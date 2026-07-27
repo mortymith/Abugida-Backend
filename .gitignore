@@ -1,0 +1,10 @@
+**/node_modules/
+**/*.dbdiagram
+**/.env
+**/.env.*
+**/dist/
+**/.turbo/
+*.log
+.DS_Store
+.idea/
+*.tsbuildinfo

@@ -1,0 +1,11 @@
+packages:
+  - 'app/*'
+  - 'packages/*'
+
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: true
+  sharp: true
+
+minimumReleaseAgeExclude:
+  - astro@7.1.4
