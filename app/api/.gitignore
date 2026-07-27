@@ -1,0 +1,18 @@
+# deps
+node_modules/
+
+# env
+.env
+.env.*
+
+# build output
+dist/
+.turbo/
+
+# logs
+*.log
+
+# IDE
+.idea/
+*.swp
+*.swo
