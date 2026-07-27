@@ -1,0 +1,937 @@
+// ============================================================================
+// Client-Side SQLite Database Schema for Abugida Education App
+// Version: 3.1 (Server-alignment fix pass — 2026-07-26)
+// Database: SQLite 3 (Flutter sqflite with PowerSync)
+// ============================================================================
+// DESIGN PRINCIPLES:
+// • PowerSync handles all sync metadata, queues, and conflict resolution
+// • Tables contain only business data - no sync metadata fields
+// • Direct mapping from server tables to client tables
+// • Only stores data needed for offline functionality
+// • Excludes server-sensitive data (finance, audit, admin, security)
+// • Optimized for PowerSync query performance
+// • PowerSync manages: _sync_status, _last_modified, _sync_id, _version
+// ============================================================================
+
+// ============================================================================
+// AUTH SCHEMA (Client-Side)
+// ============================================================================
+
+Table users {
+  id text [pk, note: 'public_id from server']
+  display_name text [not null]
+  account_status text [not null, default: 'active']
+  last_login_at text
+  last_active_at text
+  device_count integer [not null, default: 0]
+  max_devices integer [not null, default: 3, note: 'Mirrors auth.users.max_devices for local device-limit UI']
+  
+  // Profile data (merged from user_profiles for client efficiency)
+  avatar_object_key text
+  email text [note: 'Server (auth.user_profiles.email) is nullable and NOT unique — do not enforce uniqueness client-side']
+  education_segment text
+  exam_preferences text [note: 'JSON array of selected exam types']
+  onboarding_completed boolean [not null, default: false]
+  onboarding_step integer [not null, default: 0]
+  language_preference text [not null, default: 'en']
+  timezone text [not null, default: 'Africa/Addis_Ababa']
+  
+  // Gamification (denormalized from server stats)
+  streak_days integer [not null, default: 0]
+  enrolled_count integer [not null, default: 0]
+  bookmarks_count integer [not null, default: 0]
+  study_hours integer [not null, default: 0]
+  
+  // GDPR fields (for display only)
+  deletion_requested_at text
+  deletion_completed_at text
+  
+  Indexes {
+    (account_status)
+    (education_segment)
+    (email)
+  }
+}
+
+// Note: auth.user_profiles merged into users table for client efficiency
+// Note: auth.devices not synced to client - managed by server
+// Note: auth.user_consents not synced - consent management server-side
+// Note: PowerSync handles sync_status, last_modified, sync_id, version internally
+
+// ============================================================================
+// CORE SCHEMA (Client-Side - Content Cache)
+// ============================================================================
+
+Table education_levels {
+  id text [pk, note: 'public_id from server']
+  name text [not null]
+  slug text [not null]
+  description text
+  sort_order integer [not null, default: 0]
+  is_active boolean [not null, default: true]
+  
+  Indexes {
+    (slug) [unique]
+    (is_active, sort_order)
+  }
+}
+
+Table exam_types {
+  id text [pk, note: 'public_id from server']
+  education_level_id text [not null]
+  name text [not null]
+  slug text [not null]
+  description text
+  parent_exam_type_id text
+  sort_order integer [not null, default: 0]
+  is_active boolean [not null, default: true]
+  
+  Indexes {
+    (education_level_id, sort_order)
+    (education_level_id, slug) [unique]
+    (is_active)
+  }
+}
+
+// ⚠️ CRITICAL ALIGNMENT GAP: there is no core.exam_categories table on the server
+// (grep of DB_design.dbml confirms it does not exist in any schema). This table has
+// no sync source and PowerSync cannot populate it. Two options:
+//   (a) Backend adds core.exam_categories (+ FK to core.exam_types) and it becomes a
+//       normal synced content-cache table like exam_types, or
+//   (b) This is genuinely client-only, in which case it does not belong in the
+//       "Direct mapping from server tables to client tables" section and should be
+//       moved down to CLIENT-ONLY TABLES with an id generation strategy that doesn't
+//       collide with server-issued public_ids.
+// Left defined (unchanged) but excluded from the sync-eligible table set until resolved —
+// do not wire this into PowerSync sync rules as-is.
+Table exam_categories {
+  id text [pk]
+  exam_type_id text [not null]
+  name text [not null]
+  color text [not null]
+  sort_order integer [not null, default: 0]
+  
+  Indexes {
+    (exam_type_id, sort_order)
+    (exam_type_id)
+  }
+}
+
+Table courses {
+  id text [pk, note: 'public_id from server']
+  exam_type_id text [not null]
+  title text [not null]
+  slug text [not null]
+  description text
+  thumbnail_object_key text
+  price_amount real [not null, default: 0]  // numeric(19,4) -> real
+  price_currency text [not null, default: 'ETB']
+  is_free boolean [not null, default: false]
+  is_published boolean [not null, default: false]
+  published_at text
+  version integer [not null, default: 1]
+  sort_order integer [not null, default: 0]
+  
+  // Denormalized from course_stats for performance
+  total_enrollments integer [not null, default: 0]
+  active_users_7d integer [not null, default: 0]
+  downloads_30d integer [not null, default: 0]
+  purchase_count integer [not null, default: 0]
+  average_rating real
+  rating_count integer [not null, default: 0]
+  weighted_rating real
+  popularity_score real [not null, default: 0]
+  
+  image_seed text [note: 'For generated thumbnails — client-only, fine to keep']
+  
+  // Client-only fields (PowerSync manages sync)
+  _last_accessed integer [note: 'Unix timestamp for LRU cache']
+  _cached_until integer [note: 'Cache expiry timestamp']
+  
+  Indexes {
+    (exam_type_id, is_published, sort_order)
+    (slug) [unique]
+    (is_published, is_free)
+    (popularity_score)
+    (average_rating)
+    (_last_accessed)
+    (_cached_until)
+  }
+}
+
+// Full-text search virtual table
+Table courses_fts {
+  id text [pk]
+  title text
+  description text
+  Indexes {
+    (title, description) [type: fts5]
+  }
+}
+
+Table modules {
+  id text [pk, note: 'public_id from server']
+  course_id text [not null]
+  title text [not null]
+  description text
+  sort_order integer [not null]
+  estimated_duration_minutes integer
+  is_preview_available boolean [not null, default: false]
+  
+  // Client progress cache
+  completed_lessons_local integer [not null, default: 0]
+  is_locked_local boolean [not null, default: false]
+  is_completed_local boolean [not null, default: false]
+  
+  Indexes {
+    (course_id, sort_order) [unique]
+    (course_id)
+  }
+}
+
+Table resources {
+  id text [pk, note: 'public_id from server']
+  module_id text [not null]
+  course_id text [not null, note: 'Denormalized from modules for performance']
+  title text [not null]
+  description text
+  resource_type text [not null, note: 'pdf, video, quiz, exercise, link']
+  file_object_key text
+  file_size_bytes integer
+  mime_type text
+  duration_seconds integer
+  page_count integer
+  current_version integer [not null, default: 1]
+  is_downloadable boolean [not null, default: true]
+  download_size_limit_bytes integer [not null, default: 524288000]
+  
+  // Client-only fields
+  is_downloaded_local boolean [not null, default: false]
+  local_path text
+  _file_cached boolean [not null, default: false]
+  _last_opened integer
+  
+  Indexes {
+    (module_id)
+    (course_id)
+    (resource_type)
+    (is_downloadable)
+    (_file_cached)
+  }
+}
+
+Table resource_versions {
+  id text [pk, note: 'public_id from server']
+  resource_id text [not null]
+  version_number integer [not null]
+  file_object_key text [not null]
+  file_size_bytes integer
+  change_log text
+  
+  Indexes {
+    (resource_id, version_number) [unique]
+    (resource_id)
+  }
+}
+
+Table content_tags {
+  id text [pk, note: 'public_id from server']
+  name text [not null]
+  slug text [not null]
+  description text
+  
+  Indexes {
+    (slug) [unique]
+  }
+}
+
+Table resource_tags {
+  id text [pk, note: 'public_id from server']
+  resource_id text [not null]
+  tag_id text [not null]
+  
+  Indexes {
+    (resource_id, tag_id) [unique]
+    (tag_id)
+  }
+}
+
+// Note: finance schema completely excluded from client (payment processing server-side)
+// Note: finance.licenses, finance.license_grants, finance.payments, 
+//       finance.purchases, finance.transactions all server-only
+
+// ============================================================================
+// LEARNING SCHEMA (Client-Side)
+// ============================================================================
+
+Table user_enrollments {
+  id text [pk, note: 'public_id from server']
+  user_id text [not null]
+  course_id text [not null]
+  enrollment_source text [not null, default: 'purchase']
+  progress_percentage real [not null, default: 0]
+  is_completed boolean [not null, default: false]
+  completed_at text
+  last_accessed_at text
+  
+  // Client-only progress cache
+  local_progress real [not null, default: 0]
+  local_is_completed boolean [not null, default: false]
+  last_lesson_id text
+  current_module_index integer [not null, default: 0]
+  current_lesson_index integer [not null, default: 0]
+  total_modules integer [not null, default: 0]
+  total_lessons integer [not null, default: 0]
+  completed_lessons integer [not null, default: 0]
+  
+  // Note: purchase_id not synced to client
+  
+  Indexes {
+    (user_id, course_id) [unique]
+    (user_id, last_accessed_at)
+    (course_id, is_completed)
+    (local_progress)
+  }
+}
+
+Table quiz_questions {
+  id text [pk, note: 'public_id from server']
+  resource_id text [not null, note: 'Must reference resource with type=quiz']
+  version_number integer [not null]
+  question_index integer [not null]
+  question_text text [not null]
+  correct_answer text [not null]
+  explanation text
+  
+  // ⚠️ CRITICAL: learning.quiz_questions on the server has NO options or
+  // correct_index columns (only question_text/correct_answer/explanation).
+  // As written, PowerSync has nothing to populate these from, which means
+  // multiple-choice rendering is unbuildable end-to-end. This needs a backend
+  // schema change — add `options jsonb not null` and `correct_index smallint not null`
+  // (with a CHECK that correct_index is a valid array index) to learning.quiz_questions —
+  // not a client-only workaround.
+  options text [not null, note: 'JSON array of strings']
+  correct_index integer [not null]
+  
+  Indexes {
+    (resource_id, version_number, question_index) [unique]
+    (resource_id)
+  }
+}
+
+Table quiz_attempts {
+  id text [pk, note: 'public_id from server']
+  user_id text [not null]
+  resource_id text [not null]
+  attempt_number integer [not null]
+  total_questions integer [not null]
+  correct_answers integer [not null]
+  score_percentage real [not null]
+  passed boolean [not null]
+  duration_seconds integer
+  started_at text [not null]
+  completed_at text
+  created_at text [not null, note: 'Was missing on client despite being present server-side and referenced by an index below — bug fix']
+  
+  // Client-only fields
+  answers text [note: 'JSON array of selected answer indices']
+  
+  Indexes {
+    (user_id, resource_id)
+    (user_id, created_at)
+    (resource_id, passed)
+  }
+}
+
+Table quiz_answers {
+  id text [pk, note: 'public_id from server']
+  quiz_attempt_id text [not null]
+  question_id text [not null, note: 'FK to quiz_questions.id']
+  user_answer text
+  is_correct boolean [not null]
+  answered_at text [not null]
+  
+  // Note: Replaces denormalized question_text/correct_answer
+  
+  Indexes {
+    (quiz_attempt_id, question_id) [unique]
+    (quiz_attempt_id)
+    (question_id)
+  }
+}
+
+Table course_reviews {
+  id text [pk, note: 'public_id from server']
+  user_id text [not null]
+  course_id text [not null]
+  rating integer [not null]
+  title text [not null]
+  content text [not null]
+  moderation_status text [not null, default: 'pending']
+  created_at text [not null, note: 'Was missing on client despite being present server-side and referenced by an index below — bug fix']
+  
+  Indexes {
+    (course_id, rating)
+    (user_id, course_id) [unique]
+    (moderation_status, created_at)
+  }
+}
+
+// ============================================================================
+// OPS SCHEMA (Client-Side - Limited)
+// ============================================================================
+
+// Note: ops.audit_logs excluded - server-side only
+// Note: ops.principals excluded - server-side only
+// Note: ops.roles excluded - server-side only
+// Note: ops.user_roles excluded - server-side only
+// Note: ops.security_events excluded - server-side only
+// Note: ops.api_keys excluded - server-side only
+
+// Client-side only feature flags cache
+Table feature_flags_client {
+  flag_key text [pk]
+  flag_type text [not null, note: 'boolean|percentage|user_segment|date_range — mirrors ops.feature_flags.flag_type. Was missing; without it the client cannot evaluate a flag correctly offline']
+  is_enabled boolean [not null, default: false]
+  rollout_percentage integer
+  target_segments text [note: 'JSON']
+  start_date text
+  end_date text
+  
+  Indexes {
+    (flag_key) [unique]
+    (is_enabled)
+  }
+}
+
+// ============================================================================
+// SHARED SCHEMA (Client-Side)
+// ============================================================================
+
+Table file_metadata_client {
+  id text [pk, note: 'public_id from server']
+  object_key text [not null]
+  bucket_name text [not null]
+  original_filename text
+  mime_type text
+  file_size_bytes integer
+  checksum_sha256 text
+  is_public boolean [not null, default: false]
+  resource_version_id text
+  
+  // Client-only
+  local_path text
+  downloaded_at integer
+  last_accessed_at integer
+  
+  Indexes {
+    (object_key) [unique]
+    (bucket_name)
+    (resource_version_id)
+    (downloaded_at)
+  }
+}
+
+// ============================================================================
+// CLIENT-ONLY TABLES (Not in Server)
+// ============================================================================
+
+Table user_bookmarks {
+  id text [pk]
+  user_id text [not null]
+  content_type text [not null, note: 'course, lesson, resource']
+  content_id text [not null]
+  title text [not null]
+  course_name text
+  type text [not null]
+  duration text
+  image_seed text
+  bookmarked_at text [not null]
+  
+  Indexes {
+    (user_id, content_type, content_id) [unique]
+    (user_id, bookmarked_at)
+  }
+}
+
+Table user_activities {
+  id text [pk]
+  user_id text [not null]
+  type text [not null, note: 'session, completion, enrollment, achievement, streak, milestone']
+  title text [not null]
+  subtitle text
+  detail text
+  time text [not null]
+  group text [not null, note: 'today, yesterday, this_week, earlier']
+  activity_date text [not null]
+  is_read boolean [not null, default: false]
+  
+  Indexes {
+    (user_id, activity_date)
+    (user_id, type)
+    (user_id, is_read)
+  }
+}
+
+Table user_achievements {
+  id text [pk]
+  user_id text [not null]
+  achievement_key text [not null]
+  icon text [not null]
+  label text [not null]
+  color text [not null]
+  bg_color text [not null]
+  unlocked boolean [not null, default: true]
+  unlocked_at text
+  
+  Indexes {
+    (user_id, achievement_key) [unique]
+    (user_id, unlocked)
+  }
+}
+
+Table recent_searches {
+  id text [pk]
+  user_id text [not null]
+  term text [not null]
+  searched_at text [not null]
+  
+  Indexes {
+    (user_id, searched_at)
+    (user_id, term)
+  }
+}
+
+Table trending_searches {
+  term text [pk]
+  count integer [not null, default: 1]
+  icon text [not null]
+  color text [not null]
+  updated_at text [not null]
+  
+  Indexes {
+    (count)
+  }
+}
+
+Table weekly_stats {
+  id text [pk]
+  user_id text [not null]
+  week_start text [not null]
+  bar_heights text [not null, note: 'JSON array']
+  day_totals text [not null, note: 'JSON array']
+  sessions_data text [not null, note: 'JSON object']
+  total_hours integer [not null, default: 0]
+  calculated_at text [not null]
+  
+  Indexes {
+    (user_id, week_start) [unique]
+  }
+}
+
+Table chart_data_points {
+  id text [pk]
+  user_id text [not null]
+  period_type text [not null, note: 'week, month, year']
+  period_start text [not null]
+  data_points text [not null, note: 'JSON array of {label, value}']
+  calculated_at text [not null]
+  
+  Indexes {
+    (user_id, period_type, period_start) [unique]
+    (user_id, period_type)
+  }
+}
+
+Table streak_days {
+  id text [pk]
+  user_id text [not null]
+  date text [not null]
+  value integer [not null, note: '0=miss, 1=full, 2=half']
+  is_today boolean [not null, default: false]
+  
+  Indexes {
+    (user_id, date) [unique]
+    (user_id, is_today)
+  }
+}
+
+Table deadlines {
+  id text [pk]
+  user_id text [not null]
+  title text [not null]
+  date text [not null]
+  days_left integer [not null]
+  color text [not null]
+  reminder_enabled boolean [not null, default: true]
+  reminded_at text
+  
+  Indexes {
+    (user_id, date)
+    (user_id, days_left)
+  }
+}
+
+Table insights {
+  id text [pk]
+  user_id text [not null]
+  icon text [not null]
+  bg_color text [not null]
+  icon_color text [not null]
+  title text [not null]
+  description text [not null]
+  priority integer [not null, default: 0]
+  expires_at text
+  is_dismissed boolean [not null, default: false]
+  created_at text [not null]
+  
+  Indexes {
+    (user_id, priority)
+    (user_id, is_dismissed)
+  }
+}
+
+Table jump_back_items {
+  id text [pk]
+  user_id text [not null]
+  course_id text [not null]
+  title text [not null]
+  progress integer [not null, default: 0]
+  image_seed text [not null]
+  last_accessed_at text [not null]
+  
+  Indexes {
+    (user_id, last_accessed_at)
+    (user_id, progress)
+  }
+}
+
+Table faqs {
+  id text [pk]
+  question text [not null]
+  answer text [not null]
+  category text
+  sort_order integer [not null, default: 0]
+  
+  Indexes {
+    (category)
+    (sort_order)
+  }
+}
+
+// ============================================================================
+// FOREIGN KEY RELATIONSHIPS
+// ============================================================================
+
+Ref: exam_types.education_level_id > education_levels.id
+Ref: exam_types.parent_exam_type_id > exam_types.id
+Ref: exam_categories.exam_type_id > exam_types.id
+Ref: courses.exam_type_id > exam_types.id
+Ref: modules.course_id > courses.id
+Ref: resources.module_id > modules.id
+Ref: resources.course_id > courses.id
+Ref: resource_versions.resource_id > resources.id
+Ref: resource_tags.resource_id > resources.id
+Ref: resource_tags.tag_id > content_tags.id
+
+Ref: user_enrollments.user_id > users.id
+Ref: user_enrollments.course_id > courses.id
+Ref: quiz_questions.resource_id > resources.id
+Ref: quiz_attempts.user_id > users.id
+Ref: quiz_attempts.resource_id > resources.id
+Ref: quiz_answers.quiz_attempt_id > quiz_attempts.id
+Ref: quiz_answers.question_id > quiz_questions.id
+Ref: course_reviews.user_id > users.id
+Ref: course_reviews.course_id > courses.id
+
+Ref: user_bookmarks.user_id > users.id
+Ref: user_activities.user_id > users.id
+Ref: user_achievements.user_id > users.id
+Ref: weekly_stats.user_id > users.id
+Ref: chart_data_points.user_id > users.id
+Ref: streak_days.user_id > users.id
+Ref: deadlines.user_id > users.id
+Ref: insights.user_id > users.id
+Ref: jump_back_items.user_id > users.id
+Ref: jump_back_items.course_id > courses.id
+Ref: recent_searches.user_id > users.id
+
+Ref: file_metadata_client.resource_version_id > resource_versions.id
+
+// ============================================================================
+// EXCLUDED SERVER TABLES (Not Synced to Client)
+// ============================================================================
+
+/*
+EXCLUDED TABLES (Server-Only):
+================================
+auth:
+  - auth.devices (device management server-side)
+  - auth.user_consents (GDPR compliance server-side)
+  - auth.login_attempts (security server-side)
+
+finance: (COMPLETE EXCLUSION)
+  - finance.licenses
+  - finance.license_grants
+  - finance.payment_gateways
+  - finance.purchase_options
+  - finance.purchases
+  - finance.purchase_transactions
+
+ops:
+  - ops.audit_logs (audit trail)
+  - ops.principals
+  - ops.roles
+  - ops.user_roles
+  - ops.security_events
+  - ops.outbox_events (event sourcing)
+  - ops.webhook_events
+  - ops.api_keys
+  - ops.job_queue
+  - ops.moderation_queue
+  - ops.system_configs (configuration)
+
+shared:
+  - shared.file_metadata (full version - client uses minimal version)
+
+EXCLUDED FIELDS (Sensitive Data):
+=================================
+- All phone_number_* fields from auth.users
+- All password_* fields (removed in v2.2 anyway)
+- All payment/transaction fields
+- All audit log fields
+- All IP addresses
+- All encryption keys
+- All security metadata
+*/
+
+// ============================================================================
+// ALIGNMENT MATRIX: Server → Client
+// ============================================================================
+
+/*
+SERVER TABLE → CLIENT TABLE
+================================
+auth.users → users (merged with user_profiles)
+auth.user_profiles → users (merged)
+auth.devices → NOT SYNCED
+auth.user_consents → NOT SYNCED
+auth.login_attempts → NOT SYNCED
+
+core.education_levels → education_levels
+core.exam_types → exam_types
+core.courses → courses (+ course_stats denormalized)
+core.modules → modules
+core.resources → resources
+core.resource_versions → resource_versions
+core.content_tags → content_tags
+core.resource_tags → resource_tags
+
+finance.* → NOT SYNCED (complete exclusion)
+
+learning.user_enrollments → user_enrollments
+learning.quiz_questions → quiz_questions
+learning.quiz_attempts → quiz_attempts
+learning.quiz_answers → quiz_answers
+learning.course_reviews → course_reviews
+
+ops.* → NOT SYNCED (complete exclusion except feature_flags_client)
+ops.feature_flags → feature_flags_client (client-cached only)
+
+shared.file_metadata → file_metadata_client (minimal version)
+*/
+
+// ============================================================================
+// POWERASYNC INTEGRATION NOTES
+// ============================================================================
+
+/*
+PowerSync Configuration:
+========================
+
+1. PowerSync handles all sync metadata automatically:
+   - sync_status (local, pending, synced, conflict)
+   - last_modified timestamps
+   - sync_id (UUID v7)
+   - version numbers
+   - conflict detection and resolution
+
+2. Sync Queue Management:
+   - PowerSync manages upload/download queues
+   - Automatic retry with exponential backoff
+   - Transactional sync operations
+
+3. Conflict Resolution:
+   - PowerSync provides built-in conflict strategies
+   - Custom resolution can be implemented in Flutter
+
+4. Query Optimization:
+   - Use PowerSync's watch() for reactive queries
+   - Use PowerSync's get() for immediate reads
+   - Use PowerSync's execute() for writes
+
+5. Migration Strategy:
+   - PowerSync handles schema migrations
+   - Use versioned migrations in Flutter
+
+PowerSync Connection Setup:
+===========================
+class AppDatabase extends PowerSyncDatabase {
+  AppDatabase() : super(
+    'abugida.db',
+    schema: AppSchema(),
+    syncUrl: 'https://api.abugida.com/powersync',
+    // PowerSync credentials and configuration
+  );
+}
+
+PowerSync Query Examples:
+=========================
+// Reactive query
+final courses = db.watch('SELECT * FROM courses WHERE is_published = true');
+
+// Write operation (auto-sync)
+await db.execute('INSERT INTO user_enrollments (id, user_id, course_id) VALUES (?, ?, ?)', [id, userId, courseId]);
+
+// Conflict resolution
+db.onConflict = (conflict) {
+  // Custom conflict resolution logic
+  return conflict.resolve('server_wins');
+};
+*/
+
+// ============================================================================
+// INDEXES SUMMARY FOR POWERASYNC PERFORMANCE
+// ============================================================================
+
+/*
+POWERASYNC PERFORMANCE INDEXES:
+================================
+1. (user_id, course_id) - user_enrollments
+   → Fast enrollment lookup for user-scoped queries
+
+2. (user_id, last_accessed_at) - user_enrollments, user_activities
+   → Activity feeds and resume learning
+
+3. (course_id, sort_order) - modules, resources
+   → Course content navigation
+
+4. (resource_id, question_index) - quiz_questions
+   → Quiz loading
+
+5. (user_id, activity_date) - user_activities
+   → Timeline queries
+
+6. (exam_type_id, is_published) - courses
+   → Course discovery
+
+7. (popularity_score) - courses
+   → Recommendation queries
+
+8. (slug) - courses, exam_types, education_levels
+   → URL routing
+
+9. (_last_accessed) - courses
+   → LRU cache eviction
+*/
+
+// ============================================================================
+// STORAGE ESTIMATES PER USER
+// ============================================================================
+
+/*
+STORAGE BREAKDOWN:
+===================
+Content Metadata (100 courses):
+  - courses: ~200 KB
+  - modules: ~100 KB (200 modules)
+  - resources: ~150 KB (500 resources)
+  - quiz_questions: ~50 KB (200 questions)
+  - exam_types: ~10 KB
+  Subtotal: ~510 KB
+
+User Data:
+  - users: ~2 KB
+  - user_enrollments: ~10 KB (20 enrollments)
+  - quiz_attempts: ~20 KB (50 attempts)
+  - course_reviews: ~5 KB
+  Subtotal: ~37 KB
+
+Client-Only Data:
+  - user_bookmarks: ~10 KB
+  - user_activities: ~20 KB
+  - weekly_stats: ~5 KB
+  - streak_days: ~2 KB
+  - other: ~15 KB
+  Subtotal: ~52 KB
+
+Total Metadata: ~599 KB per user
+
+Downloaded Content (Optional):
+  - Lessons: 0-500 MB
+  - Resources: 0-200 MB
+  - Videos: 0-1 GB
+
+PowerSync Overhead:
+  - Metadata: ~50-100 KB per user
+  - Sync queue: ~10-50 KB
+  - Conflict logs: ~10 KB
+*/
+
+// ============================================================================
+// POWERASYNC SYNC STRATEGY
+// ============================================================================
+
+/*
+SYNC PRIORITIES (Configured in PowerSync):
+===========================================
+CRITICAL: users, user_enrollments, quiz_attempts
+  → Auto-sync immediately on change
+
+HIGH: user_bookmarks, course_reviews, user_activities
+  → Auto-sync within 5 minutes
+
+NORMAL: weekly_stats, chart_data_points, streak_days
+  → Auto-sync on schedule (every 15 minutes)
+
+BACKGROUND: courses, modules, resources, exam_types
+  → Pull on app open, push rarely
+
+SYNC DIRECTION (PowerSync Configuration):
+=========================================
+BIDIRECTIONAL:
+  - users (profile updates)
+  - user_enrollments (progress)
+  - quiz_attempts (results)
+  - course_reviews (reviews)
+  - user_bookmarks (bookmarks)
+
+SERVER → CLIENT ONLY:
+  - courses (content)
+  - modules (content)
+  - resources (content)
+  - exam_types (reference)
+  - education_levels (reference)
+
+CLIENT → SERVER ONLY:
+  - user_activities (derived)
+  - weekly_stats (derived)
+  - streak_days (derived)
+  - insights (local)
+
+CONFLICT RESOLUTION (PowerSync):
+================================
+SERVER WINS:
+  - courses, modules, resources, exam_types
+  - user_enrollments (server progress is source of truth)
+
+CLIENT WINS:
+  - user_activities (generated locally)
+  - weekly_stats (calculated locally)
+
+MERGE (PowerSync Custom):
+  - users: merge profile fields, server wins for status
+  - quiz_attempts: keep both, merge with server
+  - course_reviews: server wins for moderation status
+  - user_bookmarks: merge, client wins for bookmarks
+*/
