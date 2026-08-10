@@ -1,0 +1,20 @@
+{
+  "name": "@Abugida/auth",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/pg": "^8.21.0",
+    "typescript-eslint": "^8.66.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "better-auth": "^1.6.26",
+    "better-auth-telegram": "^2.0.1",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.23.0"
+  }
+}
