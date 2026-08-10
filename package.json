@@ -23,6 +23,8 @@
   },
   "type": "module",
   "devDependencies": {
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
     "eslint": "^10.8.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.2.0",
@@ -31,11 +33,15 @@
     "turbo": "^2.5.0"
   },
   "lint-staged": {
-    "*.{js,ts,tsx,jsx,astro}": [
-      "eslint --fix",
+    "*.{js,mjs,cjs,ts,tsx,jsx}": [
+      "eslint --fix --no-warn-ignored",
       "prettier --write"
     ],
-    "*.{json,md}": [
+    "*.astro": [
+      "eslint --fix --no-warn-ignored",
+      "prettier --write"
+    ],
+    "*.{json,jsonc,md,mdx,yaml,yml,css,scss,html,graphql}": [
       "prettier --write"
     ]
   }
