@@ -1,72 +1,59 @@
 // ============================================================================
-// Educational Mobile Application — Production Database Schema (Refactored)
-// Version: 1.0 (2026-04-30 — Professional review remediation)
+// Course Builder / LMS Platform — Production Database Schema
+// Version: 4.0 (Bundle Mechanism + Education Levels Removed)
 // Target: PostgreSQL 16
-// 
-// Design Conventions:
-// • Internal PK: bigint serial (performance-optimized, not shard-safe — monitor growth)
-// • Public ID: uuid v7 (API-safe, monotonic, supports future sharding)
-// • Soft deletes: deleted_at IS NOT NULL indicates logical deletion (EXCEPT audit/event tables — see notes)
-// • FK strategy: restrict for domain integrity, cascade for weak entities, set null for audit refs
-// • All timestamps: timestamptz with default now()
-// • Money: numeric(19,4) with explicit currency code (supports all ISO 4217 currencies including 3-decimal)
-// • CHECK constraints: defined inline on columns for simplicity and portability
-// • Partitioning: declared via table-level Partition statements for time-series tables
-// • JSONB columns: schema validation via CHECK constraints where structural guarantees are required
+// Date: 2026-08-10
 //
+// CHANGES FROM v3.0:
+// ─────────────────────────────────────────────────────────────────────────────
+// [REMOVED] catalog.education_levels — table deleted entirely
+// [REMOVED] catalog.exam_types.education_level_id — FK and column removed
+// [ADDED]   catalog.course_bundles — bundling entity grouped by exam_type
+// [ADDED]   catalog.bundle_courses — M:N junction (bundles ↔ courses)
+// [MODIFIED] finance.purchase_options — supports bundles (course_id XOR bundle_id)
+// [MODIFIED] finance.purchases — supports bundle purchases
+// [MODIFIED] catalog.exam_types — standalone hierarchy (parent self-ref only)
+// [ADDED]   finance.bundle_purchase_options — bundle-specific pricing
+// [ADDED]   learning.bundle_enrollments — tracks bundle purchase → per-course enrollment
+// ============================================================================
 
-Project EducationalMobileApp {
+Project CourseBuilderLMS {
   database_type: 'PostgreSQL'
   Note: '''
-    v2.2: Consolidated educational resources into a unified mobile platform.
-    Authentication via Telegram + Google OAuth (Better Auth).
-    Telebirr-only payment processing. No push notifications. No refunds.
-    Ethiopia-only user scope. Maximum 3 registered devices per user.
-    MVP prioritizes TOEFL/IGCSE students with phased expansion to high school and college segments.
+    v4.0: Course Builder / LMS with bundle-based selling.
+    Content hierarchy: Courses → Modules → Lessons.
+    Bundles group courses by exam_type for packaged selling.
+    RBAC: Course-scoped roles via ops.course_roles.
+    Authentication: Telegram + Google OAuth (Better Auth).
+    Payment: Telebirr-only. Ethiopia scope. Max 3 devices per user.
   '''
 }
 
 // ============================================================================
-// EXTENSIONS FOR POSTGRESQL
+// ENUM DEFINITIONS
 // ============================================================================
-// -- Run as superuser after updating shared_preload_libraries & restarting
-// CREATE EXTENSION IF NOT EXISTS pg_uuidv7;  -- for uuid_generate_v7()
-// CREATE EXTENSION IF NOT EXISTS pgcrypto;
-// CREATE EXTENSION IF NOT EXISTS timescaledb;  -- optional, for hypertables
-// CREATE EXTENSION IF NOT EXISTS pg_trgm;
-// CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
-// CREATE EXTENSION IF NOT EXISTS pgaudit;
-// CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
-// CREATE EXTENSION IF NOT EXISTS btree_gin;  -- for composite GIN indexes
-// CREATE EXTENSION IF NOT EXISTS pg_partman; -- automated partition management (v2.1)
-// CREATE EXTENSION IF NOT EXISTS pg_cron;    -- scheduled jobs for partition maintenance (v2.1)
-// CREATE EXTENSION IF NOT EXISTS btree_gist; -- for exclusion constraints (study_goals overlap) (v2.1)
 
-// ============================================================================
-// ENUM DEFINITIONS (Type Safety & Validation)
-// ============================================================================
 Enum account_status {
-  pending_verification [note: 'Email/SMS verification pending']
-  active [note: 'Fully verified and active']
-  locked [note: 'Temporarily locked due to failed attempts or security']
-  suspended [note: 'Administrative suspension']
-  deleted [note: 'Account marked for deletion (GDPR erasure pending)']
+  pending_verification
+  active
+  locked
+  suspended
+  deleted
 }
 
 Enum platform {
   ios
   android
+  web
 }
 
 Enum consent_type {
-  essential [note: 'Required for app functionality (no opt-out)']
-  analytics [note: 'Usage tracking and crash reporting']
-  personalization [note: 'Content recommendations']
-  marketing [note: 'Promotional communications']
-  third_party_sharing [note: 'Sharing anonymized data with third-party partners']
+  essential
+  analytics
+  personalization
+  marketing
+  third_party_sharing
 }
-
-// v2.2: REMOVED — verification_purpose enum (no OTP/SMS verification in social-login model)
 
 Enum education_segment {
   toefl
@@ -75,7 +62,7 @@ Enum education_segment {
   college
 }
 
-Enum resource_type {
+Enum content_type {
   pdf
   video
   quiz
@@ -83,22 +70,28 @@ Enum resource_type {
   link
 }
 
-Enum license_type {
-  perpetual [note: 'No expiration']
-  subscription [note: 'Time-limited with auto-renewal option']
-  limited_use [note: 'Fixed number of accesses or specific date range']
-  open_source [note: 'Freely usable with attribution']
+Enum content_license_type {
+  perpetual
+  subscription
+  limited_use
+  open_source
 }
 
-Enum license_status {
-  active [note: 'License valid and enforceable']
-  expiring_soon [note: '30 days or less until expiration']
-  expired [note: 'Beyond end_date without grace period']
-  revoked [note: 'Terminated early by licensor']
+Enum content_license_status {
+  active
+  expiring_soon
+  expired
+  revoked
+}
+
+Enum license_grant_status {
+  active
+  expired
+  revoked
 }
 
 Enum payment_provider {
-  telebirr [note: 'Ethiopian mobile money — sole payment method']
+  telebirr
 }
 
 Enum purchase_status {
@@ -121,12 +114,13 @@ Enum transaction_status {
 
 Enum enrollment_source {
   purchase
+  bundle_purchase [note: 'Enrolled via bundle purchase']
   free_access
   admin_grant
   preview
 }
 
-Enum user_feedback_type {
+Enum lesson_feedback_type {
   thumbs_up
   thumbs_down
 }
@@ -135,20 +129,21 @@ Enum moderation_status {
   pending
   approved
   rejected
-  edited [note: 'Content modified by moderator']
+  edited
 }
-
-// v2.2: REMOVED — notification_type enum (push notifications not in MVP scope)
 
 Enum audit_action {
   user_login
   user_logout
   purchase_completed
-  resource_access
+  lesson_access
   admin_action
   data_export
   permission_change
   content_moderation
+  grade_modified
+  enrollment_status_changed
+  bundle_purchased [note: 'New: track bundle purchase events']
 }
 
 Enum security_event_type {
@@ -193,54 +188,71 @@ Enum login_attempt_type {
   token_refresh
 }
 
-// ============================================================================
-// TABLE DEFINITIONS (Grouped by Schema)
-// ============================================================================
+Enum course_status {
+  draft
+  published
+  archived
+}
+
+// [NEW] Bundle lifecycle status
+Enum bundle_status {
+  draft [note: 'Bundle being assembled']
+  published [note: 'Bundle visible and purchasable']
+  archived [note: 'Bundle no longer sold; existing enrollments retained']
+}
+
+Enum audit_resource_type {
+  course
+  module
+  lesson
+  enrollment
+  quiz_attempt
+  purchase
+  user_account
+  role_assignment
+  bundle [note: 'New: audit bundle actions']
+}
+
+Enum moderation_content_type {
+  course_review
+  lesson_report
+  student_report
+  instructor_report
+}
 
 // ============================================================================
-// SCHEMA: auth
+// SCHEMA: auth (Identity & Access)
 // ============================================================================
+
 Table auth.users {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  // v2.2: Social-login only (Telegram + Google via Better Auth).
-  // Phone number fields are nullable — no OTP/password authentication.
-  phone_number_encrypted bytea [note: 'AES-256-GCM encrypted at application layer. NULL for social-login users.']
-  phone_number_hash varchar(64) [note: 'SHA-256 hash of plaintext phone. NULL for social-login users.']
-  phone_number_last4 char(4) [note: 'Last 4 digits for support/correlation. NULL for social-login users.']
+  phone_number_encrypted bytea [note: 'AES-256-GCM encrypted. NULL for social-login users.']
+  phone_number_hash varchar(64) [note: 'SHA-256 hash for lookups. NULL for social-login users.']
+  phone_number_last4 char(4) [note: 'Last 4 digits for support. NULL for social-login users.']
   hash_version smallint [default: 1]
-  // v2.2: Removed password_hash and password_hash_salt (no password model in social-login)
-  device_count integer [not null, default: 0, note: 'Number of registered devices for this user']
-  max_devices integer [not null, default: 3, note: 'Maximum registered devices allowed (configurable)']
+  device_count integer [not null, default: 0]
+  max_devices integer [not null, default: 3]
   display_name varchar(100)
-  account_status account_status [not null, default: "active"]
+  account_status account_status [not null, default: 'active']
   failed_login_attempts smallint [not null, default: 0, check: `failed_login_attempts >= 0`]
-  locked_until timestamptz [note: 'If locked, account unlocks after this timestamp']
+  locked_until timestamptz
   last_login_at timestamptz
   last_active_at timestamptz
-  // v2.2 GDPR compliance: SLA tracking for FR-904 deletion requests
-  deletion_requested_at timestamptz [note: 'Timestamp when user requested GDPR erasure. NULL if not requested.']
-  deletion_completed_at timestamptz [note: 'Timestamp when erasure process completed. Enables 30-day SLA tracking per FR-904.']
+  deletion_requested_at timestamptz
+  deletion_completed_at timestamptz
+  retention_expires_at timestamptz [note: 'When PII columns must be purged (GDPR)']
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
-  Note: '''
-    v2.2: Central identity table for social-login only (Telegram + Google via Better Auth).
-    Password fields removed — no password model. Phone number fields nullable (not required for social login).
-    Device_count and max_devices enforce the 3-device registration limit.
-    account_status defaults to active (no email/SMS verification step for social login).
-    Soft-delete via deleted_at; hard delete requires GDPR erasure process.
-  '''
-
+  Note: 'Central identity table. Roles managed via ops.course_roles (course-scoped RBAC).'
   Indexes {
     (public_id) [unique, name: "idx_users_public_id"]
-    (phone_number_hash) [type: hash, unique, name: "idx_users_phone_hash", note: 'Hash-based index for authentication lookups (nullable — social-login users may not have phone)']
-    (phone_number_last4) [name: "idx_users_phone_last4", note: 'For support correlation queries']
+    (phone_number_hash) [unique, name: "idx_users_phone_hash"]
     (account_status) [name: "idx_users_status"]
-    (account_status, phone_number_hash) [name: "idx_users_active_query", note: 'Filter on deleted_at IS NULL at query time']
     (deleted_at) [name: "idx_users_deleted"]
-    (deletion_requested_at) [name: "idx_users_deletion_sla", note: 'For monitoring GDPR 30-day SLA compliance (FR-904)']
+    (deletion_requested_at) [name: "idx_users_deletion_sla"]
+    (retention_expires_at) [name: "idx_users_retention"]
   }
 }
 
@@ -249,24 +261,23 @@ Table auth.user_profiles {
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   user_id bigint [not null]
   avatar_object_key varchar(500)
-  email varchar(254) [note: 'Optional email address for notifications and support.']
-  education_segment education_segment [note: 'User-selected education segment from registration.']
-  // v2.1: Added CHECK constraint for known notification preference keys
-  notification_preferences jsonb [not null, default: '{}', note: '{"email_enabled": false, "sms_enabled": false}', check: `notification_preferences IS NULL OR (jsonb_typeof(notification_preferences) = 'object' AND (notification_preferences ? 'email_enabled' OR notification_preferences ? 'sms_enabled' OR notification_preferences = '{}'::jsonb))`]
+  email_encrypted bytea [note: 'AES-256-GCM encrypted email']
+  email_hash varchar(64) [note: 'SHA-256 hash of lowercase email for lookups']
+  education_segment education_segment
+  notification_preferences jsonb [not null, default: '{}']
   language_preference varchar(10) [not null, default: 'en']
   timezone varchar(50) [not null, default: 'Africa/Addis_Ababa']
-  exam_preferences jsonb [not null, default: '[]', note: '["TOEFL", "IGCSE"] — selected exam types during onboarding (FR-110)']
-  onboarding_completed boolean [not null, default: false]
-  onboarding_step smallint [not null, default: 0, check: `onboarding_step >= 0 AND onboarding_step <= 5`, note: '0=not started, 5=completed']
+  exam_preferences jsonb [not null, default: '[]']
+  is_onboarding_completed boolean [not null, default: false]
+  onboarding_step smallint [not null, default: 0, check: `onboarding_step >= 0 AND onboarding_step <= 5`]
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
-  Note: 'One-to-one extension of users table for profile data that is frequently updated.'
-
+  Note: 'One-to-one profile extension. Email encrypted at rest.'
   Indexes {
     (public_id) [unique, name: "idx_user_profiles_public"]
-    (user_id) [unique, name: "idx_user_profiles_user", note: 'FK is already unique; this index supports JOIN performance']
+    (user_id) [unique, name: "idx_user_profiles_user"]
+    (email_hash) [unique, name: "idx_user_profiles_email_hash"]
   }
 }
 
@@ -274,47 +285,34 @@ Table auth.devices {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   user_id bigint [not null]
-  device_identifier varchar(255) [not null, note: 'Device fingerprint']
-  device_name varchar(100) [note: 'User-friendly device name']
-  platform varchar(50) [note: 'iOS, Android, Web']
-  os_version varchar(50) [check: `os_version IS NULL OR os_version ~ '^\d+(\.\d+)+$'`, note: 'Semver format validation']
-  app_version varchar(20) [check: `app_version IS NULL OR app_version ~ '^\d+\.\d+\.\d+$'`, note: 'Semver format: major.minor.patch']
+  device_identifier varchar(255) [not null]
+  device_name varchar(100)
+  platform platform
+  os_version varchar(50)
+  app_version varchar(20)
   last_active_at timestamptz [not null, default: `now()`]
   registered_at timestamptz [not null, default: `now()`]
   is_active boolean [not null, default: true]
   deleted_at timestamptz
-
-  Note: '''
-    v2.2: Redesigned device registration table.
-    Enforces maximum 3 active devices per user via trigger/application constraint.
-    Removed push_token (push notifications not in MVP scope).
-    Removed is_trusted, is_primary_user (simplified device model).
-    UNIQUE constraint on (user_id, device_identifier) ensures one registration per device per user.
-  '''
-
+  Note: 'Max 3 active devices per user.'
   Indexes {
     (public_id) [unique, name: "idx_devices_public"]
-    (user_id, device_identifier) [unique, name: "idx_devices_user_identifier", note: 'One registration per device per user']
-    (user_id, last_active_at) [name: "idx_devices_user_active", note: 'For finding least-recently-used device when enforcing 3-device limit']
+    (user_id, device_identifier) [unique, name: "idx_devices_user_identifier"]
+    (user_id, last_active_at) [name: "idx_devices_user_active"]
   }
 }
-
-// v2.2: Trigger/constraint to enforce maximum 3 active devices per user
-// Stored procedure: remove oldest inactive device when limit is reached
 
 Table auth.user_consents {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   user_id bigint [not null]
   consent_type consent_type [not null]
-  consent_version varchar(20) [not null, note: 'Version of the consent form (e.g., "2025-01-01_v1")']
+  consent_version varchar(20) [not null]
   is_granted boolean [not null]
   ip_address inet
   consented_at timestamptz [not null, default: `now()`]
   created_at timestamptz [not null, default: `now()`]
-
-  Note: 'Immutable audit trail of user consent. Revocation = new row with is_granted=false, not update.'
-
+  Note: 'Immutable consent audit trail.'
   Indexes {
     (public_id) [unique, name: "idx_consents_public"]
     (user_id, consent_type, consent_version) [unique, name: "idx_consents_unique"]
@@ -322,212 +320,196 @@ Table auth.user_consents {
   }
 }
 
-// v2.2: REMOVED — user_sessions and refresh_tokens tables.
-// Option A (Recommended): Session management delegated to Better Auth native session store.
-// Better Auth handles JWT issuance, refresh token rotation, and session invalidation internally.
-// This eliminates the need for custom session/refresh token tables in the application schema.
-
 Table auth.login_attempts {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  phone_number_last4 char(4) [not null, note: 'Last 4 digits for correlation without PII exposure']
+  phone_number_last4 char(4) [not null]
   ip_address inet [not null]
   user_agent varchar(500)
-  attempt_type login_attempt_type [not null, note: 'Enum replaces unconstrained varchar(20)']
+  attempt_type login_attempt_type [not null]
   is_successful boolean [not null]
   failure_reason varchar(100)
   attempted_at timestamptz [not null, default: `now()`]
+  retention_expires_at timestamptz [not null, note: 'attempted_at + 2 years']
   created_at timestamptz [not null, default: `now()`]
-
-  Note: 'Append-only security audit table. No soft-delete per compliance requirements.'
-
+  Note: 'Append-only security audit. Partitioned monthly.'
   Indexes {
     (public_id) [unique, name: "idx_login_attempts_public"]
     (phone_number_last4, attempted_at) [name: "idx_login_attempts_phone_time"]
     (ip_address, attempted_at) [name: "idx_login_attempts_ip_time"]
     (attempted_at) [name: "idx_login_attempts_time"]
+    (retention_expires_at) [name: "idx_login_attempts_retention"]
   }
 }
 
-// v2.2: REMOVED — sms_verifications table no longer needed (no OTP flow in social-login model)
-// OTP-based authentication has been replaced by Telegram + Google OAuth via Better Auth.
-
-// v2.2: REMOVED — password_history table no longer needed (no password model in social-login only)
-// Authentication is handled entirely by Telegram + Google OAuth via Better Auth.
-
 // ============================================================================
-// SCHEMA: core
+// SCHEMA: catalog (Course Content + Bundles)
 // ============================================================================
-Table core.education_levels {
+// [REMOVED] catalog.education_levels — DELETED.
+// exam_types is now a standalone self-referencing hierarchy.
+// ============================================================================
+
+Table catalog.exam_types {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
+  // [REMOVED] education_level_id — no longer references education_levels
   name varchar(100) [not null]
   slug varchar(100) [not null]
   description text
-  sort_order smallint [not null, default: 0, check: `sort_order >= 0`, note: 'Standardized naming']
-  is_active boolean [not null, default: true]
-  created_at timestamptz [not null, default: `now()`]
-  updated_at timestamptz [not null, default: `now()`]
-  deleted_at timestamptz
-
-  Indexes {
-    (public_id) [unique, name: "idx_education_levels_public"]
-    (slug) [unique, name: "idx_education_levels_slug"]
-    (is_active, sort_order) [name: "idx_education_levels_active_order"]
-  }
-}
-
-Table core.exam_types {
-  id bigint [pk, increment]
-  public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  education_level_id bigint [not null]
-  name varchar(100) [not null]
-  slug varchar(100) [not null]
-  description text
-  parent_exam_type_id bigint
+  parent_exam_type_id bigint [note: 'Self-referencing hierarchy. NULL = top-level exam type.']
+  depth smallint [not null, default: 0, check: `depth >= 0`, note: '0=top-level, 1=child, etc.']
   sort_order smallint [not null, default: 0, check: `sort_order >= 0`]
   is_active boolean [not null, default: true]
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
+  Note: '''
+    Standalone exam type hierarchy (no education_levels parent).
+    Self-referencing via parent_exam_type_id for sub-categories.
+    Examples: TOEFL → (Reading, Listening, Speaking, Writing)
+              IGCSE → (Mathematics, Physics, Chemistry)
+  '''
   Indexes {
     (public_id) [unique, name: "idx_exam_types_public"]
-    (education_level_id, sort_order) [name: "idx_exam_types_level_order"]
-    (education_level_id, slug) [unique, name: "idx_exam_types_level_slug"]
+    (slug) [unique, name: "idx_exam_types_slug"]
+    (parent_exam_type_id, sort_order) [name: "idx_exam_types_parent_order"]
+    (is_active, sort_order) [name: "idx_exam_types_active_order"]
   }
 }
 
-Table core.courses {
+// ============================================================================
+// COURSE BUILDER HIERARCHY: courses → modules → lessons
+// ============================================================================
+
+Table catalog.courses {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   exam_type_id bigint [not null]
+  instructor_id bigint [note: 'FK to auth.users.id. Course owner/creator.']
   title varchar(300) [not null]
-  slug varchar(300) [not null]
+  slug varchar(200) [not null]
   description text
   thumbnail_object_key varchar(500)
-  price_amount numeric(19, 4) [check: `price_amount IS NULL OR price_amount >= 0`, note: 'ISO 4217 compliant precision — supports 3-decimal currencies']
+  price_amount numeric(19, 4) [check: `price_amount IS NULL OR price_amount >= 0`]
   price_currency char(3) [not null, default: 'ETB', check: `price_currency ~ '^[A-Z]{3}$'`]
   is_free boolean [not null, default: false]
-  is_published boolean [not null, default: false]
+  status course_status [not null, default: 'draft']
   published_at timestamptz
   version integer [not null, default: 1, check: `version >= 1`]
+  row_version integer [not null, default: 1, note: 'Optimistic lock version']
   sort_order smallint [not null, default: 0, check: `sort_order >= 0`]
-  created_by bigint
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
+  Note: 'Top-level content entity. Owned by instructor. Status: draft → published → archived.'
   Indexes {
     (public_id) [unique, name: "idx_courses_public"]
-    (exam_type_id, is_published, sort_order) [name: "idx_courses_list_query"]
+    (exam_type_id, status, sort_order) [name: "idx_courses_list_query"]
     (slug) [unique, name: "idx_courses_slug"]
-    (is_published, is_free) [name: "idx_courses_discovery"]
+    (instructor_id) [name: "idx_courses_instructor"]
+    (status, is_free) [name: "idx_courses_discovery"]
+    (exam_type_id, status, sort_order) [name: "idx_courses_active_list", note: 'Partial: WHERE deleted_at IS NULL']
   }
 }
 
-// v2.1 CRITICAL FIX C3: Added missing course_stats table for FR-702 and FR-808
-Table core.course_stats {
-  course_id bigint [pk, note: 'Sole PK — one row per course. FK to core.courses.id']
+Table catalog.course_stats {
+  course_id bigint [pk]
   total_enrollments integer [not null, default: 0, check: `total_enrollments >= 0`]
-  active_users_7d integer [not null, default: 0, check: `active_users_7d >= 0 AND active_users_7d <= total_enrollments`]
+  active_students_7d integer [not null, default: 0, check: `active_students_7d >= 0`]
   downloads_30d integer [not null, default: 0, check: `downloads_30d >= 0`]
-  purchase_count integer [not null, default: 0, check: `purchase_count >= 0 AND purchase_count <= total_enrollments`]
+  purchase_count integer [not null, default: 0, check: `purchase_count >= 0`]
   average_rating numeric(3, 2) [check: `average_rating IS NULL OR (average_rating >= 1.0 AND average_rating <= 5.0)`]
   rating_count integer [not null, default: 0, check: `rating_count >= 0`]
-  weighted_rating numeric(4, 3) [note: 'FR-702: 70% recent (30d) + 30% older ratings, recalculated daily']
-  popularity_score numeric(10, 4) [note: 'FR-808: (0.4 × downloads_last_30d) + (0.3 × active_users_last_7d) + (0.3 × purchase_count), exponentially decayed']
-  calculated_at timestamptz [not null, default: `now()`, note: 'Last time metrics were recomputed']
-
-  Note: '''
-    v2.1: Materialized metrics table for admin dashboard and recommendation engine.
-    Recalculated daily via scheduled job or trigger on underlying events.
-    Single PK on course_id ensures one row per course — resolves v2.0 dual PK anomaly.
-    Supports FR-702 (weighted ratings), FR-705 (popularity recommendations), FR-808 (popularity metric).
-  '''
-
+  weighted_rating numeric(4, 3)
+  popularity_score numeric(10, 4)
+  calculated_at timestamptz [not null, default: `now()`]
+  Note: 'Materialized metrics. One row per course. Recalculated daily.'
   Indexes {
-    (popularity_score) [name: "idx_course_stats_popularity", note: 'For FR-705 popularity-based recommendations']
-    (weighted_rating) [name: "idx_course_stats_rating", note: 'For FR-706 sort by rating']
-    (calculated_at) [name: "idx_course_stats_calculated", note: 'For monitoring staleness']
+    (popularity_score, weighted_rating) [name: "idx_course_stats_recommendation", note: 'Single covering index']
   }
 }
 
-Table core.modules {
+Table catalog.course_stats_history {
+  id bigint [pk, increment]
+  course_id bigint [not null]
+  snapshot_date date [not null]
+  total_enrollments integer [not null, default: 0]
+  active_students_7d integer [not null, default: 0]
+  downloads_30d integer [not null, default: 0]
+  purchase_count integer [not null, default: 0]
+  average_rating numeric(3, 2)
+  popularity_score numeric(10, 4)
+  created_at timestamptz [not null, default: `now()`]
+  Note: 'Daily snapshots for trend analysis. Partitioned monthly.'
+  Indexes {
+    (course_id, snapshot_date) [unique, name: "idx_stats_history_course_date"]
+    (snapshot_date) [name: "idx_stats_history_date"]
+  }
+}
+
+Table catalog.modules {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   course_id bigint [not null]
+  instructor_id bigint [note: 'Module author.']
   title varchar(300) [not null]
   description text
-  sort_order smallint [not null, check: `sort_order >= 0`, note: 'Standardized naming (was module_order)']
+  sort_order smallint [not null, check: `sort_order >= 0`]
   estimated_duration_minutes integer [check: `estimated_duration_minutes IS NULL OR estimated_duration_minutes > 0`]
   is_preview_available boolean [not null, default: false]
-  created_by bigint
+  row_version integer [not null, default: 1]
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
+  Note: 'Second level in hierarchy. DELETE from parent course is RESTRICT.'
   Indexes {
     (public_id) [unique, name: "idx_modules_public"]
     (course_id, sort_order) [unique, name: "idx_modules_course_order"]
     (course_id) [name: "idx_modules_course"]
+    (instructor_id) [name: "idx_modules_instructor"]
+    (course_id, sort_order) [name: "idx_modules_course_active", note: 'Partial: WHERE deleted_at IS NULL']
   }
 }
 
-Table core.resources {
+Table catalog.lessons {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   module_id bigint [not null]
-  // v2.1 HIGH-PRIORITY FIX H8: Denormalized course_id for performance (eliminates 3-table joins)
-  course_id bigint [note: 'v2.1: Denormalized from modules.course_id via trigger. Eliminates 3-table joins for course-level queries.', check: `course_id IS NOT NULL`]
+  course_id bigint [not null, note: 'Denormalized from modules.course_id via trigger.']
+  instructor_id bigint [note: 'Lesson author.']
   title varchar(300) [not null]
   description text
-  resource_type resource_type [not null]
+  content_type content_type [not null]
   file_object_key varchar(500)
   file_size_bytes bigint [check: `file_size_bytes IS NULL OR file_size_bytes >= 0`]
   mime_type varchar(100)
   duration_seconds integer [check: `duration_seconds IS NULL OR duration_seconds >= 0`]
-  page_count smallint [check: `page_count IS NULL OR page_count > 0`, note: 'CRITICAL FIX: Removed 100-page cap (was constraint error). 32,767 max sufficient for any textbook.']
-  current_version integer [not null, default: 1, check: `current_version >= 1`]
+  page_count smallint [check: `page_count IS NULL OR page_count > 0`]
   is_downloadable boolean [not null, default: true]
   download_size_limit_bytes bigint [not null, default: 524288000, check: `download_size_limit_bytes >= 0`]
   search_vector tsvector
-  created_by bigint
+  row_version integer [not null, default: 1]
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
-  Note: 'Resources require a trigger to maintain search_vector on title/description changes and to populate course_id from modules. See -- TRIGGER NOTES.'
-
+  Note: 'Third level in hierarchy. No version tracking — updated in place.'
   Indexes {
-    (public_id) [unique, name: "idx_resources_public"]
-    (module_id) [name: "idx_resources_module"]
-    (course_id) [name: "idx_resources_course", note: 'v2.1: Supports course-level queries without joining through modules']
-    (resource_type) [name: "idx_resources_type"]
-    (search_vector) [type: gin, name: "idx_resources_search"]
+    (public_id) [unique, name: "idx_lessons_public"]
+    (module_id) [name: "idx_lessons_module"]
+    (course_id) [name: "idx_lessons_course"]
+    (content_type) [name: "idx_lessons_content_type"]
+    (instructor_id) [name: "idx_lessons_instructor"]
+    (search_vector) [type: gin, name: "idx_lessons_search"]
+    (course_id, content_type) [name: "idx_lessons_course_type"]
+    (module_id) [name: "idx_lessons_module_active", note: 'Partial: WHERE deleted_at IS NULL']
   }
 }
 
-Table core.resource_versions {
-  id bigint [pk, increment]
-  public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  resource_id bigint [not null]
-  version_number integer [not null, check: `version_number >= 1`]
-  file_object_key varchar(500) [not null]
-  file_size_bytes bigint [check: `file_size_bytes >= 0`]
-  change_log text
-  created_by bigint
-  created_at timestamptz [not null, default: `now()`]
-  deleted_at timestamptz
+// ============================================================================
+// COURSE TAGS (tags apply only to courses)
+// ============================================================================
 
-  Indexes {
-    (public_id) [unique, name: "idx_resource_versions_public"]
-    (resource_id, version_number) [unique, name: "idx_resource_versions_unique"]
-    (resource_id) [name: "idx_resource_versions_resource"]
-  }
-}
-
-Table core.content_tags {
+Table catalog.course_tags {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   name varchar(100) [not null]
@@ -535,42 +517,111 @@ Table core.content_tags {
   description text
   created_by bigint
   created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
   Indexes {
-    (public_id) [unique, name: "idx_content_tags_public"]
-    (slug) [unique, name: "idx_content_tags_slug"]
+    (public_id) [unique, name: "idx_course_tags_public"]
+    (slug) [unique, name: "idx_course_tags_slug"]
   }
 }
 
-Table core.resource_tags {
+Table catalog.course_tag_assignments {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  resource_id bigint [not null]
+  course_id bigint [not null]
   tag_id bigint [not null]
   created_at timestamptz [not null, default: `now()`]
-
   Indexes {
-    (public_id) [unique, name: "idx_resource_tags_public"]
-    (resource_id, tag_id) [unique, name: "idx_resource_tags_unique"]
-    (tag_id) [name: "idx_resource_tags_tag"]
+    (public_id) [unique, name: "idx_course_tag_assignments_public"]
+    (course_id, tag_id) [unique, name: "idx_course_tag_assignments_unique"]
+    (tag_id) [name: "idx_course_tag_assignments_tag"]
+    (course_id) [name: "idx_course_tag_assignments_course"]
   }
 }
 
 // ============================================================================
-// SCHEMA: finance
+// [NEW] COURSE BUNDLES — Grouping courses by exam_type for packaged selling
 // ============================================================================
-Table finance.licenses {
+
+Table catalog.course_bundles {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  resource_id bigint [not null]
-  license_type license_type [not null]
+  exam_type_id bigint [not null, note: 'Bundles are themed around an exam_type. All courses in the bundle should belong to this exam_type (enforced via trigger).']
+  instructor_id bigint [note: 'Bundle creator. FK to auth.users.id.']
+  title varchar(300) [not null]
+  slug varchar(200) [not null]
+  description text
+  thumbnail_object_key varchar(500)
+  // Bundle pricing — the discounted package price
+  price_amount numeric(19, 4) [not null, check: `price_amount >= 0`, note: 'Bundle price. Must be less than sum of individual course prices (enforced via trigger).']
+  price_currency char(3) [not null, default: 'ETB', check: `price_currency ~ '^[A-Z]{3}$'`]
+  // Original combined price (for showing discount to students)
+  original_price_amount numeric(19, 4) [not null, check: `original_price_amount >= 0`, note: 'Sum of individual course prices. For displaying "Save X%" to students.']
+  discount_percentage numeric(5, 2) [not null, default: 0, check: `discount_percentage >= 0 AND discount_percentage <= 100`, note: 'Calculated: ((original - bundle) / original) * 100']
+  status bundle_status [not null, default: 'draft']
+  published_at timestamptz
+  row_version integer [not null, default: 1]
+  sort_order smallint [not null, default: 0, check: `sort_order >= 0`]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  deleted_at timestamptz
+  Note: '''
+    [NEW] Bundles group courses by exam_type for packaged selling.
+    A bundle is themed around an exam_type (e.g., "Complete TOEFL Prep Bundle").
+    Contains curated courses via bundle_courses junction table.
+    Priced at a discount vs buying courses individually.
+    Status lifecycle: draft → published → archived.
+    When a student purchases a bundle, they receive enrollments in ALL courses within it.
+  '''
+  Indexes {
+    (public_id) [unique, name: "idx_course_bundles_public"]
+    (exam_type_id, status, sort_order) [name: "idx_bundles_exam_status"]
+    (slug) [unique, name: "idx_bundles_slug"]
+    (instructor_id) [name: "idx_bundles_instructor"]
+    (status) [name: "idx_bundles_status"]
+    (exam_type_id, status) [name: "idx_bundles_active", note: 'Partial: WHERE deleted_at IS NULL']
+  }
+}
+
+Table catalog.bundle_courses {
+  id bigint [pk, increment]
+  public_id uuid [not null, default: `uuid_generate_v7()`, unique]
+  bundle_id bigint [not null]
+  course_id bigint [not null]
+  sort_order smallint [not null, default: 0, check: `sort_order >= 0`, note: 'Display order within the bundle']
+  is_included boolean [not null, default: true, note: 'Allows temporarily removing a course from bundle without deleting the row']
+  added_at timestamptz [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+  Note: '''
+    [NEW] M:N junction: bundles ↔ courses.
+    A course can appear in multiple bundles (e.g., "TOEFL Reading" in both
+    "Complete TOEFL Bundle" and "TOEFL Reading + Writing Bundle").
+    is_included allows soft-exclusion without breaking purchase history.
+    Trigger validates: course.exam_type_id = bundle.exam_type_id.
+  '''
+  Indexes {
+    (public_id) [unique, name: "idx_bundle_courses_public"]
+    (bundle_id, course_id) [unique, name: "idx_bundle_courses_unique"]
+    (bundle_id, is_included, sort_order) [name: "idx_bundle_courses_active"]
+    (course_id) [name: "idx_bundle_courses_course"]
+  }
+}
+
+// ============================================================================
+// SCHEMA: finance (Payments & Licensing)
+// ============================================================================
+
+Table finance.content_licenses {
+  id bigint [pk, increment]
+  public_id uuid [not null, default: `uuid_generate_v7()`, unique]
+  lesson_id bigint [not null]
+  license_type content_license_type [not null]
   license_terms text
-  start_date date [not null]
-  end_date date [check: `end_date IS NULL OR end_date >= start_date`, note: 'NULL end_date allowed for perpetual/open_source']
+  start_date timestamptz [not null]
+  end_date timestamptz [check: `end_date IS NULL OR end_date >= start_date`]
   auto_renewal boolean [not null, default: false]
   renewal_reminder_days integer [not null, default: 30, check: `renewal_reminder_days >= 0 AND renewal_reminder_days <= 365`]
-  status license_status [not null, default: 'active']
+  status content_license_status [not null, default: 'active']
   grace_period_days integer [not null, default: 90, check: `grace_period_days >= 0 AND grace_period_days <= 365`]
   licensor_name varchar(200)
   licensor_contact varchar(300)
@@ -580,34 +631,33 @@ Table finance.licenses {
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
   Indexes {
-    (public_id) [unique, name: "idx_licenses_public"]
-    (resource_id, status) [name: "idx_licenses_resource_status"]
-    (end_date, status) [name: "idx_licenses_expiry_monitor"]
+    (public_id) [unique, name: "idx_content_licenses_public"]
+    (lesson_id, status) [name: "idx_content_licenses_lesson_status"]
+    (end_date, status) [name: "idx_content_licenses_expiry_monitor"]
   }
 }
 
-Table finance.license_grants {
+Table finance.content_license_grants {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  license_id bigint [not null]
-  user_id bigint [not null]
+  content_license_id bigint [not null]
+  student_id bigint [not null]
   purchase_id bigint
   granted_at timestamptz [not null, default: `now()`]
   access_expires_at timestamptz [not null]
-  is_active boolean [not null, default: true]
+  status license_grant_status [not null, default: 'active']
   revoked_at timestamptz
   revoke_reason varchar(200)
   created_at timestamptz [not null, default: `now()`]
-  deleted_at timestamptz
-
+  updated_at timestamptz [not null, default: `now()`]
   Indexes {
-    (public_id) [unique, name: "idx_license_grants_public"]
-    (user_id, is_active) [name: "idx_license_grants_user_active"]
-    (license_id, is_active) [name: "idx_license_grants_license_active"]
-    (access_expires_at) [name: "idx_license_grants_expiry"]
-    (purchase_id) [name: "idx_license_grants_purchase"]
+    (public_id) [unique, name: "idx_content_license_grants_public"]
+    (student_id, status) [name: "idx_clg_student_status"]
+    (content_license_id, status) [name: "idx_clg_license_status"]
+    (access_expires_at) [name: "idx_clg_expiry"]
+    (purchase_id) [name: "idx_clg_purchase"]
+    (status, access_expires_at) [name: "idx_clg_active_expiring", note: 'Partial: WHERE status = active']
   }
 }
 
@@ -616,34 +666,29 @@ Table finance.payment_gateways {
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   provider_name payment_provider [not null]
   display_name varchar(100) [not null]
-  platform_restriction varchar(15) [check: `platform_restriction = 'all'`, note: 'v2.2: Telebirr available on all platforms']
   is_enabled boolean [not null, default: true]
   requires_disclosure boolean [not null, default: false]
   disclosure_text text
-  api_config jsonb [not null, default: '{}', note: '{"merchant_id": "...", "public_key_ref": "arn:aws:secretsmanager:..."}']
+  api_config jsonb [not null, default: '{}']
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
   Indexes {
     (public_id) [unique, name: "idx_payment_gateways_public"]
     (provider_name) [unique, name: "idx_payment_gateways_provider"]
-    (is_enabled, platform_restriction) [name: "idx_payment_gateways_filter"]
+    (is_enabled) [name: "idx_payment_gateways_enabled"]
   }
 }
 
-Enum purchase_platform {
-  ios
-  android
-  web
-}
-
+// [MODIFIED] purchase_options now supports both courses and bundles
 Table finance.purchase_options {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  course_id bigint [not null]
+  // [MODIFIED] course_id is now nullable — exactly one of course_id or bundle_id must be set
+  course_id bigint [note: '[MODIFIED] Nullable. XOR with bundle_id.']
+  bundle_id bigint [note: '[NEW] Nullable. XOR with course_id. References catalog.course_bundles.id.']
   payment_gateway_id bigint [not null]
-  platform purchase_platform [not null]
+  platform platform [not null]
   product_id varchar(255) [not null]
   display_name varchar(150) [not null]
   description text
@@ -654,39 +699,54 @@ Table finance.purchase_options {
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
+  Note: '''
+    [MODIFIED] Supports both individual course pricing and bundle pricing.
+    CHECK constraint ensures exactly one of course_id or bundle_id is non-null.
+    For bundles: price_amount is the bundle price (discounted).
+    For courses: price_amount is the individual course price.
+  '''
   Indexes {
     (public_id) [unique, name: "idx_purchase_options_public"]
-    (course_id, platform, is_active) [name: "idx_purchase_options_course_platform"]
+    (course_id, platform, is_active) [name: "idx_purchase_options_course"]
+    (bundle_id, platform, is_active) [name: "idx_purchase_options_bundle"]
     (payment_gateway_id) [name: "idx_purchase_options_gateway"]
   }
 }
 
+// [MODIFIED] purchases now supports bundle purchases
 Table finance.purchases {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  user_id bigint [not null]
-  course_id bigint [not null]
-  purchase_option_id bigint [not null, note: 'v2.2: Now NOT NULL — purchase option is always required']
+  student_id bigint [not null]
+  // [MODIFIED] course_id is now nullable — exactly one of course_id or bundle_id
+  course_id bigint [note: '[MODIFIED] Nullable. Set for individual course purchases.']
+  bundle_id bigint [note: '[NEW] Nullable. Set for bundle purchases.']
+  purchase_option_id bigint [not null]
   payment_gateway_id bigint [not null]
   status purchase_status [not null, default: 'initiated']
-  amount numeric(19, 4) [not null, check: `amount >= 0`, note: 'ISO 4217 compliant precision']
+  amount numeric(19, 4) [not null, check: `amount >= 0`]
   currency char(3) [not null, default: 'ETB', check: `currency ~ '^[A-Z]{3}$'`]
   receipt_object_key varchar(500)
   completed_at timestamptz
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
-  Note: 'v2.2: Telebirr-only purchases. Removed platform_fee_amount (no Apple/Google fees). No refund fields (no refunds for Ethiopian users).'
-
+  Note: '''
+    [MODIFIED] Supports both individual course and bundle purchases.
+    CHECK: exactly one of course_id or bundle_id is non-null.
+    When a bundle is purchased, application creates enrollments for each course in the bundle.
+    Telebirr-only. No refunds.
+  '''
   Indexes {
     (public_id) [unique, name: "idx_purchases_public"]
-    (user_id, created_at) [name: "idx_purchases_user_time"]
+    (student_id, created_at) [name: "idx_purchases_student_time"]
     (course_id) [name: "idx_purchases_course"]
+    (bundle_id) [name: "idx_purchases_bundle"]
     (purchase_option_id) [name: "idx_purchases_option"]
     (status) [name: "idx_purchases_status"]
-    (user_id, course_id) [name: "idx_purchases_user_course"]
+    (student_id, course_id) [name: "idx_purchases_student_course"]
+    (student_id, bundle_id) [name: "idx_purchases_student_bundle"]
+    (status, created_at) [name: "idx_purchases_status_time"]
   }
 }
 
@@ -703,10 +763,7 @@ Table finance.purchase_transactions {
   error_message text
   idempotency_key varchar(255) [not null]
   created_at timestamptz [not null, default: `now()`]
-  deleted_at timestamptz
-
-  Note: 'v2.2: Telebirr-only transactions. Removed external_receipt_data, refund_reason, refund_policy_applied (no refunds, no Apple/Google).'
-
+  Note: 'Immutable transaction log.'
   Indexes {
     (public_id) [unique, name: "idx_purchase_transactions_public"]
     (purchase_id) [name: "idx_purchase_transactions_purchase"]
@@ -717,75 +774,107 @@ Table finance.purchase_transactions {
 }
 
 // ============================================================================
-// SCHEMA: learning
+// SCHEMA: learning (Enrollment, Progress & Assessment)
 // ============================================================================
 
-Table learning.user_enrollments {
+Table learning.enrollments {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  user_id bigint [not null]
+  student_id bigint [not null]
   course_id bigint [not null]
   purchase_id bigint
+  bundle_id bigint [note: '[NEW] Set when enrollment was created from a bundle purchase.']
   enrollment_source enrollment_source [not null, default: 'purchase']
   progress_percentage numeric(5, 2) [not null, default: 0, check: `progress_percentage >= 0 AND progress_percentage <= 100`]
   is_completed boolean [not null, default: false]
   completed_at timestamptz
   last_accessed_at timestamptz
+  row_version integer [not null, default: 1]
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
+  Note: '''
+    Student registration in a course with progress tracking.
+    [NEW] bundle_id tracks which bundle triggered this enrollment (if any).
+    enrollment_source = 'bundle_purchase' when created from a bundle.
+    CHECK: enrollment_source='purchase' requires purchase_id.
+    CHECK: enrollment_source='bundle_purchase' requires bundle_id AND purchase_id.
+  '''
   Indexes {
     (public_id) [unique, name: "idx_enrollments_public"]
-    (user_id, course_id) [unique, name: "idx_enrollments_unique"]
-    (user_id, last_accessed_at) [name: "idx_enrollments_user_recent"]
+    (student_id, course_id) [unique, name: "idx_enrollments_unique"]
+    (student_id, last_accessed_at) [name: "idx_enrollments_student_recent"]
     (course_id, is_completed) [name: "idx_enrollments_course_completion"]
+    (purchase_id) [name: "idx_enrollments_purchase"]
+    (bundle_id) [name: "idx_enrollments_bundle"]
+    (student_id, last_accessed_at) [name: "idx_enrollments_active", note: 'Partial: WHERE deleted_at IS NULL']
+  }
+}
+
+Table learning.lesson_completions {
+  id bigint [pk, increment]
+  public_id uuid [not null, default: `uuid_generate_v7()`, unique]
+  student_id bigint [not null]
+  lesson_id bigint [not null]
+  enrollment_id bigint [not null]
+  is_completed boolean [not null, default: false]
+  completed_at timestamptz
+  time_spent_seconds integer [check: `time_spent_seconds IS NULL OR time_spent_seconds >= 0`]
+  row_version integer [not null, default: 1]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+  Note: 'Granular progress tracking per lesson. Partitioned monthly.'
+  Indexes {
+    (public_id) [unique, name: "idx_lesson_completions_public"]
+    (student_id, lesson_id) [unique, name: "idx_lesson_completions_unique"]
+    (enrollment_id) [name: "idx_lesson_completions_enrollment"]
+    (lesson_id) [name: "idx_lesson_completions_lesson"]
+    (enrollment_id, is_completed) [name: "idx_lesson_completions_progress"]
+    (enrollment_id, is_completed) [name: "idx_lesson_completions_incomplete", note: 'Partial: WHERE is_completed = false']
   }
 }
 
 Table learning.quiz_questions {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  resource_id bigint [not null, note: 'v2.1 CRITICAL FIX C5: Must reference a resource with resource_type = quiz. Enforced via trigger.']
-  version_number integer [not null, check: `version_number >= 1`]
+  lesson_id bigint [not null, note: 'Must reference lesson with content_type=quiz. Enforced via trigger.']
   question_index smallint [not null, check: `question_index >= 0`]
   question_text text [not null]
   correct_answer text [not null]
   explanation text
+  row_version integer [not null, default: 1]
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
-  Note: 'Normalized from quiz_answers — resolves 2NF violation (question_text depends on question_index, not quiz_attempt_id). v2.1: FK validation trigger ensures resource_id references a quiz-type resource.'
-
   Indexes {
     (public_id) [unique, name: "idx_quiz_questions_public"]
-    (resource_id, version_number, question_index) [unique, name: "idx_quiz_questions_unique"]
-    (resource_id) [name: "idx_quiz_questions_resource"]
+    (lesson_id, question_index) [unique, name: "idx_quiz_questions_unique"]
+    (lesson_id) [name: "idx_quiz_questions_lesson"]
   }
 }
 
 Table learning.quiz_attempts {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  user_id bigint [not null]
-  resource_id bigint [not null]
+  student_id bigint [not null]
+  lesson_id bigint [not null]
   attempt_number smallint [not null, check: `attempt_number >= 1`]
   total_questions smallint [not null, check: `total_questions > 0`]
   correct_answers smallint [not null, check: `correct_answers >= 0 AND correct_answers <= total_questions`]
-  score_percentage numeric(5, 2) [not null, check: `score_percentage >= 0 AND score_percentage <= 100`]
-  passed boolean [not null]
+  quiz_score_percentage numeric(5, 2) [not null, check: `quiz_score_percentage >= 0 AND quiz_score_percentage <= 100`]
+  is_passed boolean [not null]
   duration_seconds integer [check: `duration_seconds IS NULL OR duration_seconds >= 0`]
   started_at timestamptz [not null]
   completed_at timestamptz
+  row_version integer [not null, default: 1]
   created_at timestamptz [not null, default: `now()`]
-  deleted_at timestamptz
-
+  Note: 'Partitioned monthly by started_at.'
   Indexes {
     (public_id) [unique, name: "idx_quiz_attempts_public"]
-    (user_id, resource_id) [name: "idx_quiz_attempts_user_resource"]
-    (user_id, created_at) [name: "idx_quiz_attempts_user_time"]
-    (resource_id, passed) [name: "idx_quiz_attempts_resource_pass"]
+    (student_id, lesson_id) [name: "idx_quiz_attempts_student_lesson"]
+    (student_id, created_at) [name: "idx_quiz_attempts_student_time"]
+    (lesson_id, is_passed) [name: "idx_quiz_attempts_lesson_pass"]
+    (student_id, lesson_id, completed_at) [name: "idx_quiz_attempts_history"]
   }
 }
 
@@ -793,15 +882,13 @@ Table learning.quiz_answers {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   quiz_attempt_id bigint [not null]
-  question_id bigint [not null, note: 'FK to quiz_questions.id — replaces question_text/correct_answer duplication']
-  user_answer text
+  question_id bigint [not null]
+  student_answer text
   is_correct boolean [not null]
   answered_at timestamptz [not null]
+  row_version integer [not null, default: 1]
   created_at timestamptz [not null, default: `now()`]
-  deleted_at timestamptz
-
-  Note: 'Refactored: removed denormalized question_text and correct_answer. Now references quiz_questions.'
-
+  Note: 'Grade modifications logged to quiz_answer_history via trigger.'
   Indexes {
     (public_id) [unique, name: "idx_quiz_answers_public"]
     (quiz_attempt_id, question_id) [unique, name: "idx_quiz_answers_unique"]
@@ -810,10 +897,30 @@ Table learning.quiz_answers {
   }
 }
 
+Table learning.quiz_answer_history {
+  id bigint [pk, increment]
+  public_id uuid [not null, default: `uuid_generate_v7()`, unique]
+  quiz_answer_id bigint [not null]
+  old_is_correct boolean
+  new_is_correct boolean
+  old_student_answer text
+  new_student_answer text
+  changed_by bigint [not null]
+  change_reason varchar(200)
+  changed_at timestamptz [not null, default: `now()`]
+  Note: 'Immutable grade audit trail. Append-only.'
+  Indexes {
+    (public_id) [unique, name: "idx_quiz_answer_history_public"]
+    (quiz_answer_id, changed_at) [name: "idx_qah_answer_time"]
+    (changed_by, changed_at) [name: "idx_qah_changed_by"]
+    (changed_at) [name: "idx_qah_time"]
+  }
+}
+
 Table learning.course_reviews {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  user_id bigint [not null]
+  student_id bigint [not null]
   course_id bigint [not null]
   rating smallint [not null, check: `rating >= 1 AND rating <= 5`]
   title varchar(200) [not null]
@@ -822,53 +929,56 @@ Table learning.course_reviews {
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
   Indexes {
     (public_id) [unique, name: "idx_course_reviews_public"]
     (course_id, rating) [name: "idx_course_reviews_course_rating"]
-    (user_id, course_id) [unique, name: "idx_course_reviews_user_course"]
+    (student_id, course_id) [unique, name: "idx_course_reviews_student_course"]
     (moderation_status, created_at) [name: "idx_course_reviews_status_time"]
   }
 }
 
 // ============================================================================
-// SCHEMA: ops
+// SCHEMA: ops (Operations, Security & Admin)
 // ============================================================================
+
 Table ops.audit_logs {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   actor_id bigint
   actor_ip inet
   action audit_action [not null]
-  resource_type varchar(50)
-  resource_id bigint
+  resource_type audit_resource_type [not null]
+  course_id bigint
+  module_id bigint
+  lesson_id bigint
+  enrollment_id bigint
+  quiz_attempt_id bigint
+  purchase_id bigint
+  bundle_id bigint [note: '[NEW] For bundle-related audit events']
   old_values jsonb
   new_values jsonb
   metadata jsonb [not null, default: '{}']
   created_at timestamptz [not null, default: `now()`]
-
-  Note: 'Immutable security and compliance audit trail. Partitioned by created_at monthly. No soft-delete — deletion would violate audit integrity requirements.'
-
+  Note: 'Immutable audit trail with typed FKs. Partitioned monthly.'
   Indexes {
     (public_id) [unique, name: "idx_audit_logs_public"]
     (actor_id, created_at) [name: "idx_audit_logs_actor_time"]
     (action, created_at) [name: "idx_audit_logs_action_time"]
-    (resource_type, resource_id) [name: "idx_audit_logs_resource"]
+    (resource_type, course_id) [name: "idx_audit_logs_course"]
+    (resource_type, bundle_id) [name: "idx_audit_logs_bundle"]
+    (created_at) [name: "idx_audit_logs_time"]
   }
 }
 
 Table ops.principals {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  principal_type varchar(20) [not null, check: `principal_type IN ('user', 'service', 'integration')`, note: 'Discriminator column for polymorphic FK resolution']
-  user_id bigint [check: `(principal_type = 'user' AND user_id IS NOT NULL) OR (principal_type != 'user' AND user_id IS NULL)`]
-  service_name varchar(100) [check: `(principal_type = 'service' AND service_name IS NOT NULL) OR (principal_type != 'service' AND service_name IS NULL)`]
-  integration_name varchar(100) [check: `(principal_type = 'integration' AND integration_name IS NOT NULL) OR (principal_type != 'integration' AND integration_name IS NULL)`]
+  principal_type varchar(20) [not null, check: `principal_type IN ('user', 'service', 'integration')`]
+  user_id bigint
+  service_name varchar(100)
+  integration_name varchar(100)
   created_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
-  Note: 'Abstract principal table to resolve polymorphic FK in api_keys. Replaces owner_type/owner_id pattern without referential integrity.'
-
   Indexes {
     (public_id) [unique, name: "idx_principals_public"]
     (principal_type) [name: "idx_principals_type"]
@@ -883,49 +993,42 @@ Table ops.roles {
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   name varchar(50) [not null]
   description text
-  permissions jsonb [not null, default: '[]', note: '["users:read", "content:manage", "finance:view"]']
+  permissions jsonb [not null, default: '[]']
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
   Indexes {
     (public_id) [unique, name: "idx_roles_public"]
     (name) [unique, name: "idx_roles_name"]
   }
 }
 
-Table ops.user_roles {
+Table ops.course_roles {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   user_id bigint [not null]
+  course_id bigint [note: 'NULL = global role. Non-null = course-scoped role.']
   role_id bigint [not null]
   granted_by bigint
   granted_at timestamptz [not null, default: `now()`]
   revoked_at timestamptz
   created_at timestamptz [not null, default: `now()`]
-  deleted_at timestamptz
-
+  Note: 'Course-scoped RBAC. A user can be instructor for Course A and student in Course B.'
   Indexes {
-    (public_id) [unique, name: "idx_user_roles_public"]
-    (user_id, role_id) [unique, name: "idx_user_roles_unique"]
-    (role_id) [name: "idx_user_roles_role"]
+    (public_id) [unique, name: "idx_course_roles_public"]
+    (user_id, course_id, role_id) [unique, name: "idx_course_roles_unique"]
+    (course_id, role_id) [name: "idx_course_roles_course_role"]
+    (role_id) [name: "idx_course_roles_role"]
+    (user_id) [name: "idx_course_roles_user"]
   }
 }
 
-// v2.1 HIGH-PRIORITY FIX H4: Permissions reference table for api_keys validation
 Table ops.permissions_reference {
-  permission_key varchar(100) [pk, note: 'e.g., "users:read", "content:manage", "finance:view"']
+  permission_key varchar(100) [pk]
   description text
-  resource_scope varchar(50) [note: 'High-level resource category: users, content, finance, analytics, admin']
+  resource_scope varchar(50)
   is_deprecated boolean [not null, default: false]
   created_at timestamptz [not null, default: `now()`]
-
-  Note: '''
-    v2.1: Registry of valid permissions for api_keys.permissions JSONB validation.
-    Trigger on api_keys validates all array elements exist in this table.
-    Enables permissions documentation, deprecation tracking, and safe permission management.
-  '''
-
   Indexes {
     (resource_scope) [name: "idx_permissions_reference_scope"]
   }
@@ -940,15 +1043,15 @@ Table ops.security_events {
   severity severity_level [not null, default: 'info']
   description text [not null]
   metadata jsonb [not null, default: '{}']
+  retention_expires_at timestamptz
   created_at timestamptz [not null, default: `now()`]
-
-  Note: 'Immutable security incident log. Partitioned by created_at monthly. No soft-delete.'
-
+  Note: 'Immutable security log. Partitioned monthly.'
   Indexes {
     (public_id) [unique, name: "idx_security_events_public"]
     (event_type, created_at) [name: "idx_security_events_type_time"]
     (severity, created_at) [name: "idx_security_events_severity_time"]
     (created_at) [name: "idx_security_events_time"]
+    (retention_expires_at) [name: "idx_security_events_retention"]
   }
 }
 
@@ -959,8 +1062,7 @@ Table ops.feature_flags {
   description text
   flag_type flag_type [not null]
   is_enabled boolean [not null, default: false]
-  // v2.1 HIGH-PRIORITY FIX H7: Added consistency CHECK between is_enabled and rollout_percentage
-  rollout_percentage smallint [check: `(is_enabled = false AND rollout_percentage IS NULL) OR (is_enabled = true AND rollout_percentage IS NOT NULL AND rollout_percentage >= 0 AND rollout_percentage <= 100)`, note: 'v2.1: is_enabled=false requires null rollout_percentage; is_enabled=true requires 0-100.']
+  rollout_percentage smallint
   target_segments jsonb
   start_date timestamptz
   end_date timestamptz [check: `end_date IS NULL OR end_date > start_date`]
@@ -968,7 +1070,6 @@ Table ops.feature_flags {
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
   Indexes {
     (public_id) [unique, name: "idx_feature_flags_public"]
     (flag_key) [unique, name: "idx_feature_flags_key"]
@@ -980,16 +1081,13 @@ Table ops.system_configs {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   config_key varchar(100) [not null]
-  config_value jsonb [not null, note: 'Actual secrets MUST reference AWS Secrets Manager/HashiCorp Vault. This table stores only configuration metadata and safe-to-DB values.']
+  config_value jsonb [not null]
   description text
   is_sensitive boolean [not null, default: false]
   updated_by bigint
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
-  Note: 'Sensitive config values must not be stored directly. Use is_sensitive flag to enforce Vault reference pattern via CHECK constraint.'
-
   Indexes {
     (public_id) [unique, name: "idx_system_configs_public"]
     (config_key) [unique, name: "idx_system_configs_key"]
@@ -1004,13 +1102,10 @@ Table ops.outbox_events {
   event_type varchar(200) [not null]
   event_data jsonb [not null]
   metadata jsonb [not null, default: '{}']
-  is_published boolean [not null, default: false, note: 'Renamed from "published" for positive framing consistency']
+  is_published boolean [not null, default: false]
   published_at timestamptz
   created_at timestamptz [not null, default: `now()`]
-
-  Note: 'Transactional outbox pattern for reliable event delivery. Partitioned by created_at daily.'
-
-
+  Note: 'Transactional outbox. Partitioned daily.'
   Indexes {
     (public_id) [unique, name: "idx_outbox_events_public"]
     (is_published, created_at) [name: "idx_outbox_events_publisher_poll"]
@@ -1022,7 +1117,7 @@ Table ops.outbox_events {
 Table ops.webhook_events {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  provider payment_provider [not null, note: 'Telebirr only (sole payment provider)']
+  provider payment_provider [not null]
   event_type varchar(100) [not null]
   raw_payload jsonb [not null]
   signature_header varchar(500)
@@ -1031,8 +1126,7 @@ Table ops.webhook_events {
   error_message text
   received_at timestamptz [not null, default: `now()`]
   processed_at timestamptz
-  deleted_at timestamptz
-
+  Note: 'Immutable webhook log. Partitioned monthly.'
   Indexes {
     (public_id) [unique, name: "idx_webhook_events_public"]
     (processing_status, received_at) [name: "idx_webhook_events_processing"]
@@ -1044,20 +1138,17 @@ Table ops.webhook_events {
 Table ops.api_keys {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  principal_id bigint [not null, note: 'FK to principals.id — resolves polymorphic owner issue']
+  principal_id bigint [not null]
   key_hash varchar(255) [not null]
   key_hash_salt bytea [not null]
   key_prefix varchar(10) [not null]
-  permissions jsonb [not null, default: '[]', note: 'v2.1: ["users:read", "content:manage"] — validated against ops.permissions_reference']
+  permissions jsonb [not null, default: '[]']
   is_active boolean [not null, default: true]
   last_used_at timestamptz
   expires_at timestamptz
   created_at timestamptz [not null, default: `now()`]
   revoked_at timestamptz
   deleted_at timestamptz
-
-  Note: 'Refactored polymorphic owner_type/owner_id → single FK to principals table. v2.1: Permissions validated against permissions_reference table.'
-
   Indexes {
     (public_id) [unique, name: "idx_api_keys_public"]
     (key_hash) [unique, name: "idx_api_keys_hash"]
@@ -1081,8 +1172,7 @@ Table ops.job_queue {
   started_at timestamptz
   completed_at timestamptz
   created_at timestamptz [not null, default: `now()`]
-  deleted_at timestamptz
-
+  Note: 'Job queue. Partitioned monthly.'
   Indexes {
     (public_id) [unique, name: "idx_job_queue_public"]
     (status, priority, scheduled_at) [name: "idx_job_queue_worker_poll"]
@@ -1091,45 +1181,35 @@ Table ops.job_queue {
   }
 }
 
-// v2.1 MEDIUM FIX M1: Moderation queue table for FR-803 review pipeline
 Table ops.moderation_queue {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  content_type varchar(50) [not null, note: 'e.g., "review", "resource_report", "user_report"']
-  content_id bigint [not null, note: 'ID in the source table (e.g., review ID)']
+  content_type moderation_content_type [not null]
+  content_id bigint [not null]
   status moderation_status [not null, default: 'pending']
-  submitted_by bigint [note: 'User who submitted the content for review']
-  assigned_to bigint [note: 'Admin/moderator assigned to review']
-  priority smallint [not null, default: 0, check: `priority >= 0 AND priority <= 10`, note: '10 = urgent']
+  submitted_by bigint
+  assigned_to bigint
+  priority smallint [not null, default: 0, check: `priority >= 0 AND priority <= 10`]
   submitted_at timestamptz [not null, default: `now()`]
-  // v2.1: SLA tracking for FR-803 "48-hour moderation SLA"
-  sla_deadline_at timestamptz [not null, note: 'v2.1: Set to submitted_at + 48 hours for FR-803 SLA tracking']
+  sla_deadline_at timestamptz [not null]
   resolved_at timestamptz
   resolution_note text
-  auto_flagged_reasons jsonb [note: 'v2.1: e.g., ["profanity_filter", "spam_detected"] — from automated screening']
+  auto_flagged_reasons jsonb
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
-
-  Note: '''
-    v2.1: Moderation pipeline for user-submitted content (FR-803).
-    Supports reviews, resource reports, and user reports.
-    SLA tracking via sla_deadline_at for 48-hour moderation commitment.
-    Auto-flagged reasons from automated profanity/spam detection.
-  '''
-
   Indexes {
     (public_id) [unique, name: "idx_moderation_queue_public"]
-    (status, priority, sla_deadline_at) [name: "idx_moderation_queue_worker", note: 'For moderator dashboard: pending items sorted by priority/SLA']
+    (status, priority, sla_deadline_at) [name: "idx_moderation_queue_worker"]
     (assigned_to, status) [name: "idx_moderation_queue_assignee"]
     (submitted_by) [name: "idx_moderation_queue_submitter"]
-    (sla_deadline_at) [name: "idx_moderation_queue_sla", note: 'For FR-807 alerts: items >48 hours old']
+    (sla_deadline_at) [name: "idx_moderation_queue_sla"]
   }
 }
 
+// ============================================================================
+// SCHEMA: shared (File Storage)
+// ============================================================================
 
-// ============================================================================
-// SCHEMA: shared
-// ============================================================================
 Table shared.file_metadata {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
@@ -1141,21 +1221,17 @@ Table shared.file_metadata {
   checksum_sha256 varchar(64)
   encryption_key_reference varchar(500)
   is_public boolean [not null, default: false]
-  // v2.1 MEDIUM FIX M7: FK reference to resource_versions for file ownership tracking
-  resource_version_id bigint [note: 'v2.1: FK to core.resource_versions.id — tracks which resource version owns this file']
+  lesson_id bigint [note: 'FK to catalog.lessons.id. Direct ownership link.']
   uploaded_by bigint
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
-
-  Note: 'Central file metadata registry. v2.1: resource_version_id links file to its owning resource version for ownership tracking.'
-
   Indexes {
     (public_id) [unique, name: "idx_file_metadata_public"]
     (object_key) [unique, name: "idx_file_metadata_object_key"]
     (bucket_name) [name: "idx_file_metadata_bucket"]
     (uploaded_by, created_at) [name: "idx_file_metadata_uploader_time"]
-    (resource_version_id) [name: "idx_file_metadata_resource_version", note: 'v2.1: For finding all files belonging to a resource version']
+    (lesson_id) [name: "idx_file_metadata_lesson"]
   }
 }
 
@@ -1163,300 +1239,225 @@ Table shared.file_metadata {
 // FOREIGN KEY RELATIONSHIPS
 // ============================================================================
 
-// SCHEMA: auth
+// --- auth ---
 Ref: auth.user_profiles.user_id > auth.users.id [delete: cascade, update: cascade]
 Ref: auth.devices.user_id > auth.users.id [delete: cascade, update: cascade]
 Ref: auth.user_consents.user_id > auth.users.id [delete: cascade, update: cascade]
-// v2.2: REMOVED — user_sessions, refresh_tokens, password_history references (Better Auth manages sessions)
 
-// SCHEMA: core
-Ref: core.exam_types.education_level_id > core.education_levels.id [delete: restrict, update: cascade]
-Ref: core.exam_types.parent_exam_type_id > core.exam_types.id [delete: restrict, update: cascade]
-Ref: core.courses.exam_type_id > core.exam_types.id [delete: restrict, update: cascade]
-Ref: core.courses.created_by > auth.users.id [delete: set null, update: cascade]
-// v2.1: course_stats FK
-Ref: core.course_stats.course_id > core.courses.id [delete: cascade, update: cascade]
-Ref: core.modules.course_id > core.courses.id [delete: cascade, update: cascade]
-Ref: core.modules.created_by > auth.users.id [delete: set null, update: cascade]
-Ref: core.resources.module_id > core.modules.id [delete: cascade, update: cascade]
-// v2.1: Denormalized course_id FK
-Ref: core.resources.course_id > core.courses.id [delete: restrict, update: cascade]
-Ref: core.resources.created_by > auth.users.id [delete: set null, update: cascade]
-Ref: core.resource_versions.resource_id > core.resources.id [delete: cascade, update: cascade]
-Ref: core.resource_versions.created_by > auth.users.id [delete: set null, update: cascade]
-Ref: core.content_tags.created_by > auth.users.id [delete: set null, update: cascade]
-Ref: core.resource_tags.resource_id > core.resources.id [delete: cascade, update: cascade]
-Ref: core.resource_tags.tag_id > core.content_tags.id [delete: cascade, update: cascade]
+// --- catalog ---
+// [REMOVED] exam_types.education_level_id FK — education_levels deleted
+Ref: catalog.exam_types.parent_exam_type_id > catalog.exam_types.id [delete: restrict, update: cascade]
+Ref: catalog.courses.exam_type_id > catalog.exam_types.id [delete: restrict, update: cascade]
+Ref: catalog.courses.instructor_id > auth.users.id [delete: set null, update: cascade]
+Ref: catalog.course_stats.course_id > catalog.courses.id [delete: cascade, update: cascade]
+Ref: catalog.course_stats_history.course_id > catalog.courses.id [delete: cascade, update: cascade]
+Ref: catalog.modules.course_id > catalog.courses.id [delete: restrict, update: cascade]
+Ref: catalog.modules.instructor_id > auth.users.id [delete: set null, update: cascade]
+Ref: catalog.lessons.module_id > catalog.modules.id [delete: restrict, update: cascade]
+Ref: catalog.lessons.course_id > catalog.courses.id [delete: restrict, update: cascade]
+Ref: catalog.lessons.instructor_id > auth.users.id [delete: set null, update: cascade]
+Ref: catalog.course_tags.created_by > auth.users.id [delete: set null, update: cascade]
+Ref: catalog.course_tag_assignments.course_id > catalog.courses.id [delete: cascade, update: cascade]
+Ref: catalog.course_tag_assignments.tag_id > catalog.course_tags.id [delete: cascade, update: cascade]
 
-// SCHEMA: finance
-Ref: finance.licenses.resource_id > core.resources.id [delete: restrict, update: cascade]
-Ref: finance.licenses.created_by > auth.users.id [delete: set null, update: cascade]
-Ref: finance.license_grants.license_id > finance.licenses.id [delete: cascade, update: cascade]
-Ref: finance.license_grants.user_id > auth.users.id [delete: cascade, update: cascade]
-Ref: finance.license_grants.purchase_id > finance.purchases.id [delete: set null, update: cascade]
-Ref: finance.purchases.user_id > auth.users.id [delete: restrict, update: cascade]
-Ref: finance.purchases.course_id > core.courses.id [delete: restrict, update: cascade]
+// --- catalog: bundles ---
+Ref: catalog.course_bundles.exam_type_id > catalog.exam_types.id [delete: restrict, update: cascade]
+Ref: catalog.course_bundles.instructor_id > auth.users.id [delete: set null, update: cascade]
+Ref: catalog.bundle_courses.bundle_id > catalog.course_bundles.id [delete: cascade, update: cascade]
+Ref: catalog.bundle_courses.course_id > catalog.courses.id [delete: restrict, update: cascade]
+
+// --- finance ---
+Ref: finance.content_licenses.lesson_id > catalog.lessons.id [delete: restrict, update: cascade]
+Ref: finance.content_licenses.created_by > auth.users.id [delete: set null, update: cascade]
+Ref: finance.content_license_grants.content_license_id > finance.content_licenses.id [delete: cascade, update: cascade]
+Ref: finance.content_license_grants.student_id > auth.users.id [delete: restrict, update: cascade]
+Ref: finance.content_license_grants.purchase_id > finance.purchases.id [delete: set null, update: cascade]
+Ref: finance.purchases.student_id > auth.users.id [delete: restrict, update: cascade]
+Ref: finance.purchases.course_id > catalog.courses.id [delete: restrict, update: cascade]
+Ref: finance.purchases.bundle_id > catalog.course_bundles.id [delete: restrict, update: cascade]
 Ref: finance.purchases.payment_gateway_id > finance.payment_gateways.id [delete: restrict, update: cascade]
-Ref: finance.purchase_transactions.purchase_id > finance.purchases.id [delete: cascade, update: cascade]
-Ref: finance.purchase_options.course_id > core.courses.id [delete: restrict, update: cascade]
-Ref: finance.purchase_options.payment_gateway_id > finance.payment_gateways.id [delete: restrict, update: cascade]
 Ref: finance.purchases.purchase_option_id > finance.purchase_options.id [delete: restrict, update: cascade]
+Ref: finance.purchase_transactions.purchase_id > finance.purchases.id [delete: cascade, update: cascade]
+Ref: finance.purchase_options.course_id > catalog.courses.id [delete: restrict, update: cascade]
+Ref: finance.purchase_options.bundle_id > catalog.course_bundles.id [delete: restrict, update: cascade]
+Ref: finance.purchase_options.payment_gateway_id > finance.payment_gateways.id [delete: restrict, update: cascade]
 
-// SCHEMA: learning
-Ref: learning.user_enrollments.user_id > auth.users.id [delete: cascade, update: cascade]
-Ref: learning.user_enrollments.course_id > core.courses.id [delete: restrict, update: cascade]
-Ref: learning.user_enrollments.purchase_id > finance.purchases.id [delete: set null, update: cascade]
-Ref: learning.quiz_questions.resource_id > core.resources.id [delete: cascade, update: cascade]
-Ref: learning.quiz_attempts.user_id > auth.users.id [delete: cascade, update: cascade]
-Ref: learning.quiz_attempts.resource_id > core.resources.id [delete: restrict, update: cascade]
+// --- learning ---
+Ref: learning.enrollments.student_id > auth.users.id [delete: restrict, update: cascade]
+Ref: learning.enrollments.course_id > catalog.courses.id [delete: restrict, update: cascade]
+Ref: learning.enrollments.purchase_id > finance.purchases.id [delete: set null, update: cascade]
+Ref: learning.enrollments.bundle_id > catalog.course_bundles.id [delete: set null, update: cascade]
+Ref: learning.lesson_completions.student_id > auth.users.id [delete: restrict, update: cascade]
+Ref: learning.lesson_completions.lesson_id > catalog.lessons.id [delete: restrict, update: cascade]
+Ref: learning.lesson_completions.enrollment_id > learning.enrollments.id [delete: cascade, update: cascade]
+Ref: learning.quiz_questions.lesson_id > catalog.lessons.id [delete: restrict, update: cascade]
+Ref: learning.quiz_attempts.student_id > auth.users.id [delete: restrict, update: cascade]
+Ref: learning.quiz_attempts.lesson_id > catalog.lessons.id [delete: restrict, update: cascade]
 Ref: learning.quiz_answers.quiz_attempt_id > learning.quiz_attempts.id [delete: cascade, update: cascade]
 Ref: learning.quiz_answers.question_id > learning.quiz_questions.id [delete: restrict, update: cascade]
-Ref: learning.course_reviews.user_id > auth.users.id [delete: cascade, update: cascade]
-Ref: learning.course_reviews.course_id > core.courses.id [delete: cascade, update: cascade]
+Ref: learning.quiz_answer_history.quiz_answer_id > learning.quiz_answers.id [delete: restrict, update: cascade]
+Ref: learning.quiz_answer_history.changed_by > auth.users.id [delete: restrict, update: cascade]
+Ref: learning.course_reviews.student_id > auth.users.id [delete: restrict, update: cascade]
+Ref: learning.course_reviews.course_id > catalog.courses.id [delete: restrict, update: cascade]
 
-// SCHEMA: ops
-Ref: ops.user_roles.user_id > auth.users.id [delete: cascade, update: cascade]
-Ref: ops.user_roles.role_id > ops.roles.id [delete: restrict, update: cascade]
-Ref: ops.user_roles.granted_by > auth.users.id [delete: set null, update: cascade]
+// --- ops ---
+Ref: ops.course_roles.user_id > auth.users.id [delete: cascade, update: cascade]
+Ref: ops.course_roles.course_id > catalog.courses.id [delete: cascade, update: cascade]
+Ref: ops.course_roles.role_id > ops.roles.id [delete: restrict, update: cascade]
+Ref: ops.course_roles.granted_by > auth.users.id [delete: set null, update: cascade]
 Ref: ops.audit_logs.actor_id > auth.users.id [delete: set null, update: cascade]
+Ref: ops.audit_logs.course_id > catalog.courses.id [delete: set null, update: cascade]
+Ref: ops.audit_logs.module_id > catalog.modules.id [delete: set null, update: cascade]
+Ref: ops.audit_logs.lesson_id > catalog.lessons.id [delete: set null, update: cascade]
+Ref: ops.audit_logs.enrollment_id > learning.enrollments.id [delete: set null, update: cascade]
+Ref: ops.audit_logs.quiz_attempt_id > learning.quiz_attempts.id [delete: set null, update: cascade]
+Ref: ops.audit_logs.purchase_id > finance.purchases.id [delete: set null, update: cascade]
+Ref: ops.audit_logs.bundle_id > catalog.course_bundles.id [delete: set null, update: cascade]
 Ref: ops.security_events.actor_id > auth.users.id [delete: set null, update: cascade]
 Ref: ops.principals.user_id > auth.users.id [delete: cascade, update: cascade]
 Ref: ops.feature_flags.created_by > auth.users.id [delete: set null, update: cascade]
 Ref: ops.system_configs.updated_by > auth.users.id [delete: set null, update: cascade]
 Ref: ops.api_keys.principal_id > ops.principals.id [delete: restrict, update: cascade]
-// v2.1: moderation_queue FKs
 Ref: ops.moderation_queue.submitted_by > auth.users.id [delete: set null, update: cascade]
 Ref: ops.moderation_queue.assigned_to > auth.users.id [delete: set null, update: cascade]
 
-// SCHEMA: shared
+// --- shared ---
 Ref: shared.file_metadata.uploaded_by > auth.users.id [delete: set null, update: cascade]
-// v2.1: file_metadata → resource_versions FK
-Ref: shared.file_metadata.resource_version_id > core.resource_versions.id [delete: set null, update: cascade]
+Ref: shared.file_metadata.lesson_id > catalog.lessons.id [delete: set null, update: cascade]
 
 // ============================================================================
-// PARTITIONING IMPLEMENTATION NOTES
+// TRIGGER NOTES
 // ============================================================================
 /*
--- Partitioned tables must be created with PARTITION BY clause before any data insertion.
--- The Partition blocks in this DBML indicate which tables require partitioning.
+-- [NEW] Validate bundle_courses: course must belong to same exam_type as bundle
+CREATE OR REPLACE FUNCTION validate_bundle_course_exam_type()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+  bundle_exam bigint;
+  course_exam bigint;
+BEGIN
+  SELECT exam_type_id INTO bundle_exam FROM catalog.course_bundles WHERE id = NEW.bundle_id;
+  SELECT exam_type_id INTO course_exam FROM catalog.courses WHERE id = NEW.course_id;
 
--- v2.1: Automated partition management via pg_partman + pg_cron (H1)
--- Install extensions:
-CREATE EXTENSION IF NOT EXISTS pg_partman;
-CREATE EXTENSION IF NOT EXISTS pg_cron;
+  IF bundle_exam IS NULL THEN
+    RAISE EXCEPTION 'bundle_id % does not exist', NEW.bundle_id;
+  END IF;
+  IF course_exam IS NULL THEN
+    RAISE EXCEPTION 'course_id % does not exist', NEW.course_id;
+  END IF;
+  IF bundle_exam != course_exam THEN
+    RAISE EXCEPTION 'Course exam_type (%) does not match bundle exam_type (%)', course_exam, bundle_exam;
+  END IF;
+  RETURN NEW;
+END;
+$$;
 
--- For PostgreSQL declarative partitioning, create child tables:
--- audit_logs (monthly):
-CREATE TABLE ops.audit_logs_2026_04 PARTITION OF ops.audit_logs
-  FOR VALUES FROM ('2026-04-01') TO ('2026-05-01');
+CREATE TRIGGER trg_validate_bundle_course
+  BEFORE INSERT OR UPDATE ON catalog.bundle_courses
+  FOR EACH ROW EXECUTE FUNCTION validate_bundle_course_exam_type();
 
--- outbox_events (daily):
-CREATE TABLE ops.outbox_events_2026_04_01 PARTITION OF ops.outbox_events
-  FOR VALUES FROM ('2026-04-01') TO ('2026-04-02');
+-- [NEW] Recalculate bundle pricing when courses are added/removed
+CREATE OR REPLACE FUNCTION recalculate_bundle_pricing()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+  total numeric(19,4) := 0;
+  bundle_price numeric(19,4);
+  orig numeric(19,4);
+BEGIN
+  -- Sum individual course prices for included courses
+  SELECT COALESCE(SUM(c.price_amount), 0) INTO total
+  FROM catalog.bundle_courses bc
+  JOIN catalog.courses c ON c.id = bc.course_id
+  WHERE bc.bundle_id = COALESCE(NEW.bundle_id, OLD.bundle_id)
+    AND bc.is_included = true
+    AND c.deleted_at IS NULL;
 
--- v2.1: Automate partition management with pg_partman extension (H1):
+  UPDATE catalog.course_bundles
+  SET original_price_amount = total,
+      discount_percentage = CASE
+        WHEN total > 0 THEN ROUND(((total - price_amount) / total) * 100, 2)
+        ELSE 0
+      END
+  WHERE id = COALESCE(NEW.bundle_id, OLD.bundle_id);
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+CREATE TRIGGER trg_recalculate_bundle_pricing
+  AFTER INSERT OR UPDATE OF is_included OR DELETE ON catalog.bundle_courses
+  FOR EACH ROW EXECUTE FUNCTION recalculate_bundle_pricing();
+
+-- [NEW] On bundle purchase completion, create enrollments for all included courses
+CREATE OR REPLACE FUNCTION create_bundle_enrollments()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.status = 'completed' AND NEW.bundle_id IS NOT NULL AND OLD.status != 'completed' THEN
+    INSERT INTO learning.enrollments (
+      public_id, student_id, course_id, purchase_id, bundle_id,
+      enrollment_source, progress_percentage, is_completed, row_version, created_at, updated_at
+    )
+    SELECT
+      uuid_generate_v7(),
+      NEW.student_id,
+      bc.course_id,
+      NEW.id,
+      NEW.bundle_id,
+      'bundle_purchase',
+      0,
+      false,
+      1,
+      now(),
+      now()
+    FROM catalog.bundle_courses bc
+    WHERE bc.bundle_id = NEW.bundle_id
+      AND bc.is_included = true
+    ON CONFLICT (student_id, course_id) DO NOTHING;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_bundle_purchase_enrollments
+  AFTER UPDATE OF status ON finance.purchases
+  FOR EACH ROW EXECUTE FUNCTION create_bundle_enrollments();
+
+-- [MODIFIED] purchase_options XOR constraint (also as CHECK):
+-- ALTER TABLE finance.purchase_options
+--   ADD CONSTRAINT chk_purchase_options_xor
+--   CHECK (
+--     (course_id IS NOT NULL AND bundle_id IS NULL)
+--     OR (course_id IS NULL AND bundle_id IS NOT NULL)
+--   );
+
+-- [MODIFIED] purchases XOR constraint:
+-- ALTER TABLE finance.purchases
+--   ADD CONSTRAINT chk_purchases_xor
+--   CHECK (
+--     (course_id IS NOT NULL AND bundle_id IS NULL)
+--     OR (course_id IS NULL AND bundle_id IS NOT NULL)
+--   );
+
+-- [MODIFIED] enrollment_source constraint:
+-- ALTER TABLE learning.enrollments
+--   ADD CONSTRAINT chk_enrollment_source_bundle
+--   CHECK (
+--     (enrollment_source = 'bundle_purchase' AND bundle_id IS NOT NULL AND purchase_id IS NOT NULL)
+--     OR (enrollment_source = 'purchase' AND purchase_id IS NOT NULL)
+--     OR (enrollment_source IN ('free_access', 'admin_grant', 'preview'))
+--   );
+*/
+
+// ============================================================================
+// PARTITIONING STRATEGY
+// ============================================================================
+/*
+SELECT create_parent('learning.lesson_completions', 'created_at', 'native', 'monthly');
+SELECT create_parent('learning.quiz_attempts', 'started_at', 'native', 'monthly');
+SELECT create_parent('auth.login_attempts', 'attempted_at', 'native', 'monthly');
+SELECT create_parent('ops.webhook_events', 'received_at', 'native', 'monthly');
 SELECT create_parent('ops.audit_logs', 'created_at', 'native', 'monthly');
 SELECT create_parent('ops.outbox_events', 'created_at', 'native', 'daily');
 SELECT create_parent('ops.security_events', 'created_at', 'native', 'monthly');
-
--- v2.1: Schedule automatic partition maintenance via pg_cron (H1):
-SELECT cron.schedule('partman-maintenance', '@hourly',
-  $$SELECT partman.run_maintenance()$$);
-
--- v2.1: Pre-create 3 months of future partitions to prevent insert failures:
-SELECT partman.create_future_partitions('ops.audit_logs', 3);
-SELECT partman.create_future_partitions('ops.outbox_events', 30);
-SELECT partman.create_future_partitions('ops.security_events', 3);
-
--- Retention policy: drop partitions older than retention period
--- For audit_logs: keep 1 year
-SELECT drop_partitions('ops.audit_logs', now() - interval '1 year');
-
--- For outbox_events: keep 30 days
-SELECT drop_partitions('ops.outbox_events', now() - interval '30 days');
-*/
-
-// ============================================================================
-// TRIGGER IMPLEMENTATION NOTES
-// ============================================================================
-/*
--- Updated_at trigger function (apply to all tables with updated_at column)
-CREATE OR REPLACE FUNCTION set_updated_at()
-RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$;
-
--- Apply to tables:
-CREATE TRIGGER trg_users_updated_at BEFORE UPDATE ON auth.users FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_user_profiles_updated_at BEFORE UPDATE ON auth.user_profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_devices_updated_at BEFORE UPDATE ON auth.devices FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_education_levels_updated_at BEFORE UPDATE ON core.education_levels FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_exam_types_updated_at BEFORE UPDATE ON core.exam_types FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_courses_updated_at BEFORE UPDATE ON core.courses FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_modules_updated_at BEFORE UPDATE ON core.modules FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_resources_updated_at BEFORE UPDATE ON core.resources FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_licenses_updated_at BEFORE UPDATE ON finance.licenses FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_purchases_updated_at BEFORE UPDATE ON finance.purchases FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_user_enrollments_updated_at BEFORE UPDATE ON learning.user_enrollments FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_quiz_questions_updated_at BEFORE UPDATE ON learning.quiz_questions FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_roles_updated_at BEFORE UPDATE ON ops.roles FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_feature_flags_updated_at BEFORE UPDATE ON ops.feature_flags FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_system_configs_updated_at BEFORE UPDATE ON ops.system_configs FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_file_metadata_updated_at BEFORE UPDATE ON shared.file_metadata FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- v2.1: Updated_at trigger for moderation_queue
-CREATE TRIGGER trg_moderation_queue_updated_at BEFORE UPDATE ON ops.moderation_queue FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- Search vector trigger for resources table
-CREATE FUNCTION resources_search_vector_update()
-RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  NEW.search_vector :=
-    setweight(to_tsvector('english', COALESCE(NEW.title, '')), 'A') ||
-    setweight(to_tsvector('english', COALESCE(NEW.description, '')), 'B');
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER trg_resources_search
-  BEFORE INSERT OR UPDATE OF title, description ON core.resources
-  FOR EACH ROW EXECUTE FUNCTION resources_search_vector_update();
-
--- v2.1: Trigger to populate resources.course_id from modules (H8)
-CREATE OR REPLACE FUNCTION resources_course_id_populate()
-RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  SELECT course_id INTO NEW.course_id
-  FROM core.modules
-  WHERE id = NEW.module_id;
-  
-  IF NEW.course_id IS NULL THEN
-    RAISE EXCEPTION 'Cannot determine course_id for resource: module_id % not found', NEW.module_id;
-  END IF;
-  
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER trg_resources_course_id
-  BEFORE INSERT OR UPDATE OF module_id ON core.resources
-  FOR EACH ROW EXECUTE FUNCTION resources_course_id_populate();
-
--- v2.1 CRITICAL FIX C5: Validate quiz_questions.resource_id references a quiz-type resource
-CREATE OR REPLACE FUNCTION validate_quiz_question_resource_type()
-RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE
-  res_type resource_type;
-BEGIN
-  SELECT resource_type INTO res_type
-  FROM core.resources
-  WHERE id = NEW.resource_id;
-  
-  IF res_type IS NULL THEN
-    RAISE EXCEPTION 'resource_id % does not exist', NEW.resource_id;
-  END IF;
-  
-  IF res_type != 'quiz' THEN
-    RAISE EXCEPTION 'resource_id % is type %, but quiz_questions requires resource_type = quiz', NEW.resource_id, res_type;
-  END IF;
-  
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER trg_validate_quiz_question_resource
-  BEFORE INSERT OR UPDATE OF resource_id ON learning.quiz_questions
-  FOR EACH ROW EXECUTE FUNCTION validate_quiz_question_resource_type();
-
--- v2.1 HIGH-PRIORITY FIX H4: Validate api_keys.permissions against permissions_reference
-CREATE OR REPLACE FUNCTION validate_api_key_permissions()
-RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE
-  perm text;
-  perm_exists boolean;
-BEGIN
-  IF NEW.permissions IS NOT NULL AND jsonb_array_length(NEW.permissions) > 0 THEN
-    FOR perm IN SELECT jsonb_array_elements_text(NEW.permissions)
-    LOOP
-      SELECT EXISTS(SELECT 1 FROM ops.permissions_reference WHERE permission_key = perm) INTO perm_exists;
-      IF NOT perm_exists THEN
-        RAISE EXCEPTION 'Permission "%" not found in permissions_reference table', perm;
-      END IF;
-    END LOOP;
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER trg_validate_api_key_permissions
-  BEFORE INSERT OR UPDATE OF permissions ON ops.api_keys
-  FOR EACH ROW EXECUTE FUNCTION validate_api_key_permissions();
-*/
-
-// ============================================================================
-// v2.1: PARTIAL INDEXES FOR SOFT-DELETE TABLES
-// ============================================================================
-/*
--- Reduce index bloat on tables with soft deletes:
--- Only index non-deleted rows where queries typically filter on deleted_at IS NULL.
-
-CREATE INDEX idx_courses_active_list ON core.courses (exam_type_id, is_published, sort_order)
-  WHERE deleted_at IS NULL;
-
-CREATE INDEX idx_modules_course_active ON core.modules (course_id, sort_order)
-  WHERE deleted_at IS NULL;
-
-CREATE INDEX idx_resources_module_active ON core.resources (module_id)
-  WHERE deleted_at IS NULL;
-
-CREATE INDEX idx_user_enrollments_active ON learning.user_enrollments (user_id, last_accessed_at)
-  WHERE deleted_at IS NULL;
-
-CREATE INDEX idx_licenses_active ON finance.licenses (resource_id, status)
-  WHERE deleted_at IS NULL;
-
-CREATE INDEX idx_purchases_active ON finance.purchases (user_id, created_at)
-  WHERE deleted_at IS NULL;
-
--- Note: Original non-partial indexes are retained for queries that may include soft-deleted rows.
--- Query planner will choose the appropriate index based on WHERE clause.
-*/
-
-// ============================================================================
-// ROW LEVEL SECURITY (RLS) POLICY FRAMEWORK
-// ============================================================================
-/*
--- Enable RLS on user-scoped tables
-ALTER TABLE auth.user_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE learning.quiz_attempts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE finance.purchases ENABLE ROW LEVEL SECURITY;
--- offline tables removed (offline sync feature removed from MVP)
-
--- v2.1: RLS for new tables
-
--- User isolation policy (application sets app.current_user_id via SET LOCAL)
-CREATE POLICY user_isolation ON auth.user_profiles
-  USING (user_id = current_setting('app.current_user_id')::bigint);
-
-CREATE POLICY user_isolation ON learning.quiz_attempts
-  USING (user_id = current_setting('app.current_user_id')::bigint);
-
-CREATE POLICY user_isolation ON finance.purchases
-  USING (user_id = current_setting('app.current_user_id')::bigint);
-
--- Admin bypass policy
-CREATE POLICY admin_bypass ON auth.user_profiles
-  USING (current_setting('app.role') = 'admin');
-
--- Audit tables: INSERT only for application, SELECT for admins
-ALTER TABLE ops.audit_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY audit_insert ON ops.audit_logs FOR INSERT WITH CHECK (true);
-CREATE POLICY audit_select ON ops.audit_logs FOR SELECT USING (current_setting('app.role') IN ('admin', 'auditor'));
-
-ALTER TABLE ops.security_events ENABLE ROW LEVEL SECURITY;
-CREATE POLICY security_insert ON ops.security_events FOR INSERT WITH CHECK (true);
-CREATE POLICY security_select ON ops.security_events FOR SELECT USING (current_setting('app.role') IN ('admin', 'auditor'));
+SELECT create_parent('catalog.course_stats_history', 'snapshot_date', 'native', 'monthly');
 */
