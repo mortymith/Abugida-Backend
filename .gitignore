@@ -2,6 +2,7 @@
 **/*.dbdiagram
 **/.env
 **/.env.*
+!**/.env.example
 **/dist/
 **/.turbo/
 *.log
