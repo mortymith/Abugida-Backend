@@ -1,0 +1,5 @@
+# Bun is used as the runtime only. pnpm owns the dependency graph and lockfile
+# (see pnpm-workspace.yaml + packageManager field in package.json), so bun must
+# never create its own lockfile. Fail loudly instead of silently diverging.
+[install]
+frozenLockfile = true

@@ -12,3 +12,6 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - astro@7.1.4
+  - '@tanstack/react-start-client@1.168.23'
+  - '@tanstack/react-start-server@1.167.30'
+  - '@tanstack/router-generator@1.167.27'
