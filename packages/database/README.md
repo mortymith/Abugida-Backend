@@ -1,15 +1,16 @@
-# database
+# @abugida/database
 
-To install dependencies:
+Shared Drizzle schema for the Abugida monorepo.
 
-```bash
-bun install
-```
-
-To run:
+## Commands
 
 ```bash
-bun run index.ts
+pnpm typecheck   # tsc --noEmit
+pnpm lint        # eslint .
 ```
 
-This project was created using `bun init` in bun v1.3.14. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+## Usage
+
+```ts
+import { schema } from "@abugida/database";
+```
