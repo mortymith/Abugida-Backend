@@ -5,5 +5,14 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit",
     "source.organizeImports": "never"
+  },
+  "files.watcherExclude": {
+    "app/dashboard/routeTree.gen.ts": true
+  },
+  "search.exclude": {
+    "app/dashboard/routeTree.gen.ts": true
+  },
+  "files.readonlyInclude": {
+    "app/dashboard/routeTree.gen.ts": true
   }
 }

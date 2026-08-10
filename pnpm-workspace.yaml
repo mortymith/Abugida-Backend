@@ -3,9 +3,12 @@ packages:
   - 'packages/*'
 
 allowBuilds:
+  '@google/genai': true
   esbuild: true
   msgpackr-extract: true
+  protobufjs: true
   sharp: true
+  unrs-resolver: true
 
 minimumReleaseAgeExclude:
   - astro@7.1.4
