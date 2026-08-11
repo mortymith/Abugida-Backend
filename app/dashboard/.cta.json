@@ -17,13 +17,5 @@
   "routerOnly": false,
   "version": 1,
   "framework": "react",
-  "chosenAddOns": [
-    "eslint",
-    "drizzle",
-    "better-auth",
-    "mcp",
-    "ai",
-    "tanstack-query",
-    "store"
-  ]
+  "chosenAddOns": ["eslint", "drizzle", "better-auth", "mcp", "ai", "tanstack-query", "store"]
 }
