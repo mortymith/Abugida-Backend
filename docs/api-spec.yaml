@@ -1,40 +1,31 @@
 openapi: 3.0.0
 info:
-  title: Educational Mobile Application API
+  title: Abugida Application API
   description: |
     # Overview
 
-    **Error Responses:** All 4xx and 5xx responses use `application/problem+json` 
+    **Error Responses:** All 4xx and 5xx responses use `application/problem+json`
     content-type per [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457).
 
-    Unified REST API for the Educational Mobile Application — a comprehensive learning platform 
-    supporting TOEFL, IGCSE, high school, and college examination preparation.
+    Unified REST API for the **Abugida Application** — a comprehensive learning platform
+    supporting examination preparation across multiple education segments.
 
     **Ethiopian users only. All prices in Ethiopian Birr (ETB). Telebirr is the sole payment method.**
 
     ## API Versioning
 
-    All endpoints are versioned via the URL path prefix `/api/v1/`. Breaking changes will 
+    All endpoints are versioned via the URL path prefix `/api/v1/`. Breaking changes will
     increment the version number. Non-breaking additions may be introduced within v1.
 
     ## Authentication
 
     Authentication endpoints (`/auth/*`) are provided by **Better Auth** framework.
     The API uses **JWT Bearer tokens** for user authentication:
+    - Sign-in providers: **Google Sign-In** and **Apple ID**
     - Access and refresh token lifecycle managed by Better Auth
     - Include as: `Authorization: Bearer <access_token>`
 
     Webhook endpoints use **API Key** authentication via the `X-API-Key` header.
-
-    ## Multi-Segment Behavior
-
-    The MVP prioritizes TOEFL/IGCSE users with full feature coverage. High school and college 
-    segments have graduated access:
-    - **TOEFL/IGCSE (Primary):** Full purchases with insights
-    - **High School (Secondary):** Core browsing, downloads (basic analytics only)
-    - **College (Tertiary):** Read-only resource access (no purchases in MVP)
-
-    Endpoints affected by segment restrictions document this in their descriptions.
 
     ## Response Envelope
 
@@ -98,7 +89,7 @@ info:
 
     | Header | Value |
     |--------|-------|
-    | `Access-Control-Allow-Origin` | `https://app.example.com`, `capacitor://localhost` (mobile), `ionic://localhost` (mobile) |
+    | `Access-Control-Allow-Origin` | `https://app.abugada.com`, `capacitor://localhost` (mobile), `ionic://localhost` (mobile) |
     | `Access-Control-Allow-Methods` | `GET, POST, PATCH, PUT, DELETE, OPTIONS` |
     | `Access-Control-Allow-Headers` | `Authorization, Content-Type, X-Request-ID, Accept, X-API-Key` |
     | `Access-Control-Expose-Headers` | `X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Retry-After, X-Request-ID, ETag, Link` |
@@ -118,42 +109,31 @@ info:
     | Maximum PDF file size | 5 MB | PDF extraction for indexing (per FR-308) |
     | Maximum course download size | 500 MB | Course content bundles (compressed, per FR-204) |
     | Maximum review length | 2,000 characters | `POST /courses/{id}/reviews` body |
-    | Maximum quiz answer length | 10,000 characters | `POST /resources/{id}/quiz-submit` body |
+    | Maximum quiz answer length | 10,000 characters | `POST /resources/{id}/quiz/submit` body |
 
-    Requests exceeding these limits receive `413 Payload Too Large`:
-    ```json
-    {
-      "type": "https://api.example.com/errors/payload-too-large",
-      "title": "Payload Too Large",
-      "status": 413,
-      "detail": "Request body exceeds maximum size of 10 MB.",
-      "instance": "/api/v1/users/me",
-      "correlationId": "018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8"
-    }
-    ```
+    Requests exceeding these limits receive `413 Payload Too Large`.
 
     ## Conditional Requests & Caching
 
-    Resource endpoints (`GET /resources/{id}`, `GET /resources/{id}/versions/{versionId}`)
-    support conditional requests via `ETag` and `If-None-Match` headers:
+    Resource endpoints (`GET /resources/{id}`) support conditional requests via `ETag` and `If-None-Match` headers:
 
     **Response Headers:**
+
     | Header | Description |
     |--------|-------------|
-    | `ETag` | Version-specific entity tag (format: `W/"<version_hash>"`) |
+    | `ETag` | Entity tag based on `row_version` (format: `W/"<row_version>"`) |
     | `Last-Modified` | Timestamp of last resource update |
     | `Cache-Control` | `private, max-age=300` (5 minutes for authenticated content) |
 
     **Conditional Request Flow:**
-    1. Client receives `ETag: W/"abc123"` on first request
-    2. Client sends `If-None-Match: W/"abc123"` on subsequent requests
+    1. Client receives `ETag: W/"3"` on first request (row_version = 3)
+    2. Client sends `If-None-Match: W/"3"` on subsequent requests
     3. If resource unchanged: `304 Not Modified` (no body, saves bandwidth)
     4. If resource updated: `200 OK` with new `ETag` and full body
 
-    **Supported on:** `GET /resources/{id}`, `GET /resources/{id}/versions/{versionId}`,
-    `GET /courses/{id}` (course metadata), `GET /courses/{id}/modules` (module list).
+    **Supported on:** `GET /resources/{id}`, `GET /courses/{courseId}`, `GET /courses/{courseId}/modules`.
 
-    Public endpoints (`GET /education-levels`, `GET /search`) support `Cache-Control: public, max-age=3600` (1 hour).
+    Public endpoints (`GET /exam-types`, `GET /search/courses`) support `Cache-Control: public, max-age=3600` (1 hour).
 
     ## Pagination
 
@@ -181,37 +161,44 @@ info:
 
     | Service | Purpose | Availability |
     |---------|---------|-------------|
-    | Better Auth | OAuth/authentication framework (Telegram + Google) | Production only |
+    | Better Auth | OAuth/authentication framework (Google + Apple ID) | Production only |
     | SMSEthiopia | SMS payment confirmations | Production only |
     | Telebirr C2B | Sole payment method (all platforms) | Production only |
 
+    ## Enum Serialization Convention
+
+    All enum values are transmitted as **UPPER_SNAKE_CASE** in both requests and responses
+    (e.g., `IOS`, `ANDROID`, `WEB`). The API gateway serializes/deserializes to/from the
+    database's lowercase snake_case storage format transparently. Clients never need to
+    handle lowercase enum values.
+
     **References:**
     - [Software Requirements Specification v1.0](./SRS.md)
-    - [Database Schema v2.1](./db.txt)
+    - [Database Schema v4.0](./db.txt)
     - [API Generation Plan](./re.md)
 
-  version: 1.0.0
-  termsOfService: https://example.com/terms
+  version: 2.0.0
+  termsOfService: https://abugada.com/terms
   contact:
-    name: API Support Team
-    email: api-support@example.com
-    url: https://example.com/developers
+    name: Abugida API Support Team
+    email: api-support@abugada.com
+    url: https://abugada.com/developers
   license:
     name: Proprietary
-    url: https://example.com/license
+    url: https://abugada.com/license
   x-release-phase: MVP
+  x-db-schema-version: '4.0'
 
 servers:
-  - url: https://api.edulearn.com/api/v1
+  - url: https://api.abugada.com/api/v1
     description: Production
-  - url: https://api-staging.edulearn.com/api/v1
+  - url: https://api-staging.abugada.com/api/v1
     description: Staging
-  - url: https://api-sandbox.edulearn.com/api/v1
+  - url: https://api-sandbox.abugada.com/api/v1
     description: Development
 
 security:
   - bearerAuth: []
-  - apiKeyHeader: []
 
 tags:
   - name: Users
@@ -220,11 +207,17 @@ tags:
   - name: Dashboard
     description: User dashboard with aggregated statistics, activity feed, and insights
     x-fr-series: FR-600, FR-700
-  - name: Resources
-    description: Educational resource library - hierarchy navigation, course search
+  - name: ExamTypes
+    description: Exam type hierarchy navigation (self-referencing tree)
     x-fr-series: FR-200
+  - name: Resources
+    description: Educational resource library — hierarchy navigation, course search
+    x-fr-series: FR-200
+  - name: Bundles
+    description: Course bundles — grouped course packages by exam type
+    x-fr-series: FR-200, FR-400
   - name: Progress
-    description: User learning progress, enrollments, and study tracking
+    description: User learning progress, enrollments, lesson completions, and study tracking
     x-fr-series: FR-500
   - name: Bookmark
     description: User bookmarks for courses and resources
@@ -233,8 +226,11 @@ tags:
     description: Offline course content downloads, download status, and presigned download URLs
     x-fr-series: FR-204
   - name: Purchases
-    description: Telebirr-only purchases, enrollments
+    description: Telebirr-only purchases for courses and bundles, enrollments
     x-fr-series: FR-400, FR-500
+  - name: Quiz
+    description: Quiz questions, attempts, and answer submission
+    x-fr-series: FR-500
   - name: Recommendations
     description: Course ratings, reviews, popularity-based recommendations
     x-fr-series: FR-700
@@ -244,43 +240,24 @@ tags:
   - name: System
     description: Health checks, metrics, and operational endpoints
 
-x-target-segments:
-  - name: TOEFL/IGCSE
-    priority: primary
-    features: full
-  - name: High School
-    priority: secondary
-    features: core
-  - name: College
-    priority: tertiary
-    features: readonly
-
 x-deprecation-policy:
   minimum-notice-months: 6
   sunset-header: Sunset
   sunset-link-relation: sunset
   description: |
-    **Deprecation Policy:**
-
+    Deprecation Policy:
     - Endpoints marked `deprecated: true` are scheduled for removal
     - Minimum 6-month notice before endpoint removal
     - Deprecated endpoints include `Sunset` header with removal date
-    - Migration guides published at `https://docs.example.com/migration`
-
-    **Sunset Header Example:**
-    ```
-    Sunset: Sat, 31 Dec 2026 23:59:59 GMT
-    Link: <https://docs.example.com/migration/v1-to-v2>; rel="sunset"
-    ```
+    - Migration guides published at `https://docs.abugada.com/migration`
 
 paths:
-  # ======================================================================
+  # =========================================================================
   # USERS ENDPOINTS
-  # ======================================================================
+  # =========================================================================
   /users/me:
     get:
-      tags:
-        - Users
+      tags: [Users]
       summary: Get current user profile
       operationId: getMyProfile
       security:
@@ -291,7 +268,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserProfile'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -302,10 +284,8 @@ paths:
           $ref: '#/components/responses/429'
         '500':
           $ref: '#/components/responses/500'
-
     patch:
-      tags:
-        - Users
+      tags: [Users]
       summary: Update current user profile
       operationId: updateMyProfile
       security:
@@ -322,7 +302,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserProfile'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -337,10 +322,8 @@ paths:
           $ref: '#/components/responses/429'
         '500':
           $ref: '#/components/responses/500'
-
     delete:
-      tags:
-        - Users
+      tags: [Users]
       summary: Delete current user account
       description: Initiate GDPR account deletion (queued, async)
       operationId: deleteMyAccount
@@ -370,8 +353,7 @@ paths:
 
   /users/me/onboarding:
     get:
-      tags:
-        - Users
+      tags: [Users]
       summary: Get onboarding progress
       operationId: getOnboarding
       security:
@@ -382,7 +364,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OnboardingState'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -393,10 +380,8 @@ paths:
           $ref: '#/components/responses/429'
         '500':
           $ref: '#/components/responses/500'
-
     post:
-      tags:
-        - Users
+      tags: [Users]
       summary: Update onboarding progress
       operationId: updateOnboarding
       security:
@@ -413,7 +398,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OnboardingState'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -431,8 +421,7 @@ paths:
 
   /users/me/onboarding/retrigger:
     post:
-      tags:
-        - Users
+      tags: [Users]
       summary: Retrigger onboarding flow
       operationId: retriggerOnboarding
       security:
@@ -467,8 +456,7 @@ paths:
 
   /users/me/consents:
     get:
-      tags:
-        - Users
+      tags: [Users]
       summary: Get user consent records
       operationId: getConsents
       security:
@@ -479,7 +467,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ConsentRecord'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -490,11 +485,17 @@ paths:
           $ref: '#/components/responses/429'
         '500':
           $ref: '#/components/responses/500'
-
     put:
-      tags:
-        - Users
+      tags: [Users]
       summary: Update user consents
+      description: |
+        Updates consent preferences. Creates new immutable consent records in
+        `auth.user_consents`. The `essential` consent type is always granted and
+        cannot be modified via this endpoint.
+
+        **Enum mapping:** Request values (UPPER_SNAKE_CASE) are mapped to DB
+        lowercase values by the service layer. The `ESSENTIAL` type is excluded
+        from this endpoint as it is non-modifiable.
       operationId: updateConsents
       security:
         - bearerAuth: []
@@ -528,8 +529,7 @@ paths:
 
   /users/me/export:
     get:
-      tags:
-        - Users
+      tags: [Users]
       summary: Export user data
       description: GDPR data export (FR-904) - returns streaming JSON or CSV
       operationId: exportData
@@ -542,18 +542,12 @@ paths:
             type: array
             items:
               type: string
-              enum:
-                - PROFILE
-                - PROGRESS
-                - PURCHASES
-                - CONSENTS
+              enum: [PROFILE, PROGRESS, PURCHASES, CONSENTS]
         - name: format
           in: query
           schema:
             type: string
-            enum:
-              - JSON
-              - CSV
+            enum: [JSON, CSV]
             default: JSON
       responses:
         '200':
@@ -580,8 +574,7 @@ paths:
 
   /users/me/devices:
     get:
-      tags:
-        - Users
+      tags: [Users]
       summary: Get registered devices
       operationId: getDevices
       security:
@@ -592,7 +585,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Device'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -603,12 +603,10 @@ paths:
           $ref: '#/components/responses/429'
         '500':
           $ref: '#/components/responses/500'
-
     post:
-      tags:
-        - Users
+      tags: [Users]
       summary: Register a new device
-      description: Enforces 3-device limit per user account.
+      description: Enforces 3-device limit per user account (`auth.users.max_devices`).
       operationId: registerDevice
       security:
         - bearerAuth: []
@@ -624,7 +622,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Device'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -633,6 +636,10 @@ paths:
           $ref: '#/components/responses/403'
         '409':
           description: Device limit exceeded — maximum 3 devices per account
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '422':
           $ref: '#/components/responses/422'
         '429':
@@ -642,15 +649,20 @@ paths:
 
   /users/me/devices/{deviceId}:
     patch:
-      tags:
-        - Users
+      tags: [Users]
       summary: Update device details
       description: Update device name or mark as inactive.
       operationId: updateDevice
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/deviceId'
+        - name: deviceId
+          in: path
+          required: true
+          description: UUID v7 identifier of the device
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       requestBody:
         required: true
         content:
@@ -663,7 +675,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Device'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -680,16 +697,20 @@ paths:
           $ref: '#/components/responses/429'
         '500':
           $ref: '#/components/responses/500'
-
     delete:
-      tags:
-        - Users
+      tags: [Users]
       summary: Remove a device
       operationId: removeDevice
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/deviceId'
+        - name: deviceId
+          in: path
+          required: true
+          description: UUID v7 identifier of the device
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       responses:
         '204':
           description: Device removed
@@ -708,18 +729,17 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  # ======================================================================
+  # =========================================================================
   # DASHBOARD ENDPOINTS
-  # ======================================================================
+  # =========================================================================
   /users/me/dashboard:
     get:
-      tags:
-        - Dashboard
+      tags: [Dashboard]
       summary: Get user dashboard data
       description: |
         Aggregated dashboard data for the user's home screen. This single endpoint provides
         all necessary data for the dashboard view, reducing the need for multiple API calls.
-        
+
         **Includes:**
         - User statistics (study time, lessons, XP, streak)
         - Recent activity feed
@@ -727,8 +747,12 @@ paths:
         - Weekly study data
         - Upcoming deadlines
         - Jump-back course recommendation
-        
+
         **Performance:** Cached for 60 seconds to reduce database load.
+
+        **DB Note:** XP, streak, sessions, deadlines, and achievements are computed
+        service-side from `learning.enrollments`, `learning.lesson_completions`, and
+        `catalog.course_stats`. No dedicated DB tables required for these aggregations.
       operationId: getDashboard
       security:
         - bearerAuth: []
@@ -743,7 +767,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DashboardData'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -755,25 +784,55 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  # ======================================================================
-  # RESOURCES ENDPOINTS
-  # ======================================================================
-  /education-levels:
+  # =========================================================================
+  # EXAM TYPES ENDPOINTS
+  # =========================================================================
+  /exam-types:
     get:
-      tags:
-        - Resources
-      summary: List education levels
+      tags: [ExamTypes]
+      summary: List top-level exam types
       description: |
-        Public endpoint. Returns all education levels with cursor-based pagination.
-        Cursor pagination is used here (rather than a fixed collection) because the
-        number of education levels may grow over time as new exam types are added.
-      operationId: listEducationLevels
+        Public endpoint. Returns all top-level exam types (where `parent_exam_type_id IS NULL`)
+        with cursor-based pagination. Maps to `catalog.exam_types` with `depth = 0`.
+
+        **DB Alignment:** `catalog.exam_types` is a self-referencing hierarchy.
+        Top-level items represent major education categories; children represent sub-categories.
+      operationId: listExamTypes
       parameters:
-        - $ref: '#/components/parameters/cursor'
-        - $ref: '#/components/parameters/limit'
+        - name: cursor
+          in: query
+          required: false
+          description: |
+            Opaque cursor for retrieving the next page of results.
+            Obtained from the `meta.nextCursor` field of a previous paginated response.
+            Omit or set to empty string to retrieve the first page.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: 'Maximum number of items to return per page. Default: 20, Min: 1, Max: 100'
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+        - name: include_children
+          in: query
+          required: false
+          description: If true, includes immediate children nested under each exam type.
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
-          description: Education levels retrieved
+          description: Exam types retrieved
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: public, max-age=3600
           content:
             application/json:
               schema:
@@ -789,21 +848,74 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  /education-levels/{levelId}/exam-types:
+  /exam-types/{examTypeId}:
     get:
-      tags:
-        - Resources
-      summary: List exam types for an education level
+      tags: [ExamTypes]
+      summary: Get exam type details with children
       description: |
-        Returns all exam types for the given education level as a fixed collection
-        (no cursor pagination). Exam types per level are a small, bounded set
-        (typically 2–5 items), so cursor pagination is not necessary here.
-      operationId: listExamTypes
+        Returns a single exam type including its child exam types.
+        Maps to `catalog.exam_types` with self-referencing `parent_exam_type_id`.
+      operationId: getExamType
       parameters:
-        - $ref: '#/components/parameters/levelId'
+        - name: examTypeId
+          in: path
+          required: true
+          description: UUID v7 identifier of the exam type (public_id)
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
+        - name: include_children
+          in: query
+          required: false
+          description: Include child exam types in response
+          schema:
+            type: boolean
+            default: true
       responses:
         '200':
-          description: Exam types retrieved
+          description: Exam type retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ExamType'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '429':
+          $ref: '#/components/responses/429'
+        '500':
+          $ref: '#/components/responses/500'
+
+  /exam-types/{examTypeId}/children:
+    get:
+      tags: [ExamTypes]
+      summary: List child exam types
+      description: |
+        Returns all child exam types for the given parent exam type.
+        Maps to `catalog.exam_types WHERE parent_exam_type_id = :id ORDER BY sort_order`.
+        Uses index `idx_exam_types_parent_order`.
+      operationId: listChildExamTypes
+      parameters:
+        - name: examTypeId
+          in: path
+          required: true
+          description: UUID v7 identifier of the parent exam type
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
+      responses:
+        '200':
+          description: Child exam types retrieved
           content:
             application/json:
               schema:
@@ -821,26 +933,44 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
+  # =========================================================================
+  # RESOURCES ENDPOINTS
+  # =========================================================================
   /exam-types/{examTypeId}/courses:
     get:
-      tags:
-        - Resources
+      tags: [Resources]
       summary: List courses for an exam type
+      description: |
+        Returns published courses for the given exam type.
+        Uses index `idx_courses_list_query` (exam_type_id, status, sort_order).
       operationId: listCourses
       parameters:
-        - $ref: '#/components/parameters/examTypeId'
-        - $ref: '#/components/parameters/cursor'
-        - $ref: '#/components/parameters/limit'
+        - name: examTypeId
+          in: path
+          required: true
+          description: UUID v7 identifier of the exam type
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque cursor for pagination
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
         - name: sort
           in: query
           schema:
             type: string
-            enum:
-              - rating
-              - popularity
-              - newest
-              - price_low
-              - price_high
+            enum: [rating, popularity, newest, price_low, price_high]
       responses:
         '200':
           description: Courses retrieved
@@ -863,20 +993,29 @@ paths:
 
   /courses/{courseId}:
     get:
-      tags:
-        - Resources
+      tags: [Resources]
       summary: Get course details
+      description: |
+        Returns full course metadata. Maps to `catalog.courses` joined with
+        `catalog.course_stats` for ratings and popularity.
       operationId: getCourse
       parameters:
-        - $ref: '#/components/parameters/courseId'
+        - name: courseId
+          in: path
+          required: true
+          description: UUID v7 identifier of the course (public_id)
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       responses:
         '200':
           description: Course details retrieved
           headers:
             ETag:
-              description: Entity tag for this course version
+              description: Entity tag based on row_version
               schema:
                 type: string
+                example: 'W/"3"'
             Last-Modified:
               schema:
                 type: string
@@ -888,7 +1027,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Course'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -906,23 +1050,32 @@ paths:
 
   /courses/{courseId}/curriculum:
     get:
-      tags:
-        - Resources
+      tags: [Resources]
       summary: Get course curriculum
       description: |
         Returns the full hierarchical curriculum structure for a course including
-        modules, sections, and lectures. This endpoint is separated from the main
-        course details to support lazy loading and reduce payload size.
+        modules and lessons. Maps to `catalog.modules` → `catalog.lessons`.
       operationId: getCourseCurriculum
       parameters:
-        - $ref: '#/components/parameters/courseId'
+        - name: courseId
+          in: path
+          required: true
+          description: UUID v7 identifier of the course
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       responses:
         '200':
           description: Curriculum retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CourseCurriculum'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -938,15 +1091,20 @@ paths:
 
   /courses/{courseId}/modules:
     get:
-      tags:
-        - Resources
+      tags: [Resources]
       summary: List modules in a course
       description: |
-        Returns a summary list of modules for a course. For the full curriculum
-        with lecture details, use `GET /courses/{courseId}/curriculum`.
+        Returns a summary list of modules for a course.
+        Uses index `idx_modules_course_order`.
       operationId: listModules
       parameters:
-        - $ref: '#/components/parameters/courseId'
+        - name: courseId
+          in: path
+          required: true
+          description: UUID v7 identifier of the course
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       responses:
         '200':
           description: Modules retrieved
@@ -967,19 +1125,39 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  /modules/{moduleId}/resources:
+  /modules/{moduleId}/lessons:
     get:
-      tags:
-        - Resources
-      summary: List resources in a module
-      operationId: listModuleResources
+      tags: [Resources]
+      summary: List lessons in a module
+      description: |
+        Returns all lessons within a module. Maps to `catalog.lessons WHERE module_id = :id`.
+        Uses index `idx_lessons_module`.
+        Note: "Resources" in this API refers to DB "lessons" (`catalog.lessons`).
+      operationId: listModuleLessons
       parameters:
-        - $ref: '#/components/parameters/moduleId'
-        - $ref: '#/components/parameters/cursor'
-        - $ref: '#/components/parameters/limit'
+        - name: moduleId
+          in: path
+          required: true
+          description: UUID v7 identifier of the module
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         '200':
-          description: Resources retrieved
+          description: Lessons retrieved
           content:
             application/json:
               schema:
@@ -999,12 +1177,21 @@ paths:
 
   /resources/{resourceId}:
     get:
-      tags:
-        - Resources
-      summary: Get resource details
+      tags: [Resources]
+      summary: Get resource (lesson) details
+      description: |
+        Returns lesson details. Maps to `catalog.lessons`.
+        Note: "Resource" = DB "lesson". Lessons are updated in place (no version tracking).
+        ETag is derived from `row_version`.
       operationId: getResource
       parameters:
-        - $ref: '#/components/parameters/resourceId'
+        - name: resourceId
+          in: path
+          required: true
+          description: UUID v7 identifier of the lesson (public_id)
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
         - name: If-None-Match
           in: header
           description: Optional ETag for conditional request
@@ -1015,33 +1202,34 @@ paths:
           description: Resource details retrieved
           headers:
             ETag:
-              description: Entity tag for this resource version. Use with `If-None-Match`
-                for conditional requests to save bandwidth.
+              description: Entity tag derived from row_version
               schema:
                 type: string
-                example: W/"018f3a2c9b5e7d4aa1c2e3f4a5b6c7d8_v3"
+                example: 'W/"5"'
             Last-Modified:
               description: Timestamp of last modification
               schema:
                 type: string
                 format: http-date
-                example: Wed, 30 Apr 2026 10:30:00 GMT
             Cache-Control:
-              description: Caching directive
               schema:
                 type: string
                 example: private, max-age=300
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Lesson'
         '304':
-          description: Not Modified - Resource has not changed since `If-None-Match`
+          description: Not Modified
           headers:
             ETag:
               schema:
                 type: string
-                example: W/"018f3a2c9b5e7d4aa1c2e3f4a5b6c7d8_v3"
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -1057,21 +1245,129 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  /resources/{resourceId}/versions:
+  # =========================================================================
+  # BUNDLES ENDPOINTS
+  # =========================================================================
+  /bundles:
     get:
-      tags:
-        - Resources
-      summary: List resource versions
-      operationId: listResourceVersions
+      tags: [Bundles]
+      summary: List published course bundles
+      description: |
+        Returns all published course bundles. Maps to `catalog.course_bundles WHERE status = 'published'`.
+        Uses index `idx_bundles_status`.
+      operationId: listBundles
       parameters:
-        - $ref: '#/components/parameters/resourceId'
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, price_low, price_high, discount]
+            default: newest
       responses:
         '200':
-          description: Versions retrieved
+          description: Bundles retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CollectionResponse'
+                $ref: '#/components/schemas/CursorPaginatedResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '429':
+          $ref: '#/components/responses/429'
+        '500':
+          $ref: '#/components/responses/500'
+
+  /bundles/{bundleId}:
+    get:
+      tags: [Bundles]
+      summary: Get bundle details
+      description: |
+        Returns full bundle details including pricing, discount, and course count.
+        Maps to `catalog.course_bundles`.
+      operationId: getBundle
+      parameters:
+        - name: bundleId
+          in: path
+          required: true
+          description: UUID v7 identifier of the bundle (public_id)
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
+      responses:
+        '200':
+          description: Bundle retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CourseBundle'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '410':
+          $ref: '#/components/responses/410'
+        '429':
+          $ref: '#/components/responses/429'
+        '500':
+          $ref: '#/components/responses/500'
+
+  /bundles/{bundleId}/courses:
+    get:
+      tags: [Bundles]
+      summary: List courses in a bundle
+      description: |
+        Returns all courses included in the bundle. Maps to `catalog.bundle_courses`
+        joined with `catalog.courses`. Uses index `idx_bundle_courses_active`.
+        Only returns courses where `is_included = true`.
+      operationId: listBundleCourses
+      parameters:
+        - name: bundleId
+          in: path
+          required: true
+          description: UUID v7 identifier of the bundle
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
+      responses:
+        '200':
+          description: Bundle courses retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CollectionResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/BundleCourseItem'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -1085,22 +1381,45 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  /resources/{resourceId}/versions/{versionId}:
+  /bundles/{bundleId}/purchase-options:
     get:
-      tags:
-        - Resources
-      summary: Get specific resource version
-      operationId: getResourceVersion
+      tags: [Bundles]
+      summary: Get purchase options for a bundle
+      description: |
+        Returns Telebirr purchase options for this bundle.
+        Maps to `finance.purchase_options WHERE bundle_id = :id AND is_active = true`.
+        Uses index `idx_purchase_options_bundle`.
+      operationId: getBundlePurchaseOptions
       parameters:
-        - $ref: '#/components/parameters/resourceId'
-        - $ref: '#/components/parameters/versionId'
+        - name: bundleId
+          in: path
+          required: true
+          description: UUID v7 identifier of the bundle
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       responses:
         '200':
-          description: Version retrieved
+          description: Purchase options retrieved
+          headers:
+            X-Platform-Payment-Methods:
+              description: Available payment methods
+              schema:
+                type: array
+                items:
+                  type: string
+                  enum: [telebirr]
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/CollectionResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PurchaseOption'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -1114,112 +1433,113 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  # ----------------------------------------------------------------------
-  # Course-Centric Search
-  # ----------------------------------------------------------------------
+  /exam-types/{examTypeId}/bundles:
+    get:
+      tags: [Bundles]
+      summary: List bundles for an exam type
+      description: |
+        Returns published bundles themed around the given exam type.
+        Maps to `catalog.course_bundles WHERE exam_type_id = :id AND status = 'published'`.
+        Uses index `idx_bundles_exam_status`.
+      operationId: listBundlesByExamType
+      parameters:
+        - name: examTypeId
+          in: path
+          required: true
+          description: UUID v7 identifier of the exam type
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Bundles retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaginatedResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '429':
+          $ref: '#/components/responses/429'
+        '500':
+          $ref: '#/components/responses/500'
+
+  # =========================================================================
+  # SEARCH ENDPOINTS
+  # =========================================================================
   /search/courses:
     get:
-      tags:
-        - Resources
+      tags: [Resources]
       summary: Search for courses
       description: |
-        **Course-Centric Search:** This endpoint is specifically optimized for finding 
-        courses across the platform. Unlike the generic resource search, this search 
-        focuses on course metadata including titles, descriptions, providers, and 
-        educational context.
-        
+        Course-Centric Search optimized for finding courses across the platform.
+
         **Search Strategy:**
-        - Primary: Full-text search on course title, description, and provider
-        - Secondary: Filter by education level, exam type, and tags
+        - Primary: Full-text search on course title, description
+        - Secondary: Filter by exam type hierarchy and tags
         - Tertiary: Sort by relevance, rating, popularity, or price
-        
-        **Best Practices:**
-        - Use `q` for keyword search (min 2 characters for performance)
-        - Combine with filters to narrow results effectively
-        - Use `fuzzy=true` for approximate matching (typo tolerance)
-        - Results are paginated using cursor-based pagination
-        
-        **Search Example:**
-        ```
-        /search/courses?q=chemistry&exam-type=igcse&sort=rating&limit=20
-        ```
-        
-        **Performance:** Results are cached for 60 seconds. Full-text search uses
-        PostgreSQL GIN indexes for optimal performance.
+
+        **DB Alignment:** Full-text search uses `catalog.lessons.search_vector` GIN index
+        aggregated at course level. Filters map to `catalog.courses` columns and
+        `catalog.course_tag_assignments`.
       operationId: searchCourses
       parameters:
         - name: q
           in: query
           required: false
-          description: |
-            Keyword search query. Supports full-text search on course title, 
-            description, and provider. Minimum 2 characters for performance.
-            If omitted, returns paginated courses with applied filters.
+          description: Keyword search query (min 2 characters)
           schema:
             type: string
             minLength: 2
             maxLength: 200
           example: atomic structure
-        
         - name: fuzzy
           in: query
           required: false
-          description: |
-            Enable fuzzy matching for approximate searches. Uses PostgreSQL trigram
-            similarity for typo tolerance and partial matching.
+          description: Enable fuzzy matching (trigram similarity)
           schema:
             type: boolean
             default: false
-          example: true
-        
-        - name: education_level
-          in: query
-          required: false
-          description: Filter by education level ID
-          schema:
-            $ref: '#/components/schemas/UUIDv7'
-          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-        
         - name: exam_type
           in: query
           required: false
-          description: Filter by exam type ID
+          description: Filter by exam type ID (includes children recursively)
           schema:
             $ref: '#/components/schemas/UUIDv7'
-          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d9
-        
         - name: tags
           in: query
           required: false
-          description: Filter by tags (comma-separated)
+          description: Filter by tag IDs (comma-separated)
           schema:
             type: array
             items:
               $ref: '#/components/schemas/UUIDv7'
-          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7da
-        
         - name: sort
           in: query
           required: false
-          description: |
-            Sort order for search results.
-            - `relevance` - Most relevant to search query (default)
-            - `rating` - Highest rated
-            - `popularity` - Most popular (enrollments + activity)
-            - `newest` - Most recently added
-            - `price_low` - Cheapest first
-            - `price_high` - Most expensive first
           schema:
             type: string
-            enum:
-              - relevance
-              - rating
-              - popularity
-              - newest
-              - price_low
-              - price_high
+            enum: [relevance, rating, popularity, newest, price_low, price_high]
             default: relevance
-        
         - name: min_price
           in: query
           required: false
@@ -1227,8 +1547,6 @@ paths:
           schema:
             type: number
             minimum: 0
-          example: 100
-        
         - name: max_price
           in: query
           required: false
@@ -1236,19 +1554,26 @@ paths:
           schema:
             type: number
             minimum: 0
-          example: 500
-        
         - name: free_only
           in: query
           required: false
-          description: Only return free courses
+          description: Only return free courses (maps to `courses.is_free`)
           schema:
             type: boolean
             default: false
-        
-        - $ref: '#/components/parameters/cursor'
-        - $ref: '#/components/parameters/limit'
-      
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         '200':
           description: Course search results retrieved
@@ -1272,25 +1597,84 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
+  /search/bundles:
+    get:
+      tags: [Bundles]
+      summary: Search for bundles
+      description: |
+        Search bundles by keyword, exam type, or price range.
+        Maps to `catalog.course_bundles` with full-text on title/description.
+      operationId: searchBundles
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 200
+        - name: exam_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+        - name: min_price
+          in: query
+          required: false
+          schema:
+            type: number
+            minimum: 0
+        - name: max_price
+          in: query
+          required: false
+          schema:
+            type: number
+            minimum: 0
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [relevance, newest, price_low, price_high, discount]
+            default: relevance
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Bundle search results retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaginatedResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '429':
+          $ref: '#/components/responses/429'
+        '500':
+          $ref: '#/components/responses/500'
+
   /search/suggestions:
     get:
-      tags:
-        - Resources
+      tags: [Resources]
       summary: Get search suggestions
       description: |
-        Provides autocomplete suggestions for course search queries. 
-        Returns trending searches, popular topics, and query suggestions
-        based on platform-wide search activity.
-        
-        **Use Cases:**
-        - Search bar autocomplete
-        - Trending topics display
-        - Popular course suggestions
-        
-        **Implementation:**
-        - Trending: Based on recent search volume (last 7 days)
-        - Popular topics: Most frequently searched terms
-        - Real-time: Minimal latency for typing experience
+        Provides autocomplete suggestions for course search queries.
+        Returns trending searches and popular topics based on platform-wide activity.
       operationId: getSearchSuggestions
       parameters:
         - name: q
@@ -1302,11 +1686,9 @@ paths:
             minLength: 1
             maxLength: 50
           example: chem
-        
         - name: limit
           in: query
           required: false
-          description: Maximum number of suggestions to return
           schema:
             type: integer
             minimum: 1
@@ -1330,14 +1712,14 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  # ----------------------------------------------------------------------
-  # Tags
-  # ----------------------------------------------------------------------
+  # =========================================================================
+  # TAGS ENDPOINTS
+  # =========================================================================
   /tags:
     get:
-      tags:
-        - Resources
+      tags: [Resources]
       summary: List all tags
+      description: Maps to `catalog.course_tags WHERE deleted_at IS NULL`.
       operationId: listTags
       responses:
         '200':
@@ -1359,14 +1741,31 @@ paths:
 
   /tags/{tagId}/courses:
     get:
-      tags:
-        - Resources
+      tags: [Resources]
       summary: List courses by tag
+      description: Maps to `catalog.course_tag_assignments` joined with `catalog.courses`.
       operationId: listCoursesByTag
       parameters:
-        - $ref: '#/components/parameters/tagId'
-        - $ref: '#/components/parameters/cursor'
-        - $ref: '#/components/parameters/limit'
+        - name: tagId
+          in: path
+          required: true
+          description: UUID v7 identifier of the tag
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         '200':
           description: Courses retrieved
@@ -1387,18 +1786,16 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  # ======================================================================
+  # =========================================================================
   # PROGRESS ENDPOINTS
-  # ======================================================================
+  # =========================================================================
   /users/me/progress:
     get:
-      tags:
-        - Progress
+      tags: [Progress]
       summary: Get user learning progress
       description: |
-        Aggregated learning progress for the authenticated user.
-        Returns statistics about all enrolled courses including active courses,
-        completed courses, study time, and overall progress.
+        Aggregated learning progress. Computed from `learning.enrollments`
+        and `learning.lesson_completions`.
       operationId: getProgressStats
       security:
         - bearerAuth: []
@@ -1408,7 +1805,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ProgressStats'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -1422,27 +1824,47 @@ paths:
 
   /users/me/enrollments:
     get:
-      tags:
-        - Progress
+      tags: [Progress]
       summary: List user enrollments
       description: |
-        Returns all course enrollments for the authenticated user with detailed
-        progress information including total lessons, completed lessons, and
-        last access timestamp.
+        Returns all course enrollments for the authenticated user.
+        Maps to `learning.enrollments WHERE student_id = :userId AND deleted_at IS NULL`.
+        Uses index `idx_enrollments_active`.
       operationId: listEnrollments
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/cursor'
-        - $ref: '#/components/parameters/limit'
-        - name: status
+        - name: cursor
           in: query
+          required: false
           schema:
             type: string
-            enum:
-              - in_progress
-              - completed
-              - not_started
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: status
+          in: query
+          required: false
+          description: |
+            Filter by enrollment status. Derived from DB fields:
+            - `NOT_STARTED`: progress_percentage = 0 AND is_completed = false
+            - `IN_PROGRESS`: progress_percentage > 0 AND is_completed = false
+            - `COMPLETED`: is_completed = true
+          schema:
+            type: string
+            enum: [NOT_STARTED, IN_PROGRESS, COMPLETED]
+        - name: source
+          in: query
+          required: false
+          description: Filter by enrollment source (maps to `enrollment_source` enum)
+          schema:
+            type: string
+            enum: [PURCHASE, BUNDLE_PURCHASE, FREE_ACCESS, ADMIN_GRANT, PREVIEW]
       responses:
         '200':
           description: Enrollments retrieved
@@ -1463,21 +1885,34 @@ paths:
 
   /users/me/enrollments/{enrollmentId}:
     get:
-      tags:
-        - Progress
+      tags: [Progress]
       summary: Get enrollment details
+      description: |
+        Returns detailed enrollment including bundle source info.
+        Maps to `learning.enrollments` with optional join to `catalog.course_bundles`.
       operationId: getEnrollment
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/enrollmentId'
+        - name: enrollmentId
+          in: path
+          required: true
+          description: UUID v7 identifier of the enrollment (public_id)
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       responses:
         '200':
           description: Enrollment details retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Enrollment'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -1491,23 +1926,148 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  # ======================================================================
+  /users/me/enrollments/{enrollmentId}/lesson-completions:
+    get:
+      tags: [Progress]
+      summary: List lesson completions for an enrollment
+      description: |
+        Returns all lesson completion records for the given enrollment.
+        Maps to `learning.lesson_completions WHERE enrollment_id = :id`.
+        Uses index `idx_lesson_completions_progress`.
+      operationId: listLessonCompletions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: enrollmentId
+          in: path
+          required: true
+          description: UUID v7 identifier of the enrollment
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Lesson completions retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaginatedResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '429':
+          $ref: '#/components/responses/429'
+        '500':
+          $ref: '#/components/responses/500'
+
+  /users/me/enrollments/{enrollmentId}/lesson-completions/{lessonId}:
+    put:
+      tags: [Progress]
+      summary: Mark a lesson as complete or incomplete
+      description: |
+        Toggles lesson completion status within an enrollment.
+        Maps to `learning.lesson_completions` (upsert on student_id + lesson_id).
+        On completion, triggers recalculation of `enrollments.progress_percentage`.
+        The `row_version` on the enrollment is incremented for optimistic concurrency.
+      operationId: updateLessonCompletion
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: enrollmentId
+          in: path
+          required: true
+          description: UUID v7 identifier of the enrollment
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+        - name: lessonId
+          in: path
+          required: true
+          description: UUID v7 identifier of the lesson
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LessonCompletionUpdate'
+      responses:
+        '200':
+          description: Lesson completion updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LessonCompletion'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '409':
+          $ref: '#/components/responses/409'
+        '422':
+          $ref: '#/components/responses/422'
+        '429':
+          $ref: '#/components/responses/429'
+        '500':
+          $ref: '#/components/responses/500'
+
+  # =========================================================================
   # BOOKMARK ENDPOINTS
-  # ======================================================================
+  # =========================================================================
   /users/me/bookmarks:
     get:
-      tags:
-        - Bookmark
+      tags: [Bookmark]
       summary: List user bookmarks
       description: |
         Returns all bookmarked courses and resources for the authenticated user.
         Bookmarks are sorted by creation date (newest first).
+
+        **DB Note:** Requires a bookmarks table (not yet in DBML v4.0).
+        Service-layer implementation pending DB migration.
       operationId: listBookmarks
       security:
         - bearerAuth: []
+      x-db-alignment: pending_table
       parameters:
-        - $ref: '#/components/parameters/cursor'
-        - $ref: '#/components/parameters/limit'
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         '200':
           description: Bookmarks retrieved
@@ -1525,17 +2085,17 @@ paths:
           $ref: '#/components/responses/429'
         '500':
           $ref: '#/components/responses/500'
-
     post:
-      tags:
-        - Bookmark
+      tags: [Bookmark]
       summary: Create a bookmark
       description: |
-        Bookmark a course or resource for quick access. The same item can only
-        be bookmarked once per user.
+        Bookmark a course or resource for quick access.
+
+        **DB Note:** Requires a bookmarks table (not yet in DBML v4.0).
       operationId: createBookmark
       security:
         - bearerAuth: []
+      x-db-alignment: pending_table
       requestBody:
         required: true
         content:
@@ -1557,6 +2117,10 @@ paths:
           $ref: '#/components/responses/403'
         '409':
           description: Item already bookmarked
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '422':
           $ref: '#/components/responses/422'
         '429':
@@ -1566,12 +2130,12 @@ paths:
 
   /users/me/bookmarks/{itemId}:
     delete:
-      tags:
-        - Bookmark
+      tags: [Bookmark]
       summary: Remove a bookmark
       operationId: deleteBookmark
       security:
         - bearerAuth: []
+      x-db-alignment: pending_table
       parameters:
         - name: itemId
           in: path
@@ -1595,19 +2159,28 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  # ======================================================================
+  # =========================================================================
   # DOWNLOAD ENDPOINTS
-  # ======================================================================
+  # =========================================================================
   /courses/{courseId}/download:
     post:
-      tags:
-        - Downloads
+      tags: [Downloads]
       summary: Initiate course download
+      description: |
+        Initiates a course content download package. Validates enrollment and
+        download size limits (`catalog.lessons.download_size_limit_bytes`, max 500MB).
+        Maps to `shared.file_metadata` for object keys and `catalog.lessons.file_object_key`.
       operationId: initiateDownload
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/courseId'
+        - name: courseId
+          in: path
+          required: true
+          description: UUID v7 identifier of the course
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       responses:
         '200':
           description: Download initiated
@@ -1634,14 +2207,20 @@ paths:
 
   /courses/{courseId}/download/status:
     get:
-      tags:
-        - Downloads
+      tags: [Downloads]
       summary: Get download status
+      description: Returns current download preparation status for a course.
       operationId: getDownloadStatus
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/courseId'
+        - name: courseId
+          in: path
+          required: true
+          description: UUID v7 identifier of the course
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       responses:
         '200':
           description: Download status retrieved
@@ -1664,14 +2243,22 @@ paths:
 
   /courses/{courseId}/download/presigned-url:
     get:
-      tags:
-        - Downloads
+      tags: [Downloads]
       summary: Get presigned download URL
+      description: |
+        Returns a time-limited presigned URL for downloading the course package.
+        Resolves `shared.file_metadata.object_key` + `bucket_name` to S3 presigned URL.
       operationId: getPresignedUrl
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/courseId'
+        - name: courseId
+          in: path
+          required: true
+          description: UUID v7 identifier of the course
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       responses:
         '200':
           description: Presigned URL retrieved
@@ -1692,18 +2279,26 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  # ======================================================================
+  # =========================================================================
   # PURCHASE ENDPOINTS
-  # ======================================================================
+  # =========================================================================
   /courses/{courseId}/purchase-options:
     get:
-      tags:
-        - Purchases
+      tags: [Purchases]
       summary: Get purchase options for a course
-      description: Returns purchase options. Telebirr is the sole payment method.
-      operationId: getPurchaseOptions
+      description: |
+        Returns purchase options for a specific course. Telebirr is the sole payment method.
+        Maps to `finance.purchase_options WHERE course_id = :id AND is_active = true`.
+        Uses index `idx_purchase_options_course`.
+      operationId: getCoursePurchaseOptions
       parameters:
-        - $ref: '#/components/parameters/courseId'
+        - name: courseId
+          in: path
+          required: true
+          description: UUID v7 identifier of the course
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       responses:
         '200':
           description: Purchase options retrieved
@@ -1714,8 +2309,7 @@ paths:
                 type: array
                 items:
                   type: string
-                  enum:
-                    - telebirr
+                  enum: [telebirr]
           content:
             application/json:
               schema:
@@ -1742,15 +2336,36 @@ paths:
 
   /purchases:
     get:
-      tags:
-        - Purchases
+      tags: [Purchases]
       summary: List user purchases
+      description: |
+        Returns all purchases (courses and bundles) for the authenticated user.
+        Maps to `finance.purchases WHERE student_id = :userId`.
+        Uses index `idx_purchases_student_time`.
       operationId: listPurchases
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/cursor'
-        - $ref: '#/components/parameters/limit'
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: type
+          in: query
+          required: false
+          description: Filter by purchase type (course or bundle)
+          schema:
+            type: string
+            enum: [COURSE, BUNDLE]
       responses:
         '200':
           description: Purchases retrieved
@@ -1768,11 +2383,18 @@ paths:
           $ref: '#/components/responses/429'
         '500':
           $ref: '#/components/responses/500'
-
     post:
-      tags:
-        - Purchases
+      tags: [Purchases]
       summary: Initiate a purchase
+      description: |
+        Initiates a purchase for either a course OR a bundle (XOR constraint).
+        Maps to `finance.purchases`. DB CHECK constraint enforces:
+        exactly one of `course_id` or `bundle_id` must be non-null.
+
+        **Server-side resolution:** The `payment_gateway_id` (NOT NULL in DB) is
+        resolved server-side to the active Telebirr gateway. Clients do not provide this.
+
+        On completion with `bundle_id`, trigger `create_bundle_enrollments()` fires.
       operationId: initiatePurchase
       security:
         - bearerAuth: []
@@ -1788,7 +2410,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Purchase'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -1806,21 +2433,34 @@ paths:
 
   /purchases/{purchaseId}:
     get:
-      tags:
-        - Purchases
+      tags: [Purchases]
       summary: Get purchase details
+      description: |
+        Returns full purchase details including status, amount, and generated enrollments.
+        Maps to `finance.purchases` joined with `finance.purchase_transactions`.
       operationId: getPurchase
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/purchaseId'
+        - name: purchaseId
+          in: path
+          required: true
+          description: UUID v7 identifier of the purchase (public_id)
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       responses:
         '200':
           description: Purchase details retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Purchase'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -1834,24 +2474,240 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  # ======================================================================
+  # =========================================================================
+  # QUIZ ENDPOINTS
+  # =========================================================================
+  /resources/{resourceId}/quiz:
+    get:
+      tags: [Quiz]
+      summary: Get quiz questions for a lesson
+      description: |
+        Returns all quiz questions for a lesson with `content_type=quiz`.
+        Maps to `learning.quiz_questions WHERE lesson_id = :id ORDER BY question_index`.
+        Only accessible to enrolled students. Does NOT include correct answers.
+      operationId: getQuizQuestions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: resourceId
+          in: path
+          required: true
+          description: UUID v7 identifier of the lesson (must be content_type=quiz)
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
+      responses:
+        '200':
+          description: Quiz questions retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/QuizQuestionSet'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '422':
+          description: Lesson is not a quiz type
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '429':
+          $ref: '#/components/responses/429'
+        '500':
+          $ref: '#/components/responses/500'
+
+  /resources/{resourceId}/quiz/submit:
+    post:
+      tags: [Quiz]
+      summary: Submit quiz answers
+      description: |
+        Submits answers for a quiz attempt. Creates records in `learning.quiz_attempts`
+        and `learning.quiz_answers`. Maximum answer length: 10,000 characters per answer.
+        Grading is server-side (compares against `quiz_questions.correct_answer`).
+      operationId: submitQuizAttempt
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: resourceId
+          in: path
+          required: true
+          description: UUID v7 identifier of the quiz lesson
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuizSubmitRequest'
+      responses:
+        '201':
+          description: Quiz attempt recorded with results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/QuizAttemptResult'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '422':
+          $ref: '#/components/responses/422'
+        '429':
+          $ref: '#/components/responses/429'
+        '500':
+          $ref: '#/components/responses/500'
+
+  /resources/{resourceId}/quiz/attempts:
+    get:
+      tags: [Quiz]
+      summary: List quiz attempts for a lesson
+      description: |
+        Returns all quiz attempts by the current user for a specific lesson.
+        Maps to `learning.quiz_attempts WHERE student_id = :userId AND lesson_id = :id`.
+        Uses index `idx_quiz_attempts_student_lesson`.
+      operationId: listQuizAttempts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: resourceId
+          in: path
+          required: true
+          description: UUID v7 identifier of the quiz lesson
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Quiz attempts retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaginatedResponse'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '429':
+          $ref: '#/components/responses/429'
+        '500':
+          $ref: '#/components/responses/500'
+
+  /quiz/attempts/{attemptId}:
+    get:
+      tags: [Quiz]
+      summary: Get quiz attempt details with answers
+      description: |
+        Returns a specific quiz attempt with all answers and explanations.
+        Maps to `learning.quiz_attempts` joined with `learning.quiz_answers`
+        and `learning.quiz_questions` (for explanations after submission).
+      operationId: getQuizAttempt
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          description: UUID v7 identifier of the quiz attempt (public_id)
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
+      responses:
+        '200':
+          description: Quiz attempt retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/QuizAttemptDetail'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '429':
+          $ref: '#/components/responses/429'
+        '500':
+          $ref: '#/components/responses/500'
+
+  # =========================================================================
   # RECOMMENDATIONS ENDPOINTS
-  # ======================================================================
+  # =========================================================================
   /courses/{courseId}/ratings:
     get:
-      tags:
-        - Recommendations
+      tags: [Recommendations]
       summary: Get course rating summary
+      description: |
+        Maps to `catalog.course_stats` (average_rating, rating_count).
+        The `distribution` field is computed at query time from
+        `learning.course_reviews WHERE course_id = :id AND moderation_status = 'approved'`
+        grouped by rating value.
       operationId: getCourseRating
       parameters:
-        - $ref: '#/components/parameters/courseId'
+        - name: courseId
+          in: path
+          required: true
+          description: UUID v7 identifier of the course
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       responses:
         '200':
           description: Rating summary retrieved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SingleResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SingleResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CourseRatingSummary'
         '400':
           $ref: '#/components/responses/400'
         '401':
@@ -1864,16 +2720,23 @@ paths:
           $ref: '#/components/responses/429'
         '500':
           $ref: '#/components/responses/500'
-
     post:
-      tags:
-        - Recommendations
+      tags: [Recommendations]
       summary: Submit rating for a course
+      description: |
+        Submits or updates a rating. Requires enrollment.
+        Updates `catalog.course_stats.average_rating` and `rating_count`.
       operationId: submitRating
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/courseId'
+        - name: courseId
+          in: path
+          required: true
+          description: UUID v7 identifier of the course
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       requestBody:
         required: true
         content:
@@ -1902,14 +2765,34 @@ paths:
 
   /courses/{courseId}/reviews:
     get:
-      tags:
-        - Recommendations
+      tags: [Recommendations]
       summary: List approved reviews for a course
+      description: |
+        Returns approved reviews only. Maps to
+        `learning.course_reviews WHERE course_id = :id AND moderation_status = 'approved'`.
+        Uses index `idx_course_reviews_status_time`.
       operationId: listReviews
       parameters:
-        - $ref: '#/components/parameters/courseId'
-        - $ref: '#/components/parameters/cursor'
-        - $ref: '#/components/parameters/limit'
+        - name: courseId
+          in: path
+          required: true
+          description: UUID v7 identifier of the course
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         '200':
           description: Reviews retrieved
@@ -1929,16 +2812,23 @@ paths:
           $ref: '#/components/responses/429'
         '500':
           $ref: '#/components/responses/500'
-
     post:
-      tags:
-        - Recommendations
+      tags: [Recommendations]
       summary: Submit review for a course
+      description: |
+        Submits a review (enters moderation queue with status=pending).
+        Maps to `learning.course_reviews`. Unique constraint: one review per student per course.
       operationId: submitReview
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/courseId'
+        - name: courseId
+          in: path
+          required: true
+          description: UUID v7 identifier of the course
+          schema:
+            $ref: '#/components/schemas/UUIDv7'
+          example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
       requestBody:
         required: true
         content:
@@ -1947,7 +2837,7 @@ paths:
               $ref: '#/components/schemas/ReviewSubmit'
       responses:
         '201':
-          description: Review submitted (pending approval)
+          description: Review submitted (pending moderation approval)
           content:
             application/json:
               schema:
@@ -1961,7 +2851,11 @@ paths:
         '404':
           $ref: '#/components/responses/404'
         '409':
-          $ref: '#/components/responses/409'
+          description: Review already exists for this course
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '422':
           $ref: '#/components/responses/422'
         '429':
@@ -1971,21 +2865,29 @@ paths:
 
   /users/me/recommendations:
     get:
-      tags:
-        - Recommendations
+      tags: [Recommendations]
       summary: Get personalized recommendations
       description: |
-        Returns popularity-based course recommendations. Currently implements
-        FR-705 (popularity-based) with reasons like "POPULAR_AMONG_LEARNERS".
-        
-        **Future Enhancement:** Will evolve to collaborative filtering (FR-707)
-        as user data grows.
+        Returns popularity-based course recommendations (FR-705).
+        Uses `catalog.course_stats` index `idx_course_stats_recommendation`
+        (popularity_score, weighted_rating).
       operationId: getRecommendations
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/cursor'
-        - $ref: '#/components/parameters/limit'
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
       responses:
         '200':
           description: Recommendations retrieved
@@ -2004,18 +2906,19 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  # ======================================================================
+  # =========================================================================
   # WEBHOOK ENDPOINTS
-  # ======================================================================
+  # =========================================================================
   /webhooks/telebirr:
     post:
-      tags:
-        - Webhooks
+      tags: [Webhooks]
       summary: Telebirr C2B payment callback
       description: |
         Receives payment callback from Telebirr C2B service.
         Sole payment method — all platforms.
-        Uses API Key authentication per NFR-TP01.
+        Stores in `ops.webhook_events` (provider=telebirr) and updates
+        `finance.purchase_transactions` + `finance.purchases` status.
+        Idempotency enforced via `purchase_transactions.idempotency_key`.
       operationId: handleTelebirrWebhook
       security:
         - apiKeyHeader: []
@@ -2035,7 +2938,11 @@ paths:
         '403':
           $ref: '#/components/responses/403'
         '409':
-          $ref: '#/components/responses/409'
+          description: Duplicate webhook (idempotency key already processed)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '422':
           $ref: '#/components/responses/422'
         '429':
@@ -2045,15 +2952,21 @@ paths:
 
   /webhooks/sms-delivery:
     post:
-      tags:
-        - Webhooks
+      tags: [Webhooks]
       summary: SMS delivery status callback
       description: |
         Receives delivery status from SMSEthiopia.
-        Uses API Key authentication per NFR-TP01.
+        Stores in `ops.webhook_events`.
+
+        **DB Alignment Note:** `ops.webhook_events.provider` enum currently only has
+        'telebirr'. This endpoint requires extending the `payment_provider` enum with
+        'smsethiopia' or using a separate webhook_provider enum before go-live.
+        The service layer should handle this gracefully until the DB migration is applied.
       operationId: handleSmsDeliveryWebhook
       security:
         - apiKeyHeader: []
+      x-db-alignment: requires_enum_extension
+      x-db-note: "ops.webhook_events.provider enum must include 'smsethiopia'"
       requestBody:
         required: true
         content:
@@ -2078,18 +2991,16 @@ paths:
         '500':
           $ref: '#/components/responses/500'
 
-  # ======================================================================
+  # =========================================================================
   # SYSTEM ENDPOINTS
-  # ======================================================================
+  # =========================================================================
   /health:
     get:
-      tags:
-        - System
+      tags: [System]
       summary: Liveness probe
       description: |
-        Returns 200 OK if the application process is running.
+        Returns 200 OK if the Abugida application process is running.
         No authentication required. No dependency checks performed.
-        Used by Kubernetes liveness probes and load balancer health checks.
       operationId: healthLiveness
       security: []
       responses:
@@ -2102,8 +3013,7 @@ paths:
                 properties:
                   status:
                     type: string
-                    enum:
-                      - ok
+                    enum: [ok]
                     example: ok
                   uptime:
                     type: number
@@ -2112,29 +3022,22 @@ paths:
                   version:
                     type: string
                     description: Deployed API version
-                    example: 1.0.0
+                    example: 2.0.0
                   timestamp:
                     $ref: '#/components/schemas/Timestamp'
-                required:
-                  - status
-                  - uptime
-                  - version
-                  - timestamp
-        '400':
-          $ref: '#/components/responses/400'
+                required: [status, uptime, version, timestamp]
+        '429':
+          $ref: '#/components/responses/429'
         '500':
           $ref: '#/components/responses/500'
 
   /health/ready:
     get:
-      tags:
-        - System
+      tags: [System]
       summary: Readiness probe
       description: |
         Returns 200 OK only if all critical dependencies are available.
-        Checks database connectivity, SMS provider,
-        and payment gateway status. Used by Kubernetes readiness probes.
-        Returns 503 if any dependency is unavailable.
+        Checks database connectivity, SMS provider, and payment gateway status.
       operationId: healthReadiness
       security: []
       responses:
@@ -2147,131 +3050,54 @@ paths:
                 properties:
                   status:
                     type: string
-                    enum:
-                      - ok
-                    example: ok
+                    enum: [ok]
                   checks:
                     type: object
                     properties:
                       database:
                         type: string
-                        enum:
-                          - ok
-                          - degraded
-                          - unavailable
-                        description: PostgreSQL connection and query health
-                        example: ok
+                        enum: [ok, degraded, unavailable]
                       sms_provider:
                         type: string
-                        enum:
-                          - ok
-                          - degraded
-                          - unavailable
-                        description: SMSEthiopia API reachability
-                        example: ok
+                        enum: [ok, degraded, unavailable]
                       payment_gateway:
                         type: string
-                        enum:
-                          - ok
-                          - degraded
-                          - unavailable
-                        description: Telebirr payment service
-                        example: ok
-                    required:
-                      - database
-                      - sms_provider
-                      - payment_gateway
+                        enum: [ok, degraded, unavailable]
+                    required: [database, sms_provider, payment_gateway]
                   timestamp:
                     $ref: '#/components/schemas/Timestamp'
-                required:
-                  - status
-                  - checks
-                  - timestamp
-        '400':
-          $ref: '#/components/responses/400'
+                required: [status, checks, timestamp]
+        '429':
+          $ref: '#/components/responses/429'
         '503':
-          description: One or more dependencies unavailable
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetail'
-                example:
-                  type: https://api.example.com/errors/service-unavailable
-                  title: Service Unavailable
-                  status: 503
-                  detail: 'Dependency check failed: database is unavailable.'
-                  instance: /api/v1/health/ready
-                  correlationId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
+          $ref: '#/components/responses/503'
 
+# =============================================================================
+# COMPONENTS
+# =============================================================================
 components:
-  # ======================================================================
+  # ===========================================================================
   # SECURITY SCHEMES
-  # ======================================================================
+  # ===========================================================================
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
       description: |
-        **JWT Bearer Token Authentication**
-
-        Obtain tokens via:
-        - Login — Returns `{ accessToken, refreshToken, expiresIn }`
-        - Register — Returns tokens for immediate authentication after signup
-        - Token refresh — Rotates tokens using a valid refresh token
-
-        **Token Lifecycle:**
-        - Access token: 24 hours (configurable via `ops.system_configs`)
-        - Refresh token: 7 days with rotation on each use
-        - Token family rotation: Using a refresh token invalidates all tokens in the same family
-
-        **Usage:**
-        ```
-        Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
-        ```
-
-        **Security (FR-901):**
-        - Authentication via Better Auth (Telegram + Google OAuth)
-        - JWT/session lifecycle governed by Better Auth configuration
-        - No custom token implementation — Better Auth manages all auth flows
-
-        **Related Functional Requirements:**
-        - FR-103: Login with phone + password
-        - FR-107: Account lockout after 5 failed attempts
-        - FR-108: Logout invalidates all tokens
-        - FR-901: Secure authentication enforcement
-        - NFR-402: Session timeout after 15 minutes inactivity
-
+        JWT Bearer Token Authentication via Better Auth.
+        Supported sign-in providers: **Google Sign-In** and **Apple ID**.
     apiKeyHeader:
       type: apiKey
       in: header
       name: X-API-Key
       description: |
-        **API Key Authentication for Webhooks**
+        API Key Authentication for Webhooks.
+        Validated against `ops.api_keys` table with `principal_type = 'integration'`.
 
-        Used by third-party services to authenticate incoming webhook calls:
-        - Telebirr C2B payment callbacks
-        - SMSEthiopia delivery status callbacks
-
-        **Security Requirements (NFR-TP01):**
-        - API keys stored in AWS Secrets Manager / HashiCorp Vault
-        - Rotated every 90 days
-        - Never exposed in client-side code or build artifacts
-        - Validated against `ops.api_keys` table with `principal_type = 'integration'`
-
-        **Usage:**
-        ```
-        X-API-Key: ek_live_a1b2c3d4e5f6...
-        ```
-
-        **Related Requirements:**
-        - FR-404: Payment receipt validation
-        - FR-1005: SMS delivery confirmation
-        - NFR-TP01: Server-side only, never client-exposed
-
-  # ======================================================================
+  # ===========================================================================
   # SCHEMAS
-  # ======================================================================
+  # ===========================================================================
   schemas:
     # ----- Shared primitives -----
     UUIDv7:
@@ -2279,116 +3105,68 @@ components:
       format: uuid
       description: |
         Universally Unique Identifier version 7 (time-ordered, monotonic).
-
-        **Characteristics:**
-        - Time-ordered: Sortable by creation time without additional timestamp
-        - Monotonic: Guarantees uniqueness within the same millisecond
-        - API-safe: Used as public-facing identifier (maps to `public_id` in database)
-        - Internal `bigint` primary keys are never exposed in API responses
-
-        Generated via PostgreSQL `uuid_generate_v7()` from the `pg_uuidv7` extension.
-
-        **Example:** `018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8`
+        Maps to `public_id` columns in the database.
       pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
       example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
 
     Timestamp:
       type: string
       format: date-time
-      description: |
-        ISO 8601 timestamp with timezone offset. All timestamps are stored and returned 
-        in UTC with timezone awareness (`timestamptz` in PostgreSQL).
-
-        **Precision:** Millisecond-level precision when available.
-        **Example:** `2026-04-30T14:30:00.000Z`
+      description: ISO 8601 timestamp with timezone (maps to timestamptz in PostgreSQL)
       example: '2026-04-30T14:30:00.000Z'
 
     CurrencyCode:
       type: string
       pattern: ^[A-Z]{3}$
-      description: |
-        ISO 4217 three-letter currency code. Supports all world currencies including 
-        three-decimal currencies (e.g., Bahraini Dinar, Kuwaiti Dinar).
-
-        **Default:** `ETB` (Ethiopian Birr)
-        **Examples:** `ETB`, `USD`, `EUR`, `BHD`
+      description: ISO 4217 three-letter currency code. Default ETB.
       minLength: 3
       maxLength: 3
       example: ETB
 
     Money:
       type: object
-      description: |
-        Monetary value with explicit currency code. Amount is represented as a string 
-        to preserve exact decimal precision (mapped to `numeric(19,4)` in PostgreSQL).
-
-        **Precision:** Up to 4 decimal places (supports 3-decimal ISO 4217 currencies)
-        **Scale:** 19 total digits, 4 fractional
+      description: Monetary value (maps to numeric(19,4) amount + char(3) currency in PostgreSQL)
       properties:
         amount:
           type: string
           pattern: ^\d{1,15}\.\d{1,4}$
-          description: Monetary amount as exact decimal string (avoids floating-point issues)
-          example: '299.99'
+          description: Exact decimal string (15 integer + 4 fractional = 19 digits)
+          example: '299.9900'
         currency:
           $ref: '#/components/schemas/CurrencyCode'
-      required:
-        - amount
-        - currency
+      required: [amount, currency]
 
     PaginationCursor:
       type: string
-      description: |
-        Opaque base64url-encoded cursor for pagination. Cursors encode the last item's 
-        sort key and are stable for a given result set order.
+      description: Opaque base64url-encoded cursor for pagination
+      example: eyJ0aW1lc3RhbXAiOiIyMDI2LTA0LTMwVDEwOjAwOjAwWiIsImlkIjoiMDE4ZjNhMmMifQ
 
-        **Implementation:**
-        - Encode sort key + tiebreaker (usually `public_id` UUID v7) as JSON → base64url
-        - Cursors are not guaranteed across different sort orders or filter combinations
-        - Empty cursor or omitted cursor = first page
-
-        **Example:** `eyJ0aW1lc3RhbXAiOiIyMDI2LTA0LTMwVDEwOjAwOjAwWiIsImlkIjoiMDE4Zi4uLiJ9`
-      example: eyJ0aW1lc3RhbXAiOiIyMDI2LTA0LTMwVDEwOjAwOjAwWiIsImlkIjoiMDE4ZjNhMmMtOWI1ZS03ZDRhLWExYzItZTNmNGE1YjZjN2Q4In0
-
-    # ----- Response envelopes & errors -----
+    # ----- Response envelopes -----
     ResponseMetadata:
       type: object
-      description: |
-        Base metadata present in all successful responses.
       properties:
         requestId:
           $ref: '#/components/schemas/UUIDv7'
-          description: Unique identifier for this request/response pair
         timestamp:
           $ref: '#/components/schemas/Timestamp'
-          description: Server timestamp when the response was generated
-      required:
-        - requestId
-        - timestamp
+      required: [requestId, timestamp]
 
     SingleResponse:
-      description: |
-        Envelope for responses containing a single resource.
-
-        **Usage:** GET single resource, POST create, PATCH update
+      description: Envelope for single resource responses
       properties:
         data:
-          description: The response payload (schema varies by endpoint)
+          description: The response payload
         meta:
           $ref: '#/components/schemas/ResponseMetadata'
-      required:
-        - data
-        - meta
+      required: [data, meta]
 
     CollectionResponse:
-      description: |
-        Envelope for responses containing a collection with cursor-based pagination.
-
-        **Usage:** GET collections where pagination is not needed (small, fixed-size lists)
+      description: Envelope for fixed-size collections (no pagination)
       properties:
         data:
           type: array
-          description: Array of resources (schema varies by endpoint)
+          items:
+            type: object
         meta:
           allOf:
             - $ref: '#/components/schemas/ResponseMetadata'
@@ -2397,36 +3175,16 @@ components:
                 count:
                   type: integer
                   minimum: 0
-                  description: Total number of items in this response
-              required:
-                - count
-      required:
-        - data
-        - meta
+              required: [count]
+      required: [data, meta]
 
     CursorPaginatedResponse:
-      description: |
-        Envelope for paginated collection responses using cursor-based pagination.
-
-        **Pagination Flow:**
-        1. Initial request: `GET /resources?limit=20`
-        2. Response includes `nextCursor` if more results exist
-        3. Next page: `GET /resources?cursor=<nextCursor>&limit=20`
-        4. When `hasNextPage` is `false`, all results have been retrieved
-
-        **Cursor Stability:**
-        - Cursors are valid only for the same sort order and filters
-        - Changing `sort` or `filter` parameters requires starting from page 1
-        - Cursors are opaque and should not be constructed or modified by clients
-
-        **Limit Constraints (per NFR-103):**
-        - Default: 20 items
-        - Minimum: 1
-        - Maximum: 100
+      description: Envelope for cursor-paginated collections
       properties:
         data:
           type: array
-          description: Array of resources for the current page
+          items:
+            type: object
         meta:
           allOf:
             - $ref: '#/components/schemas/ResponseMetadata'
@@ -2434,136 +3192,724 @@ components:
               properties:
                 hasNextPage:
                   type: boolean
-                  description: '`true` if more results exist beyond this page'
                 nextCursor:
                   $ref: '#/components/schemas/PaginationCursor'
-                  description: Opaque cursor for retrieving the next page (only present when `hasNextPage` is `true`)
                 limit:
                   type: integer
                   minimum: 1
                   maximum: 100
                   default: 20
-                  description: Number of items per page requested
                 totalCount:
                   type: integer
                   minimum: 0
-                  description: |
-                    Approximate total count of matching results (optional, may be omitted 
-                    for performance reasons on large datasets)
-              required:
-                - hasNextPage
-                - limit
-      required:
-        - data
-        - meta
+                  description: Approximate total (optional)
+              required: [hasNextPage, limit]
+      required: [data, meta]
 
     ProblemDetail:
       type: object
-      description: |
-        **RFC 9457 Problem Details Object** (supersedes RFC 7807)
-
-        Returned for all 4xx and 5xx errors. Provides machine-readable error information with human-readable descriptions.
-
-        **Standard Members (RFC 9457 §3.1):**
-        - `type`: URI reference identifying the problem type. Defaults to `"about:blank"` when omitted, in which case `title` SHOULD match the HTTP status reason phrase.
-        - `title`: Short, human-readable summary. SHOULD NOT change between occurrences of the same type.
-        - `status`: HTTP status code (advisory — MUST match the actual response status).
-        - `detail`: Human-readable explanation specific to this occurrence.
-        - `instance`: URI reference identifying the specific occurrence.
-
-        **Extension Members:**
-        - `correlationId`: Non-standard extension for request tracing and log correlation.
-        - `errors`: Non-standard extension for field-level validation details (422 responses).
+      description: RFC 9457 Problem Details
       properties:
         type:
           type: string
           format: uri-reference
-          description: URI reference identifying the problem type (RFC 9457 §3.1.1). When absent or set to `"about:blank"`, title SHOULD match the HTTP status reason phrase.
           default: about:blank
-          example: https://api.example.com/errors/invalid-parameter
         title:
           type: string
-          description: Short, human-readable summary of the problem type (RFC 9457 §3.1.2). SHOULD be the same for all occurrences of the same `type`.
-          example: Invalid Parameter
         status:
           type: integer
-          description: HTTP status code (RFC 9457 §3.1.3). Advisory — MUST match the actual response status code. Included for convenience when consuming the body directly.
           minimum: 400
           maximum: 599
-          example: 400
         detail:
           type: string
-          description: Human-readable explanation specific to this occurrence (RFC 9457 §3.1.4). Intended for the developer, not end-user display.
-          example: The 'email' field must be a valid email address.
         instance:
           type: string
           format: uri-reference
-          description: URI reference identifying the specific occurrence (RFC 9457 §3.1.5). Typically the request path.
-          example: /api/v1/users/me
         correlationId:
           $ref: '#/components/schemas/UUIDv7'
-          description: 'Extension member: unique request identifier for support and log correlation. Maps to the `X-Request-ID` response header.'
         errors:
           type: array
-          description: 'Extension member: field-level validation errors. Present only when `status` is 422 (Unprocessable Entity).'
           items:
             $ref: '#/components/schemas/ValidationError'
-      required:
-        - type
-        - title
-        - status
-        - detail
-        - instance
+      required: [type, title, status, detail, instance]
 
     ValidationError:
       type: object
-      description: |
-        Field-level validation error detail. Only present when `status` is 422 (Unprocessable Entity) 
-        and the error involves specific input fields.
       properties:
         field:
           type: string
-          description: JSON path to the invalid field (dot notation for nested objects)
-          example: password
         message:
           type: string
-          description: Specific validation failure message
-          example: Password must be at least 8 characters and include uppercase, lowercase, digit, and special character.
         code:
           type: string
-          description: Machine-readable error code for programmatic handling
-          example: PASSWORD_COMPLEXITY
-        rejectedValue:
-          description: The value that failed validation (redacted for sensitive fields)
-          example: short
-      required:
-        - field
-        - message
-        - code
+        rejectedValue: {}
+      required: [field, message, code]
 
-    # ----- Users -----
-    AccountDeletionRequest:
+    # ----- Domain: Exam Types -----
+    ExamType:
+      type: object
+      description: Maps to catalog.exam_types
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+        name:
+          type: string
+          maxLength: 100
+        slug:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        parentExamTypeId:
+          $ref: '#/components/schemas/UUIDv7'
+          description: Null for top-level exam types
+        depth:
+          type: integer
+          minimum: 0
+          description: '0=top-level, 1=child, etc.'
+        sortOrder:
+          type: integer
+          minimum: 0
+        isActive:
+          type: boolean
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExamTypeSummary'
+          description: Immediate child exam types (when include_children=true)
+      required: [id, name, slug, depth, isActive]
+
+    ExamTypeSummary:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+        name:
+          type: string
+        slug:
+          type: string
+        depth:
+          type: integer
+        sortOrder:
+          type: integer
+      required: [id, name, slug]
+
+    # ----- Domain: Courses -----
+    Course:
+      type: object
+      description: Maps to catalog.courses + catalog.course_stats
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+        examTypeId:
+          $ref: '#/components/schemas/UUIDv7'
+        title:
+          type: string
+          maxLength: 300
+        slug:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        thumbnailUrl:
+          type: string
+          format: uri
+          description: Resolved presigned URL from thumbnail_object_key
+        price:
+          $ref: '#/components/schemas/Money'
+        isFree:
+          type: boolean
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, ARCHIVED]
+          description: Maps to DB course_status enum (draft, published, archived)
+          x-db-enum: course_status
+        version:
+          type: integer
+          minimum: 1
+        sortOrder:
+          type: integer
+        stats:
+          $ref: '#/components/schemas/CourseStats'
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+        updatedAt:
+          $ref: '#/components/schemas/Timestamp'
+      required: [id, examTypeId, title, slug, status, isFree]
+
+    CourseStats:
+      type: object
+      description: Maps to catalog.course_stats
+      properties:
+        totalEnrollments:
+          type: integer
+        averageRating:
+          type: number
+          format: float
+          minimum: 1.0
+          maximum: 5.0
+          nullable: true
+        ratingCount:
+          type: integer
+        popularityScore:
+          type: number
+      required: [totalEnrollments, ratingCount]
+
+    CourseCurriculum:
+      type: object
+      description: Full course hierarchy (modules → lessons)
+      properties:
+        courseId:
+          $ref: '#/components/schemas/UUIDv7'
+        courseTitle:
+          type: string
+        modules:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModuleWithLessons'
+      required: [courseId, modules]
+
+    ModuleWithLessons:
+      type: object
+      description: Maps to catalog.modules with nested lessons
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+        title:
+          type: string
+          maxLength: 300
+        description:
+          type: string
+        sortOrder:
+          type: integer
+        estimatedDurationMinutes:
+          type: integer
+          nullable: true
+        isPreviewAvailable:
+          type: boolean
+        lessons:
+          type: array
+          items:
+            $ref: '#/components/schemas/LessonSummary'
+      required: [id, title, sortOrder]
+
+    LessonSummary:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+        title:
+          type: string
+          maxLength: 300
+        contentType:
+          type: string
+          enum: [PDF, VIDEO, QUIZ, EXERCISE, LINK]
+          description: Maps to DB content_type enum (pdf, video, quiz, exercise, link)
+          x-db-enum: content_type
+        durationSeconds:
+          type: integer
+          nullable: true
+        isDownloadable:
+          type: boolean
+      required: [id, title, contentType]
+
+    Lesson:
+      type: object
+      description: Maps to catalog.lessons (full detail)
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+        moduleId:
+          $ref: '#/components/schemas/UUIDv7'
+        courseId:
+          $ref: '#/components/schemas/UUIDv7'
+        title:
+          type: string
+          maxLength: 300
+        description:
+          type: string
+        contentType:
+          type: string
+          enum: [PDF, VIDEO, QUIZ, EXERCISE, LINK]
+          description: Maps to DB content_type enum
+          x-db-enum: content_type
+        fileSizeBytes:
+          type: integer
+          format: int64
+          nullable: true
+          description: Maps to DB bigint column
+        mimeType:
+          type: string
+          maxLength: 100
+        durationSeconds:
+          type: integer
+          nullable: true
+        pageCount:
+          type: integer
+          nullable: true
+        isDownloadable:
+          type: boolean
+        downloadSizeLimitBytes:
+          type: integer
+          format: int64
+          description: Max download size (default 500MB = 524288000 bytes)
+        rowVersion:
+          type: integer
+          description: Optimistic lock version (used for ETag)
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+        updatedAt:
+          $ref: '#/components/schemas/Timestamp'
+      required: [id, moduleId, courseId, title, contentType, isDownloadable]
+
+    # ----- Domain: Bundles -----
+    CourseBundle:
+      type: object
+      description: Maps to catalog.course_bundles
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+        examTypeId:
+          $ref: '#/components/schemas/UUIDv7'
+        title:
+          type: string
+          maxLength: 300
+        slug:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        thumbnailUrl:
+          type: string
+          format: uri
+        price:
+          $ref: '#/components/schemas/Money'
+          description: Discounted bundle price
+        originalPrice:
+          $ref: '#/components/schemas/Money'
+          description: Sum of individual course prices
+        discountPercentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: 'Calculated: ((original - bundle) / original) * 100'
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, ARCHIVED]
+          description: Maps to DB bundle_status enum
+          x-db-enum: bundle_status
+        courseCount:
+          type: integer
+          description: Number of included courses (computed from bundle_courses WHERE is_included=true)
+        publishedAt:
+          $ref: '#/components/schemas/Timestamp'
+          nullable: true
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+      required: [id, examTypeId, title, slug, price, originalPrice, discountPercentage, status]
+
+    BundleCourseItem:
+      type: object
+      description: A course within a bundle (from bundle_courses junction)
+      properties:
+        courseId:
+          $ref: '#/components/schemas/UUIDv7'
+        title:
+          type: string
+        slug:
+          type: string
+        thumbnailUrl:
+          type: string
+        individualPrice:
+          $ref: '#/components/schemas/Money'
+        sortOrder:
+          type: integer
+      required: [courseId, title, sortOrder]
+
+    # ----- Domain: Purchases -----
+    PurchaseOption:
+      type: object
+      description: |
+        Maps to finance.purchase_options. Supports both course and bundle pricing.
+        XOR constraint: exactly one of courseId or bundleId is present.
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+        courseId:
+          $ref: '#/components/schemas/UUIDv7'
+          description: Present for course purchase options (null for bundles)
+          nullable: true
+        bundleId:
+          $ref: '#/components/schemas/UUIDv7'
+          description: Present for bundle purchase options (null for courses)
+          nullable: true
+        platform:
+          type: string
+          enum: [IOS, ANDROID, WEB]
+          description: Maps to DB platform enum (ios, android, web)
+          x-db-enum: platform
+        productId:
+          type: string
+          maxLength: 255
+        displayName:
+          type: string
+          maxLength: 150
+        description:
+          type: string
+        durationDays:
+          type: integer
+          minimum: 1
+        price:
+          $ref: '#/components/schemas/Money'
+        isActive:
+          type: boolean
+      required: [id, platform, productId, displayName, durationDays, price]
+
+    PurchaseInitiateRequest:
       type: object
       additionalProperties: false
-      description: Account deletion request (GDPR FR-904)
+      description: |
+        Request to initiate a purchase. XOR constraint: exactly one of
+        courseId or bundleId must be provided (matches DB CHECK constraint).
+        The payment_gateway_id is resolved server-side (not provided by client).
       properties:
-        confirmation:
+        courseId:
+          $ref: '#/components/schemas/UUIDv7'
+          description: Course to purchase (mutually exclusive with bundleId)
+        bundleId:
+          $ref: '#/components/schemas/UUIDv7'
+          description: Bundle to purchase (mutually exclusive with courseId)
+        purchaseOptionId:
+          $ref: '#/components/schemas/UUIDv7'
+          description: Selected purchase option
+        platform:
           type: string
-          enum:
-            - DELETE_MY_ACCOUNT
-          description: Must match exact string to confirm deletion
-          example: DELETE_MY_ACCOUNT
-        reason:
+          enum: [IOS, ANDROID, WEB]
+          description: User's current platform
+          x-db-enum: platform
+          example: IOS
+      required: [purchaseOptionId, platform]
+
+    Purchase:
+      type: object
+      description: Maps to finance.purchases
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+        courseId:
+          $ref: '#/components/schemas/UUIDv7'
+          nullable: true
+          description: Present for course purchases
+        bundleId:
+          $ref: '#/components/schemas/UUIDv7'
+          nullable: true
+          description: Present for bundle purchases
+        purchaseOptionId:
+          $ref: '#/components/schemas/UUIDv7'
+        status:
           type: string
-          maxLength: 500
-          description: Optional reason for leaving
-        deleteAllData:
+          enum: [INITIATED, PAYMENT_PENDING, COMPLETED, FAILED]
+          description: Maps to DB purchase_status enum
+          x-db-enum: purchase_status
+        amount:
+          $ref: '#/components/schemas/Money'
+        completedAt:
+          $ref: '#/components/schemas/Timestamp'
+          nullable: true
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+        enrollments:
+          type: array
+          items:
+            $ref: '#/components/schemas/UUIDv7'
+          description: Enrollment IDs created from this purchase (for bundles, one per course)
+      required: [id, purchaseOptionId, status, amount, createdAt]
+
+    # ----- Domain: Enrollments -----
+    Enrollment:
+      type: object
+      description: Maps to learning.enrollments
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+        courseId:
+          $ref: '#/components/schemas/UUIDv7'
+        purchaseId:
+          $ref: '#/components/schemas/UUIDv7'
+          nullable: true
+        bundleId:
+          $ref: '#/components/schemas/UUIDv7'
+          nullable: true
+          description: Set when enrollment was created from a bundle purchase
+        enrollmentSource:
+          type: string
+          enum: [PURCHASE, BUNDLE_PURCHASE, FREE_ACCESS, ADMIN_GRANT, PREVIEW]
+          description: Maps to DB enrollment_source enum
+          x-db-enum: enrollment_source
+        progressPercentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+        isCompleted:
           type: boolean
-          default: true
-          description: Whether to delete all user data or retain anonymized analytics
-          example: true
+        completedAt:
+          $ref: '#/components/schemas/Timestamp'
+          nullable: true
+        lastAccessedAt:
+          $ref: '#/components/schemas/Timestamp'
+          nullable: true
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+      required: [id, courseId, enrollmentSource, progressPercentage, isCompleted]
+
+    ProgressStats:
+      type: object
+      description: Aggregated progress statistics
+      properties:
+        totalEnrollments:
+          type: integer
+        activeEnrollments:
+          type: integer
+        completedEnrollments:
+          type: integer
+        totalLessonsCompleted:
+          type: integer
+        totalStudyTimeSeconds:
+          type: integer
+      required: [totalEnrollments, activeEnrollments, completedEnrollments]
+
+    # ----- Domain: Lesson Completions -----
+    LessonCompletion:
+      type: object
+      description: Maps to learning.lesson_completions
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+        lessonId:
+          $ref: '#/components/schemas/UUIDv7'
+        enrollmentId:
+          $ref: '#/components/schemas/UUIDv7'
+        isCompleted:
+          type: boolean
+        completedAt:
+          $ref: '#/components/schemas/Timestamp'
+          nullable: true
+        timeSpentSeconds:
+          type: integer
+          nullable: true
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+        updatedAt:
+          $ref: '#/components/schemas/Timestamp'
+      required: [id, lessonId, enrollmentId, isCompleted]
+
+    LessonCompletionUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        isCompleted:
+          type: boolean
+          description: Set true to mark complete, false to mark incomplete
+        timeSpentSeconds:
+          type: integer
+          minimum: 0
+          description: Cumulative time spent on this lesson
+      required: [isCompleted]
+
+    # ----- Domain: Quiz -----
+    QuizQuestionSet:
+      type: object
+      description: Quiz questions for a lesson (without correct answers)
+      properties:
+        lessonId:
+          $ref: '#/components/schemas/UUIDv7'
+        totalQuestions:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizQuestion'
+      required: [lessonId, totalQuestions, questions]
+
+    QuizQuestion:
+      type: object
+      description: Maps to learning.quiz_questions (student view — no correct_answer)
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+        questionIndex:
+          type: integer
+          minimum: 0
+        questionText:
+          type: string
+      required: [id, questionIndex, questionText]
+
+    QuizSubmitRequest:
+      type: object
+      additionalProperties: false
+      description: Submit answers for a quiz attempt
+      properties:
+        answers:
+          type: array
+          items:
+            type: object
+            properties:
+              questionId:
+                $ref: '#/components/schemas/UUIDv7'
+              answer:
+                type: string
+                maxLength: 10000
+                description: Student's answer (max 10,000 chars)
+            required: [questionId, answer]
+        startedAt:
+          $ref: '#/components/schemas/Timestamp'
+          description: When the student started the quiz
+      required: [answers, startedAt]
+
+    QuizAttemptResult:
+      type: object
+      description: Result of a quiz submission
+      properties:
+        attemptId:
+          $ref: '#/components/schemas/UUIDv7'
+        attemptNumber:
+          type: integer
+          minimum: 1
+        totalQuestions:
+          type: integer
+        correctAnswers:
+          type: integer
+        scorePercentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+        isPassed:
+          type: boolean
+        durationSeconds:
+          type: integer
+          nullable: true
+        answers:
+          type: array
+          items:
+            type: object
+            properties:
+              questionId:
+                $ref: '#/components/schemas/UUIDv7'
+              isCorrect:
+                type: boolean
+              explanation:
+                type: string
+                description: Shown after submission
       required:
-        - confirmation
+        [attemptId, attemptNumber, totalQuestions, correctAnswers, scorePercentage, isPassed]
+
+    QuizAttemptDetail:
+      type: object
+      description: Full quiz attempt with answers
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+        lessonId:
+          $ref: '#/components/schemas/UUIDv7'
+        attemptNumber:
+          type: integer
+        totalQuestions:
+          type: integer
+        correctAnswers:
+          type: integer
+        scorePercentage:
+          type: number
+        isPassed:
+          type: boolean
+        durationSeconds:
+          type: integer
+          nullable: true
+        startedAt:
+          $ref: '#/components/schemas/Timestamp'
+        completedAt:
+          $ref: '#/components/schemas/Timestamp'
+          nullable: true
+        answers:
+          type: array
+          items:
+            type: object
+            properties:
+              questionId:
+                $ref: '#/components/schemas/UUIDv7'
+              questionText:
+                type: string
+              studentAnswer:
+                type: string
+              isCorrect:
+                type: boolean
+              correctAnswer:
+                type: string
+                description: Revealed after attempt completion
+              explanation:
+                type: string
+      required:
+        [id, lessonId, attemptNumber, totalQuestions, correctAnswers, scorePercentage, isPassed]
+
+    # ----- Domain: Users -----
+    UserProfile:
+      type: object
+      description: Maps to auth.users + auth.user_profiles
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+          description: public_id from auth.users
+        displayName:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          description: Decrypted email (from email_encrypted)
+        avatarUrl:
+          type: string
+          format: uri
+          description: Resolved presigned URL from avatar_object_key
+        educationSegment:
+          type: string
+          enum: [PRIMARY, SECONDARY, TERTIARY, GENERAL]
+          description: |
+            User's education segment. Maps to DB education_segment enum.
+            Service layer maps: PRIMARY→toefl, SECONDARY→igcse, TERTIARY→high_school, GENERAL→college.
+          x-db-enum: education_segment
+          x-db-values: [toefl, igcse, high_school, college]
+        notificationPreferences:
+          type: object
+          description: Maps to user_profiles.notification_preferences (jsonb)
+        languagePreference:
+          type: string
+          maxLength: 10
+          default: en
+        timezone:
+          type: string
+          maxLength: 50
+          default: Africa/Addis_Ababa
+        examPreferences:
+          type: array
+          items:
+            type: object
+          description: Maps to user_profiles.exam_preferences (jsonb)
+        isOnboardingCompleted:
+          type: boolean
+        onboardingStep:
+          type: integer
+          minimum: 0
+          maximum: 5
+        accountStatus:
+          type: string
+          enum: [PENDING_VERIFICATION, ACTIVE, LOCKED, SUSPENDED, DELETED]
+          description: Maps to DB account_status enum
+          x-db-enum: account_status
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+      required: [id, accountStatus]
 
     UserProfileUpdate:
       type: object
@@ -2574,70 +3920,102 @@ components:
           type: string
           minLength: 1
           maxLength: 100
-          description: User's display name
         email:
           type: string
           format: email
-          description: Email address
+          description: Server encrypts (AES-256-GCM) and hashes (SHA-256) before storing
         avatarObjectKey:
           type: string
           maxLength: 500
-          description: |
-            Object key of the avatar in storage (maps to auth.user_profiles.avatar_object_key).
-            The server resolves this to a pre-signed URL when returning the profile;
-            clients must not treat the key as a public URL.
-          example: avatars/018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8.jpg
         educationSegment:
           type: string
-          enum:
-            - TOEFL
-            - IGCSE
-            - HIGH_SCHOOL
-            - COLLEGE
-          description: |
-            User education segment. API values are UPPER_CASE; the server normalises them 
-            to the lowercase DB enum values (toefl, igcse, high_school, college) before persisting.
+          enum: [PRIMARY, SECONDARY, TERTIARY, GENERAL]
+          description: Maps to DB education_segment enum
           x-db-enum: education_segment
-          x-db-values:
-            - toefl
-            - igcse
-            - high_school
-            - college
+          x-db-values: [toefl, igcse, high_school, college]
+        languagePreference:
+          type: string
+          maxLength: 10
+        timezone:
+          type: string
+          maxLength: 50
+        notificationPreferences:
+          type: object
+          description: JSON object for notification settings
+        examPreferences:
+          type: array
+          items:
+            type: object
+          description: Exam preference settings
+
+    AccountDeletionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        confirmation:
+          type: string
+          enum: [DELETE_MY_ACCOUNT]
+        reason:
+          type: string
+          maxLength: 500
+        deleteAllData:
+          type: boolean
+          default: true
+      required: [confirmation]
+
+    OnboardingState:
+      type: object
+      properties:
+        isCompleted:
+          type: boolean
+        currentStep:
+          type: integer
+          minimum: 0
+          maximum: 5
+      required: [isCompleted, currentStep]
 
     OnboardingStepUpdate:
       type: object
       additionalProperties: false
-      description: Request to advance onboarding to a specific step
       properties:
         step:
           type: integer
           minimum: 0
           maximum: 5
-          description: |
-            Step to advance to. Step 0 is the initial unstarted state (DB default); 
-            steps 1–5 represent onboarding progress stages.
-          example: 3
-      required:
-        - step
+      required: [step]
 
     OnboardingRetriggerRequest:
       type: object
       additionalProperties: false
-      description: Request to restart onboarding flow
       properties:
         reason:
           type: string
-          enum:
-            - USER_REQUESTED
-            - APP_UPDATE
-            - CONTENT_REFRESH
-          description: Reason for retriggering onboarding
-          example: USER_REQUESTED
+          enum: [USER_REQUESTED, APP_UPDATE, CONTENT_REFRESH]
+
+    ConsentRecord:
+      type: object
+      description: Maps to auth.user_consents
+      properties:
+        consentType:
+          type: string
+          enum: [ESSENTIAL, ANALYTICS, PERSONALIZATION, MARKETING, THIRD_PARTY_SHARING]
+          description: Maps to DB consent_type enum
+          x-db-enum: consent_type
+        consentVersion:
+          type: string
+          maxLength: 20
+        isGranted:
+          type: boolean
+        consentedAt:
+          $ref: '#/components/schemas/Timestamp'
+      required: [consentType, consentVersion, isGranted, consentedAt]
 
     ConsentUpdate:
       type: object
       additionalProperties: false
-      description: Request to update consent preferences
+      description: |
+        Update consent preferences. Note: 'essential' consent is always granted
+        and cannot be modified. Only modifiable types are listed here.
       properties:
         consents:
           type: array
@@ -2646,75 +4024,83 @@ components:
             properties:
               consentType:
                 type: string
-                enum:
-                  - MARKETING
-                  - ANALYTICS
-                  - PERSONALIZATION
-                  - THIRD_PARTY_SHARING
+                enum: [MARKETING, ANALYTICS, PERSONALIZATION, THIRD_PARTY_SHARING]
+                description: Maps to DB consent_type enum (excludes essential)
+                x-db-enum: consent_type
               consentVersion:
                 type: string
                 maxLength: 20
-                description: |
-                  Version string of the consent document the user is accepting 
-                  (maps to auth.user_consents.consent_version, NOT NULL). 
-                  Clients must supply the current version obtained from the consent 
-                  policy document in effect.
-                example: '1.0'
               isGranted:
                 type: boolean
-            required:
-              - consentType
-              - consentVersion
-              - isGranted
-      required:
-        - consents
+            required: [consentType, consentVersion, isGranted]
+      required: [consents]
+
+    Device:
+      type: object
+      description: Maps to auth.devices
+      properties:
+        id:
+          $ref: '#/components/schemas/UUIDv7'
+        deviceIdentifier:
+          type: string
+          maxLength: 255
+        deviceName:
+          type: string
+          maxLength: 100
+        platform:
+          type: string
+          enum: [IOS, ANDROID, WEB]
+          description: Maps to DB platform enum (ios, android, web)
+          x-db-enum: platform
+        osVersion:
+          type: string
+          maxLength: 50
+        appVersion:
+          type: string
+          maxLength: 20
+        lastActiveAt:
+          $ref: '#/components/schemas/Timestamp'
+        isActive:
+          type: boolean
+      required: [id, deviceIdentifier, isActive]
 
     DeviceRegistrationRequest:
       type: object
       additionalProperties: false
-      description: Register a new device for the current user
       properties:
         deviceIdentifier:
           type: string
           maxLength: 255
-          description: Device fingerprint (unique per device)
         deviceName:
           type: string
           maxLength: 100
-          description: User-friendly device name
         platform:
           type: string
-          enum:
-            - iOS
-            - Android
-            - Web
-          description: Device platform
+          enum: [IOS, ANDROID, WEB]
+          description: Maps to DB platform enum
+          x-db-enum: platform
         osVersion:
           type: string
-          description: Operating system version
+          maxLength: 50
         appVersion:
           type: string
-          description: Application version
-      required:
-        - deviceIdentifier
+          maxLength: 20
+      required: [deviceIdentifier]
 
     DeviceUpdateRequest:
       type: object
       additionalProperties: false
-      description: Update device details
       properties:
         deviceName:
           type: string
           maxLength: 100
-          description: Updated device name
         isActive:
           type: boolean
-          description: Mark device as active or inactive
 
-    # ----- Dashboard -----
+    # ----- Domain: Dashboard -----
     DashboardData:
       type: object
-      description: Aggregated dashboard data for the user's home screen
+      description: Aggregated dashboard (computed service-side)
       properties:
         userStats:
           $ref: '#/components/schemas/UserStats'
@@ -2737,567 +4123,233 @@ components:
 
     UserStats:
       type: object
-      description: User learning statistics
       properties:
         minutesToday:
           type: integer
-          description: Minutes studied today
-          example: 24
         lessonsToday:
           type: integer
-          description: Lessons completed today
-          example: 3
         xpEarned:
           type: integer
-          description: Experience points earned
-          example: 85
         streakDays:
           type: integer
-          description: Current study streak in days
-          example: 7
         streakTarget:
           type: integer
-          description: Target streak for milestone
-          example: 10
 
     ActivityItem:
       type: object
-      description: A single activity feed item
       properties:
         id:
           $ref: '#/components/schemas/UUIDv7'
         type:
           type: string
-          enum:
-            - session
-            - completion
-            - enrollment
-            - achievement
-            - streak
-            - milestone
-          description: Type of activity
+          enum: [SESSION, COMPLETION, ENROLLMENT, ACHIEVEMENT, STREAK, MILESTONE]
         title:
           type: string
-          description: Activity title
         subtitle:
           type: string
-          description: Optional subtitle
         detail:
           type: string
-          description: Optional detail text
         time:
           type: string
-          description: Time string relative to now (e.g., "2 hours ago")
         group:
           type: string
-          description: Grouping key for UI
 
     Insight:
       type: object
-      description: User insight or achievement
       properties:
         id:
           $ref: '#/components/schemas/UUIDv7'
         icon:
           type: string
-          description: Icon identifier
         bgColor:
           type: string
-          description: Background color code
         iconColor:
           type: string
-          description: Icon color code
         title:
           type: string
-          description: Insight title
         description:
           type: string
-          description: Insight description
 
     WeeklyData:
       type: object
-      description: Weekly study data for charts
       properties:
         barHeights:
           type: array
           items:
             type: number
-          description: Bar heights for each day (0-1)
         dayTotals:
           type: array
           items:
             type: string
-          description: Time totals for each day
         sessions:
           type: object
           additionalProperties:
             type: array
             items:
               $ref: '#/components/schemas/WeeklySession'
-          description: Sessions grouped by day index
 
     WeeklySession:
       type: object
-      description: A single study session
       properties:
         course:
           type: string
-          description: Course name
         lesson:
           type: string
-          description: Lesson name
         duration:
           type: string
-          description: Duration string
 
     Deadline:
       type: object
-      description: Upcoming deadline
       properties:
         title:
           type: string
-          description: Deadline title
         date:
           type: string
-          description: Deadline date string
         daysLeft:
           type: integer
-          description: Days remaining
         color:
           type: string
-          description: Color code
 
     JumpBackItem:
       type: object
-      description: Course to jump back into
       properties:
         title:
           type: string
-          description: Course title
         progress:
           type: integer
-          description: Progress percentage
         imageSeed:
           type: string
-          description: Image seed for UI
 
-    # ----- Bookmarks -----
+    # ----- Domain: Bookmarks -----
     BookmarkCreate:
       type: object
       additionalProperties: false
-      description: Request to create a bookmark
       properties:
         itemType:
           type: string
-          enum:
-            - course
-            - resource
-          description: Type of item to bookmark
+          enum: [COURSE, RESOURCE]
         itemId:
           $ref: '#/components/schemas/UUIDv7'
-          description: ID of the course or resource to bookmark
-      required:
-        - itemType
-        - itemId
+      required: [itemType, itemId]
 
-    # ----- Purchases & recommendations -----
-    PurchaseInitiateRequest:
+    # ----- Domain: Ratings & Reviews -----
+    CourseRatingSummary:
       type: object
-      additionalProperties: false
-      description: Request to initiate a purchase
+      description: |
+        Rating summary for a course. The `distribution` field is computed at
+        query time by aggregating `learning.course_reviews` grouped by rating.
       properties:
         courseId:
           $ref: '#/components/schemas/UUIDv7'
-        purchaseOptionId:
-          $ref: '#/components/schemas/UUIDv7'
-        platform:
-          type: string
-          enum:
-            - IOS
-            - ANDROID
-          description: User's current platform
-          example: IOS
-      required:
-        - courseId
-        - purchaseOptionId
-        - platform
-
-    PurchaseOption:
-      type: object
-      description: A purchase option for a course
-      properties:
-        id:
-          $ref: '#/components/schemas/UUIDv7'
-        courseId:
-          $ref: '#/components/schemas/UUIDv7'
-        platform:
-          type: string
-          enum:
-            - IOS
-            - ANDROID
-            - WEB
-          description: Platform for this purchase option. API values are UPPER_CASE; maps to DB enum `purchase_platform` (ios, android, web).
-          x-db-enum: purchase_platform
-          x-db-values:
-            - ios
-            - android
-            - web
-        productId:
-          type: string
-        displayName:
-          type: string
-        description:
-          type: string
-        durationDays:
+        averageRating:
+          type: number
+          format: float
+          nullable: true
+          minimum: 1.0
+          maximum: 5.0
+        ratingCount:
           type: integer
-          minimum: 1
-        price:
-          $ref: '#/components/schemas/Money'
-        isActive:
-          type: boolean
-      required:
-        - id
-        - courseId
-        - platform
-        - productId
-        - displayName
-        - durationDays
-        - price
+        distribution:
+          type: object
+          description: Count per star (1-5), computed from course_reviews table
+          properties:
+            '1':
+              type: integer
+            '2':
+              type: integer
+            '3':
+              type: integer
+            '4':
+              type: integer
+            '5':
+              type: integer
+      required: [courseId, ratingCount]
 
     RatingSubmit:
       type: object
       additionalProperties: false
-      description: Submit a rating for a course
       properties:
         rating:
           type: integer
           minimum: 1
           maximum: 5
-          description: Star rating (1-5)
-          example: 5
-      required:
-        - rating
+      required: [rating]
 
     ReviewSubmit:
       type: object
       additionalProperties: false
-      description: Submit a review for a course
       properties:
         rating:
           type: integer
           minimum: 1
           maximum: 5
-          example: 5
         title:
           type: string
           minLength: 1
           maxLength: 200
-          example: Excellent content
         content:
           type: string
           minLength: 10
           maxLength: 2000
-          example: This course covers all the topics needed for...
-      required:
-        - rating
-        - title
-        - content
+      required: [rating, title, content]
 
-    # ----- Webhooks -----
+    # ----- Domain: Webhooks -----
     TelebirrWebhookPayload:
       type: object
       additionalProperties: true
-      description: |
-        Telebirr C2B payment callback payload (FR-401, FR-404, NFR-TP01).
-        Sole payment method — all platforms. Additional fields from Telebirr may be present
-        depending on the merchant configuration and API version.
+      description: Telebirr C2B payment callback
       properties:
         externalTransactionId:
           type: string
-          description: Merchant-assigned transaction identifier for idempotency
-          example: order-018f3a2c-9b5e-7d4a-a1c2
+          description: Maps to purchase_transactions.external_transaction_id
         merchantCode:
           type: string
-          description: Telebirr-assigned merchant code for the application
-          example: MERCH001
+          description: Stored in validation_response jsonb
         transactionId:
           type: string
-          description: Telebirr-assigned unique transaction identifier
-          example: TXN20260430001
+          description: Telebirr transaction ID (stored in validation_response)
         amount:
           type: string
           pattern: ^\d+(\.\d{1,4})?$
-          description: |
-            Payment amount as a decimal string to preserve precision.
-            Maps to `finance.purchase_transactions.amount` (DB: numeric(19,4)).
-            String encoding avoids IEEE 754 float rounding errors.
-          example: '299.9900'
+          description: Maps to purchase_transactions.amount (numeric 19,4)
         currency:
           type: string
-          description: ISO 4217 currency code (typically ETB for Ethiopian Birr)
-          example: ETB
+          description: Maps to purchase_transactions.currency (char 3)
         status:
           type: string
-          description: Payment status as reported by Telebirr
-          example: SUCCESS
+          description: 'Telebirr status. Mapped: SUCCESS→succeeded, FAILED→failed'
         paymentTime:
           type: string
           format: date-time
-          description: Timestamp when the payment was completed
-          example: '2026-04-30T10:30:00Z'
+          description: Maps to purchases.completed_at
         subscriberNumber:
           type: string
-          description: The Telebirr subscriber (phone) number that made the payment
-          example: '+251911123456'
+          description: PII — stored encrypted in validation_response
 
     SmsDeliveryWebhookPayload:
       type: object
       additionalProperties: true
-      description: |
-        SMSEthiopia delivery status callback payload (FR-1005, NFR-TP01).
-        Additional fields from SMSEthiopia may be present depending on the API version.
-
-        **DB alignment note:** The v2.2 DBML removed all SMS/OTP tables (`sms_verifications` dropped, social-login only). 
-        This webhook payload is consumed as an inbound external event and stored in `ops.webhook_events` 
-        (provider=telebirr is the only modelled provider). If SMSEthiopia delivery callbacks are retained, 
-        `ops.webhook_events.provider` must be extended with a `smsethiopia` enum value. 
-        **Review required before go-live.**
+      description: SMSEthiopia delivery callback
       properties:
         messageId:
           type: string
-          description: The unique identifier of the SMS message as assigned by SMSEthiopia
-          example: msg-018f3a2c-9b5e-7d4a
         status:
           type: string
-          enum:
-            - DELIVERED
-            - FAILED
-            - EXPIRED
-            - UNKNOWN
-          description: Delivery status of the SMS message
-          example: DELIVERED
+          enum: [DELIVERED, FAILED, EXPIRED, UNKNOWN]
         deliveredAt:
           type: string
           format: date-time
-          description: Timestamp when the message was delivered (present only when status is DELIVERED)
-          example: '2026-04-30T10:30:05Z'
         errorCode:
           type: string
-          description: Provider-specific error code (present only when status is FAILED)
-          example: INVALID_NUMBER
         errorMessage:
           type: string
-          description: Human-readable error description (present only when status is FAILED)
-          example: The destination number is not reachable
 
-  # ======================================================================
-  # PARAMETERS
-  # ======================================================================
-  parameters:
-    cursor:
-      name: cursor
-      in: query
-      required: false
-      description: |
-        Opaque cursor for retrieving the next page of results. 
-        
-        Obtained from the `meta.nextCursor` field of a previous paginated response.
-        Omit or set to empty string to retrieve the first page.
-        
-        Cursors encode the sort key of the last item in the previous page and are 
-        specific to the current sort order and filter combination.
-      schema:
-        type: string
-      example: eyJ0aW1lc3RhbXAiOiIyMDI2LTA0LTMwVDEwOjAwOjAwWiIsImlkIjoiMDE4Zi4uLiJ9
-
-    limit:
-      name: limit
-      in: query
-      required: false
-      description: |
-        Maximum number of items to return per page.
-
-        - Default: `20`
-        - Minimum: `1`
-        - Maximum: `100`
-
-        Values outside this range will be clamped to the nearest valid value.
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 20
-      example: 20
-
-    deviceId:
-      name: deviceId
-      in: path
-      required: true
-      description: UUID v7 identifier of the device
-      schema:
-        $ref: '#/components/schemas/UUIDv7'
-      example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
-    levelId:
-      name: levelId
-      in: path
-      required: true
-      description: UUID v7 identifier of the education level
-      schema:
-        $ref: '#/components/schemas/UUIDv7'
-      example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
-    examTypeId:
-      name: examTypeId
-      in: path
-      required: true
-      description: UUID v7 identifier of the exam type
-      schema:
-        $ref: '#/components/schemas/UUIDv7'
-      example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
-    courseId:
-      name: courseId
-      in: path
-      required: true
-      description: UUID v7 identifier of the course
-      schema:
-        $ref: '#/components/schemas/UUIDv7'
-      example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
-    moduleId:
-      name: moduleId
-      in: path
-      required: true
-      description: UUID v7 identifier of the module
-      schema:
-        $ref: '#/components/schemas/UUIDv7'
-      example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
-    resourceId:
-      name: resourceId
-      in: path
-      required: true
-      description: UUID v7 identifier of the resource
-      schema:
-        $ref: '#/components/schemas/UUIDv7'
-      example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
-    versionId:
-      name: versionId
-      in: path
-      required: true
-      description: UUID v7 identifier of the resource version
-      schema:
-        $ref: '#/components/schemas/UUIDv7'
-      example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
-    tagId:
-      name: tagId
-      in: path
-      required: true
-      description: UUID v7 identifier of the tag
-      schema:
-        $ref: '#/components/schemas/UUIDv7'
-      example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
-    purchaseId:
-      name: purchaseId
-      in: path
-      required: true
-      description: UUID v7 identifier of the purchase
-      schema:
-        $ref: '#/components/schemas/UUIDv7'
-      example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
-    enrollmentId:
-      name: enrollmentId
-      in: path
-      required: true
-      description: UUID v7 identifier of the enrollment
-      schema:
-        $ref: '#/components/schemas/UUIDv7'
-      example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
-  # ======================================================================
-  # EXAMPLES
-  # ======================================================================
-  examples:
-    ListEducationLevelsResponse:
-      description: List of education levels with cursor pagination
-      value:
-        data:
-          - id: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-            name: Grade 9
-            slug: grade-9
-            description: Grade 9 curriculum
-            sortOrder: 1
-            isActive: true
-          - id: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d9
-            name: Grade 10
-            slug: grade-10
-            description: Grade 10 curriculum
-            sortOrder: 2
-            isActive: true
-        meta:
-          requestId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-          timestamp: '2026-04-30T10:30:00.000Z'
-          hasNextPage: true
-          nextCursor: eyJpZCI6IjAxOGYzYTJjLTliNWUtN2Q0YS1hMWMyLWUzZjRhNWJjNjdkOCJ9
-          limit: 20
-
-    GetPurchaseOptionsResponse_iOS:
-      description: Purchase options (Telebirr only)
-      value:
-        data:
-          - id: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-            courseId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d1
-            platform: IOS
-            productId: com.example.course.igcse_chem_1month
-            displayName: 1 Month Access
-            description: Full access for 30 days
-            durationDays: 30
-            price:
-              amount: '299.99'
-              currency: ETB
-            isActive: true
-          - id: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d9
-            courseId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d1
-            platform: IOS
-            productId: com.example.course.igcse_chem_6month
-            displayName: 6 Month Access
-            description: Full access for 180 days
-            durationDays: 180
-            price:
-              amount: '1499.99'
-              currency: ETB
-            isActive: true
-        meta:
-          requestId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-          timestamp: '2026-04-30T10:30:00.000Z'
-          count: 2
-
-    BadRequestError_Validation:
-      description: 400 Bad Request - Field validation failure
-      value:
-        type: https://api.example.com/errors/invalid-parameter
-        title: Invalid Parameter
-        status: 400
-        detail: The 'email' field must be a valid email address.
-        instance: /api/v1/users/me
-        correlationId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-        errors:
-          - field: email
-            message: Must be a valid email address
-            code: INVALID_EMAIL
-            rejectedValue: notanemail
-
-  # ======================================================================
+  # ===========================================================================
   # RESPONSES
-  # ======================================================================
+  # ===========================================================================
   responses:
     '400':
-      description: Bad Request - Invalid request body or malformed parameters
+      description: Bad Request
       headers:
         X-Request-ID:
           $ref: '#/components/headers/X-Request-ID'
@@ -3305,50 +4357,26 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
-          examples:
-            validation-error:
-              $ref: '#/components/examples/BadRequestError_Validation'
-
     '401':
-      description: Unauthorized - Missing or invalid authentication credentials
+      description: Unauthorized
       headers:
         X-Request-ID:
           $ref: '#/components/headers/X-Request-ID'
-        X-RateLimit-Remaining:
-          $ref: '#/components/headers/X-RateLimit-Remaining'
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
-          example:
-            type: https://api.example.com/errors/unauthorized
-            title: Unauthorized
-            status: 401
-            detail: The access token has expired. Please refresh your token.
-            instance: /api/v1/users/me
-            correlationId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
     '403':
-      description: Forbidden - Insufficient permissions or role scope
+      description: Forbidden
       headers:
         X-Request-ID:
           $ref: '#/components/headers/X-Request-ID'
-        X-RateLimit-Remaining:
-          $ref: '#/components/headers/X-RateLimit-Remaining'
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
-          example:
-            type: https://api.example.com/errors/forbidden
-            title: Forbidden
-            status: 403
-            detail: You do not have permission to access this resource. Admin access required.
-            instance: /api/v1/admin/users
-            correlationId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
     '404':
-      description: Not Found - Resource does not exist
+      description: Not Found
       headers:
         X-Request-ID:
           $ref: '#/components/headers/X-Request-ID'
@@ -3356,16 +4384,8 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
-          example:
-            type: https://api.example.com/errors/not-found
-            title: Not Found
-            status: 404
-            detail: The requested resource was not found.
-            instance: /api/v1/courses/018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-            correlationId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
     '409':
-      description: Conflict - Duplicate resource or version conflict
+      description: Conflict
       headers:
         X-Request-ID:
           $ref: '#/components/headers/X-Request-ID'
@@ -3373,16 +4393,8 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
-          example:
-            type: https://api.example.com/errors/conflict
-            title: Conflict
-            status: 409
-            detail: A resource with this identifier already exists.
-            instance: /api/v1/users
-            correlationId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
     '410':
-      description: Gone - Resource permanently deleted
+      description: Gone
       headers:
         X-Request-ID:
           $ref: '#/components/headers/X-Request-ID'
@@ -3390,40 +4402,17 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
-          example:
-            type: https://api.example.com/errors/gone
-            title: Gone
-            status: 410
-            detail: This resource has been permanently deleted and is no longer available.
-            instance: /api/v1/resources/018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-            correlationId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
     '422':
-      description: Unprocessable Entity - Business logic validation failed
+      description: Unprocessable Entity
       headers:
         X-Request-ID:
           $ref: '#/components/headers/X-Request-ID'
-        X-RateLimit-Remaining:
-          $ref: '#/components/headers/X-RateLimit-Remaining'
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
-          example:
-            type: https://api.example.com/errors/unprocessable
-            title: Unprocessable Entity
-            status: 422
-            detail: The request could not be processed due to business logic validation failure.
-            instance: /api/v1/users
-            correlationId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-            errors:
-              - field: answers[0].selectedOptionId
-                message: This resource is not a quiz type
-                code: INVALID_RESOURCE_TYPE
-                rejectedValue: quiz
-
     '429':
-      description: Too Many Requests - Rate limit exceeded
+      description: Too Many Requests
       headers:
         X-Request-ID:
           $ref: '#/components/headers/X-Request-ID'
@@ -3434,25 +4423,16 @@ components:
         X-RateLimit-Reset:
           $ref: '#/components/headers/X-RateLimit-Reset'
         Retry-After:
-          description: Seconds to wait before retrying
+          description: Seconds to wait
           schema:
             type: integer
             minimum: 1
-            example: 60
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
-          example:
-            type: https://api.example.com/errors/rate-limited
-            title: Too Many Requests
-            status: 429
-            detail: Rate limit exceeded. Please try again later.
-            instance: /api/v1/users/me
-            correlationId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
     '500':
-      description: Internal Server Error - Unhandled server error
+      description: Internal Server Error
       headers:
         X-Request-ID:
           $ref: '#/components/headers/X-Request-ID'
@@ -3460,65 +4440,42 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
-          example:
-            type: https://api.example.com/errors/internal-error
-            title: Internal Server Error
-            status: 500
-            detail: An unexpected error occurred. Please try again later.
-            instance: /api/v1/users/me
-            correlationId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
     '503':
-      description: Service Unavailable - A required dependency is temporarily unavailable
+      description: Service Unavailable
       headers:
         X-Request-ID:
           $ref: '#/components/headers/X-Request-ID'
         Retry-After:
-          description: Seconds to wait before retrying
+          description: Seconds to wait
           schema:
             type: integer
             minimum: 1
-            example: 30
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ProblemDetail'
-          example:
-            type: https://api.example.com/errors/service-unavailable
-            title: Service Unavailable
-            status: 503
-            detail: Service temporarily unavailable. Please try again later.
-            instance: /api/v1/health/readiness
-            correlationId: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
 
-  # ======================================================================
+  # ===========================================================================
   # HEADERS
-  # ======================================================================
+  # ===========================================================================
   headers:
     X-Request-ID:
-      description: Unique identifier for this request, used for correlation and debugging
+      description: Unique request identifier
       schema:
         type: string
         format: uuid
-        example: 018f3a2c-9b5e-7d4a-a1c2-e3f4a5b6c7d8
-
     X-RateLimit-Remaining:
-      description: Number of requests remaining in the current time window
+      description: Requests remaining in window
       schema:
         type: integer
         minimum: 0
-        example: 95
-
     X-RateLimit-Limit:
-      description: Maximum number of requests allowed in the current time window
+      description: Max requests per window
       schema:
         type: integer
         minimum: 1
-        example: 100
-
     X-RateLimit-Reset:
-      description: Unix timestamp when the rate limit window resets
+      description: Unix timestamp when window resets
       schema:
         type: integer
         minimum: 0
-        example: 1714579200

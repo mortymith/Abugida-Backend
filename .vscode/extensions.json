@@ -1,7 +1,15 @@
 {
   "recommendations": [
     "astro-build.astro-vscode",
+    "bradlc.vscode-tailwindcss",
     "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode"
+    "eamodio.gitlens",
+    "EditorConfig.EditorConfig",
+    "esbenp.prettier-vscode",
+    "mikestead.dotenv",
+    "ms-azuretools.vscode-docker",
+    "streetsidesoftware.code-spell-checker",
+    "usernamehw.errorlens",
+    "YoavBls.pretty-ts-errors"
   ]
 }
