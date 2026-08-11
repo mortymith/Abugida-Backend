@@ -1,17 +1,125 @@
 {
   "editor.formatOnSave": true,
-
+  "editor.formatOnPaste": false,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit",
     "source.organizeImports": "never"
   },
-  "files.watcherExclude": {
-    "app/dashboard/routeTree.gen.ts": true
+  "editor.rulers": [100],
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": true,
+  "editor.wordWrap": "off",
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": "active",
+  "editor.guides.highlightActiveBracketPair": true,
+  "editor.minimap.enabled": true,
+  "editor.minimap.renderCharacters": false,
+  "editor.suggestSelection": "first",
+  "editor.inlineSuggest.enabled": true,
+  "files.autoSave": "onFocusChange",
+  "files.eol": "\n",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.associations": {
+    "*.env": "dotenv",
+    "*.env.*": "dotenv"
   },
-  "search.exclude": {
-    "app/dashboard/routeTree.gen.ts": true
+  "files.exclude": {
+    "**/.git": true,
+    "**/.turbo": true,
+    "**/.astro": true,
+    "**/dist": true
+  },
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/.turbo/**": true,
+    "**/dist/**": true,
+    "**/.astro/**": true
   },
   "files.readonlyInclude": {
+    "**/routeTree.gen.ts": true,
+    "**/.astro/types.d.ts": true
+  },
+  "search.useIgnoreFiles": true,
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.turbo": true,
+    "**/.astro": true,
     "app/dashboard/routeTree.gen.ts": true
+  },
+  "js/ts.tsdk.path": "app/dashboard/node_modules/typescript/lib",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+  "js/ts.preferences.importModuleSpecifier": "shortest",
+  "js/ts.preferences.quoteStyle": "single",
+  "js/ts.suggest.autoImports": true,
+  "js/ts.suggest.completeFunctionCalls": true,
+  "js/ts.updateImportsOnFileMove.enabled": "always",
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact", "astro"],
+  "prettier.requireConfig": true,
+  "tailwindCSS.includeLanguages": {
+    "astro": "html"
+  },
+  "tailwindCSS.classAttributes": ["class", "className", "ngClass", "class:list"],
+  "git.autofetch": true,
+  "git.enableSmartCommit": true,
+  "git.confirmSync": false,
+  "diffEditor.ignoreTrimWhitespace": false,
+  "cSpell.language": "en",
+  "cSpell.words": [
+    "abugida",
+    "astro",
+    "betterauth",
+    "bullmq",
+    "drizzle",
+    "hono",
+    "pino",
+    "scalar",
+    "tailwindcss",
+    "tanstack",
+    "tsr",
+    "zod"
+  ],
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[scss]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[astro]": {
+    "editor.defaultFormatter": "astro-build.astro-vscode"
   }
 }

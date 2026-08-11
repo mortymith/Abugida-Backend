@@ -1,6 +1,6 @@
 // ============================================================================
 // Course Builder / LMS Platform — Production Database Schema
-// Version: 4.0 (Bundle Mechanism + Education Levels Removed)
+// Version: 4.0
 // Target: PostgreSQL 16
 // Date: 2026-08-10
 //
