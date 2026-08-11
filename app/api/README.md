@@ -13,21 +13,21 @@ REST API server for the Abugida educational platform. Built with Hono, Better Au
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `BETTER_AUTH_SECRET` | Auth secret key |
-| `BETTER_AUTH_URL` | Auth callback URL |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `REDIS_URL` | Redis connection string |
+| Variable             | Description                  |
+| -------------------- | ---------------------------- |
+| `BETTER_AUTH_SECRET` | Auth secret key              |
+| `BETTER_AUTH_URL`    | Auth callback URL            |
+| `DATABASE_URL`       | PostgreSQL connection string |
+| `REDIS_URL`          | Redis connection string      |
 
 ## Commands
 
-| Command | Action |
-|---------|--------|
-| `pnpm dev` | Start dev server with hot reload on port 3000 |
-| `pnpm lint` | Run ESLint |
-| `pnpm lint:fix` | Run ESLint with auto-fix |
-| `pnpm test` | Run tests |
+| Command         | Action                                        |
+| --------------- | --------------------------------------------- |
+| `pnpm dev`      | Start dev server with hot reload on port 3000 |
+| `pnpm lint`     | Run ESLint                                    |
+| `pnpm lint:fix` | Run ESLint with auto-fix                      |
+| `pnpm test`     | Run tests                                     |
 
 ## Project Structure
 

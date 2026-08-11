@@ -1,14 +1,14 @@
 // eslint.config.js
-import eslintPluginAstro from 'eslint-plugin-astro';
+import eslintPluginAstro from 'eslint-plugin-astro'
 // If you installed eslint-plugin-jsx-a11y
 // import jsxA11yPlugin from 'eslint-plugin-jsx-a11y';
-import astroParser from 'astro-eslint-parser';
-import typescriptParser from '@typescript-eslint/parser';
+import astroParser from 'astro-eslint-parser'
+import typescriptParser from '@typescript-eslint/parser'
 
 export default [
   // Use the recommended rules from eslint-plugin-astro.
   // Replace with 'jsx-a11y-recommended' if you installed the a11y plugin.
-  ...eslintPluginAstro.configs.recommended, 
+  ...eslintPluginAstro.configs.recommended,
   // ...eslintPluginAstro.configs['jsx-a11y-recommended'],
 
   // If using the a11y plugin, you also need to add it to the plugins list:
@@ -39,4 +39,4 @@ export default [
   //     // Your TypeScript-specific rules
   //   },
   // },
-];
+]
