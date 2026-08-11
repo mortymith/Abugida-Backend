@@ -12,5 +12,5 @@ pnpm lint        # eslint .
 ## Usage
 
 ```ts
-import { schema } from "@abugida/database";
+import { schema } from '@abugida/database'
 ```
