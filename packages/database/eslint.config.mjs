@@ -1,7 +1,7 @@
-import tseslint from "typescript-eslint";
+import tseslint from 'typescript-eslint'
 
 export default tseslint.config({
-  files: ["**/*.ts"],
+  files: ['**/*.ts'],
   extends: [...tseslint.configs.recommended],
   languageOptions: {
     parser: tseslint.parser,
@@ -10,4 +10,4 @@ export default tseslint.config({
       tsconfigRootDir: import.meta.dirname,
     },
   },
-});
+})

@@ -1,6 +1,6 @@
 {
   "name": "@abugida/database",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "type": "module",
   "private": true,
   "main": "./index.ts",
@@ -17,7 +17,12 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:pull": "drizzle-kit pull",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
