@@ -10,6 +10,7 @@
     "dev": "bun --watch src/index.ts",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
+    "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "test": "bun test --pass-with-no-tests"
   },

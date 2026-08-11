@@ -11,6 +11,7 @@
     "preview": "bun run astro preview",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
+    "format": "prettier --write .",
     "typecheck": "bun run astro check"
   },
   "dependencies": {
