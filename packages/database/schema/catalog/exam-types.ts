@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   index,
   check,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import { relations } from 'drizzle-orm'
@@ -27,7 +28,7 @@ export const examTypes = pgTable(
     description: text('description'),
     parentExamTypeId: bigint('parent_exam_type_id', {
       mode: 'number',
-    }).references(() => examTypes.id, {
+    }).references((): AnyPgColumn => examTypes.id, {
       onDelete: 'restrict',
       onUpdate: 'cascade',
     }),
