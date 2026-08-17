@@ -8,7 +8,7 @@
  */
 
 import type { TanStackStorageClient } from './client.ts'
-import type { PutResult, ObjectMetadata, ListResult } from '../../core/types.ts'
+import type { PutResult, ObjectMetadata, ListResult, BodyInput } from '../../core/types.ts'
 import type { PresignedUrlResult } from '../../presigned/types.ts'
 
 // React imports — the consuming app must provide React
@@ -21,7 +21,10 @@ type SetStateAction<S> = S | ((prevState: S) => S)
  * In a real TanStack Start app, React is always available.
  */
 declare function useState<S>(initialState: S | (() => S)): [S, Dispatch<SetStateAction<S>>]
-declare function useCallback<T extends Function>(callback: T, deps: unknown[]): T
+declare function useCallback<T extends (...args: never[]) => unknown>(
+  callback: T,
+  deps: unknown[],
+): T
 
 /**
  * Hook for uploading a file to storage.
@@ -34,13 +37,13 @@ export function useUpload(client: TanStackStorageClient) {
   const upload = useCallback(
     async (
       key: string,
-      body: unknown,
+      body: BodyInput,
       options?: { contentType?: string; metadata?: Record<string, string> },
     ) => {
       setLoading(true)
       setError(null)
       try {
-        const res = await client.upload(key, body as any, options)
+        const res = await client.upload(key, body, options)
         setResult(res)
         return res
       } catch (err) {

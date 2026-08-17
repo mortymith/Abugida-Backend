@@ -297,7 +297,7 @@ export interface CopyOptions {
 }
 
 /** Options for the move operation. */
-export interface MoveOptions extends CopyOptions {}
+export type MoveOptions = CopyOptions
 
 /** Options for the list operation. */
 export interface ListOptions {
