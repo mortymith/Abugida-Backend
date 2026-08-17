@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [".env*", "pnpm-lock.yaml"],
   "tasks": {
     "dev": {
       "cache": false,
@@ -7,15 +8,45 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".astro/**"]
+      "outputs": ["dist/**", ".astro/**", "build/**", ".next/**", ".vercel/**"]
     },
-    "lint": {},
+    "lint": {
+      "outputs": []
+    },
     "format": {
-      "cache": false
+      "cache": false,
+      "outputs": []
     },
     "typecheck": {
-      "dependsOn": ["^typecheck"]
+      "dependsOn": ["^typecheck"],
+      "outputs": []
     },
-    "test": {}
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "db:generate": {
+      "cache": false
+    },
+    "db:migrate": {
+      "cache": false
+    },
+    "db:push": {
+      "cache": false
+    },
+    "db:pull": {
+      "cache": false
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true
+    },
+    "generate-routes": {
+      "cache": false
+    },
+    "clean": {
+      "cache": false,
+      "outputs": []
+    }
   }
 }
