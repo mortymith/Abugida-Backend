@@ -22,7 +22,8 @@
     "db:migrate": "bun run drizzle-kit migrate",
     "db:push": "bun run drizzle-kit push",
     "db:pull": "bun run drizzle-kit pull",
-    "db:studio": "bun run drizzle-kit studio"
+    "db:studio": "bun run drizzle-kit studio",
+    "clean": "rm -rf dist .turbo node_modules"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",

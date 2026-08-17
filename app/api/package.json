@@ -8,11 +8,13 @@
   },
   "scripts": {
     "dev": "bun --watch src/index.ts",
+    "build": "tsc",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "test": "bun test --pass-with-no-tests"
+    "test": "bun test --pass-with-no-tests",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.6.25",

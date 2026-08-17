@@ -29,7 +29,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "bun test",
     "test:unit": "bun test tests/unit",
-    "test:integration": "bun test tests/integration"
+    "test:integration": "bun test tests/integration",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "bullmq": "^5.34.0"
