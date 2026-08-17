@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
-    "typecheck": "bun run astro check"
+    "typecheck": "bun run astro check",
+    "clean": "rm -rf dist .astro"
   },
   "dependencies": {
     "astro": "^7.1.4"
