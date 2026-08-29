@@ -19,6 +19,12 @@
       "skillPath": "better-auth/create-auth/SKILL.md",
       "computedHash": "4e261efac2ae9a2321c4495c846ef97cf239818fc8bd2ab7e92ed1f9d25470f7"
     },
+    "design-doc-mermaid": {
+      "source": "spillwavesolutions/design-doc-mermaid",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "379bb1b77bba960f4629114254cd68ca84618044de61c4c4f363801f2c6f0fe1"
+    },
     "organization-best-practices": {
       "source": "better-auth/skills",
       "sourceType": "github",
