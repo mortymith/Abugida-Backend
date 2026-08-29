@@ -10,3 +10,21 @@
 .idea/
 *.tsbuildinfo
 .opencode/
+
+# ─── Data volumes (never commit runtime state) ──────────────────────────────
+data/
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
+logs/
+!logs/.gitkeep
+
+# ─── Environment files (contain sensitive values) ────────────────────────────
+.env.dev
+.env.prod
+
+# ─── Cloudflare Tunnel credentials ───────────────────────────────────────────
+config/cloudflared/credentials.json
+
+# ─── Redis persistence files ────────────────────────────────────────────────
+*.rdb
+*.aof

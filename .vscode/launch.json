@@ -1,0 +1,38 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "bun",
+      "request": "launch",
+      "name": "API: Debug (@abugida/api)",
+      "program": "${workspaceFolder}/app/api/src/index.ts",
+      "cwd": "${workspaceFolder}/app/api",
+      "stopOnEntry": false,
+      "watchMode": false,
+      "internalConsoleOptions": "openOnSessionStart"
+    },
+    {
+      "type": "bun",
+      "request": "launch",
+      "name": "API: Debug with watch (@abugida/api)",
+      "program": "${workspaceFolder}/app/api/src/index.ts",
+      "cwd": "${workspaceFolder}/app/api",
+      "watchMode": true
+    },
+    {
+      "type": "bun",
+      "request": "launch",
+      "name": "Bun: Test current file",
+      "runtimeArgs": ["test"],
+      "program": "${file}",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "bun",
+      "request": "attach",
+      "name": "Bun: Attach to --inspect (port 6499)",
+      "url": "ws://localhost:6499/",
+      "protocol": "websocket"
+    }
+  ]
+}
