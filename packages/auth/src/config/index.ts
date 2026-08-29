@@ -47,6 +47,13 @@ const rateLimitSchema = z
   })
   .optional();
 
+const tokensSchema = z
+  .object({
+    issuer: z.string().url().optional(),
+    audience: z.union([z.string().min(1), z.array(z.string().min(1))]).optional(),
+  })
+  .optional();
+
 const appleCredentialsSchema = z
   .object({
     clientId: z.string().min(1),
@@ -77,6 +84,7 @@ const baseConfigSchema = z.object({
   session: sessionSchema,
   cors: corsSchema,
   rateLimit: rateLimitSchema,
+  tokens: tokensSchema,
   providers: z.object({
     apple: appleCredentialsSchema,
     google: googleCredentialsSchema,

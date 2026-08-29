@@ -144,6 +144,33 @@ if (token.ok) {
 }
 ```
 
+## JWT issuance for external services (PowerSync)
+
+Pass a `tokens` block to opt in to better-auth's `jwt` + `bearer` plugins.
+Keys are served at `GET <basePath>/jwks` (default `/api/auth/jwks`) and
+tokens carry `sub` = user id, which PowerSync sync streams read via
+`auth.user_id()`:
+
+```ts
+createAuth({
+  // ...
+  tokens: {
+    // issuer defaults to baseUrl; audience must match the consumer's config:
+    // docker/config/powersync/service.yaml sets client_auth.audience = ["abugida"]
+    audience: "abugida",
+  },
+});
+```
+
+Requirements and wiring:
+
+- Add better-auth's generated `jwks` table to your Drizzle schema
+  (`@better-auth/cli generate` after enabling) — the plugin stores its
+  encrypted private keys there.
+- Point `PS_JWKS_URI` (see `.env.example`) at `<api-base>/api/auth/jwks`.
+- Clients obtain tokens via the plugin's `/token` endpoint while a session
+  is active; the `bearer` plugin accepts them on API requests.
+
 ## Session refresh and CSRF hardening
 
 - `auth.refreshSession(headers)` / `authServerFns.refreshServerSession()` —
@@ -199,6 +226,7 @@ src/
     auth.ts            createAuth() factory + pure option builders
     session.ts          resolveSession / refreshSession / revokeSession
     token-refresh.ts     getValidAccessToken (auto-refresh wrapper)
+    tokens.ts            opt-in jwt/bearer plugins (PowerSync et al)
     csrf.ts              Origin-header defense-in-depth check
     logger.ts            pluggable Logger interface, noop + console adapters
     environment.ts       isProduction/isDevelopment/isTest helpers
