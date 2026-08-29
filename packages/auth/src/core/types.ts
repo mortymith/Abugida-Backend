@@ -145,6 +145,20 @@ export interface ProvidersConfig {
   custom?: Record<string, { definition: AuthProviderDefinition; credentials: BaseProviderCredentials }>;
 }
 
+/**
+ * Opt-in JWT issuance for service-to-client consumers (currently PowerSync).
+ * When present, `createAuth()` registers better-auth's jwt + bearer plugins:
+ * signing keys are served at `<basePath>/jwks` and tokens authenticate as
+ * bearer credentials. Requires the generated `jwks` table in the consumer's
+ * Drizzle schema. See core/tokens.ts.
+ */
+export interface TokensConfig {
+  /** Issuer claim for minted JWTs. Default: the configured baseUrl. */
+  issuer?: string;
+  /** Audience claim. Default: "abugida" — must match PowerSync client_auth.audience. */
+  audience?: string | string[];
+}
+
 export interface AuthConfig<TSchema extends AuthDatabaseSchema = AuthDatabaseSchema> {
   environment: AuthEnvironment;
   /** Base URL of the app serving the auth endpoints, e.g. https://api.abugida.com */
@@ -156,6 +170,8 @@ export interface AuthConfig<TSchema extends AuthDatabaseSchema = AuthDatabaseSch
   session?: SessionConfig;
   cors?: CorsConfig;
   rateLimit?: RateLimitConfig;
+  /** Enables JWT issuance (jwt + bearer plugins). Omit to disable entirely. */
+  tokens?: TokensConfig;
   /**
    * Structured logger for startup validation, provider errors, session
    * errors, and rate-limit events. Defaults to a no-op logger — see

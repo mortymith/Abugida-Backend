@@ -19,6 +19,7 @@ import { appleProvider, googleProvider } from "../providers";
 import { ProviderRegistry } from "../providers/base";
 import { resolveSession, revokeSession, refreshSession } from "./session";
 import { getValidAccessToken } from "./token-refresh";
+import { buildTokenPlugins } from "./tokens";
 import { noopLogger, redact, type Logger } from "./logger";
 import { isProduction } from "./environment";
 
@@ -160,6 +161,9 @@ export function createAuth<TSchema extends AuthDatabaseSchema>(inputConfig: Auth
     advanced: buildAdvancedOptions(config),
     trustedOrigins: config.cors?.origins,
     rateLimit: buildRateLimitOptions(config),
+    // Opt-in JWT issuance (PowerSync et al). Spread before betterAuthOverrides
+    // so consumer overrides always win.
+    plugins: buildTokenPlugins(config),
     // better-auth issues + validates its own CSRF (state/PKCE) tokens for the
     // OAuth redirect flow automatically; `trustedOrigins` above is what scopes
     // which origins are allowed to complete a flow at all. See core/csrf.ts

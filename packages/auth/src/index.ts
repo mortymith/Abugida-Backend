@@ -17,6 +17,7 @@ export { resolveSession, revokeSession, refreshSession } from "./core/session";
 export type { ResolvedSession } from "./core/session";
 export { getValidAccessToken } from "./core/token-refresh";
 export type { GetAccessTokenParams, AccessTokenResult } from "./core/token-refresh";
+export { buildTokenPlugins, DEFAULT_TOKEN_AUDIENCE } from "./core/tokens";
 export { verifyRequestOrigin } from "./core/csrf";
 export type { OriginCheckOptions } from "./core/csrf";
 export { noopLogger, createConsoleLogger, redact } from "./core/logger";
@@ -31,6 +32,7 @@ export type {
   SessionConfig,
   CorsConfig,
   RateLimitConfig,
+  TokensConfig,
   AppleProviderCredentials,
   GoogleProviderCredentials,
   BaseProviderCredentials,
