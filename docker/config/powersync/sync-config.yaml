@@ -1,0 +1,40 @@
+# ═════════════════════════════════════════════════════════════════════
+# PowerSync Sync Streams (referenced from service.yaml)
+#
+# Uses Sync Streams (`config.edition: 3`) — PowerSync's current recommended
+# approach over the legacy `bucket_definitions` Sync Rules format.
+# Query-language reference: https://docs.powersync.com/sync/streams/overview
+#
+# PLACEHOLDERS — the two streams below validate syntax against real tables
+# from packages/database/schema but are intentionally `auto_subscribe: false`,
+# so zero data syncs until a client explicitly subscribes. Replace with the
+# real stream set before enabling client access.
+#
+# Notes:
+#   - auth.user_id() returns TEXT; cast when comparing against bigint PKs.
+#   - Every stream query must respect soft deletes (deleted_at IS NULL).
+#   - Changes to this file are picked up on service restart; follow
+#     https://docs.powersync.com/maintenance-ops/deploying-schema-changes
+#     for rule-version rollouts.
+# ═════════════════════════════════════════════════════════════════════
+
+config:
+  edition: 3
+
+streams:
+  # A student's own enrollments — per-user data partitioned by student_id.
+  # NOTE (placeholder): auth.user_id() is TEXT while student_id is BIGINT;
+  # the comparison below intentionally avoids a cast (the streams' SQLite
+  # dialect rejects ::type casts). Align ID types before enabling clients.
+  my_enrollments:
+    auto_subscribe: false
+    query: SELECT public_id, course_id, progress_percentage, is_completed, updated_at
+      FROM enrollments
+      WHERE student_id = auth.user_id() AND deleted_at IS NULL
+
+  # Published catalog — public reference data all clients may read.
+  published_courses:
+    auto_subscribe: false
+    query: SELECT public_id, title, slug, price_amount, price_currency, is_free
+      FROM courses
+      WHERE status = 'published' AND deleted_at IS NULL

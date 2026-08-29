@@ -1,0 +1,17 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "UploadOnlyAccess",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::${MINIO_BUCKET_NAME}/*"]
+    },
+    {
+      "Sid": "UploadListBucket",
+      "Effect": "Allow",
+      "Action": ["s3:ListBucket"],
+      "Resource": ["arn:aws:s3:::${MINIO_BUCKET_NAME}"]
+    }
+  ]
+}

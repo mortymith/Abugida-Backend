@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<!-- ClickHouse Server Configuration (ADR-010) -->
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<!--
+  Storage backend for SigNoz observability data.
+  Internal only (infrastructure network). No external ports.
+
+  Authentication: the "default" user's password is applied by the image
+  entrypoint from CLICKHOUSE_PASSWORD (compose marks it required).
+  NOTE: ${VAR} placeholders in this file are NOT substituted by either
+  the image or ClickHouse itself — never put credentials here.
+
+  Retention: table TTLs are managed by SigNoz's retention manager from
+  SIGNOZ_*_RETENTION_DAYS env vars. Do not hand-write TTL scripts here:
+  /docker-entrypoint-initdb.d only runs on first boot of an empty
+  volume, i.e. BEFORE SigNoz creates any tables.
+
+  remote_servers/default_cluster: minimal single-shard definition so the
+  signoz-otel-collector migrate job can run with the
+  clickhouse-cluster=default_cluster and clickhouse-replication=false flags.
+-->
+<clickhouse>
+    <logger>
+        <level>warning</level>
+        <console>true</console>
+        <size>100M</size>
+        <count>3</count>
+    </logger>
+
+    <!-- Bind all interfaces; the infrastructure network is internal:true,
+         so nothing outside the compose network can reach these ports. Do
+         NOT bind to the subnet gateway (172.22.0.1): peers resolve the
+         container IP (172.22.0.x), which would then refuse connections.
+         0.0.0.0 (not ::) keeps the stack working on hosts with IPv6
+         disabled, where binding "::" fails for every port. -->
+    <listen_host replace="true">0.0.0.0</listen_host>
+    <http_port>8123</http_port>
+    <tcp_port>9000</tcp_port>
+    <interserver_http_port>9009</interserver_http_port>
+
+    <!-- Max concurrent queries (SigNoz + OTEL collector + ad-hoc) -->
+    <max_concurrent_queries>100</max_concurrent_queries>
+
+    <!-- Memory limits (kept under the container limit set in overrides).
+         User-level settings MUST live under <profiles> in CH >= 25 —
+         top-level placement is a fatal config error there. -->
+    <profiles>
+        <default>
+            <max_memory_usage>4294967296</max_memory_usage> <!-- 4 GB -->
+            <max_bytes_before_external_group_by>2147483648</max_bytes_before_external_group_by> <!-- 2 GB -->
+        </default>
+    </profiles>
+
+    <path>/var/lib/clickhouse/</path>
+    <tmp_path>/var/lib/clickhouse/tmp/</tmp_path>
+    <user_files_path>/var/lib/clickhouse/user_files/</user_files_path>
+    <format_schema_path>/var/lib/clickhouse/format_schemas/</format_schema_path>
+
+    <mark_cache_size>536870912</mark_cache_size> <!-- 512 MB -->
+
+    <!-- Single-node cluster: one shard, self-referencing replica. Used
+         only as a metadata target by the collector's migrate job
+         (replication disabled). Keeper is still required: `migrate
+         bootstrap` resolves ON CLUSTER DDL via Zookeeper (upstream #808). -->
+    <remote_servers replace="true">
+        <default_cluster>
+            <shard>
+                <internal_replication>false</internal_replication>
+                <replica>
+                    <host>clickhouse</host>
+                    <port>9000</port>
+                </replica>
+            </shard>
+        </default_cluster>
+    </remote_servers>
+
+    <zookeeper>
+        <node>
+            <host>clickhouse-keeper</host>
+            <port>2181</port>
+        </node>
+    </zookeeper>
+</clickhouse>

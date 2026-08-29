@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<!-- ClickHouse Keeper — single-node coordination (ADR-010) -->
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<!--
+  Required even for single-node ClickHouse: signoz-otel-collector's
+  `migrate bootstrap` resolves ON CLUSTER DDL through Zookeeper
+  configuration and fails without it (upstream issue #808). A single
+  Keeper node is also the coordination seed if this stack ever grows to
+  a replicated ClickHouse cluster (production then wants a 3-node quorum).
+-->
+<clickhouse>
+    <listen_host>0.0.0.0</listen_host>
+    <keeper_server>
+        <tcp_port>2181</tcp_port>
+        <http_port>9181</http_port>
+        <server_id>1</server_id>
+        <log_storage_path>/var/lib/clickhouse-keeper/log</log_storage_path>
+        <snapshot_storage_path>/var/lib/clickhouse-keeper/snapshots</snapshot_storage_path>
+
+        <coordination_settings>
+            <operation_timeout_ms>10000</operation_timeout_ms>
+            <session_timeout_ms>30000</session_timeout_ms>
+            <raft_logs_level>warning</raft_logs_level>
+        </coordination_settings>
+
+        <raft_configuration>
+            <server>
+                <id>1</id>
+                <hostname>clickhouse-keeper</hostname>
+                <port>44444</port>
+            </server>
+        </raft_configuration>
+    </keeper_server>
+</clickhouse>

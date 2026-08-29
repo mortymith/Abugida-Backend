@@ -1,0 +1,283 @@
+# ═══════════════════════════════════════════════════════════════════
+# OBSERVABILITY — Monitoring, Logging, Tracing Stack
+# ═══════════════════════════════════════════════════════════════════
+#
+# Part of modular Docker Compose structure
+# Composes with: networks.yml, volumes.yml, base.yml,
+#   app.yml, edge.yml,
+#   + profiles/staging.override.yml / profiles/prod.override.yml
+#
+# Included in: Staging + Prod (NOT Dev — dev runs infra-only)
+#
+# Telemetry pipeline: OTLP → signoz-otel-collector → ClickHouse;
+# SigNoz queries ClickHouse directly and keeps metadata (alerts,
+# dashboards, orgs) in PostgreSQL via PgBouncer (signoz database,
+# provisioned by base.yml's signoz-db-setup job).
+#
+# Services defined here: clickhouse, otel-collector-migrate,
+#   otel-collector, signoz-frontend.
+#
+# Schema lifecycle: the collector no longer builds ClickHouse tables at
+# startup — the one-shot otel-collector-migrate job runs
+# `migrate bootstrap/sync/async` first; the collector starts once it
+# has completed successfully.
+#
+# Staging: ports published (loopback-bound) for debugging.
+# Prod: internal only — SigNoz reached via Cloudflare Tunnel (ADR-020).
+# ═══════════════════════════════════════════════════════════════════
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+x-security: &default-security
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  # ═══════════════════════════════════════════════════════════════════
+  # ClickHouse Keeper — single-node coordination (ADR-010)
+  # ═══════════════════════════════════════════════════════════════════
+  # Required even without replication: signoz-otel-collector's
+  # `migrate bootstrap` resolves ON CLUSTER DDL through Zookeeper config
+  # and fails without it (upstream signoz-otel-collector#808). Doubles as
+  # the coordination seed for a future replicated cluster; production at
+  # scale should move to a 3-node quorum.
+  #
+  # GOTCHA: the official image's entrypoint reads
+  # /etc/clickhouse-keeper/keeper_config.xml — that exact filename, not
+  # config.xml — so the mount target below must match it or your config
+  # is silently ignored in favor of the image defaults.
+  # ═══════════════════════════════════════════════════════════════════
+  clickhouse-keeper:
+    image: clickhouse/clickhouse-keeper:25.12.5
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_clickhouse-keeper
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - keeper_data:/var/lib/clickhouse-keeper
+      - ./docker/config/clickhouse/keeper-config.xml:/etc/clickhouse-keeper/keeper_config.xml:ro
+    networks:
+      - infrastructure
+    healthcheck:
+      test:
+        ['CMD', 'clickhouse-keeper-client', '--host', 'localhost', '--port', '2181', '-q', 'ruok']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ═══════════════════════════════════════════════════════════════════
+  # ClickHouse — Observability Storage (ADR-003, ADR-010)
+  # ═══════════════════════════════════════════════════════════════════
+  # Columnar store for all telemetry (metrics, traces, logs).
+  # Pinned ≥ 25.12.5: newer signoz-otel-collector releases store trace
+  # attributes as JSON columns whose schema migration requires settings
+  # introduced in 25.12.5 (see SigNoz upgrade guide 0→0.131).
+  #
+  # Auth: single "default" user, password REQUIRED via CLICKHOUSE_PASSWORD
+  # (applied by the image entrypoint). Access is restricted to the
+  # internal infrastructure network; least-privilege per-service CH users
+  # are a future hardening step.
+  #
+  # Staging: HTTP :8123 published loopback-only for ad-hoc queries.
+  # Prod: internal only — SQL access via docker exec.
+  # ═══════════════════════════════════════════════════════════════════
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.12.5
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_clickhouse
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    environment:
+      CLICKHOUSE_DB: signoz_traces
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD is required (set it in .env or export from Vault)}
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./docker/config/clickhouse/config.xml:/etc/clickhouse-server/config.d/custom.xml:ro
+    depends_on:
+      clickhouse-keeper:
+        condition: service_healthy
+    networks:
+      - infrastructure
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8123/ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════════════════
+  # OTel Collector — one-shot ClickHouse schema migration
+  # ═══════════════════════════════════════════════════════════════════
+  # Runs the ClickHouse schema migrations (bootstrap / sync / async) as a
+  # short-lived job and exits. otel-collector depends on this completing
+  # successfully, so the collector process no longer blocks its own
+  # startup on a long, serial schema build — it comes up immediately
+  # once migrations have finished. Failures here are isolated to this
+  # service and clearly visible instead of silently stalling the
+  # collector's health endpoint.
+  #
+  # Re-run manually after a version upgrade without waiting:
+  #   docker compose ... run --rm otel-collector-migrate
+  # ═══════════════════════════════════════════════════════════════════
+  otel-collector-migrate:
+    image: signoz/signoz-otel-collector:v0.144.8
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_otel-collector-migrate
+    restart: 'no'
+    <<: *default-security
+    logging: *default-logging
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        set -e
+        MIGRATE_DSN="tcp://$${CLICKHOUSE_HOST}:$${CLICKHOUSE_PORT}?username=$${CLICKHOUSE_USER}&password=$${CLICKHOUSE_PASSWORD}"
+        /signoz-otel-collector --clickhouse-dsn="$$MIGRATE_DSN" --clickhouse-cluster=default_cluster --clickhouse-replication=false migrate bootstrap
+        /signoz-otel-collector --clickhouse-dsn="$$MIGRATE_DSN" --clickhouse-cluster=default_cluster --clickhouse-replication=false migrate sync up
+        /signoz-otel-collector --clickhouse-dsn="$$MIGRATE_DSN" --clickhouse-cluster=default_cluster --clickhouse-replication=false migrate async up
+    environment:
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: '9000'
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD is required (set it in .env or export from Vault)}
+    networks:
+      - infrastructure
+
+  # ═══════════════════════════════════════════════════════════════════
+  # OpenTelemetry Collector (ADR-003)
+  # ═══════════════════════════════════════════════════════════════════
+  # SigNoz fork of opentelemetry-collector-contrib — provides the native
+  # ClickHouse exporters (traces/metrics/logs) + spanmetrics processor
+  # used by our pipeline config. Receives OTLP from
+  # api/dashboard/marketing (gRPC :4317, HTTP :4318), batches, filters
+  # debug signals, stamps env, exports straight to ClickHouse.
+  # Internal only — no published ports. Health check at :13133.
+  # ═══════════════════════════════════════════════════════════════════
+  otel-collector:
+    image: signoz/signoz-otel-collector:v0.144.8
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_otel-collector
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: '9000'
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD is required (set it in .env or export from Vault)}
+    volumes:
+      - ./docker/config/opentelemetry/collector-config.yml:/etc/otel-collector-config.yaml:ro
+    command: ['--config=/etc/otel-collector-config.yaml']
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      otel-collector-migrate:
+        condition: service_completed_successfully
+    networks:
+      - infrastructure
+    healthcheck:
+      # Image ships bash but not wget — probe the health extension via /dev/tcp.
+      test: ['CMD', 'bash', '-c', 'echo > /dev/tcp/127.0.0.1/13133']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════════════════
+  # SigNoz (ADR-003, ADR-010, ADR-018)
+  # ═══════════════════════════════════════════════════════════════════
+  # Consolidated UI + query/API server (single container): serves the
+  # dashboard AND API on :8080. Queries telemetry from ClickHouse;
+  # stores its own metadata (alerts, dashboards, orgs) in PostgreSQL
+  # via PgBouncer (database "signoz", role provisioned by signoz-db-setup).
+  #
+  # Config model (v0.9x+): YAML config resolved from env — every
+  # SIGNOZ_* var maps to a config path where single "_" separates path
+  # segments and "__" escapes a literal underscore. DSNs embed secrets,
+  # so they are assembled in-shell instead of interpolated by compose
+  # (which would leak the password into the container command line).
+  #
+  # Retention/alert channels: managed at runtime via the settings UI/API
+  # (stored in Postgres); the retention/telegram envs below are kept as
+  # inert operator documentation.
+  #
+  # Staging: published on ${SIGNOZ_FRONTEND_PORT:-3002} (loopback-bound).
+  # Prod: internal only — reached via Cloudflare Tunnel (ADR-020).
+  # ═══════════════════════════════════════════════════════════════════
+  signoz-frontend:
+    image: signoz/signoz:v0.137.0
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_signoz-frontend
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        set -e
+        export SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN="tcp://$${CLICKHOUSE_HOST}:9000?username=$${CLICKHOUSE_USER}&password=$${CLICKHOUSE_PASSWORD}"
+        export SIGNOZ_SQLSTORE_POSTGRES_DSN="postgres://signoz:$${SIGNOZ_DB_PASSWORD}@pgbouncer:6432/signoz?sslmode=disable"
+        exec ./signoz server
+    environment:
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD is required (set it in .env or export from Vault)}
+      SIGNOZ_DB_PASSWORD: ${SIGNOZ_DB_PASSWORD:?SIGNOZ_DB_PASSWORD is required (set it in .env or export from Vault)}
+      # Metadata store → Postgres via PgBouncer (transaction pooling;
+      # prepared statements supported via max_prepared_statements).
+      SIGNOZ_SQLSTORE_PROVIDER: postgres
+      # UI session/token signing secret
+      SIGNOZ_TOKENIZER_JWT_SECRET: ${SIGNOZ_JWT_SECRET:?SIGNOZ_JWT_SECRET is required (set it in .env or export from Vault)}
+      # Disable the Prometheus active-query tracker: it tries to create a
+      # logging directory at startup and fails (harmless but noisy).
+      SIGNOZ_PROMETHEUS_ACTIVE__QUERY__TRACKER_ENABLED: 'false'
+      # ── Inert operator documentation (managed via UI/settings API) ──
+      SIGNOZ_METRICS_RETENTION_DAYS: ${SIGNOZ_METRICS_RETENTION_DAYS:-7}
+      SIGNOZ_TRACES_RETENTION_DAYS: ${SIGNOZ_TRACES_RETENTION_DAYS:-7}
+      SIGNOZ_LOGS_RETENTION_DAYS: ${SIGNOZ_LOGS_RETENTION_DAYS:-7}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    volumes:
+      - signoz_data:/var/lib/signoz
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
+      # Schema must exist before SigNoz's own migrations probe ClickHouse,
+      # otherwise first-boot SQL migrations log unknown-database warnings.
+      otel-collector-migrate:
+        condition: service_completed_successfully
+    networks:
+      - infrastructure
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8080/api/v1/health']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+# ── Observability-only volumes ────────────────────────────────────────
+# Declared here (not volumes.yml) because everything below only runs in
+# staging + prod alongside the rest of the observability stack.
+volumes:
+  clickhouse_data:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_clickhouse_data
+  keeper_data:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_keeper_data
+  signoz_data:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_signoz_data

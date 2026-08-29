@@ -1,0 +1,35 @@
+# ═════════════════════════════════════════════════════════════════════
+# Redis ACL File
+# Source: deployment.md v3.0.0 §5.3, §7.2
+#
+# Passwords reference Docker secrets files.
+# In prod, Vault injects these; in dev, Docker secrets are used (ADR-017).
+#
+# Passwords are read at container startup by the entrypoint, which
+# generates the final users.acl from this template.
+# ═════════════════════════════════════════════════════════════════════
+#
+# IMPORTANT: This file uses > prefix for password-file references.
+# The entrypoint resolves these before redis-server starts.
+#
+
+# Disable default user entirely — no anonymous connections.
+user default off
+
+# Admin — full access for operational tooling and Sentinel.
+# Retains CONFIG, SHUTDOWN, DEBUG (DEBUG is renamed in redis.conf,
+# so this grants the renamed-command key which is empty = no-op).
+user admin on >{{REDIS_ADMIN_PASSWORD}} ~* &* +@all
+
+# App — application service account (API, Dashboard workers).
+# All commands except dangerous category (FLUSH*, DEBUG, CONFIG, SHUTDOWN, etc.).
+user app on >{{REDIS_PASSWORD}} ~* &* -@dangerous +@all
+
+# Readonly — read replicas / monitoring / health checks.
+# Only @read category commands.
+user readonly on >{{REDIS_READONLY_PASSWORD}} ~* &* +@read
+
+# Sentinel — used by Sentinel instances to connect to Redis nodes.
+# 2.7 Fix: Scoped to commands Sentinel actually uses against data nodes
+# (the SENTINEL command itself does not exist in server mode).
+user sentinel on >{{REDIS_SENTINEL_PASSWORD}} ~* &* +ping +publish +subscribe +info +client +replconf +psync

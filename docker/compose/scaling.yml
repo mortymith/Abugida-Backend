@@ -1,0 +1,258 @@
+# ═══════════════════════════════════════════════════════
+# SCALING — Replicas, HA Components (Production Only)
+# ═══════════════════════════════════════════════════════
+#
+# Part of modular Docker Compose structure
+# Composes with: networks.yml, volumes.yml, base.yml,
+#   app.yml, observability.yml, edge.yml, security.yml,
+#   profiles/prod.override.yml
+#
+# Included in: Prod ONLY (not Dev or Staging)
+# Production-only high-availability components:
+#   - PostgreSQL replicas (ADR-002)
+#   - Redis replicas + Sentinel cluster (ADR-014, ADR-022)
+#
+# Secrets strategy (ADR-006): sensitive values are injected as environment
+# variables exported from Vault at deploy time.
+#
+# Hardening (every service): no-new-privileges via x-security anchor;
+# log rotation capped at 10 MB × 5 files per container via x-logging.
+#
+# ═══════════════════════════════════════════════════════
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+x-security: &default-security
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  # ═══════════════════════════════════════════════════════
+  # PostgreSQL 17 Replica 1 (ADR-002)
+  # ═══════════════════════════════════════════════════════
+  postgres-replica-1:
+    build:
+      context: .
+      dockerfile: docker/dockerfiles/postgres-replica/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_postgres-replica-1
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      POSTGRES_PRIMARY_HOST: ${POSTGRES_PRIMARY_HOST:-postgres-primary}
+      SLOT_NAME: ${REPLICA1_SLOT_NAME:-replica_slot_1}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (export from Vault)}
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - postgres_replica1_data:/var/lib/postgresql/data
+      - ./docker/config/postgres/conf/replica.conf:/etc/postgresql/replica.conf:ro
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    networks:
+      - infrastructure
+    stop_grace_period: 30s
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # ═══════════════════════════════════════════════════════
+  # PostgreSQL 17 Replica 2 (ADR-002)
+  # ═══════════════════════════════════════════════════════
+  postgres-replica-2:
+    build:
+      context: .
+      dockerfile: docker/dockerfiles/postgres-replica/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_postgres-replica-2
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      POSTGRES_PRIMARY_HOST: ${POSTGRES_PRIMARY_HOST:-postgres-primary}
+      SLOT_NAME: ${REPLICA2_SLOT_NAME:-replica_slot_2}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (export from Vault)}
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - postgres_replica2_data:/var/lib/postgresql/data
+      - ./docker/config/postgres/conf/replica.conf:/etc/postgresql/replica.conf:ro
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    networks:
+      - infrastructure
+    stop_grace_period: 30s
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # ═══════════════════════════════════════════════════════
+  # Redis Replica 1 (ADR-014)
+  # ═══════════════════════════════════════════════════════
+  # NOTE: Health check uses unauthenticated PING. The entrypoint
+  #   resolves the real password from Docker secrets at startup
+  #   and rewrites the Redis config. Compose-level healthchecks
+  #   cannot read Docker secrets, so we use a minimal check here
+  #   and rely on the application-level auth enforcement.
+  redis-replica-1:
+    build:
+      context: .
+      dockerfile: docker/dockerfiles/redis/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_redis-replica-1
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      ROLE: replica
+      REDIS_PRIMARY_HOST: redis-primary
+      REDIS_PRIMARY_PORT: '6379'
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required (export from Vault)}
+      REDIS_ADMIN_PASSWORD: ${REDIS_ADMIN_PASSWORD:?REDIS_ADMIN_PASSWORD is required (export from Vault)}
+      REDIS_READONLY_PASSWORD: ${REDIS_READONLY_PASSWORD:?REDIS_READONLY_PASSWORD is required (export from Vault)}
+      REDIS_MAXMEMORY: ${REDIS_MAXMEMORY:-}
+      REDIS_MAXMEMORY_POLICY: ${REDIS_MAXMEMORY_POLICY:-}
+    volumes:
+      - redis_replica1_data:/data
+    depends_on:
+      redis-primary:
+        condition: service_healthy
+    networks:
+      - infrastructure
+    stop_grace_period: 30s
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ═══════════════════════════════════════════════════════
+  # Redis Replica 2 (ADR-014)
+  # ═══════════════════════════════════════════════════════
+  redis-replica-2:
+    build:
+      context: .
+      dockerfile: docker/dockerfiles/redis/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_redis-replica-2
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      ROLE: replica
+      REDIS_PRIMARY_HOST: redis-primary
+      REDIS_PRIMARY_PORT: '6379'
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required (export from Vault)}
+      REDIS_ADMIN_PASSWORD: ${REDIS_ADMIN_PASSWORD:?REDIS_ADMIN_PASSWORD is required (export from Vault)}
+      REDIS_READONLY_PASSWORD: ${REDIS_READONLY_PASSWORD:?REDIS_READONLY_PASSWORD is required (export from Vault)}
+      REDIS_MAXMEMORY: ${REDIS_MAXMEMORY:-}
+      REDIS_MAXMEMORY_POLICY: ${REDIS_MAXMEMORY_POLICY:-}
+    volumes:
+      - redis_replica2_data:/data
+    depends_on:
+      redis-primary:
+        condition: service_healthy
+    networks:
+      - infrastructure
+    stop_grace_period: 30s
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ═══════════════════════════════════════════════════════
+  # Redis Sentinel 1 (ADR-022)
+  # ═══════════════════════════════════════════════════════
+  # NOTE: Sentinel auth is configured by the entrypoint from
+  #   Docker secrets. Health check uses unauthenticated PING
+  #   (sentinel requirepass is set in the rendered config).
+  redis-sentinel-1:
+    build:
+      context: .
+      dockerfile: docker/dockerfiles/redis/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_redis-sentinel-1
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      ROLE: sentinel
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required (export from Vault)}
+      REDIS_SENTINEL_PASSWORD: ${REDIS_SENTINEL_PASSWORD:?REDIS_SENTINEL_PASSWORD is required (export from Vault)}
+    depends_on:
+      redis-primary:
+        condition: service_healthy
+    networks:
+      - infrastructure
+    stop_grace_period: 10s
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-p', '26379', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ═══════════════════════════════════════════════════════
+  # Redis Sentinel 2 (ADR-022)
+  # ═══════════════════════════════════════════════════════
+  redis-sentinel-2:
+    build:
+      context: .
+      dockerfile: docker/dockerfiles/redis/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_redis-sentinel-2
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      ROLE: sentinel
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required (export from Vault)}
+      REDIS_SENTINEL_PASSWORD: ${REDIS_SENTINEL_PASSWORD:?REDIS_SENTINEL_PASSWORD is required (export from Vault)}
+    depends_on:
+      redis-primary:
+        condition: service_healthy
+    networks:
+      - infrastructure
+    stop_grace_period: 10s
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-p', '26379', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ═══════════════════════════════════════════════════════
+  # Redis Sentinel 3 (ADR-022)
+  # ═══════════════════════════════════════════════════════
+  redis-sentinel-3:
+    build:
+      context: .
+      dockerfile: docker/dockerfiles/redis/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_redis-sentinel-3
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      ROLE: sentinel
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required (export from Vault)}
+      REDIS_SENTINEL_PASSWORD: ${REDIS_SENTINEL_PASSWORD:?REDIS_SENTINEL_PASSWORD is required (export from Vault)}
+    depends_on:
+      redis-primary:
+        condition: service_healthy
+    networks:
+      - infrastructure
+    stop_grace_period: 10s
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-p', '26379', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

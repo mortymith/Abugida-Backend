@@ -1,0 +1,247 @@
+# ════════════════════════════════════════════════════════════════════════════════════════
+# STAGING OVERRIDE — Staging Environment (Infrastructure + Applications + Monitoring)
+# ════════════════════════════════════════════════════════════════════════════════════════
+#
+# Part of modular Docker Compose structure
+# Composes with: networks.yml, volumes.yml, base.yml,
+#   app.yml, observability.yml, security.yml
+#
+# Deployment tier: INFRASTRUCTURE + APPLICATIONS + MONITORING
+#   - All base infrastructure (databases, caches, storage, sync)
+#   - Application services (api, dashboard, marketing) with published ports
+#   - Observability stack (otel-collector, signoz-frontend) with published ports
+#   - NO edge services (caddy, keepalived)
+#   - Security layer included via security.yml (vault + minio-backup; ADR-006 / ADR-012)
+#
+# This overlay:
+#   - Publishes ports for all services (debugging + testing), LOOPBACK-BOUND:
+#     reachable only from the host itself, never from other machines — a
+#     published port on 0.0.0.0 would bypass the internal-network isolation.
+#   - Moderate resource caps (2 CPU / 2GB)
+#   - Single instances (no replicas)
+#   - Single Redis (no replicas/sentinels)
+#   - MinIO with init for bucket provisioning
+#
+# Secrets strategy (ADR-006): sensitive values are exported from HashiCorp
+# Vault into the environment before running compose (see just setup-staging).
+#
+# Usage:
+#   docker compose -f docker/compose/networks.yml \
+#     -f docker/compose/volumes.yml \
+#     -f docker/compose/base.yml \
+#     -f docker/compose/app.yml \
+#     -f docker/compose/observability.yml \
+#     -f docker/compose/security.yml \
+#     -f docker/compose/profiles/staging.override.yml \
+#     up -d
+#
+# ════════════════════════════════════════════════════════════════════════════════════════
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+x-security: &default-security
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  # ── Vault — staging overrides (published for debugging, ADR-006) ──────
+  # Vault runs in staging (mirroring production) so applications can pull
+  # dynamic, short-lived credentials. The API port is published loopback-only
+  # for operator debugging (ADR-006); it is NOT published in production.
+  # The base service definition lives in security.yml.
+  vault:
+    ports:
+      - '127.0.0.1:${VAULT_PORT:-8200}:8200'
+    deploy:
+      resources:
+        limits:
+          cpus: '${VAULT_CPU_LIMIT:-0.5}'
+          memory: ${VAULT_MEM_LIMIT:-512m}
+
+  # ── Infrastructure Layer ──────────────────────────────────────────────────
+
+  # ── PostgreSQL Primary — staging overrides ──────────────────────────────
+  postgres-primary:
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    environment:
+      POSTGRES_SHARED_BUFFERS: ${POSTGRES_SHARED_BUFFERS:-256MB}
+    deploy:
+      resources:
+        limits:
+          cpus: '${POSTGRES_CPU_LIMIT:-2}'
+          memory: ${POSTGRES_MEM_LIMIT:-2g}
+
+  # ── PgBouncer — staging overrides ─────────────────────────────────
+  pgbouncer:
+    ports:
+      - '127.0.0.1:${PGBOUNCER_PORT:-6432}:6432'
+    deploy:
+      resources:
+        limits:
+          cpus: '${PGBOUNCER_CPU_LIMIT:-1}'
+          memory: ${PGBOUNCER_MEM_LIMIT:-512m}
+
+  # ── Redis Primary — staging overrides (standalone) ────────────────────
+  redis-primary:
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    deploy:
+      resources:
+        limits:
+          cpus: '${REDIS_CPU_LIMIT:-2}'
+          memory: ${REDIS_MEM_LIMIT:-2g}
+
+  # ── MinIO — staging overrides (published ports, resource caps) ────────
+  minio:
+    ports:
+      - '127.0.0.1:${MINIO_API_PORT:-9000}:9000'
+      - '127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001'
+    deploy:
+      resources:
+        limits:
+          cpus: '${MINIO_CPU_LIMIT:-2}'
+          memory: ${MINIO_MEM_LIMIT:-2g}
+
+  # ── MinIO Init — one-shot bucket/policy provisioning ─────────────────
+  # Runs against the healthy minio service (NOT as its entrypoint).
+  init-minio:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_init-minio
+    restart: 'no'
+    <<: *default-security
+    logging: *default-logging
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required (export from Vault)}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-app-data}
+      ENVIRONMENT: staging
+    volumes:
+      - ./docker/config/minio/policies:/policies:ro
+      - ./docker/init/init-minio-buckets.sh:/init.sh:ro
+    networks:
+      - infrastructure
+    entrypoint: ['bash', '/init.sh']
+
+  # ── ClickHouse — staging overrides (loopback-bound port) ──────────────
+  clickhouse:
+    ports:
+      - '127.0.0.1:${CLICKHOUSE_HTTP_PORT:-8123}:8123'
+    environment:
+      CLICKHOUSE_DB: signoz_traces
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD is required (export from Vault)}
+    deploy:
+      resources:
+        limits:
+          cpus: '${CLICKHOUSE_CPU_LIMIT:-2}'
+          memory: ${CLICKHOUSE_MEM_LIMIT:-2g}
+
+  # ── PowerSync — staging overrides (published client API port) ────────
+  powersync-api:
+    ports:
+      - '127.0.0.1:${POWERSYNC_PORT:-8085}:8085'
+    environment:
+      NODE_OPTIONS: --max-old-space-size=768
+    deploy:
+      resources:
+        limits:
+          cpus: '${POWERSYNC_CPU_LIMIT:-0.5}'
+          memory: ${POWERSYNC_MEM_LIMIT:-1g}
+
+  # Replication role — SINGLETON. Never scale this service.
+  powersync-sync:
+    environment:
+      NODE_OPTIONS: --max-old-space-size=768
+    deploy:
+      resources:
+        limits:
+          cpus: '${POWERSYNC_CPU_LIMIT:-0.5}'
+          memory: ${POWERSYNC_MEM_LIMIT:-1g}
+
+  # ── Application Layer ─────────────────────────────────────────────────────
+
+  # ── API — staging overrides (single instance, published port) ────────
+  api:
+    ports:
+      - '127.0.0.1:${API_PORT:-3001}:3000'
+    environment:
+      ENVIRONMENT: staging
+    deploy:
+      resources:
+        limits:
+          cpus: '${API_CPU_LIMIT:-2}'
+          memory: ${API_MEM_LIMIT:-2g}
+
+  # ── Dashboard — staging overrides (single instance, published port) ──
+  dashboard:
+    ports:
+      - '127.0.0.1:${DASHBOARD_PORT:-8081}:8080'
+    environment:
+      ENVIRONMENT: staging
+    deploy:
+      resources:
+        limits:
+          cpus: '${DASHBOARD_CPU_LIMIT:-2}'
+          memory: ${DASHBOARD_MEM_LIMIT:-2g}
+
+  # ── Marketing — staging overrides (single instance, published port) ──
+  marketing:
+    ports:
+      - '127.0.0.1:${MARKETING_PORT:-8082}:8080'
+    environment:
+      ENVIRONMENT: staging
+    deploy:
+      resources:
+        limits:
+          cpus: '${MARKETING_CPU_LIMIT:-1}'
+          memory: ${MARKETING_MEM_LIMIT:-512m}
+
+  # ── Observability Layer ──────────────────────────────────────────────────
+
+  # ── OTEL Collector — staging overrides (loopback-bound OTLP ports) ───
+  # OTLP is published loopback-only so host-side tooling (local apps,
+  # k6, etc.) can send telemetry. The health extension (:13133) stays
+  # un-published — probe it via docker exec / just otel-status.
+  otel-collector:
+    ports:
+      - '127.0.0.1:${OTEL_GRPC_PORT:-4317}:4317'
+      - '127.0.0.1:${OTEL_HTTP_PORT:-4318}:4318'
+    environment:
+      ENVIRONMENT: staging
+    deploy:
+      resources:
+        limits:
+          cpus: '${OTEL_CPU_LIMIT:-1}'
+          memory: ${OTEL_MEM_LIMIT:-1g}
+
+  # ── SigNoz — staging overrides (loopback-bound on :3002) ──────────────
+  # Consolidated UI + API server listens on internal :8080.
+  signoz-frontend:
+    ports:
+      - '127.0.0.1:${SIGNOZ_FRONTEND_PORT:-3002}:8080'
+    deploy:
+      resources:
+        limits:
+          cpus: '${SIGNOZ_CPU_LIMIT:-2}'
+          memory: ${SIGNOZ_MEM_LIMIT:-4g}
+
+# ── Network override (staging) ───────────────────────────────────────────────
+# The infrastructure tier ships `internal: true` (ADR-004). Docker SILENTLY
+# drops port publications for containers attached only to an internal
+# network, which would defeat this overlay's published debugging ports for
+# every infrastructure service (clickhouse, otel-collector, signoz, postgres,
+# pgbouncer, redis, minio, powersync). Staging therefore keeps the same
+# subnet with routing enabled — compensating control: ALL staging ports are
+# loopback-bound (host-reachable only), never on 0.0.0.0.
+networks:
+  infrastructure:
+    internal: false

@@ -1,0 +1,168 @@
+# ═════════════════════════════════════════════════════════════════════════════════
+# OpenTelemetry Collector Configuration (ADR-003)
+# ═════════════════════════════════════════════════════════════════════════════════
+#
+# Unified telemetry pipeline for metrics, traces, and logs.
+# Runs on signoz/signoz-otel-collector (SigNoz fork of
+# opentelemetry-collector-contrib) — required for the native ClickHouse
+# exporters + spanmetrics processor below; the core otelcol image cannot
+# load this config.
+#
+# Receives OTLP from api/dashboard/marketing via gRPC (4317) and HTTP (4318).
+#
+# Flow: Receiver → memory_limiter (OOM guard, always first)
+#       → resource/environment (stamp deployment env + instance)
+#       → filter/drop-debug → signozspanmetrics/delta (traces only)
+#       → batch (10s, always last)
+#       → Exporters (ClickHouse per-signal databases)
+#
+# ClickHouse credentials arrive via CLICKHOUSE_* environment variables
+# (set in observability.yml). Schema is created by the one-shot
+# otel-collector-migrate job BEFORE this collector starts.
+# ═════════════════════════════════════════════════════════════════════════════════
+
+extensions:
+  health_check:
+    # Bind to loopback only — operational tools should not be exposed
+    endpoint: 127.0.0.1:13133
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        # 0.0.0.0 required for cross-container OTLP; reachability is
+        # restricted at the network layer (internal infrastructure net).
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  prometheus:
+    config:
+      scrape_configs:
+        # Collector's own telemetry (default pull port :8888).
+        - job_name: 'otel-collector'
+          scrape_interval: 30s
+          static_configs:
+            - targets: ['localhost:8888']
+
+        # PowerSync service metrics (powersync-api role exposes Prometheus on
+        # :9090 — see telemetry.prometheus_port in powersync.yaml). Key series
+        # for alerting: replication slot lag / WAL growth (WAL-bloat risk).
+        - job_name: 'powersync'
+          scrape_interval: 30s
+          static_configs:
+            - targets: ['powersync-api:9090']
+
+# NOTE: no StatsD receiver — the signoz-otel-collector distro (v0.144.x)
+# silently skips its bundled statsd component, so a receiver block here
+# would never bind. Vault exposes Prometheus metrics at /v1/sys/metrics;
+# scrape that instead if Vault metrics are needed.
+
+processors:
+  # Memory limiter MUST be the first processor — rejects/throttles intake
+  # before internal queues can OOM the container.
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 75
+    spike_limit_percentage: 25
+
+  batch:
+    timeout: 10s
+    send_batch_size: 8192
+    send_batch_max_size: 16384
+
+  filter/drop-debug:
+    error_mode: ignore
+    traces:
+      span:
+        - 'attributes["log.level"] == "debug"'
+    logs:
+      log_record:
+        - 'attributes["log.level"] == "debug"'
+    metrics:
+      datapoint:
+        - 'attributes["log.level"] == "debug"'
+
+  resource/environment:
+    attributes:
+      - key: deployment.environment
+        value: ${env:ENVIRONMENT:-development}
+        action: upsert
+      - key: service.instance.id
+        value: ${env:HOSTNAME:-unknown}
+        action: upsert
+
+  # Derives RED metrics (call rate, error rate, latency histograms) from
+  # spans so SigNoz can chart service latency without app-side metrics.
+  signozspanmetrics/delta:
+    metrics_exporter: signozclickhousemetrics
+    latency_histogram_buckets:
+      [
+        1,
+        2,
+        4,
+        8,
+        16,
+        32,
+        64,
+        128,
+        256,
+        512,
+        1024,
+        2048,
+        4096,
+        8192,
+        16384,
+        32768,
+        65536,
+        131072,
+        262144,
+        524288,
+        1048576,
+      ]
+    dimensions_cache_size: 10000
+
+exporters:
+  clickhousetraces:
+    datasource: tcp://${env:CLICKHOUSE_HOST}:${env:CLICKHOUSE_PORT}?username=${env:CLICKHOUSE_USER}&password=${env:CLICKHOUSE_PASSWORD}&database=signoz_traces
+    timeout: 10s
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+  signozclickhousemetrics:
+    dsn: tcp://${env:CLICKHOUSE_HOST}:${env:CLICKHOUSE_PORT}?username=${env:CLICKHOUSE_USER}&password=${env:CLICKHOUSE_PASSWORD}&database=signoz_metrics
+    timeout: 10s
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+  clickhouselogsexporter:
+    dsn: tcp://${env:CLICKHOUSE_HOST}:${env:CLICKHOUSE_PORT}?username=${env:CLICKHOUSE_USER}&password=${env:CLICKHOUSE_PASSWORD}&database=signoz_logs
+    timeout: 10s
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors:
+        [memory_limiter, resource/environment, filter/drop-debug, signozspanmetrics/delta, batch]
+      exporters: [clickhousetraces]
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [memory_limiter, resource/environment, batch]
+      exporters: [signozclickhousemetrics]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource/environment, filter/drop-debug, batch]
+      exporters: [clickhouselogsexporter]

@@ -1,0 +1,29 @@
+# ═════════════════════════════════════════════════════════════════════
+# Cloudflare Tunnel Configuration (ADR-020)
+# ═════════════════════════════════════════════════════════════════════
+# credentials.json is created at runtime and is GITIGNORED.
+# NEVER template real credentials in this repo.
+#
+# Ingress rules:
+#   - signoz.{domain} → signoz-frontend:8080 (consolidated UI + API server)
+#   - All other traffic → block (no catch-all)
+#
+# The tunnel is outbound-only — no published ports.
+# SigNoz UI is reachable ONLY via the tunnel domain.
+# ═══════════════════════════════════════════════════════════════════
+
+tunnel: ${CLOUDFLARE_TUNNEL_NAME:-infra-tunnel}
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  # SigNoz monitoring UI — only via Cloudflare Tunnel (ADR-020)
+  - hostname: ${DOMAIN_SIGNOZ:-signoz.localhost}
+    service: http://signoz-frontend:8080
+    originRequest:
+      # M-04 Fix: Enable TLS verification for origin services
+      # Accepted risk documented: In self-signed dev environments,
+      # set to true. In production with proper certs, keep true.
+      noTLSVerify: false
+
+  # Catch-all: block all other traffic
+  - service: http_status:404

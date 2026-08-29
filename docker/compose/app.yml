@@ -1,0 +1,145 @@
+# ═══════════════════════════════════════════════════════════════════
+# APP — Application Services
+# ═══════════════════════════════════════════════════════════════════
+#
+# Part of modular Docker Compose structure
+# Composes with: networks.yml, volumes.yml, base.yml,
+#   observability.yml, edge.yml,
+#   + profiles/staging.override.yml / profiles/prod.override.yml
+#
+# Included in: Staging + Prod (NOT Dev — dev runs infra-only)
+# Application-facing services that receive traffic via Caddy.
+# Multi-network: backend (ingress) + infrastructure (data layer).
+# Port mappings and resource limits are in override files.
+#
+# Secrets strategy (ADR-006): sensitive values are injected as environment
+# variables — from .env in development, exported from Vault in staging/prod.
+#
+# Hardening (every service): no-new-privileges via x-security anchor;
+# log rotation capped at 10 MB × 5 files per container via x-logging.
+#
+# ═══════════════════════════════════════════════════════════════════
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+x-security: &default-security
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  # ═══════════════════════════════════════════════════════════════════
+  # API Service
+  # ─────────────────────────────────────────────────────────────────
+  # Multi-network: backend (receives traffic from Caddy) + infrastructure (data layer).
+  # Connects to: PgBouncer (ADR-019), Redis, MinIO (ADR-008), Vault (ADR-006, prod).
+  # ═══════════════════════════════════════════════════════════════════
+  api:
+    build:
+      context: .
+      dockerfile: app/api/Dockerfile
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      PGBOUNCER_HOST: pgbouncer
+      PGBOUNCER_PORT: '6432'
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (set it in .env or export from Vault)}
+      REDIS_HOST: redis-primary
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required (set it in .env or export from Vault)}
+      MINIO_HOST: minio
+      MINIO_PORT: '9000'
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required (set it in .env or export from Vault)}
+      API_SECRET_KEY: ${API_SECRET_KEY:?API_SECRET_KEY is required (set it in .env or export from Vault)}
+      DEPLOY_VERSION: ${DEPLOY_VERSION:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis-primary:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - backend
+      - infrastructure
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://localhost:3000/health']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Dashboard Service
+  # ─────────────────────────────────────────────────────────────────
+  # Multi-network: backend (receives traffic from Caddy) + infrastructure (data layer).
+  # Connects to: PgBouncer (ADR-019), Redis.
+  # ═══════════════════════════════════════════════════════════════════
+  dashboard:
+    build:
+      context: .
+      dockerfile: app/dashboard/Dockerfile
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      PGBOUNCER_HOST: pgbouncer
+      PGBOUNCER_PORT: '6432'
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (set it in .env or export from Vault)}
+      REDIS_HOST: redis-primary
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required (set it in .env or export from Vault)}
+      DEPLOY_VERSION: ${DEPLOY_VERSION:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis-primary:
+        condition: service_healthy
+    networks:
+      - backend
+      - infrastructure
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://localhost:8080/health']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Marketing Service
+  # ─────────────────────────────────────────────────────────────────
+  # Static Astro landing page served by a small Bun static-file server.
+  # No data-layer access — single network: backend (traffic from Caddy).
+  # ═══════════════════════════════════════════════════════════════════
+  marketing:
+    build:
+      context: .
+      dockerfile: app/marketing/Dockerfile
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEPLOY_VERSION: ${DEPLOY_VERSION:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    networks:
+      - backend
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://localhost:8080/health']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

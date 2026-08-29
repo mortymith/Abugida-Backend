@@ -1,0 +1,361 @@
+# ═══════════════════════════════════════════════════════════════════
+# BASE — Core Infrastructure Services
+# ═══════════════════════════════════════════════════════════════════
+#
+# Part of modular Docker Compose structure
+# Composes with: networks.yml, volumes.yml,
+#   app.yml, observability.yml, edge.yml,
+#   + profiles/dev.override.yml / profiles/staging.override.yml / profiles/prod.override.yml
+#
+# Services defined here run in ALL environments (dev + staging + prod).
+# Port mappings and resource limits are in override files.
+#
+# Secrets strategy (ADR-006): sensitive values are injected as environment
+# variables — from .env in development, exported from Vault in staging/prod.
+#
+# Tiered deployment model:
+#   Dev:      base.yml only (databases, caches, storage, sync)
+#   Staging:  base.yml + app.yml + observability.yml
+#   Prod:     base.yml + app.yml + observability.yml + edge.yml + scaling.yml + security.yml
+#
+# Hardening (every service): no-new-privileges via x-security anchor;
+# log rotation capped at 10 MB × 5 files per container via x-logging.
+#
+# ═══════════════════════════════════════════════════════════════════
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+x-security: &default-security
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  # ═══════════════════════════════════════════════════════════════════
+  # PostgreSQL 17 Primary (ADR-002, ADR-015, ADR-005)
+  # ═══════════════════════════════════════════════════════════════════
+  postgres-primary:
+    image: postgres:17-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_postgres-primary
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (set it in .env or export from Vault)}
+      PGDATA: /var/lib/postgresql/data
+      POSTGRES_SHARED_BUFFERS: ${POSTGRES_SHARED_BUFFERS:-128MB}
+    # Load the bind-mounted custom config + HBA files — without this the
+    # official image ignores them (defaults live in PGDATA), leaving
+    # wal_level at 'replica' and breaking logical replication.
+    command:
+      [
+        'postgres',
+        '-c',
+        'config_file=/etc/postgresql/postgresql.conf',
+        '-c',
+        'hba_file=/etc/postgresql/pg_hba.conf',
+      ]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/config/postgres/conf/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./docker/config/postgres/conf/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./docker/config/postgres/init:/docker-entrypoint-initdb.d:ro
+      - postgres_wal:/var/lib/postgresql/wal_archive
+    networks:
+      - infrastructure
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════════════════
+  # SigNoz Metadata Store Provisioning (one-shot)
+  # ═══════════════════════════════════════════════════════════════════
+  # Creates the "signoz" role (password from env) + "signoz" database in
+  # postgres-primary. MUST run before pgbouncer-init (which copies the
+  # role's SCRAM verifier into userlist.txt) and before signoz-frontend
+  # connects through the pooler. Idempotent; also applies password
+  # rotation on re-run. Same lifecycle as the powersync-setup job below.
+  signoz-db-setup:
+    image: postgres:17-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_signoz-db-setup
+    restart: 'no'
+    <<: *default-security
+    logging: *default-logging
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (set it in .env or export from Vault)}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      PGHOST: postgres-primary
+      PGPORT: '5432'
+      SIGNOZ_DB_PASSWORD: ${SIGNOZ_DB_PASSWORD:?SIGNOZ_DB_PASSWORD is required (set it in .env or export from Vault)}
+    volumes:
+      - ./docker/init/init-signoz-db.sh:/init.sh:ro
+    entrypoint: ['bash', '/init.sh']
+    networks:
+      - infrastructure
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PgBouncer — Connection Pooler (ADR-019)
+  # ═══════════════════════════════════════════════════════════════════
+  # Auth layer (SCRAM pass-through) is provisioned by the pgbouncer-init
+  # one-shot job below: it copies connecting users' SCRAM verifiers from
+  # pg_authid into userlist.txt. No password material lives in git.
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.23.1-p3
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_pgbouncer
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      pgbouncer-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASES_HOST: postgres-primary
+      DATABASES_PORT: '5432'
+      PGBOUNCER_MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:-100}
+      PGBOUNCER_DEFAULT_POOL_SIZE: ${PGBOUNCER_DEFAULT_POOL_SIZE:-20}
+      PGBOUNCER_MIN_POOL_SIZE: ${PGBOUNCER_MIN_POOL_SIZE:-5}
+    volumes:
+      - ./docker/config/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - pgbouncer_auth:/etc/pgbouncer/auth:ro
+    networks:
+      - infrastructure
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -p 6432 -U ${POSTGRES_USER:-app}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # One-shot: provisions PgBouncer's auth_file before pgbouncer starts.
+  # Copies SCRAM verifiers from pg_authid into userlist.txt (rotation:
+  # re-run this job, then SIGHUP pgbouncer). Idempotent; also removes the
+  # legacy 'pgbouncer' auth_user role from pre-existing volumes.
+  # Depends on signoz-db-setup: the "signoz" role must exist (with a
+  # password) before its verifier can be copied into userlist.txt.
+  pgbouncer-init:
+    image: postgres:17-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_pgbouncer-init
+    restart: 'no'
+    <<: *default-security
+    logging: *default-logging
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      signoz-db-setup:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (set it in .env or export from Vault)}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      PGHOST: postgres-primary
+      PGPORT: '5432'
+      PGBOUNCER_AUTH_USERS: ${PGBOUNCER_AUTH_USERS:-app,signoz}
+    volumes:
+      - ./docker/init/init-pgbouncer.sh:/init.sh:ro
+      - pgbouncer_auth:/auth
+    entrypoint: ['bash', '/init.sh']
+    networks:
+      - infrastructure
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Redis Primary (ADR-014, ADR-022)
+  # ─────────────────────────────────────────────────────────────────
+  # Base service used in both dev (standalone) and prod (with replicas/sentinels).
+  # Dev overlay: publishes ports, lowers memory.
+  # Prod overlay: adds replicas + sentinels, removes published ports.
+  # ═══════════════════════════════════════════════════════════════════
+  redis-primary:
+    build:
+      context: .
+      dockerfile: docker/dockerfiles/redis/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_redis-primary
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      ROLE: primary
+      # Consumed by entrypoint.sh (ACL generation) and healthcheck.sh
+      # (authenticated PING — default user is disabled in users.acl).
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required (set it in .env or export from Vault)}
+      REDIS_ADMIN_PASSWORD: ${REDIS_ADMIN_PASSWORD:?REDIS_ADMIN_PASSWORD is required (set it in .env or export from Vault)}
+      REDIS_READONLY_PASSWORD: ${REDIS_READONLY_PASSWORD:?REDIS_READONLY_PASSWORD is required (set it in .env or export from Vault)}
+      REDIS_SENTINEL_PASSWORD: ${REDIS_SENTINEL_PASSWORD:?REDIS_SENTINEL_PASSWORD is required (set it in .env or export from Vault)}
+      # Applied by entrypoint.sh as --maxmemory overrides on top of redis.conf.
+      REDIS_MAXMEMORY: ${REDIS_MAXMEMORY:-}
+      REDIS_MAXMEMORY_POLICY: ${REDIS_MAXMEMORY_POLICY:-}
+    volumes:
+      - redis_primary_data:/data
+    networks:
+      - infrastructure
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-u', 'redis://app:${REDIS_PASSWORD}@localhost:6379', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ═══════════════════════════════════════════════════════════════════
+  # MinIO — S3-Compatible Object Storage (ADR-008, ADR-012)
+  # ═══════════════════════════════════════════════════════════════════
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_minio
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required (set it in .env or export from Vault)}
+    volumes:
+      - minio_data:/data
+    networks:
+      - infrastructure
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://localhost:9000/minio/health/live']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════════════════
+  # PowerSync — Real-Time Sync Engine (Logical Replication)
+  # ─────────────────────────────────────────────────────────────────
+  # Split into two roles (see docs/services/powersync.md):
+  #   powersync-setup — one-shot DB provisioning job (runs before sync/api)
+  #   powersync-sync  — replication role; SINGLETON (owns the logical
+  #                     replication slot against the source DB)
+  #   powersync-api   — client-facing API role; stateless, scalable
+  #
+  # Both roles connect DIRECTLY to postgres-primary:5432, bypassing PgBouncer:
+  # transaction-mode pooling severs the persistent connection required by
+  # logical replication streaming. Connection URIs are assembled here from
+  # least-privilege role credentials (replication vs storage), NOT a shared
+  # superuser. See docker/config/powersync/powersync.yaml for the schema.
+  # ═══════════════════════════════════════════════════════════════════
+
+  # One-shot: creates/updates roles, grants, publication, and storage grant.
+  # Runs AUTOMATICALLY on every stack start before powersync-sync and
+  # powersync-api — required on fresh volumes, where init SQL deliberately
+  # creates the PowerSync roles WITHOUT passwords (same lifecycle as the
+  # pgbouncer-init job above). Also runnable manually: just ps-setup
+  # (idempotent, safe on existing volumes)
+  powersync-setup:
+    image: postgres:17-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_powersync-setup
+    restart: 'no'
+    <<: *default-security
+    logging: *default-logging
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (set it in .env or export from Vault)}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      PGHOST: postgres-primary
+      PGPORT: '5432'
+      PS_REPLICATION_PASSWORD: ${PS_REPLICATION_PASSWORD:?PS_REPLICATION_PASSWORD is required (set it in .env or export from Vault)}
+      PS_STORAGE_PASSWORD: ${PS_STORAGE_PASSWORD:?PS_STORAGE_PASSWORD is required (set it in .env or export from Vault)}
+    volumes:
+      - ./docker/init/init-powersync.sh:/init.sh:ro
+    entrypoint: ['bash', '/init.sh']
+    networks:
+      - infrastructure
+
+  powersync-sync:
+    image: journeyapps/powersync-service:1.24
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_powersync-sync
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    command: ['start', '-r', 'sync']
+    environment:
+      POWERSYNC_CONFIG_PATH: /config/service.yaml
+      NODE_OPTIONS: ${POWERSYNC_NODE_OPTIONS:---max-old-space-size=384}
+      # !env substitution in service.yaml only picks up PS_-prefixed vars;
+      # every var referenced there must be listed explicitly (both roles).
+      PS_REPLICATION_URI: postgresql://powersync:${PS_REPLICATION_PASSWORD:?PS_REPLICATION_PASSWORD is required (set it in .env or export from Vault)}@postgres-primary:5432/${POSTGRES_DB:-app}
+      PS_STORAGE_URI: postgresql://powersync_storage:${PS_STORAGE_PASSWORD:?PS_STORAGE_PASSWORD is required (set it in .env or export from Vault)}@postgres-primary:5432/${POSTGRES_DB:-app}
+      PS_JWKS_URI: ${PS_JWKS_URI:-http://api.localhost/api/auth/jwks}
+    volumes:
+      - ./docker/config/powersync:/config:ro
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      # Provisioning must complete first — on fresh volumes the PowerSync
+      # roles exist without passwords until this job applies them.
+      powersync-setup:
+        condition: service_completed_successfully
+    networks:
+      - infrastructure
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:8085/probes/liveness').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  powersync-api:
+    image: journeyapps/powersync-service:1.24
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_powersync-api
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    command: ['start', '-r', 'api']
+    environment:
+      POWERSYNC_CONFIG_PATH: /config/service.yaml
+      NODE_OPTIONS: ${POWERSYNC_NODE_OPTIONS:---max-old-space-size=384}
+      PS_REPLICATION_URI: postgresql://powersync:${PS_REPLICATION_PASSWORD:?PS_REPLICATION_PASSWORD is required (set it in .env or export from Vault)}@postgres-primary:5432/${POSTGRES_DB:-app}
+      PS_STORAGE_URI: postgresql://powersync_storage:${PS_STORAGE_PASSWORD:?PS_STORAGE_PASSWORD is required (set it in .env or export from Vault)}@postgres-primary:5432/${POSTGRES_DB:-app}
+      PS_JWKS_URI: ${PS_JWKS_URI:-http://api.localhost/api/auth/jwks}
+    volumes:
+      - ./docker/config/powersync:/config:ro
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      # Provisioning must complete first — on fresh volumes the PowerSync
+      # roles exist without passwords until this job applies them.
+      powersync-setup:
+        condition: service_completed_successfully
+      # Avoid schema-creation race: sync creates the powersync schema on
+      # startup; api must wait until sync is healthy to prevent the
+      # "duplicate key value violates unique constraint" error (PG23505).
+      powersync-sync:
+        condition: service_healthy
+    networks:
+      - infrastructure
+    # Prometheus metrics (:9090) are scraped by the OTEL collector in
+    # staging/prod; dev publishes them via the dev overlay.
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:8085/probes/liveness').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s

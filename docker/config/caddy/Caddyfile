@@ -1,0 +1,205 @@
+# ═════════════════════════════════════════════════════════════════════════════════
+# Caddyfile — Shared Configuration
+# Source: deployment.md v3.0.0, ADR-001, ADR-007, ADR-011, ADR-020
+#
+# Dev:  auto-HTTPS for *.localhost (Caddy's built-in local CA)
+# Prod: Vault PKI or Let's Encrypt
+#
+# Upstreams are defined in snippets/upstreams.conf and are the ONLY
+# place backend addresses appear. scripts/deploy/dynamic-upstream.sh
+# rewrites that file during deployments.
+# ═════════════════════════════════════════════════════════════════════════════════
+
+{
+    # Admin API (bound to internal interface only — ADR-020)
+    # Enable admin API on loopback for dynamic-upstream.sh reloads
+    admin 127.0.0.1:2019
+
+    # Auto-HTTPS issuer
+    # Dev: internal CA for *.localhost
+    # Prod: ACME via Let's Encrypt (or Vault PKI cert path)
+    {$CADDY_ACME_ISSUER :local}
+
+    # 3.17 Fix: Enforce TLS 1.2 minimum for compliance
+    # Caddy defaults to TLS 1.3 which satisfies this; explicit for audit clarity
+    # servers {
+    #     protocols tls1.2 tls1.3
+    # }
+
+    # Log format
+    log {
+        format json {
+            level info
+        }
+        output file /var/log/caddy/access.log {
+            roll_size 100mb
+            roll_keep 5
+        }
+    }
+}
+
+# ── Import shared snippets ──────────────────────────────────────────────────
+import snippets/security.conf
+import snippets/rate-limiting.conf
+import snippets/upstreams.conf
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Dashboard — {$DOMAIN_DASHBOARD}
+# ═══════════════════════════════════════════════════════════════════════════════
+{$DOMAIN_DASHBOARD:localhost} {
+    # Phase 9: HTTP caching headers for static assets
+    handle_path /static/* {
+        reverse_proxy dashboard:8080 {
+            lb_policy least_conn
+            health_path /health
+            health_interval 10s
+            health_timeout 5s
+        }
+        header_up Cache-Control "public, max-age=31536000, immutable"
+    }
+
+    handle_path /assets/* {
+        reverse_proxy dashboard:8080 {
+            lb_policy least_conn
+            health_path /health
+            health_interval 10s
+            health_timeout 5s
+        }
+        header_up Cache-Control "public, max-age=31536000, immutable"
+    }
+
+    # Health check endpoint (unauthenticated)
+    handle /health {
+        reverse_proxy dashboard:8080
+    }
+
+    # All other traffic → dashboard upstream with CDN-friendly caching
+    handle {
+        reverse_proxy dashboard {
+            lb_policy least_conn
+            health_path /health
+            health_interval 10s
+            health_timeout 5s
+        }
+        # Phase 9: Default cache policy — short TTL for dynamic content
+        header_up Cache-Control "public, max-age=60, s-maxage=300, stale-while-revalidate=600"
+    }
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Marketing — {$DOMAIN_MARKETING}
+# ═══════════════════════════════════════════════════════════════════════════════
+{$DOMAIN_MARKETING:marketing.localhost} {
+    # Health check endpoint (unauthenticated)
+    handle /health {
+        reverse_proxy marketing:8080
+    }
+
+    # Static landing page — aggressive CDN-friendly caching
+    handle {
+        reverse_proxy marketing {
+            lb_policy least_conn
+            health_path /health
+            health_interval 10s
+            health_timeout 5s
+        }
+        header_up Cache-Control "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400"
+    }
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# API — {$DOMAIN_API}
+# ═══════════════════════════════════════════════════════════════════════════════
+{$DOMAIN_API:api.localhost} {
+    # 2.12 Fix: Removed duplicate security.conf import (already imported globally above)
+    import snippets/rate-limiting.conf
+
+    # API health endpoints
+    handle /health {
+        reverse_proxy api:3000
+    }
+
+    # 3.4 Fix: /db-health requires rate limiting and internal-only access
+    handle /db-health {
+        rate_limit internal_zone {
+            zone internal_zone {
+                key {host}
+                events 5
+                window 1m
+            }
+        }
+        # Only allow from Docker internal networks in production
+        # In dev, allow all
+        @not_internal not remote_ip 172.16.0.0/12 10.0.0.0/8 127.0.0.1/8 ::1
+        handle @not_internal {
+            respond 403 "Forbidden" 403
+        }
+        reverse_proxy api:3000
+    }
+
+    # API traffic with stricter rate limits
+    handle {
+        rate_limit api_zone
+        reverse_proxy api {
+            lb_policy least_conn
+            health_path /health
+            health_interval 10s
+            health_timeout 5s
+        }
+        # Phase 9: No caching for API responses by default
+        header_up Cache-Control "no-store, no-cache, must-revalidate"
+        header_up Pragma "no-cache"
+    }
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PowerSync — {$DOMAIN_SYNC}
+# Client sync API (offline-first SDK traffic). Long-lived HTTP streams:
+# flush_interval -1 disables response buffering so sync messages arrive live.
+# ═══════════════════════════════════════════════════════════════════════════════
+{$DOMAIN_SYNC:sync.localhost} {
+    reverse_proxy powersync-api:8085 {
+        lb_policy least_conn
+        health_path /probes/liveness
+        health_interval 10s
+        health_timeout 5s
+        flush_interval -1
+    }
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SigNoz UI — ONLY via Cloudflare Tunnel (ADR-020)
+# In dev, accessible on localhost for debugging.
+# In prod, no published port — reachable ONLY through cloudflared tunnel.
+# ═══════════════════════════════════════════════════════════════════════════════
+{$DOMAIN_SIGNOZ:signoz.localhost} {
+    # 3.14 Fix: Prevent search engine indexing
+    Header X-Robots-Tag "noindex, nofollow"
+    reverse_proxy signoz-frontend:8080 {
+        health_path /api/v1/health
+        health_interval 15s
+        health_timeout 5s
+    }
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# MinIO Console — {$DOMAIN_MINIO_CONSOLE} (dev only, prod via tunnel)
+# ═══════════════════════════════════════════════════════════════════════════════
+{$DOMAIN_MINIO_CONSOLE:minio.localhost} {
+    # 3.3 Fix: Add security headers and rate limiting to MinIO console
+    import snippets/security.conf
+    import snippets/rate-limiting.conf
+    # 3.14 Fix: Prevent search engine indexing
+    Header X-Robots-Tag "noindex, nofollow"
+    reverse_proxy minio:9001
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 3.15 Fix: Custom error pages (prevent leaking infrastructure details)
+# ═══════════════════════════════════════════════════════════════════════════════
+handle_errors {
+    @5xx expression `{err.status_code} >= 500 && {err.status_code} < 600`
+    respond @5xx "Service temporarily unavailable" 503
+    @4xx expression `{err.status_code} >= 400 && {err.status_code} < 500`
+    respond @4xx "Not found" 404
+}

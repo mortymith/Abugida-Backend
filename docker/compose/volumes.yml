@@ -1,0 +1,42 @@
+# ═══════════════════════════════════════════════════════════════════
+# VOLUMES — All volume definitions
+# ═══════════════════════════════════════════════════════════════════
+#
+# Part of modular Docker Compose structure
+# Used with: ALL compose files (foundational layer)
+#
+# Base volumes are used in all environments.
+# Tier-specific volumes live with their services: observability-only
+# volumes in observability.yml, production-only in profiles/prod.override.yml.#
+# ═══════════════════════════════════════════════════════════════════
+
+volumes:
+  # ── PostgreSQL ─────────────────────────────────────────────────────
+  postgres_data:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_postgres_data
+  postgres_wal:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_postgres_wal
+
+  # ── PgBouncer ──────────────────────────────────────────────────────
+  # Holds the runtime-generated userlist.txt (pgbouncer auth_user SCRAM
+  # verifier) written by the pgbouncer-init one-shot job.
+  pgbouncer_auth:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_pgbouncer_auth
+
+  # ── Redis ──────────────────────────────────────────────────────────
+  redis_primary_data:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_redis_primary_data
+
+  # ── MinIO ──────────────────────────────────────────────────────────
+  minio_data:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_minio_data
+
+  # ── Cloudflared ────────────────────────────────────────────────────
+  cloudflared_creds:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_cloudflared_creds
+
+  # ── Caddy (dev single-instance) ───────────────────────────────────
+  caddy_dev_data:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_caddy_dev_data
+  caddy_dev_logs:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_caddy_dev_logs
