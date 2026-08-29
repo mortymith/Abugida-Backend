@@ -1,0 +1,158 @@
+# ═══════════════════════════════════════════════════════════════════
+# EDGE — Reverse Proxy, Ingress, Load Balancing, Tunnel
+# ═══════════════════════════════════════════════════════════════════
+#
+# Part of modular Docker Compose structure
+# Composes with: networks.yml, volumes.yml, base.yml,
+#   app.yml, observability.yml,
+#   + profiles/prod.override.yml
+#
+# Included in: Prod ONLY (not Dev or Staging)
+# Caddy terminates TLS on the edge network and reverse-proxies
+# to application services on the backend network.
+# Cloudflared (ADR-020) exposes SigNoz outbound-only via tunnel.
+#
+# Prod: caddy-active + caddy-standby HA, Keepalived VIP,
+#   Cloudflared tunnel, no published ports.
+#
+# Hardening (every service): no-new-privileges via x-security anchor;
+# log rotation capped at 10 MB × 5 files per container via x-logging.
+#
+# ═══════════════════════════════════════════════════════════════════
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+x-security: &default-security
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  # ═══════════════════════════════════════════════════════════════════
+  # Caddy Active (ADR-001, ADR-011)
+  # ═══════════════════════════════════════════════════════════════════
+  # Production-only. Active holds VIP via Keepalived.
+  # No ports — traffic arrives via VIP (172.20.0.100) or Cloudflare.
+  # ═══════════════════════════════════════════════════════════════════
+  caddy-active:
+    build:
+      context: .
+      dockerfile: docker/dockerfiles/caddy/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_caddy-active
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      ROLE: active
+      # Consumed by the Caddyfile via {$VAR} interpolation. Domains are also
+      # passed in prod.override.yml's merge chain; defined here so every
+      # environment that runs Caddy gets them from .env.
+      DOMAIN_API: ${DOMAIN_API:-localhost}
+      DOMAIN_DASHBOARD: ${DOMAIN_DASHBOARD:-localhost}
+      DOMAIN_MARKETING: ${DOMAIN_MARKETING:-marketing.localhost}
+      DOMAIN_SYNC: ${DOMAIN_SYNC:-sync.localhost}
+      DOMAIN_SIGNOZ: ${DOMAIN_SIGNOZ:-signoz.localhost}
+      DOMAIN_MINIO_CONSOLE: ${DOMAIN_MINIO_CONSOLE:-minio.localhost}
+      CADDY_EMAIL: ${CADDY_EMAIL:-admin@example.com}
+      # letsencrypt | zerossl | local (dev uses the internal CA)
+      CADDY_ACME_ISSUER: ${CADDY_ACME_ISSUER:-local}
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - edge
+      - backend
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://localhost:80/health']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Caddy Standby (ADR-011)
+  # ═══════════════════════════════════════════════════════════════════
+  caddy-standby:
+    build:
+      context: .
+      dockerfile: docker/dockerfiles/caddy/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_caddy-standby
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      ROLE: standby
+      PEER_HOST: caddy-active
+      # Mirrors caddy-active above — the Caddyfile reads these via {$VAR}.
+      DOMAIN_API: ${DOMAIN_API:-localhost}
+      DOMAIN_DASHBOARD: ${DOMAIN_DASHBOARD:-localhost}
+      DOMAIN_MARKETING: ${DOMAIN_MARKETING:-marketing.localhost}
+      DOMAIN_SYNC: ${DOMAIN_SYNC:-sync.localhost}
+      DOMAIN_SIGNOZ: ${DOMAIN_SIGNOZ:-signoz.localhost}
+      DOMAIN_MINIO_CONSOLE: ${DOMAIN_MINIO_CONSOLE:-minio.localhost}
+      CADDY_EMAIL: ${CADDY_EMAIL:-admin@example.com}
+      CADDY_ACME_ISSUER: ${CADDY_ACME_ISSUER:-letsencrypt}
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./docker/config/caddy:/etc/caddy:ro
+      - caddy_standby_data:/data
+      - caddy_standby_logs:/var/log/caddy
+    networks:
+      - edge
+      - backend
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://localhost:80/health']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Keepalived — Floating VIP Manager (ADR-011)
+  # ═══════════════════════════════════════════════════════════════════
+  # Manages VIP 172.20.0.100 on the edge network.
+  # Health-checks both Caddy instances; fails over in <5s.
+  # Runs in privileged mode (required for VRRP).
+  # ═══════════════════════════════════════════════════════════════════
+  keepalived:
+    image: osixia/keepalived:2.0.20-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_keepalived
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    cap_add:
+      - NET_ADMIN
+      - NET_BROADCAST
+      - NET_RAW
+    network_mode: 'host'
+    volumes:
+      - ./docker/config/keepalived/keepalived.conf:/etc/keepalived/keepalived.conf:ro
+    depends_on:
+      caddy-active:
+        condition: service_healthy
+      caddy-standby:
+        condition: service_healthy
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Cloudflared — Cloudflare Tunnel (ADR-020)
+  # ═══════════════════════════════════════════════════════════════════
+  # Outbound-only. No published ports. credentials.json created at runtime.
+  # SigNoz UI reachable ONLY via tunnel domain (not direct port).
+  # ═══════════════════════════════════════════════════════════════════
+  cloudflared:
+    image: cloudflare/cloudflared:2024.12.2
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_cloudflared
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    volumes:
+      - ./docker/config/cloudflared/config.yml:/etc/cloudflared/config.yml:ro
+      - cloudflared_creds:/etc/cloudflared
+    networks:
+      - infrastructure
+    command: tunnel --config /etc/cloudflared/config.yml run

@@ -1,0 +1,50 @@
+# ═══════════════════════════════════════════════════════════════════
+# NETWORKS — All network definitions
+# ═══════════════════════════════════════════════════════════════════
+#
+# Part of modular Docker Compose structure
+# Used with: ALL compose files (foundational layer)
+#
+# Network architecture (ADR-004):
+#   Tier 1 — edge:         Public-facing DMZ, Caddy TLS termination
+#   Tier 2 — backend:      Application services, Caddy reverse-proxy target
+#   Tier 3 — infrastructure: Data layer (databases, caches, storage), internal only
+#
+# ═══════════════════════════════════════════════════════════════════
+
+networks:
+  # ─── Edge / DMZ (ADR-004 Tier 1) ─────────────────────────────────────
+  # Public-facing layer. Caddy terminates TLS here and routes to backend.
+  # Production: only ports 80/443 exposed via Caddy or Cloudflare Tunnel.
+  # Keepalived manages a floating VIP (172.20.0.100) across Caddy instances.
+  edge:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_edge
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.1
+
+  # ─── Backend / Application (ADR-004 Tier 2) ───────────────────────
+  # Application services (API, Dashboard, Marketing). Caddy reverse-proxies into this network.
+  # Services here also attach to infrastructure for data-layer access.
+  backend:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_backend
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/24
+          gateway: 172.21.0.1
+
+  # ─── Infrastructure / Data & Services (ADR-004 Tier 3) ───────────
+  # Databases, caches, object storage, secrets management, observability.
+  # Internal only — no default gateway, no outbound internet access.
+  # Application services attach here via multi-network membership.
+  infrastructure:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_infrastructure
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.22.0.0/24
+          # No gateway — internal: true blocks external routing

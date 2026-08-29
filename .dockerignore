@@ -1,0 +1,54 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Root .dockerignore — applied to every image build using the monorepo root as
+# its build context (all app/*/Dockerfile builds).
+#
+# Keeps contexts small (no node_modules / dist / runtime data crossing the wire)
+# and prevents secrets (.env*, Vault state, tunnel credentials) from ever being
+# sent to the daemon or landing in layer caches.
+#
+# Only explicitly COPYed paths reach the builder, so anything not referenced by
+# an application Dockerfile can safely live here.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ─── Version control / CI / IDE / agent tooling ───────────────────────────────
+.git
+.github
+.vscode
+.idea
+.opencode
+.agents
+
+# ─── Dependencies & build artifacts (recreated inside the images) ─────────────
+**/node_modules
+**/dist
+**/.turbo
+**/.astro
+**/*.tsbuildinfo
+**/coverage
+
+# ─── Environment files (injected at runtime via compose env vars) ─────────────
+**/.env
+**/.env.*
+!**/.env.example
+
+# ─── Local runtime state (vault init, backups, logs, persistence dumps) ───────
+data/
+logs/
+*.rdb
+*.aof
+
+# ─── Infra, ops tooling & docs not consumed by application image builds ───────
+scripts/
+docs/
+justfile
+
+# ─── docker/ tree: excluded by default, re-included only where infra image
+# builds COPY from (redis, caddy, postgres-replica use the root build context).
+# Negations must come last — dockerignore matches are resolved last-match-wins.
+docker/**
+!docker/dockerfiles/redis/**
+!docker/config/redis/**
+!docker/dockerfiles/caddy/**
+!docker/config/caddy/**
+!docker/dockerfiles/postgres-replica/**
+!docker/config/postgres/conf/replica.conf

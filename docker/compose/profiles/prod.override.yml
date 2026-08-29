@@ -1,0 +1,422 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# PROD OVERRIDE — Production Environment (Full Stack)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Part of modular Docker Compose structure
+# Composes with: networks.yml, volumes.yml, base.yml,
+#   app.yml, observability.yml, edge.yml, scaling.yml, security.yml
+#
+# Deployment tier: COMPLETE STACK
+#   - All infrastructure (databases, caches, storage, sync)
+#   - Application services (api, dashboard, marketing) with 3 replicas
+#   - Observability stack (internal only, reached via Cloudflare Tunnel)
+#   - Edge/ingress (caddy-active + caddy-standby + keepalived VIP + cloudflared)
+#   - Scaling (postgres replicas, redis replicas, sentinels)
+#   - Security (vault, minio-backup)
+#
+# This overlay:
+#   - Removes ALL published ports (infrastructure-network access only)
+#   - Production resource limits (4+ CPU, 8+ GB) with reservations
+#   - API + dashboard + marketing: replicas per env vars
+#   - Caddy HA: active + standby + Keepalived VIP
+#   - Production init-minio with backup endpoint
+#   - Production domains + Let's Encrypt for Caddy
+#
+# Secrets strategy (ADR-006): ALL secrets are exported from HashiCorp Vault
+# into the environment before running compose (see just setup-prod).
+#
+# Usage:
+#   docker compose -f docker/compose/networks.yml \
+#     -f docker/compose/volumes.yml \
+#     -f docker/compose/base.yml \
+#     -f docker/compose/app.yml \
+#     -f docker/compose/observability.yml \
+#     -f docker/compose/edge.yml \
+#     -f docker/compose/scaling.yml \
+#     -f docker/compose/security.yml \
+#     -f docker/compose/profiles/prod.override.yml \
+#     up -d
+#
+# ═══════════════════════════════════════════════════════════════════════════════
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+x-security: &default-security
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  # ═══════════════════════════════════════════════════════════════════
+  # Infrastructure Layer Overrides
+  # ═══════════════════════════════════════════════════════════════════
+
+  # ── PostgreSQL Primary ─────────────────────────────────────────────────
+  postgres-primary:
+    deploy:
+      resources:
+        limits:
+          cpus: '${POSTGRES_CPU_LIMIT:-4}'
+          memory: ${POSTGRES_MEM_LIMIT:-8g}
+        reservations:
+          cpus: '2'
+          memory: 4g
+    ports: []
+
+  # ── PgBouncer ──────────────────────────────────────────────────────────
+  pgbouncer:
+    deploy:
+      resources:
+        limits:
+          cpus: '${PGBOUNCER_CPU_LIMIT:-1}'
+          memory: ${PGBOUNCER_MEM_LIMIT:-1g}
+
+  # ── Redis Primary ──────────────────────────────────────────────────────
+  redis-primary:
+    ports: []
+    deploy:
+      resources:
+        limits:
+          cpus: '${REDIS_CPU_LIMIT:-4}'
+          memory: ${REDIS_MEM_LIMIT:-8g}
+        reservations:
+          cpus: '2'
+          memory: 4g
+
+  # ── MinIO ───────────────────────────────────────────────────────────────
+  minio:
+    ports: []
+    deploy:
+      resources:
+        limits:
+          cpus: '${MINIO_CPU_LIMIT:-4}'
+          memory: ${MINIO_MEM_LIMIT:-8g}
+        reservations:
+          cpus: '2'
+          memory: 4g
+
+  # ── ClickHouse ──────────────────────────────────────────────────────────
+  clickhouse:
+    ports: []
+    environment:
+      CLICKHOUSE_DB: signoz_traces
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD is required (export from Vault)}
+    deploy:
+      resources:
+        limits:
+          cpus: '${CLICKHOUSE_CPU_LIMIT:-4}'
+          memory: ${CLICKHOUSE_MEM_LIMIT:-8g}
+        reservations:
+          cpus: '2'
+          memory: 4g
+
+  # ── PowerSync ────────────────────────────────────────────────────────────
+  # No published ports — client sync traffic enters via Caddy (DOMAIN_SYNC).
+  powersync-api:
+    ports: []
+    environment:
+      ENVIRONMENT: production
+      NODE_OPTIONS: --max-old-space-size=768
+    deploy:
+      resources:
+        limits:
+          cpus: '${POWERSYNC_CPU_LIMIT:-1}'
+          memory: ${POWERSYNC_MEM_LIMIT:-1g}
+        reservations:
+          cpus: '0.5'
+          memory: 512m
+
+  # Replication role — SINGLETON. Never scale this service (it owns the
+  # logical replication slot against postgres-primary).
+  powersync-sync:
+    environment:
+      ENVIRONMENT: production
+      NODE_OPTIONS: --max-old-space-size=768
+    deploy:
+      resources:
+        limits:
+          cpus: '${POWERSYNC_CPU_LIMIT:-1}'
+          memory: ${POWERSYNC_MEM_LIMIT:-1g}
+        reservations:
+          cpus: '0.5'
+          memory: 512m
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Application Layer Overrides
+  # ═══════════════════════════════════════════════════════════════════
+
+  # ── API (3 replicas, no published ports) ────────────────────────────────
+  api:
+    ports: []
+    environment:
+      ENVIRONMENT: production
+    deploy:
+      replicas: ${API_REPLICAS:-3}
+      resources:
+        limits:
+          cpus: '${API_CPU_LIMIT:-4}'
+          memory: ${API_MEM_LIMIT:-8g}
+        reservations:
+          cpus: '2'
+          memory: 4g
+
+  # ── Dashboard (3 replicas, no published ports) ─────────────────────────
+  dashboard:
+    ports: []
+    environment:
+      ENVIRONMENT: production
+    deploy:
+      replicas: ${DASHBOARD_REPLICAS:-3}
+      resources:
+        limits:
+          cpus: '${DASHBOARD_CPU_LIMIT:-4}'
+          memory: ${DASHBOARD_MEM_LIMIT:-8g}
+        reservations:
+          cpus: '2'
+          memory: 4g
+
+  # ── Marketing (3 replicas, no published ports) ────────────────────────
+  marketing:
+    ports: []
+    environment:
+      ENVIRONMENT: production
+    deploy:
+      replicas: ${MARKETING_REPLICAS:-3}
+      resources:
+        limits:
+          cpus: '${MARKETING_CPU_LIMIT:-2}'
+          memory: ${MARKETING_MEM_LIMIT:-2g}
+        reservations:
+          cpus: '1'
+          memory: 1g
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Observability Layer Overrides
+  # ═══════════════════════════════════════════════════════════════════
+
+  # ── OTEL Collector ─────────────────────────────────────────────────────
+  otel-collector:
+    ports: []
+    environment:
+      ENVIRONMENT: production
+    deploy:
+      resources:
+        limits:
+          cpus: '${OTEL_CPU_LIMIT:-2}'
+          memory: ${OTEL_MEM_LIMIT:-2g}
+        reservations:
+          cpus: '1'
+          memory: 1g
+
+  # ── SigNoz Frontend ────────────────────────────────────────────────────
+  signoz-frontend:
+    ports: []
+    deploy:
+      resources:
+        limits:
+          cpus: '${SIGNOZ_CPU_LIMIT:-4}'
+          memory: ${SIGNOZ_MEM_LIMIT:-8g}
+        reservations:
+          cpus: '2'
+          memory: 4g
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Edge / Ingress Layer Overrides (Production Only)
+  # ═══════════════════════════════════════════════════════════════════
+
+  # ── Caddy Active (HA, Let's Encrypt) ────────────────────────────────────
+  # Domains/email/ACME issuer are inherited from edge.yml.
+  caddy-active:
+    ports: []
+    environment:
+      PEER_HOST: caddy-standby
+    volumes:
+      - ./docker/config/caddy:/etc/caddy:ro
+      - caddy_active_data:/data
+      - caddy_active_logs:/var/log/caddy
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: ${CADDY_CPU_LIMIT:-2}
+          memory: ${CADDY_MEM_LIMIT:-1g}
+        reservations:
+          cpus: '1'
+          memory: 512m
+
+  # ── Caddy Standby ───────────────────────────────────────────────────────
+  caddy-standby:
+    ports: []
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: ${CADDY_CPU_LIMIT:-2}
+          memory: ${CADDY_MEM_LIMIT:-1g}
+        reservations:
+          cpus: '1'
+          memory: 512m
+
+  # ── Keepalived ─────────────────────────────────────────────────────────
+  keepalived:
+    stop_grace_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: ${KEEPALIVED_CPU_LIMIT:-0.25}
+          memory: ${KEEPALIVED_MEM_LIMIT:-128m}
+
+  # ── Cloudflared ─────────────────────────────────────────────────────────
+  cloudflared:
+    stop_grace_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: ${CLOUDFLARED_CPU_LIMIT:-0.5}
+          memory: ${CLOUDFLARED_MEM_LIMIT:-256m}
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Scaling Layer Overrides (Production Only)
+  # ═══════════════════════════════════════════════════════════════════
+
+  postgres-replica-1:
+    deploy:
+      resources:
+        limits:
+          cpus: '${POSTGRES_CPU_LIMIT:-4}'
+          memory: ${POSTGRES_MEM_LIMIT:-8g}
+        reservations:
+          cpus: '2'
+          memory: 4g
+
+  postgres-replica-2:
+    deploy:
+      resources:
+        limits:
+          cpus: '${POSTGRES_CPU_LIMIT:-4}'
+          memory: ${POSTGRES_MEM_LIMIT:-8g}
+        reservations:
+          cpus: '2'
+          memory: 4g
+
+  redis-replica-1:
+    deploy:
+      resources:
+        limits:
+          cpus: '${REDIS_CPU_LIMIT:-4}'
+          memory: ${REDIS_MEM_LIMIT:-8g}
+        reservations:
+          cpus: '2'
+          memory: 4g
+
+  redis-replica-2:
+    deploy:
+      resources:
+        limits:
+          cpus: '${REDIS_CPU_LIMIT:-4}'
+          memory: ${REDIS_MEM_LIMIT:-8g}
+        reservations:
+          cpus: '2'
+          memory: 4g
+
+  redis-sentinel-1:
+    deploy:
+      resources:
+        limits:
+          cpus: ${SENTINEL_CPU_LIMIT:-0.5}
+          memory: ${SENTINEL_MEM_LIMIT:-256m}
+
+  redis-sentinel-2:
+    deploy:
+      resources:
+        limits:
+          cpus: ${SENTINEL_CPU_LIMIT:-0.5}
+          memory: ${SENTINEL_MEM_LIMIT:-256m}
+
+  redis-sentinel-3:
+    deploy:
+      resources:
+        limits:
+          cpus: ${SENTINEL_CPU_LIMIT:-0.5}
+          memory: ${SENTINEL_MEM_LIMIT:-256m}
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Security Layer Overrides (Production Only)
+  # ═══════════════════════════════════════════════════════════════════
+
+  # ── Vault ──────────────────────────────────────────────────────────────
+  vault:
+    deploy:
+      resources:
+        limits:
+          cpus: '${VAULT_CPU_LIMIT:-0.5}'
+          memory: ${VAULT_MEM_LIMIT:-512m}
+        reservations:
+          cpus: '0.25'
+          memory: 256m
+
+  # ── MinIO Backup ────────────────────────────────────────────────────────
+  minio-backup:
+    deploy:
+      resources:
+        limits:
+          cpus: '${MINIO_CPU_LIMIT:-4}'
+          memory: ${MINIO_MEM_LIMIT:-8g}
+        reservations:
+          cpus: '1'
+          memory: 2g
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Production Init Services
+  # ═══════════════════════════════════════════════════════════════════
+
+  # ── MinIO Init (with backup endpoint) ─────────────────────────────────
+  init-minio:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_init-minio
+    restart: 'no'
+    <<: *default-security
+    logging: *default-logging
+    depends_on:
+      minio:
+        condition: service_healthy
+      minio-backup:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required (export from Vault)}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-app-data}
+      ENVIRONMENT: production
+      MINIO_BACKUP_ENDPOINT: http://minio-backup:9000
+      MINIO_BACKUP_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_BACKUP_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required (export from Vault)}
+    volumes:
+      - ./docker/config/minio/policies:/policies:ro
+      - ./docker/init/init-minio-buckets.sh:/init.sh:ro
+    networks:
+      - infrastructure
+    entrypoint: ['bash', '/init.sh']
+
+# ── Production-only volumes ───────────────────────────────────────────────
+volumes:
+  postgres_replica1_data:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_postgres_replica1_data
+  postgres_replica2_data:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_postgres_replica2_data
+  redis_replica1_data:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_redis_replica1_data
+  redis_replica2_data:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_redis_replica2_data
+  caddy_active_data:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_caddy_active_data
+  caddy_standby_data:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_caddy_standby_data
+  caddy_active_logs:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_caddy_active_logs
+  caddy_standby_logs:
+    name: ${COMPOSE_PROJECT_NAME:-infra}_caddy_standby_logs

@@ -1,0 +1,68 @@
+# ═════════════════════════════════════════════════════════════════════
+# PowerSync Service Configuration
+#
+# Schema verified against https://docs.powersync.com/configuration/powersync-service/self-hosted-instances
+# and the JSON schema at:
+#   https://unpkg.com/@powersync/service-schema@latest/json-schema/powersync-config.json
+#
+# This file is bind-mounted (with sync-config.yaml) into the powersync-sync
+# and powersync-api containers at /config/service.yaml.
+# ═════════════════════════════════════════════════════════════════════
+
+# ─── Env-var substitution ──────────────────────────────────────────────
+# The config parser substitutes YAML `!env VARNAME` tags for variables
+# whose names start with PS_. Every !env reference below MUST be listed
+# under each container's `environment:` in docker/compose/base.yml, or the
+# service refuses to boot ("Attempted to substitute environment variable...").
+
+replication:
+  connections:
+    - type: postgresql
+      # Assembled by docker-compose from PS_REPLICATION_PASSWORD.
+      # DIRECT to postgres-primary:5432 — must NOT route through PgBouncer
+      # (transaction pooling severs the logical-replication stream).
+      # See docs/services/powersync.md for rationale.
+      uri: !env PS_REPLICATION_URI
+      sslmode: disable # internal-only Docker network; switch to verify-full if this ever crosses an untrusted network
+
+# Bucket storage — Postgres backend (no MongoDB dependency). Same server as
+# the source DB but a separate least-privilege role; PowerSync creates and
+# migrates its own "powersync" schema under it. Do not hand-create tables there.
+storage:
+  type: postgresql
+  uri: !env PS_STORAGE_URI
+  sslmode: disable
+
+# Container port for both roles' HTTP surface (client API on powersync-api,
+# probes on both). Host mapping is 8085 in dev/staging; prod routes via Caddy.
+port: 8085
+
+# Sync Streams definition — kept in a separate file for readability.
+sync_config:
+  path: /config/sync-config.yaml
+
+# Client authentication — verifies JWTs presented by client SDKs against the
+# Better Auth JWKS endpoint (@abugida/auth jwt plugin serves /api/auth/jwks).
+# Tokens carry sub = user id, which sync streams read via auth.user_id().
+client_auth:
+  jwks_uri: !env PS_JWKS_URI
+  # Must match the audience configured on the @abugida/auth token plugins.
+  audience: ['abugida']
+
+# Anonymized usage telemetry + Prometheus metrics port (scraped by the
+# OTEL collector in staging/prod — see docs/services/powersync.md).
+telemetry:
+  disable_telemetry_sharing: false
+  prometheus_port: 9090
+
+# Health probes: GET /probes/liveness and GET /probes/startup are always
+# available; this selects their implementation details.
+healthcheck:
+  probes:
+    use_http: true
+    use_filesystem: true
+
+system:
+  logging:
+    level: info # silly | debug | verbose | http | info | warn | error
+    format: json

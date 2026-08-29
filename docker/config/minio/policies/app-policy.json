@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AppFullBucketAccess",
+      "Effect": "Allow",
+      "Action": ["s3:*"],
+      "Resource": ["arn:aws:s3:::${MINIO_BUCKET_NAME}", "arn:aws:s3:::${MINIO_BUCKET_NAME}/*"]
+    },
+    {
+      "Sid": "AppListAllBuckets",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListAllMyBuckets",
+        "s3:ListBucket",
+        "s3:GetBucketLocation",
+        "s3:GetBucketVersioning"
+      ],
+      "Resource": ["arn:aws:s3:::*"]
+    }
+  ]
+}

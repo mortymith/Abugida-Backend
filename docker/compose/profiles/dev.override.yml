@@ -1,0 +1,144 @@
+# ════════════════════════════════════════════════════════════════════════════════════════
+# DEV OVERRIDE — Development Environment (Infrastructure Only)
+# ════════════════════════════════════════════════════════════════════════════════════════
+#
+# Part of modular Docker Compose structure
+# Composes with: networks.yml, volumes.yml, base.yml
+#
+# Deployment tier: INFRASTRUCTURE ONLY
+#   - Databases, caches, object storage, sync engine
+#   - NO application services (api, dashboard, marketing)
+#   - NO observability services (clickhouse, otel-collector, signoz-frontend)
+#   - NO edge services (caddy, keepalived)
+#   - NO production services (vault, replicas, sentinels, cloudflared)
+#
+# This overlay:
+#   - Publishes ports for local debugging
+#   - Sets conservative resource caps (1 CPU / 1GB)
+#   - MinIO: published ports + init-minio bucket provisioning
+#   - Single Redis instance (no replicas, no Sentinel)
+#
+# Secrets strategy (ADR-006): sensitive values come from .env environment variables.
+#
+# Usage:
+#   docker compose -f docker/compose/networks.yml \
+#     -f docker/compose/volumes.yml \
+#     -f docker/compose/base.yml \
+#     -f docker/compose/profiles/dev.override.yml \
+#     up -d
+#
+# ════════════════════════════════════════════════════════════════════════════════════════
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+x-security: &default-security
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  # ── PostgreSQL Primary — dev overrides ─────────────────────────────────────
+  postgres-primary:
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    environment:
+      POSTGRES_SHARED_BUFFERS: ${POSTGRES_SHARED_BUFFERS:-128MB}
+    deploy:
+      resources:
+        limits:
+          cpus: '${POSTGRES_CPU_LIMIT:-1}'
+          memory: ${POSTGRES_MEM_LIMIT:-1g}
+
+  # ── PgBouncer — dev overrides ────────────────────────────────────
+  pgbouncer:
+    ports:
+      - '${PGBOUNCER_PORT:-6432}:6432'
+    deploy:
+      resources:
+        limits:
+          cpus: '${PGBOUNCER_CPU_LIMIT:-0.5}'
+          memory: ${PGBOUNCER_MEM_LIMIT:-256m}
+
+  # ── Redis Primary — dev overrides (standalone, no replicas/sentinel) ─────
+  redis-primary:
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    deploy:
+      resources:
+        limits:
+          cpus: '${REDIS_CPU_LIMIT:-1}'
+          memory: ${REDIS_MEM_LIMIT:-1g}
+
+  # ── MinIO — dev overrides (published ports, resource caps) ─────────
+  minio:
+    ports:
+      - '${MINIO_API_PORT:-9000}:9000'
+      - '${MINIO_CONSOLE_PORT:-9001}:9001'
+    deploy:
+      resources:
+        limits:
+          cpus: '${MINIO_CPU_LIMIT:-1}'
+          memory: ${MINIO_MEM_LIMIT:-1g}
+
+  # ── MinIO Init — one-shot bucket/policy provisioning ───────────────
+  # Runs against the healthy minio service (NOT as its entrypoint — the
+  # init script never starts the server). Invoked by `just dev-up` via
+  # compose run, mirroring the production init-minio service.
+  init-minio:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    container_name: ${COMPOSE_PROJECT_NAME:-infra}_init-minio
+    restart: 'no'
+    <<: *default-security
+    logging: *default-logging
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required (set it in .env)}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-app-data}
+      ENVIRONMENT: development
+    volumes:
+      - ./docker/config/minio/policies:/policies:ro
+      - ./docker/init/init-minio-buckets.sh:/init.sh:ro
+    networks:
+      - infrastructure
+    entrypoint: ['bash', '/init.sh']
+
+  # ── PowerSync — dev overrides (published ports, resource caps) ───────────
+  # Client API + probes on 8085; Prometheus metrics on 9090 for local debugging.
+  powersync-api:
+    ports:
+      - '${POWERSYNC_PORT:-8085}:8085'
+      - '${POWERSYNC_METRICS_PORT:-9090}:9090'
+    deploy:
+      resources:
+        limits:
+          cpus: '${POWERSYNC_CPU_LIMIT:-0.5}'
+          memory: ${POWERSYNC_MEM_LIMIT:-512m}
+
+  # Replication role — SINGLETON. Never scale this service.
+  # Own metrics-port variable: sharing POWERSYNC_METRICS_PORT with
+  # powersync-api would publish the same host port twice.
+  powersync-sync:
+    ports:
+      - '${POWERSYNC_SYNC_METRICS_PORT:-9091}:9090'
+    deploy:
+      resources:
+        limits:
+          cpus: '${POWERSYNC_CPU_LIMIT:-0.5}'
+          memory: ${POWERSYNC_MEM_LIMIT:-512m}
+
+# ── Network override (dev) ───────────────────────────────────────────────────
+# The infrastructure tier ships `internal: true` (ADR-004: no external routing
+# in staging/prod). Docker SILENTLY drops port publications for containers
+# attached only to an internal network, which would defeat this overlay's core
+# purpose (published ports for local debugging). Dev therefore keeps the same
+# subnet with routing enabled.
+networks:
+  infrastructure:
+    internal: false

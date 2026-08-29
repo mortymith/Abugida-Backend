@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OWASP ZAP Scan Policy
+  Source: deployment.md v3.0.0 Phase 14
+
+  Covers OWASP Top-10 scan against the public-facing surface.
+  Used by: tests/security/owasp-zap/scan.sh (or manual ZAP UI import)
+
+  Usage:
+    zap-cli --config-file tests/security/owasp-zap/scan-policy.xml ...
+    # Or import via ZAP Desktop: Tools > Options > Active Scan
+-->
+<zap>
+  <policy>
+    <!-- Default strength: MEDIUM (covers most issues efficiently) -->
+    <default_strength>MEDIUM</default_strength>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- A01:2021 — Broken Access Control                       -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <scanner>
+      <id>10038</id>
+      <!-- Path Traversal -->
+      <name>Path Traversal</name>
+      <strength>HIGH</strength>
+      <threshold>HIGH</threshold>
+      <enabled>true</enabled>
+    </scanner>
+    <scanner>
+      <id>10096</id>
+      <!-- Directory Browsing -->
+      <name>Directory Browsing</name>
+      <strength>HIGH</strength>
+      <threshold>HIGH</threshold>
+      <enabled>true</enabled>
+    </scanner>
+    <scanner>
+      <id>40012</id>
+      <!-- Cross Site Request Forgery -->
+      <name>Cross Site Request Forgery</name>
+      <strength>HIGH</strength>
+      <threshold>HIGH</threshold>
+      <enabled>true</enabled>
+    </scanner>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- A02:2021 — Cryptographic Failures                    -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <scanner>
+      <id>2</id>
+      <!-- Insecure TLS/SSL -->
+      <name>Insecure TLS/SSL Ciphers</name>
+      <strength>HIGH</strength>
+      <threshold>HIGH</threshold>
+      <enabled>true</enabled>
+    </scanner>
+    <scanner>
+      <id>90019</id>
+      <!-- Mixed Content -->
+      <name>Mixed Content</name>
+      <strength>MEDIUM</strength>
+      <threshold>MEDIUM</threshold>
+      <enabled>true</enabled>
+    </scanner>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- A03:2021 — Injection                                 -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <scanner>
+      <id>40018</id>
+      <!-- SQL Injection -->
+      <name>SQL Injection</name>
+      <strength>HIGH</strength>
+      <threshold>HIGH</threshold>
+      <enabled>true</enabled>
+    </scanner>
+    <scanner>
+      <id>40009</id>
+      <!-- Cross Site Scripting (Reflective) -->
+      <name>Cross Site Scripting (Reflective)</name>
+      <strength>HIGH</strength>
+      <threshold>HIGH</threshold>
+      <enabled>true</enabled>
+    </scanner>
+    <scanner>
+      <id>40012</id>
+      <!-- Cross Site Scripting (Persistent) -->
+      <name>Cross Site Scripting (Persistent)</name>
+      <strength>HIGH</strength>
+      <threshold>HIGH</threshold>
+      <enabled>true</enabled>
+    </scanner>
+    <scanner>
+      <id>40020</id>
+      <!-- Command Injection -->
+      <name>OS Command Injection</name>
+      <strength>HIGH</strength>
+      <threshold>HIGH</threshold>
+      <enabled>true</enabled>
+    </scanner>
+    <scanner>
+      <id>40041</id>
+      <!-- Remote File Inclusion -->
+      <name>Remote File Inclusion</name>
+      <strength>HIGH</strength>
+      <threshold>HIGH</threshold>
+      <enabled>true</enabled>
+    </scanner>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- A04:2021 — Insecure Design                            -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <scanner>
+      <id>10055</id>
+      <!-- CSP Scanner -->
+      <name>Content Security Policy (CSP) Scanner</name>
+      <strength>HIGH</strength>
+      <threshold>MEDIUM</threshold>
+      <enabled>true</enabled>
+    </scanner>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- A05:2021 — Security Misconfiguration                  -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <scanner>
+      <id>10036</id>
+      <!-- Server Header Info -->
+      <name>Server Header Info Leak</name>
+      <strength>MEDIUM</strength>
+      <threshold>MEDIUM</threshold>
+      <enabled>true</enabled>
+    </scanner>
+    <scanner>
+      <id>10098</id>
+      <!-- Application Error Disclosure -->
+      <name>Application Error Disclosure</name>
+      <strength>MEDIUM</strength>
+      <threshold>MEDIUM</threshold>
+      <enabled>true</enabled>
+    </scanner>
+    <scanner>
+      <id>10045</id>
+      <!-- X-Frame-Options -->
+      <name>X-Frame-Options Header</name>
+      <strength>MEDIUM</strength>
+      <threshold>MEDIUM</threshold>
+      <enabled>true</enabled>
+    </scanner>
+    <scanner>
+      <id>10050</id>
+      <!-- X-Content-Type-Options -->
+      <name>X-Content-Type-Options Header</name>
+      <strength>MEDIUM</strength>
+      <threshold>MEDIUM</threshold>
+      <enabled>true</enabled>
+    </scanner>
+    <scanner>
+      <id>10052</id>
+      <!-- Strict-Transport-Security -->
+      <name>Strict-Transport-Security Header</name>
+      <strength>HIGH</strength>
+      <threshold>HIGH</threshold>
+      <enabled>true</enabled>
+    </scanner>
+    <scanner>
+      <id>90001</id>
+      <!-- Insecure HTTP Methods -->
+      <name>Insecure HTTP Methods</name>
+      <strength>MEDIUM</strength>
+      <threshold>MEDIUM</threshold>
+      <enabled>true</enabled>
+    </scanner>
+    <scanner>
+      <id>10021</id>
+      <!-- Information Disclosure: Debug Errors -->
+      <name>Information Disclosure - Debug Error Messages</name>
+      <strength>MEDIUM</strength>
+      <threshold>MEDIUM</threshold>
+      <enabled>true</enabled>
+    </scanner>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- A06:2021 — Vulnerable and Outdated Components       -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- (Covered by Trivy in CI — not duplicated in ZAP)      -->
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- A07:2021 — Identification and Authentication Failures -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <scanner>
+      <id>10109</id>
+      <!-- Weak Authentication -->
+      <name>Weak Authentication Method</name>
+      <strength>HIGH</strength>
+      <threshold>HIGH</threshold>
+      <enabled>true</enabled>
+    </scanner>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- A08:2021 — Software and Data Integrity Failures      -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <scanner>
+      <id>10015</id>
+      <!-- Insecure HTTP Verb -->
+      <name>Insecure HTTP Verb (e.g. PUT on static resources)</name>
+      <strength>MEDIUM</strength>
+      <threshold>MEDIUM</threshold>
+      <enabled>true</enabled>
+    </scanner>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- A09:2021 — Security Logging and Monitoring Failures   -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- (Architectural — validated via config checks, not ZAP)  -->
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <!-- A10:2021 — Server-Side Request Forgery (SSRF)        -->
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <scanner>
+      <id>90029</id>
+      <!-- SSRF -->
+      <name>Server-Side Request Forgery</name>
+      <strength>HIGH</strength>
+      <threshold>HIGH</threshold>
+      <enabled>true</enabled>
+    </scanner>
+
+  </policy>
+</zap>

@@ -1,0 +1,21 @@
+# Dependencies / lockfiles
+node_modules
+pnpm-lock.yaml
+bun.lockb
+
+# Build outputs
+dist
+build
+.turbo
+coverage
+.astro
+.next
+.vercel
+
+# Generated code
+*.gen.ts
+
+# Editor / OS cruft
+.agents/*
+.vscode/*
+!.vscode/extensions.json
