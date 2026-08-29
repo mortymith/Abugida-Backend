@@ -1,0 +1,77 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev: all workspaces (turbo)",
+      "type": "shell",
+      "command": "pnpm dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "dev: api (@abugida/api)",
+      "type": "shell",
+      "command": "pnpm --filter @abugida/api dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "dev: dashboard (@abugida/dashboard)",
+      "type": "shell",
+      "command": "pnpm --filter @abugida/dashboard dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "dev: marketing (@abugida/marketing)",
+      "type": "shell",
+      "command": "pnpm --filter @abugida/marketing dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "check: typecheck",
+      "type": "shell",
+      "command": "pnpm typecheck",
+      "group": "build",
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "check: lint",
+      "type": "shell",
+      "command": "pnpm lint",
+      "problemMatcher": []
+    },
+    {
+      "label": "check: test",
+      "type": "shell",
+      "command": "pnpm test",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "infra: dev up (just)",
+      "type": "shell",
+      "command": "just dev-up",
+      "problemMatcher": []
+    },
+    {
+      "label": "infra: dev down (just)",
+      "type": "shell",
+      "command": "just dev-down",
+      "problemMatcher": []
+    },
+    {
+      "label": "db: studio (dashboard)",
+      "type": "shell",
+      "command": "pnpm --filter @abugida/dashboard db:studio",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    }
+  ]
+}

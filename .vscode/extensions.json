@@ -3,13 +3,17 @@
     "astro-build.astro-vscode",
     "bradlc.vscode-tailwindcss",
     "dbaeumer.vscode-eslint",
-    "eamodio.gitlens",
-    "EditorConfig.EditorConfig",
     "esbenp.prettier-vscode",
+    "EditorConfig.EditorConfig",
+    "oven.bun-vscode",
+    "usernamehw.errorlens",
+    "YoavBls.pretty-ts-errors",
+    "streetsidesoftware.code-spell-checker",
+    "eamodio.gitlens",
     "mikestead.dotenv",
     "ms-azuretools.vscode-docker",
-    "streetsidesoftware.code-spell-checker",
-    "usernamehw.errorlens",
-    "YoavBls.pretty-ts-errors"
+    "nefrob.vscode-just-syntax",
+    "redhat.vscode-yaml",
+    "matt-meyers.vscode-dbml"
   ]
 }
