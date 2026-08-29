@@ -21,38 +21,37 @@ REDIS_PORT="${REDIS_PORT:-6379}"
 
 # ── Wait helper ─────────────────────────────────────────────────────
 wait_for() {
-	local host="$1" port="$2" name="$3" timeout="${4:-60}"
-	local elapsed=0
-	echo "[entrypoint] Waiting for ${name} (${host}:${port})..."
-	while [ $elapsed -lt $timeout ]; do
-		if (echo >"/dev/tcp/${host}/${port}") 2>/dev/null; then
-			echo "[entrypoint] ${name} is ready."
-			return 0
-		fi
-		sleep 2
-		elapsed=$((elapsed + 2))
-	done
-	echo "[entrypoint][ERROR] ${name} not ready after ${timeout}s" >&2
-	return 1
+  local host="$1" port="$2" name="$3" timeout="${4:-60}"
+  local elapsed=0
+  echo "[entrypoint] Waiting for ${name} (${host}:${port})..."
+  while [ $elapsed -lt $timeout ]; do
+    if (echo > "/dev/tcp/${host}/${port}") 2> /dev/null; then
+      echo "[entrypoint] ${name} is ready."
+      return 0
+    fi
+    sleep 2
+    elapsed=$((elapsed + 2))
+  done
+  echo "[entrypoint][ERROR] ${name} not ready after ${timeout}s" >&2
+  return 1
 }
 
 # ── Wait for PgBouncer (only if configured) ──────────────────────────
 if [ -n "${PGBOUNCER_HOST}" ]; then
-	wait_for "${PGBOUNCER_HOST}" "${PGBOUNCER_PORT}" "PgBouncer" 60
+  wait_for "${PGBOUNCER_HOST}" "${PGBOUNCER_PORT}" "PgBouncer" 60
 fi
 
 # ── Wait for Redis (only if configured) ──────────────────────────────
 if [ -n "${REDIS_HOST}" ]; then
-	wait_for "${REDIS_HOST}" "${REDIS_PORT}" "Redis" 30
+  wait_for "${REDIS_HOST}" "${REDIS_PORT}" "Redis" 30
 fi
 
-# ── Resolve database connection from Docker secrets (dev) ────────────
+# ── Resolve database connection from environment variables ──────────
 # DATABASE_URL is required by the Drizzle node-postgres client. When it is
-# not provided directly, build it from the mounted postgres_password secret
+# not provided directly, build it from the POSTGRES_PASSWORD env var
 # (same pattern as the API entrypoint).
-if [ -z "${DATABASE_URL:-}" ] && [ -f /run/secrets/postgres_password ]; then
-	PG_PASS=$(cat /run/secrets/postgres_password)
-	export DATABASE_URL="postgresql://${POSTGRES_USER:-app}:${PG_PASS}@${PGBOUNCER_HOST:-pgbouncer}:${PGBOUNCER_PORT:-6432}/${POSTGRES_DB:-app}"
+if [ -z "${DATABASE_URL:-}" ] && [ -n "${POSTGRES_PASSWORD:-}" ]; then
+  export DATABASE_URL="postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD}@${PGBOUNCER_HOST:-pgbouncer}:${PGBOUNCER_PORT:-6432}/${POSTGRES_DB:-app}"
 fi
 
 # ── Export OTEL env vars (defaults from the image, overridable) ──────
