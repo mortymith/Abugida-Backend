@@ -15,6 +15,12 @@ import {
   insertLoginAttemptSchema,
   selectLoginAttemptSchema,
   loginAttemptTypeEnum,
+  insertSessionSchema,
+  selectSessionSchema,
+  insertAccountSchema,
+  selectAccountSchema,
+  insertVerificationSchema,
+  selectVerificationSchema,
 } from '../../schema/auth'
 
 describe('auth schemas', () => {
@@ -98,6 +104,10 @@ describe('auth schemas', () => {
         deviceCount: 0,
         maxDevices: 3,
         displayName: null,
+        betterAuthId: null,
+        email: null,
+        emailVerified: false,
+        image: null,
         accountStatus: 'active',
         failedLoginAttempts: 0,
         lockedUntil: null,
@@ -328,6 +338,216 @@ describe('auth schemas', () => {
         })
         expect(result.success).toBe(true)
       }
+    })
+  })
+
+  describe('session', () => {
+    const validSession = {
+      id: 'sess_abc123',
+      userId: 'user_xyz789',
+      token: 'tok_abc123def456',
+      expiresAt: new Date('2026-12-31'),
+    }
+
+    it('accepts valid session insert', () => {
+      const result = insertSessionSchema.safeParse(validSession)
+      expect(result.success).toBe(true)
+    })
+
+    it('requires id', () => {
+      const result = insertSessionSchema.safeParse({
+        userId: 'user_xyz789',
+        token: 'tok_abc123',
+        expiresAt: new Date(),
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('requires userId', () => {
+      const result = insertSessionSchema.safeParse({
+        id: 'sess_abc123',
+        token: 'tok_abc123',
+        expiresAt: new Date(),
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('requires token', () => {
+      const result = insertSessionSchema.safeParse({
+        id: 'sess_abc123',
+        userId: 'user_xyz789',
+        expiresAt: new Date(),
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('requires expiresAt', () => {
+      const result = insertSessionSchema.safeParse({
+        id: 'sess_abc123',
+        userId: 'user_xyz789',
+        token: 'tok_abc123',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('accepts optional fields', () => {
+      const result = insertSessionSchema.safeParse({
+        ...validSession,
+        refreshToken: 'ref_abc123',
+        ipAddress: '192.168.1.1',
+        userAgent: 'Mozilla/5.0',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts select schema', () => {
+      const result = selectSessionSchema.safeParse({
+        id: 'sess_abc123',
+        userId: 'user_xyz789',
+        token: 'tok_abc123',
+        refreshToken: null,
+        expiresAt: new Date(),
+        ipAddress: null,
+        userAgent: null,
+        createdAt: new Date(),
+      })
+      expect(result.success).toBe(true)
+    })
+  })
+
+  describe('account', () => {
+    const validAccount = {
+      id: 'acc_abc123',
+      userId: 'user_xyz789',
+      providerId: 'google',
+      accountId: 'google_123456',
+    }
+
+    it('accepts valid account insert', () => {
+      const result = insertAccountSchema.safeParse(validAccount)
+      expect(result.success).toBe(true)
+    })
+
+    it('requires id', () => {
+      const result = insertAccountSchema.safeParse({
+        userId: 'user_xyz789',
+        providerId: 'google',
+        accountId: 'google_123456',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('requires userId', () => {
+      const result = insertAccountSchema.safeParse({
+        id: 'acc_abc123',
+        providerId: 'google',
+        accountId: 'google_123456',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('requires providerId', () => {
+      const result = insertAccountSchema.safeParse({
+        id: 'acc_abc123',
+        userId: 'user_xyz789',
+        accountId: 'google_123456',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('requires accountId', () => {
+      const result = insertAccountSchema.safeParse({
+        id: 'acc_abc123',
+        userId: 'user_xyz789',
+        providerId: 'google',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('accepts optional OAuth fields', () => {
+      const result = insertAccountSchema.safeParse({
+        ...validAccount,
+        accessToken: 'ya29.access_token',
+        refreshToken: '1//-refresh_token',
+        accessTokenExpiresAt: new Date('2026-01-01'),
+        idToken: 'eyJhbGciOiJSUzI1NiJ9',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts select schema', () => {
+      const result = selectAccountSchema.safeParse({
+        id: 'acc_abc123',
+        userId: 'user_xyz789',
+        providerId: 'google',
+        accountId: 'google_123456',
+        accessToken: null,
+        refreshToken: null,
+        accessTokenExpiresAt: null,
+        idToken: null,
+        createdAt: new Date(),
+      })
+      expect(result.success).toBe(true)
+    })
+  })
+
+  describe('verification', () => {
+    const validVerification = {
+      id: 'ver_abc123',
+      identifier: 'user@example.com',
+      value: '123456',
+      expiresAt: new Date('2026-12-31'),
+    }
+
+    it('accepts valid verification insert', () => {
+      const result = insertVerificationSchema.safeParse(validVerification)
+      expect(result.success).toBe(true)
+    })
+
+    it('requires id', () => {
+      const result = insertVerificationSchema.safeParse({
+        identifier: 'user@example.com',
+        value: '123456',
+        expiresAt: new Date(),
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('requires identifier', () => {
+      const result = insertVerificationSchema.safeParse({
+        id: 'ver_abc123',
+        value: '123456',
+        expiresAt: new Date(),
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('requires value', () => {
+      const result = insertVerificationSchema.safeParse({
+        id: 'ver_abc123',
+        identifier: 'user@example.com',
+        expiresAt: new Date(),
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('requires expiresAt', () => {
+      const result = insertVerificationSchema.safeParse({
+        id: 'ver_abc123',
+        identifier: 'user@example.com',
+        value: '123456',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('accepts select schema', () => {
+      const result = selectVerificationSchema.safeParse({
+        id: 'ver_abc123',
+        identifier: 'user@example.com',
+        value: '123456',
+        expiresAt: new Date(),
+      })
+      expect(result.success).toBe(true)
     })
   })
 })
