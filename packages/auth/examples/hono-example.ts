@@ -5,14 +5,11 @@
  */
 
 import { Hono } from "hono";
-import { drizzle } from "drizzle-orm/node-postgres";
 import { createAuth } from "@abugida/auth";
 import { mountAuthRoutes, withSession, requireSession, type HonoAuthVariables } from "@abugida/auth/hono";
-// Schema comes from your own db-schemas package, e.g.:
-// import { authSchema } from "@abugida/db-schemas/auth";
-import { authSchema } from "./fixtures/schema";
+import { authSchema, createClient } from "@abugida/database";
 
-const db = drizzle(process.env.DATABASE_URL!);
+const db = createClient(process.env.DATABASE_URL!);
 
 export const auth = createAuth({
   environment: (process.env.NODE_ENV as "development" | "production" | "test") ?? "development",

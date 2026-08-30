@@ -3,14 +3,13 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import { drizzle } from "drizzle-orm/node-postgres";
 import { createAuth } from "@abugida/auth";
 import { createAuthServerFunctions, requireAuthBeforeLoad, createAuthClient } from "@abugida/auth/tanstack";
-import { authSchema } from "./fixtures/schema";
+import { authSchema, createClient } from "@abugida/database";
 
 // --- app/lib/auth.server.ts ------------------------------------------------
 
-const db = drizzle(process.env.DATABASE_URL!);
+const db = createClient(process.env.DATABASE_URL!);
 
 export const auth = createAuth({
   environment: (process.env.NODE_ENV as "development" | "production" | "test") ?? "development",
