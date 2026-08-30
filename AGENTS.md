@@ -3,6 +3,7 @@
 - **Runtime:** bun (>= 1.3.14, pinned in `.bun-version`). Run scripts, dev servers, and tests with bun.
 - **Package manager:** pnpm (>= 11, pinned in `package.json` `packageManager`). Install deps with `pnpm install` only.
 - Never let bun touch the dependency graph: `bunfig.toml` sets `frozenLockfile = true` and there is intentionally no `bun.lockb`. Do not run `bun add`/`bun install` or introduce a bun lockfile — edit `package.json` + `pnpm-workspace.yaml` and reinstall with pnpm.
+- `pnpm-workspace.yaml` has explicit `allowBuilds` for native deps (`@google/genai`, `esbuild`, `sharp`, etc.). Don't add new native packages without checking this list.
 
 ## Monorepo
 
@@ -25,6 +26,28 @@ Turborepo over pnpm workspaces (`app/*`, `packages/*`). Root `pnpm <script>` fan
 - Tests use **bun** as the runner (`bun test`), not vitest/jest. `app/api` uses `bun test --pass-with-no-tests`.
 - `app/dashboard` has Drizzle scripts: `pnpm --filter @abugida/dashboard db:generate|db:migrate|db:push|db:pull|db:studio`. `drizzle.config.ts` requires `DATABASE_URL` in `app/dashboard/.env.local` or `.env`.
 - Env is per-app and git-ignored; examples live at `app/*/.env.example`.
+- The root `format` script also runs `shfmt` on shell scripts.
+
+## Infrastructure (just command runner)
+
+The `justfile` manages Docker Compose infrastructure across three tiers (dev/staging/prod). Run `just --list` to see all recipes.
+
+```bash
+just setup-dev          # Bootstrap: .env + start + init (5 services)
+just dev-up / dev-down  # Start/stop dev infrastructure
+just health             # Probe all service health endpoints
+just logs <service>     # Tail a container's logs
+just shell <service>    # Shell into a running container
+just psql               # psql shell against postgres-primary
+just redis-cli          # redis-cli against redis-primary
+just mc ls local/       # MinIO client (ephemeral container, no host install)
+just down               # Stop all services
+just validate-compose   # Validate all three compose tiers
+```
+
+- Three-tier modular Compose: `docker/compose/{base,app,edge,scaling,security,observability,networks,volumes}.yml` + `profiles/{dev,staging,prod}.override.yml`.
+- Secrets: dev uses `.env`, staging/prod use HashiCorp Vault.
+- Dev environment infra: PostgreSQL, PgBouncer, Redis (Sentinel), MinIO, PowerSync.
 
 ## Git workflow (enforced by husky hooks — don't bypass)
 
