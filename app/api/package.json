@@ -17,16 +17,23 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@abugida/auth": "workspace:*",
     "@abugida/database": "workspace:*",
+    "@abugida/queue": "workspace:*",
+    "@abugida/storage": "workspace:*",
     "@hono/zod-openapi": "^1.5.1",
     "@scalar/hono-api-reference": "^0.11.11",
+    "better-auth": "1.6.26",
     "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.12.32",
+    "pg": "^8.22.0",
     "rate-limiter-flexible": "^11.2.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/pg": "^8.20.0",
     "dotenv-expand": "^13.0.0",
     "typescript-eslint": "^8.65.0"
   }
