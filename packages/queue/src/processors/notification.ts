@@ -118,7 +118,7 @@ function maskPhone(phone: string): string {
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
-  if (!domain) return "****";
+  if (!local || !domain) return "****";
   const masked = local.slice(0, 2) + "****";
   return `${masked}@${domain}`;
 }

@@ -31,10 +31,10 @@ export const MONITORING_DEFAULTS = {
 // Logging Defaults
 // ---------------------------------------------------------------------------
 
-export const LOGGING_DEFAULTS: Record<string, QueueConfig["logging"]> = {
-  development: { level: "debug", format: "pretty" },
-  staging: { level: "debug", format: "json" },
-  production: { level: "info", format: "json" },
+export const LOGGING_DEFAULTS = {
+  development: { level: "debug" as const, format: "pretty" as const },
+  staging: { level: "debug" as const, format: "json" as const },
+  production: { level: "info" as const, format: "json" as const },
 };
 
 // ---------------------------------------------------------------------------
@@ -42,6 +42,8 @@ export const LOGGING_DEFAULTS: Record<string, QueueConfig["logging"]> = {
 // ---------------------------------------------------------------------------
 
 export function getDefaultConfig(env: "development" | "staging" | "production" = "development"): QueueConfig {
+  const redisPassword = process.env.REDIS_PASSWORD;
+
   return {
     env,
     redis: {
@@ -53,7 +55,7 @@ export function getDefaultConfig(env: "development" | "staging" | "production" =
             ? (process.env.REDIS_HOST ?? "redis.staging.internal")
             : "localhost",
       port: parseInt(process.env.REDIS_PORT ?? "6379", 10),
-      password: process.env.REDIS_PASSWORD,
+      ...(redisPassword ? { password: redisPassword } : {}),
       db: parseInt(process.env.REDIS_DB ?? "0", 10),
       tls: env === "production",
     },
@@ -79,7 +81,7 @@ export function mergeWithDefaults(
   const base = getDefaultConfig(env);
 
   return {
-    env: overrides.env ?? base.env,
+    env: overrides.env ?? base.env ?? env,
     redis: {
       ...base.redis,
       ...overrides.redis,
