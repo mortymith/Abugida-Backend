@@ -115,12 +115,13 @@ export function createQueueWorker(config: QueueConfig, processors: AnyProcessorE
         }
       };
 
+      const limiter = userConfig?.limiter ?? queueConfig?.limiter;
+
       const worker = new Worker(queueName, dispatchProcessor, {
         connection,
         concurrency,
         stalledInterval: userConfig?.stalledInterval ?? queueConfig?.stalledInterval ?? 30_000,
-        // Use the queue's limiter if configured
-        limiter: userConfig?.limiter ?? queueConfig?.limiter,
+        ...(limiter ? { limiter } : {}),
       });
 
       // Event handlers
