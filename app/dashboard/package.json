@@ -25,7 +25,6 @@
     "@abugida/database": "workspace:*",
     "@abugida/queue": "workspace:*",
     "@abugida/storage": "workspace:*",
-    "@modelcontextprotocol/sdk": "1.30.0",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/ai": "0.43.1",
     "@tanstack/ai-anthropic": "0.16.4",
