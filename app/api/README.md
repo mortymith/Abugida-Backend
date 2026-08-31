@@ -1,11 +1,10 @@
 # @abugida/api
 
-REST API server for the Abugida educational platform. Built with Hono, Better Auth, Drizzle ORM, and BullMQ.
+REST API server for the Abugida educational platform. Built with Hono, Drizzle ORM, and BullMQ.
 
 ## Tech Stack
 
 - **Framework:** Hono with Zod OpenAPI
-- **Auth:** Better Auth (Telegram + Google OAuth)
 - **Database:** PostgreSQL via Drizzle ORM
 - **Queue:** BullMQ (backed by Redis)
 - **Validation:** Zod
@@ -13,12 +12,10 @@ REST API server for the Abugida educational platform. Built with Hono, Better Au
 
 ## Environment Variables
 
-| Variable             | Description                  |
-| -------------------- | ---------------------------- |
-| `BETTER_AUTH_SECRET` | Auth secret key              |
-| `BETTER_AUTH_URL`    | Auth callback URL            |
-| `DATABASE_URL`       | PostgreSQL connection string |
-| `REDIS_URL`          | Redis connection string      |
+| Variable       | Description                  |
+| -------------- | ---------------------------- |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `REDIS_URL`    | Redis connection string      |
 
 ## Commands
 
