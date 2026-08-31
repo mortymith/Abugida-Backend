@@ -11,7 +11,7 @@
 #   Stage 1 (builder): workspace-aware pnpm install against the frozen
 #                      lockfile, then the TanStack Start production build
 #                      (`vite build`). The SSR bundle (dist/server/server.js)
-#                      externalizes react/@tanstack/better-auth/pg/etc., so
+#                      externalizes react/@tanstack/pg/etc., so
 #                      a production-only node_modules is pruned and shipped.
 #   Stage 2 (runtime): base stage + pruned node_modules (workspace layout
 #                      preserved so pnpm symlinks resolve) + dist + the Bun

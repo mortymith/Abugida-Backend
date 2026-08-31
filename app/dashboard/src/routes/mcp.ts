@@ -1,5 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { createFileRoute } from '@tanstack/react-router'
+import { createAPIFileRoute } from '@tanstack/react-start/api'
 import z from 'zod'
 
 import { handleMcpRequest } from '#/utils/mcp-handler'
@@ -44,10 +44,6 @@ server.registerTool(
 //   }
 // );
 
-export const Route = createFileRoute('/mcp')({
-  server: {
-    handlers: {
-      POST: async ({ request }) => handleMcpRequest(request, server),
-    },
-  },
+export const APIRoute = createAPIFileRoute('/mcp')({
+  POST: async ({ request }) => handleMcpRequest(request, server),
 })
