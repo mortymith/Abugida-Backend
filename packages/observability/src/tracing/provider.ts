@@ -28,9 +28,9 @@ export function initTracerProvider(
     return provider
   }
 
-  const exporter = new OTLPTraceExporter({
-    url: config.otlpProtocol === 'grpc' ? undefined : `${config.otlpEndpoint}/v1/traces`,
-  })
+  const exporter = new OTLPTraceExporter(
+    config.otlpProtocol === 'grpc' ? {} : { url: `${config.otlpEndpoint}/v1/traces` },
+  )
 
   provider = new BasicTracerProvider({
     resource,

@@ -27,9 +27,9 @@ export function initMeterProvider(resource: Resource, config: ObservabilityConfi
     return provider
   }
 
-  const exporter = new OTLPMetricExporter({
-    url: config.otlpProtocol === 'grpc' ? undefined : `${config.otlpEndpoint}/v1/metrics`,
-  })
+  const exporter = new OTLPMetricExporter(
+    config.otlpProtocol === 'grpc' ? {} : { url: `${config.otlpEndpoint}/v1/metrics` },
+  )
 
   const metricReader = new PeriodicExportingMetricReader({
     exporter,

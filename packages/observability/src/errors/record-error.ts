@@ -50,8 +50,13 @@ function sanitizeErrorMessage(message: string): string {
  * @param options
  * @param options.silent - when true, skip Pino logging (avoids duplicates
  *   when the caller already logged)
+ * @param options.context - additional structured context attached to the
+ *   error log (e.g. requestId, method, path).
  */
-export function recordError(error: unknown, options?: { silent?: boolean }): void {
+export function recordError(
+  error: unknown,
+  options?: { silent?: boolean; context?: Record<string, unknown> },
+): void {
   const errMessage = error instanceof Error ? error.message : String(error)
   const errStack = error instanceof Error ? error.stack : undefined
   const errName = error instanceof Error ? error.constructor.name : 'UnknownError'
@@ -78,6 +83,7 @@ export function recordError(error: unknown, options?: { silent?: boolean }): voi
             message: sanitizeErrorMessage(errMessage),
             stack: errStack,
           },
+          ...options?.context,
         },
         errMessage,
       )
