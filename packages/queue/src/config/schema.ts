@@ -12,6 +12,8 @@ export interface RedisConfig {
   hostname: string;
   /** Redis port. Default: `6379`. */
   port: number;
+  /** Optional username for ACL-based AUTH (Redis 6+). */
+  username?: string;
   /** Optional password for AUTH. */
   password?: string;
   /** Redis database index (0-15). Default: `0`. */

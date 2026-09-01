@@ -34,7 +34,11 @@ const connectionCache = new Map<string, CachedConnection>();
  */
 function buildRedisUrl(redis: RedisConfig): string {
   const scheme = redis.tls ? "rediss" : "redis";
-  const auth = redis.password ? `:${encodeURIComponent(redis.password)}@` : "";
+  const auth = redis.username
+    ? `${encodeURIComponent(redis.username)}:${encodeURIComponent(redis.password ?? "")}@`
+    : redis.password
+      ? `:${encodeURIComponent(redis.password)}@`
+      : "";
   const db = redis.db != null ? `/${redis.db}` : "";
   return `${scheme}://${auth}${redis.hostname}:${redis.port}${db}`;
 }
