@@ -67,8 +67,8 @@ export interface CounterOptions {
  */
 export function createCounter(meter: Meter, name: string, options?: CounterOptions): Counter {
   return meter.createCounter(name, {
-    description: options?.description,
-    unit: options?.unit,
+    ...(options?.description !== undefined ? { description: options.description } : {}),
+    ...(options?.unit !== undefined ? { unit: options.unit } : {}),
   })
 }
 
@@ -77,8 +77,8 @@ export function createCounter(meter: Meter, name: string, options?: CounterOptio
  */
 export function createHistogram(meter: Meter, name: string, options?: CounterOptions): Histogram {
   return meter.createHistogram(name, {
-    description: options?.description,
-    unit: options?.unit,
+    ...(options?.description !== undefined ? { description: options.description } : {}),
+    ...(options?.unit !== undefined ? { unit: options.unit } : {}),
   })
 }
 
@@ -91,8 +91,8 @@ export function createUpDownCounter(
   options?: CounterOptions,
 ): UpDownCounter {
   return meter.createUpDownCounter(name, {
-    description: options?.description,
-    unit: options?.unit,
+    ...(options?.description !== undefined ? { description: options.description } : {}),
+    ...(options?.unit !== undefined ? { unit: options.unit } : {}),
   })
 }
 

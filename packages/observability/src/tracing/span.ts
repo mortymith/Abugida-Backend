@@ -40,8 +40,8 @@ export async function withSpan<T>(
   } as const
 
   const span = tracer.startSpan(name, {
-    kind: options?.kind ? (spanKindMap[options.kind] as unknown as SpanKind) : undefined,
-    attributes: options?.attributes,
+    ...(options?.kind ? { kind: spanKindMap[options.kind] as unknown as SpanKind } : {}),
+    ...(options?.attributes ? { attributes: options.attributes } : {}),
   })
 
   return context.with(trace.setSpan(context.active(), span), async () => {
@@ -70,7 +70,7 @@ export function withSpanSync<T>(
   const tracer = getTracer('@abugida/observability')
 
   const span = tracer.startSpan(name, {
-    attributes: options?.attributes,
+    ...(options?.attributes ? { attributes: options.attributes } : {}),
   })
 
   return context.with(trace.setSpan(context.active(), span), () => {

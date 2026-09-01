@@ -61,7 +61,7 @@ export function observabilityMiddleware(): MiddlewareHandler {
             [SEMATTRS_HTTP_USER_AGENT]: c.req.header('user-agent')!,
           }),
           ...(c.req.header('x-forwarded-for') && {
-            [SEMATTRS_HTTP_CLIENT_IP]: c.req.header('x-forwarded-for')!.split(',')[0].trim(),
+            [SEMATTRS_HTTP_CLIENT_IP]: c.req.header('x-forwarded-for')!.split(',')[0]?.trim() ?? '',
           }),
           ...(c.req.header('x-real-ip') && {
             [SEMATTRS_HTTP_CLIENT_IP]: c.req.header('x-real-ip')!,
