@@ -74,11 +74,11 @@
   },
   "dependencies": {
     "drizzle-zod": "^0.8.3",
-    "pg": "^8.22.0"
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "@types/pg": "^8.20.0",
+    "@types/pg": "^8.21.0",
     "drizzle-kit": "^0.31.10",
     "typescript-eslint": "^8.66.0"
   }

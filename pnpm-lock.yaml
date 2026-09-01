@@ -297,6 +297,9 @@ importers:
       '@abugida/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@abugida/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
       '@abugida/queue':
         specifier: workspace:*
         version: link:../../packages/queue
@@ -322,7 +325,7 @@ importers:
         specifier: ^4.12.32
         version: 4.12.32
       pg:
-        specifier: ^8.22.0
+        specifier: ^8.23.0
         version: 8.23.0
       rate-limiter-flexible:
         specifier: ^11.2.0
@@ -335,7 +338,7 @@ importers:
         specifier: latest
         version: 1.4.0
       '@types/pg':
-        specifier: ^8.20.0
+        specifier: 8.21.0
         version: 8.21.0
       dotenv-expand:
         specifier: ^13.0.0
@@ -558,13 +561,13 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: '>=0.36.0'
-        version: 0.45.2(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(bun-types@1.4.0)(kysely@0.29.4)(pg@8.22.0)
+        version: 0.45.2(@opentelemetry/api@1.9.0)(@types/pg@8.21.0)(bun-types@1.4.0)(kysely@0.29.4)(pg@8.23.0)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(bun-types@1.4.0)(kysely@0.29.4)(pg@8.22.0))(zod@4.4.3)
+        version: 0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.0)(@types/pg@8.21.0)(bun-types@1.4.0)(kysely@0.29.4)(pg@8.23.0))(zod@4.4.3)
       pg:
-        specifier: ^8.22.0
-        version: 8.22.0
+        specifier: ^8.23.0
+        version: 8.23.0
       zod:
         specifier: '>=3.23.0'
         version: 4.4.3
@@ -573,8 +576,8 @@ importers:
         specifier: ^22.10.2
         version: 22.20.1
       '@types/pg':
-        specifier: ^8.20.0
-        version: 8.20.0
+        specifier: ^8.21.0
+        version: 8.21.0
       drizzle-kit:
         specifier: ^0.31.10
         version: 0.31.10
@@ -3653,9 +3656,6 @@ packages:
   '@types/node@26.1.1':
     resolution: {integrity: sha512-nxAkRSVkN1Y0JC1W8ky/fTfkGsMmcrRsbx+3XoZE+rMOX71kLYTV7fLXpqud1GpbpP5TuffXFqfX7fH2GgZREw==}
 
-  '@types/pg@8.20.0':
-    resolution: {integrity: sha512-bEPFOaMAHTEP1EzpvHTbmwR8UsFyHSKsRisLIHVMXnpNefSbGA1bD6CVy+qKjGSqmZqNqBDV2azOBo8TgkcVow==}
-
   '@types/pg@8.21.0':
     resolution: {integrity: sha512-AYdtudzabjLZgVgRZmAnU8bAnVUXzuJX2IYHeSIiIHm68olD+LgQYCGWdtcNYnP0uq9c4S4NibVG3Ni7VbKW7Q==}
 
@@ -6429,24 +6429,12 @@ packages:
     peerDependencies:
       pg: '>=8.0'
 
-  pg-protocol@1.15.0:
-    resolution: {integrity: sha512-cq9sECI5s0+uPUXjbz8ioyPJni6RzsRib0US67i5IoTZKw8fNeYlVE7u8F4dG7vEJJtc5wdD1K189lCCUwqWTQ==}
-
   pg-protocol@1.16.0:
     resolution: {integrity: sha512-sILXutLVjCLjcDuOmvhX5e2Z4cS5qG/6Bu3VkpFwdf/633ElGLpEh9bgmuI5I4sqKqkifQiGyiCcx1HdtrK7tg==}
 
   pg-types@2.2.0:
     resolution: {integrity: sha512-qTAAlrEsl8s4OiEQY69wDvcMIdQN6wdz5ojQiOy6YRMuynxenON0O5oCpJI6lshc6scgAY8qvJ2On/p+CXY0GA==}
     engines: {node: '>=4'}
-
-  pg@8.22.0:
-    resolution: {integrity: sha512-8wih1vVIBMxoUM2oB4soJsD9tDnDpLv4OXBJ+EJzFsvycD+lfyIreC2gGHq78f8jbLLt+bvlPTFdFZfJkOuzAA==}
-    engines: {node: '>= 16.0.0'}
-    peerDependencies:
-      pg-native: '>=3.0.1'
-    peerDependenciesMeta:
-      pg-native:
-        optional: true
 
   pg@8.23.0:
     resolution: {integrity: sha512-Ip2EQCngowJLGOfCwkFhPXU7/ljlhn6Rxlmy4XYfL2Y+vyRM59+8uR2xqRWKdYmbXmxCFOAmKxBuSUCdF34qLg==}
@@ -10641,12 +10629,6 @@ snapshots:
     dependencies:
       undici-types: 8.3.0
 
-  '@types/pg@8.20.0':
-    dependencies:
-      '@types/node': 22.20.1
-      pg-protocol: 1.15.0
-      pg-types: 2.2.0
-
   '@types/pg@8.21.0':
     dependencies:
       '@types/node': 22.20.1
@@ -12152,14 +12134,6 @@ snapshots:
       pg: 8.23.0
       react: 19.2.8
 
-  drizzle-orm@0.45.2(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(bun-types@1.4.0)(kysely@0.29.4)(pg@8.22.0):
-    optionalDependencies:
-      '@opentelemetry/api': 1.9.0
-      '@types/pg': 8.20.0
-      bun-types: 1.4.0
-      kysely: 0.29.4
-      pg: 8.22.0
-
   drizzle-orm@0.45.2(@opentelemetry/api@1.9.0)(@types/pg@8.21.0)(bun-types@1.4.0)(kysely@0.29.4)(pg@8.23.0):
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
@@ -12168,9 +12142,9 @@ snapshots:
       kysely: 0.29.4
       pg: 8.23.0
 
-  drizzle-zod@0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(bun-types@1.4.0)(kysely@0.29.4)(pg@8.22.0))(zod@4.4.3):
+  drizzle-zod@0.8.3(drizzle-orm@0.45.2(@opentelemetry/api@1.9.0)(@types/pg@8.21.0)(bun-types@1.4.0)(kysely@0.29.4)(pg@8.23.0))(zod@4.4.3):
     dependencies:
-      drizzle-orm: 0.45.2(@opentelemetry/api@1.9.0)(@types/pg@8.20.0)(bun-types@1.4.0)(kysely@0.29.4)(pg@8.22.0)
+      drizzle-orm: 0.45.2(@opentelemetry/api@1.9.0)(@types/pg@8.21.0)(bun-types@1.4.0)(kysely@0.29.4)(pg@8.23.0)
       zod: 4.4.3
 
   dset@3.1.4: {}
@@ -14024,15 +13998,9 @@ snapshots:
 
   pg-int8@1.0.1: {}
 
-  pg-pool@3.14.0(pg@8.22.0):
-    dependencies:
-      pg: 8.22.0
-
   pg-pool@3.14.0(pg@8.23.0):
     dependencies:
       pg: 8.23.0
-
-  pg-protocol@1.15.0: {}
 
   pg-protocol@1.16.0: {}
 
@@ -14043,16 +14011,6 @@ snapshots:
       postgres-bytea: 1.0.1
       postgres-date: 1.0.7
       postgres-interval: 1.2.0
-
-  pg@8.22.0:
-    dependencies:
-      pg-connection-string: 2.14.0
-      pg-pool: 3.14.0(pg@8.22.0)
-      pg-protocol: 1.15.0
-      pg-types: 2.2.0
-      pgpass: 1.0.5
-    optionalDependencies:
-      pg-cloudflare: 1.4.0
 
   pg@8.23.0:
     dependencies:
