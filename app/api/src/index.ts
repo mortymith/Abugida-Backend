@@ -1,119 +1,86 @@
-import 'dotenv/config'
+/**
+ * @module index
+ *
+ * API entry point. Initializes configuration (validated up-front), boots the
+ * observability stack, starts the Hono server, and wires graceful shutdown.
+ *
+ * Environment loading/validation happens in `./config/app_config` — nothing
+ * here reads `process.env` for application configuration.
+ */
 
-import { Pool } from 'pg'
-import { Hono } from 'hono'
-import { createAuth, parseEnvironment } from '@abugida/auth'
-import { mountAuthRoutes, type HonoAuthVariables } from '@abugida/auth/hono'
-import { createClient } from '@abugida/database/client'
-import { authSchema } from '@abugida/database/auth'
-import { mergeWithDefaults, createQueueClient, type QueueClient } from '@abugida/queue'
-import {
-  createStorage,
-  configFromEnv as storageConfigFromEnv,
-  type Storage,
-} from '@abugida/storage'
+import { appConfig } from './config/app_config'
+import { init, shutdown, logger } from './config/observability'
+import { pool } from './config/database'
+import { createApp } from './app'
 
-const db = createClient(process.env.DATABASE_URL!)
+await init()
 
-function buildAuthConfig() {
-  const issuer = process.env.AUTH_BASE_URL
-  const audience = process.env.TOKEN_AUDIENCE
-
-  return {
-    environment: parseEnvironment(process.env.ENVIRONMENT),
-    baseUrl: process.env.BETTER_AUTH_URL!,
-    secret: process.env.BETTER_AUTH_SECRET!,
-    database: { db, schema: authSchema, provider: 'pg' as const },
-    providers: {},
-    cors: {
-      origins: process.env.WEB_APP_URL ? [process.env.WEB_APP_URL] : [],
-      credentials: true,
-    },
-    rateLimit: { max: 100, windowSeconds: 60 },
-    ...(issuer || audience
-      ? { tokens: { ...(issuer ? { issuer } : {}), ...(audience ? { audience } : {}) } }
-      : {}),
-  }
-}
-
-const auth = createAuth(buildAuthConfig())
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-
-const redisPassword = process.env.REDIS_PASSWORD
-
-const queueConfig = mergeWithDefaults({
-  redis: {
-    hostname: process.env.REDIS_HOST ?? 'localhost',
-    port: Number(process.env.REDIS_PORT ?? 6379),
-    db: Number(process.env.REDIS_DB ?? 0),
-    ...(redisPassword ? { password: redisPassword } : {}),
-  },
-})
-
-let queue: QueueClient | undefined
-let storage: Storage | undefined
+let server: ReturnType<typeof Bun.serve>
+let queue: Awaited<ReturnType<typeof createApp>>['queue']
+let storage: Awaited<ReturnType<typeof createApp>>['storage']
 
 try {
-  queue = createQueueClient(queueConfig)
+  const app = createApp()
+  queue = app.queue
+  storage = app.storage
+
+  server = Bun.serve({
+    hostname: appConfig.HOST,
+    port: appConfig.PORT,
+    fetch: (req, server) => app.app.fetch(req, server),
+  })
+
+  logger.info(
+    { hostname: server.hostname, port: server.port, environment: appConfig.NODE_ENV },
+    'API server listening',
+  )
 } catch (err) {
-  console.warn('[api] queue unavailable — skipping:', (err as Error).message)
+  logger.fatal({ err }, 'Failed to start API server')
+  process.exit(1)
 }
 
-try {
-  storage = createStorage(storageConfigFromEnv())
-} catch (err) {
-  console.warn('[api] storage unavailable — skipping:', (err as Error).message)
-}
+let shuttingDown = false
 
-const app = new Hono<{ Bindings: Record<string, unknown>; Variables: HonoAuthVariables }>()
+async function shutdownServer(): Promise<void> {
+  if (shuttingDown) return
+  shuttingDown = true
 
-mountAuthRoutes(app, auth)
-
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
-
-app.get('/health', async (c) => {
-  const checks: Record<string, string> = { api: 'up' }
+  logger.info('Shutting down API server…')
 
   try {
-    await pool.query('SELECT 1')
-    checks.postgres = 'up'
-  } catch {
-    checks.postgres = 'down'
+    await queue?.close()
+  } catch (err) {
+    logger.warn({ err }, 'Error closing queue during shutdown')
   }
 
-  if (queue) {
-    try {
-      await queue.getQueueLength('abugida.purchases')
-      checks.queue = 'up'
-    } catch {
-      checks.queue = 'down'
-    }
-  } else {
-    checks.queue = 'disabled'
+  try {
+    await storage?.destroy()
+  } catch (err) {
+    logger.warn({ err }, 'Error destroying storage during shutdown')
   }
 
-  if (storage) {
-    try {
-      const health = await storage.health()
-      checks.storage = health.healthy ? 'up' : 'down'
-    } catch {
-      checks.storage = 'down'
-    }
-  } else {
-    checks.storage = 'disabled'
+  try {
+    await pool.end()
+  } catch (err) {
+    logger.warn({ err }, 'Error closing database pool during shutdown')
   }
 
-  const allUp = Object.values(checks).every((v) => v === 'up' || v === 'disabled')
-  return c.json(checks, allUp ? 200 : 503)
-})
+  try {
+    await shutdown()
+  } catch (err) {
+    logger.warn({ err }, 'Error shutting down observability during shutdown')
+  }
+}
 
-const port = Number(process.env.PORT ?? 3000)
-const server = Bun.serve({
-  port,
-  fetch: app.fetch,
-})
+function handleSignal(signal: string): void {
+  logger.info({ signal }, 'Received signal, initiating graceful shutdown')
+  shutdownServer()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      logger.fatal({ err }, 'Error during graceful shutdown')
+      process.exit(1)
+    })
+}
 
-console.log(`[api] listening on http://${server.hostname}:${server.port}`)
+process.on('SIGTERM', () => handleSignal('SIGTERM'))
+process.on('SIGINT', () => handleSignal('SIGINT'))
