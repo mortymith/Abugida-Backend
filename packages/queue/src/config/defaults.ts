@@ -42,6 +42,7 @@ export const LOGGING_DEFAULTS = {
 // ---------------------------------------------------------------------------
 
 export function getDefaultConfig(env: "development" | "staging" | "production" = "development"): QueueConfig {
+  const redisUsername = process.env.REDIS_USERNAME;
   const redisPassword = process.env.REDIS_PASSWORD;
 
   return {
@@ -55,6 +56,7 @@ export function getDefaultConfig(env: "development" | "staging" | "production" =
             ? (process.env.REDIS_HOST ?? "redis.staging.internal")
             : "localhost",
       port: parseInt(process.env.REDIS_PORT ?? "6379", 10),
+      ...(redisUsername ? { username: redisUsername } : {}),
       ...(redisPassword ? { password: redisPassword } : {}),
       db: parseInt(process.env.REDIS_DB ?? "0", 10),
       tls: env === "production",
