@@ -114,6 +114,9 @@ import snippets/upstreams.conf
     # 2.12 Fix: Removed duplicate security.conf import (already imported globally above)
     import snippets/rate-limiting.conf
 
+    # Edge response compression (ADR: offload CPU from the API runtime)
+    encode zstd gzip
+
     # API health endpoints
     handle /health {
         reverse_proxy api:3000
