@@ -5,24 +5,24 @@
  * `config.environment === "production"` string comparisons everywhere.
  */
 
-import type { AuthConfig, AuthEnvironment } from "./types";
+import type { AuthConfig, AuthEnvironment } from './types'
 
-export function isProduction(config: Pick<AuthConfig, "environment">): boolean {
-  return config.environment === "production";
+export function isProduction(config: Pick<AuthConfig, 'environment'>): boolean {
+  return config.environment === 'production'
 }
 
-export function isDevelopment(config: Pick<AuthConfig, "environment">): boolean {
-  return config.environment === "development";
+export function isDevelopment(config: Pick<AuthConfig, 'environment'>): boolean {
+  return config.environment === 'development'
 }
 
-export function isTest(config: Pick<AuthConfig, "environment">): boolean {
-  return config.environment === "test";
+export function isTest(config: Pick<AuthConfig, 'environment'>): boolean {
+  return config.environment === 'test'
 }
 
 /** Parses `process.env.NODE_ENV` (or an arbitrary string) into an AuthEnvironment, defaulting to "development". */
 export function parseEnvironment(value: string | undefined): AuthEnvironment {
-  if (value === "production" || value === "test" || value === "development") {
-    return value;
+  if (value === 'production' || value === 'test' || value === 'development') {
+    return value
   }
-  return "development";
+  return 'development'
 }

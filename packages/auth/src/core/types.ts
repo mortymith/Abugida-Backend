@@ -6,15 +6,15 @@
  * plugged in without touching core logic.
  */
 
-import type { BetterAuthOptions } from "better-auth";
-import type { Logger } from "./logger";
+import type { BetterAuthOptions } from 'better-auth'
+import type { Logger } from './logger'
 
 // ---------------------------------------------------------------------------
 // Environment
 // ---------------------------------------------------------------------------
 
 /** Supported deployment environments. Drives cookie/security defaults. */
-export type AuthEnvironment = "development" | "test" | "production";
+export type AuthEnvironment = 'development' | 'test' | 'production'
 
 // ---------------------------------------------------------------------------
 // Database schema injection
@@ -29,13 +29,13 @@ export type AuthEnvironment = "development" | "test" | "production";
  */
 export interface AuthDatabaseSchema {
   /** Drizzle table definition for application users. */
-  user: unknown;
+  user: unknown
   /** Drizzle table definition for active sessions (incl. refresh tokens). */
-  session: unknown;
+  session: unknown
   /** Drizzle table definition linking users to OAuth provider accounts. */
-  account: unknown;
+  account: unknown
   /** Drizzle table definition for email/OTP verification tokens. */
-  verification: unknown;
+  verification: unknown
 }
 
 /**
@@ -46,11 +46,11 @@ export interface AuthDatabaseSchema {
  */
 export interface AuthDatabaseConfig<TSchema extends AuthDatabaseSchema = AuthDatabaseSchema> {
   /** A Drizzle ORM instance (any Postgres driver). */
-  db: unknown;
+  db: unknown
   /** The injected schema tables, imported by the consuming app. */
-  schema: TSchema;
+  schema: TSchema
   /** Drizzle dialect. Only "pg" is supported today. */
-  provider: "pg";
+  provider: 'pg'
 }
 
 // ---------------------------------------------------------------------------
@@ -59,9 +59,9 @@ export interface AuthDatabaseConfig<TSchema extends AuthDatabaseSchema = AuthDat
 
 /** Credentials common to every OAuth 2.0 provider. */
 export interface BaseProviderCredentials {
-  clientId: string;
+  clientId: string
   /** Redirect URI registered with the provider console. */
-  redirectUri?: string;
+  redirectUri?: string
 }
 
 /**
@@ -69,17 +69,19 @@ export interface BaseProviderCredentials {
  * `google.ts` both satisfy this, and it's the shape a consumer implements to
  * register a brand-new provider (see README "Adding a provider").
  */
-export interface AuthProviderDefinition<TCredentials extends BaseProviderCredentials = BaseProviderCredentials> {
+export interface AuthProviderDefinition<
+  TCredentials extends BaseProviderCredentials = BaseProviderCredentials,
+> {
   /** Unique provider id, e.g. "apple" | "google" | "github". */
-  id: string;
+  id: string
   /** Human-readable name for logs/UI. */
-  name: string;
+  name: string
   /** OAuth scopes requested by default. */
-  scopes: string[];
+  scopes: string[]
   /** Builds the better-auth `socialProviders` entry for this provider. */
-  toBetterAuthConfig(credentials: TCredentials): Record<string, unknown>;
+  toBetterAuthConfig(credentials: TCredentials): Record<string, unknown>
   /** Validates credentials at startup, throwing a typed AuthConfigError. */
-  validateCredentials(credentials: TCredentials): void;
+  validateCredentials(credentials: TCredentials): void
 }
 
 // ---------------------------------------------------------------------------
@@ -88,26 +90,26 @@ export interface AuthProviderDefinition<TCredentials extends BaseProviderCredent
 
 export interface AppleProviderCredentials extends BaseProviderCredentials {
   /** Apple "Services ID" — used as the OAuth client_id. */
-  clientId: string;
+  clientId: string
   /** Apple Team ID (10-char alphanumeric). */
-  teamId: string;
+  teamId: string
   /** Key ID for the private key registered in App Store Connect. */
-  keyId: string;
+  keyId: string
   /** PKCS#8 private key (.p8 contents) used to sign the client secret JWT. */
-  privateKey: string;
+  privateKey: string
   /** Client secret lifetime in seconds. Apple caps this at 15777000 (~6mo). */
-  clientSecretTtlSeconds?: number;
+  clientSecretTtlSeconds?: number
   /** true for native iOS/macOS app flows using Sign in with Apple SDK. */
-  appBundleIdentifier?: string;
+  appBundleIdentifier?: string
 }
 
 export interface GoogleProviderCredentials extends BaseProviderCredentials {
-  clientId: string;
-  clientSecret: string;
+  clientId: string
+  clientSecret: string
   /** Additional client IDs to accept id_tokens from (e.g. iOS + web clients). */
-  additionalClientIds?: string[];
-  accessType?: "online" | "offline";
-  prompt?: "none" | "consent" | "select_account";
+  additionalClientIds?: string[]
+  accessType?: 'online' | 'offline'
+  prompt?: 'none' | 'consent' | 'select_account'
 }
 
 // ---------------------------------------------------------------------------
@@ -116,33 +118,36 @@ export interface GoogleProviderCredentials extends BaseProviderCredentials {
 
 export interface SessionConfig {
   /** Session lifetime in seconds. Default: 30 days. */
-  expiresInSeconds?: number;
+  expiresInSeconds?: number
   /** Sliding-expiration refresh window in seconds. Default: 1 day. */
-  updateAgeSeconds?: number;
+  updateAgeSeconds?: number
   cookie?: {
-    name?: string;
-    domain?: string;
-    secure?: boolean;
-    sameSite?: "lax" | "strict" | "none";
-  };
+    name?: string
+    domain?: string
+    secure?: boolean
+    sameSite?: 'lax' | 'strict' | 'none'
+  }
 }
 
 export interface CorsConfig {
-  origins: string[];
-  credentials?: boolean;
+  origins: string[]
+  credentials?: boolean
 }
 
 export interface RateLimitConfig {
   /** Requests allowed within `windowSeconds` per IP+route. */
-  max: number;
-  windowSeconds: number;
+  max: number
+  windowSeconds: number
 }
 
 export interface ProvidersConfig {
-  apple?: AppleProviderCredentials;
-  google?: GoogleProviderCredentials;
+  apple?: AppleProviderCredentials
+  google?: GoogleProviderCredentials
   /** Escape hatch for consumer-defined providers (see AuthProviderDefinition). */
-  custom?: Record<string, { definition: AuthProviderDefinition; credentials: BaseProviderCredentials }>;
+  custom?: Record<
+    string,
+    { definition: AuthProviderDefinition; credentials: BaseProviderCredentials }
+  >
 }
 
 /**
@@ -154,37 +159,45 @@ export interface ProvidersConfig {
  */
 export interface TokensConfig {
   /** Issuer claim for minted JWTs. Default: the configured baseUrl. */
-  issuer?: string;
+  issuer?: string
   /** Audience claim. Default: "abugida" — must match PowerSync client_auth.audience. */
-  audience?: string | string[];
+  audience?: string | string[]
 }
 
 export interface AuthConfig<TSchema extends AuthDatabaseSchema = AuthDatabaseSchema> {
-  environment: AuthEnvironment;
+  environment: AuthEnvironment
   /** Base URL of the app serving the auth endpoints, e.g. https://api.abugida.com */
-  baseUrl: string;
+  baseUrl: string
+  /**
+   * Path prefix under which better-auth's request handler is mounted by the
+   * consuming app (e.g. `/auth`). Must equal the framework route prefix so
+   * better-auth can resolve its internal endpoints (`/sign-in/social`,
+   * `/sign-up/email`, `/callback/:provider`, `/get-session`, `/sign-out`, …)
+   * against incoming request paths. Default: `/auth`.
+   */
+  basePath?: string
   /** Secret used for signing/encrypting sessions & CSRF tokens. */
-  secret: string;
-  database: AuthDatabaseConfig<TSchema>;
-  providers: ProvidersConfig;
-  session?: SessionConfig;
-  cors?: CorsConfig;
-  rateLimit?: RateLimitConfig;
+  secret: string
+  database: AuthDatabaseConfig<TSchema>
+  providers: ProvidersConfig
+  session?: SessionConfig
+  cors?: CorsConfig
+  rateLimit?: RateLimitConfig
   /** Enables JWT issuance (jwt + bearer plugins). Omit to disable entirely. */
-  tokens?: TokensConfig;
+  tokens?: TokensConfig
   /**
    * Structured logger for startup validation, provider errors, session
    * errors, and rate-limit events. Defaults to a no-op logger — see
    * `core/logger.ts`. Never receives secrets; sensitive fields are redacted
    * before any log call.
    */
-  logger?: Logger;
+  logger?: Logger
   /**
    * Escape hatch for advanced consumers who need to pass raw better-auth
    * options through. Merged in last, after our derived config, so it can
    * override anything.
    */
-  betterAuthOverrides?: Partial<BetterAuthOptions>;
+  betterAuthOverrides?: Partial<BetterAuthOptions>
 }
 
 // ---------------------------------------------------------------------------
@@ -192,52 +205,52 @@ export interface AuthConfig<TSchema extends AuthDatabaseSchema = AuthDatabaseSch
 // ---------------------------------------------------------------------------
 
 export type AuthErrorKind =
-  | "config_invalid"
-  | "provider_error"
-  | "session_expired"
-  | "session_invalid"
-  | "csrf_mismatch"
-  | "rate_limited"
-  | "unauthorized"
-  | "unknown";
+  | 'config_invalid'
+  | 'provider_error'
+  | 'session_expired'
+  | 'session_invalid'
+  | 'csrf_mismatch'
+  | 'rate_limited'
+  | 'unauthorized'
+  | 'unknown'
 
 export interface AuthErrorBase {
-  kind: AuthErrorKind;
+  kind: AuthErrorKind
   /** Safe to show to end users; never includes secrets or stack traces. */
-  message: string;
+  message: string
   /** Original cause, for server-side logging only — never serialize this to clients. */
-  cause?: unknown;
+  cause?: unknown
 }
 
 export interface AuthConfigError extends AuthErrorBase {
-  kind: "config_invalid";
-  field: string;
+  kind: 'config_invalid'
+  field: string
 }
 
 export interface AuthProviderError extends AuthErrorBase {
-  kind: "provider_error";
-  providerId: string;
+  kind: 'provider_error'
+  providerId: string
 }
 
 export interface AuthSessionError extends AuthErrorBase {
-  kind: "session_expired" | "session_invalid";
+  kind: 'session_expired' | 'session_invalid'
 }
 
 export interface AuthCsrfError extends AuthErrorBase {
-  kind: "csrf_mismatch";
+  kind: 'csrf_mismatch'
 }
 
 export interface AuthRateLimitError extends AuthErrorBase {
-  kind: "rate_limited";
-  retryAfterSeconds: number;
+  kind: 'rate_limited'
+  retryAfterSeconds: number
 }
 
 export interface AuthUnauthorizedError extends AuthErrorBase {
-  kind: "unauthorized";
+  kind: 'unauthorized'
 }
 
 export interface AuthUnknownError extends AuthErrorBase {
-  kind: "unknown";
+  kind: 'unknown'
 }
 
 export type AuthError =
@@ -247,15 +260,15 @@ export type AuthError =
   | AuthCsrfError
   | AuthRateLimitError
   | AuthUnauthorizedError
-  | AuthUnknownError;
+  | AuthUnknownError
 
 /** Result type used throughout the package instead of throwing across module boundaries. */
-export type AuthResult<T> = { ok: true; value: T } | { ok: false; error: AuthError };
+export type AuthResult<T> = { ok: true; value: T } | { ok: false; error: AuthError }
 
 export function ok<T>(value: T): AuthResult<T> {
-  return { ok: true, value };
+  return { ok: true, value }
 }
 
 export function err(error: AuthError): AuthResult<never> {
-  return { ok: false, error };
+  return { ok: false, error }
 }

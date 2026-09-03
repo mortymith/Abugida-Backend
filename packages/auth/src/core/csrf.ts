@@ -13,17 +13,17 @@
  * it does not replace better-auth's own CSRF handling, it backstops it.
  */
 
-import type { AuthResult } from "./types";
-import { ok, err } from "./types";
+import type { AuthResult } from './types'
+import { ok, err } from './types'
 
 export interface OriginCheckOptions {
   /** Allowed origins, e.g. config.cors.origins. Exact match, scheme included. */
-  trustedOrigins: string[];
+  trustedOrigins: string[]
   /** HTTP methods this check applies to. Default: mutating methods only. */
-  methods?: string[];
+  methods?: string[]
 }
 
-const DEFAULT_PROTECTED_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
+const DEFAULT_PROTECTED_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE']
 
 /**
  * Verifies that a state-changing request's `Origin` header (falling back to
@@ -33,33 +33,39 @@ const DEFAULT_PROTECTED_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
  */
 export function verifyRequestOrigin(
   request: { method: string; headers: Headers },
-  options: OriginCheckOptions
+  options: OriginCheckOptions,
 ): AuthResult<true> {
-  const protectedMethods = options.methods ?? DEFAULT_PROTECTED_METHODS;
+  const protectedMethods = options.methods ?? DEFAULT_PROTECTED_METHODS
 
   if (!protectedMethods.includes(request.method.toUpperCase())) {
-    return ok(true as const);
+    return ok(true as const)
   }
 
-  const originHeader = request.headers.get("origin");
-  const refererHeader = request.headers.get("referer");
-  const candidate = originHeader ?? (refererHeader ? safeOriginFromUrl(refererHeader) : null);
+  const originHeader = request.headers.get('origin')
+  const refererHeader = request.headers.get('referer')
+  const candidate = originHeader ?? (refererHeader ? safeOriginFromUrl(refererHeader) : null)
 
   if (!candidate) {
-    return err({ kind: "csrf_mismatch", message: "Missing Origin/Referer header on a state-changing request." });
+    return err({
+      kind: 'csrf_mismatch',
+      message: 'Missing Origin/Referer header on a state-changing request.',
+    })
   }
 
   if (!options.trustedOrigins.includes(candidate)) {
-    return err({ kind: "csrf_mismatch", message: "Request origin is not in the trusted origins allowlist." });
+    return err({
+      kind: 'csrf_mismatch',
+      message: 'Request origin is not in the trusted origins allowlist.',
+    })
   }
 
-  return ok(true as const);
+  return ok(true as const)
 }
 
 function safeOriginFromUrl(url: string): string | null {
   try {
-    return new URL(url).origin;
+    return new URL(url).origin
   } catch {
-    return null;
+    return null
   }
 }

@@ -2,45 +2,54 @@
  * @module middleware/hono
  *
  * Hono integration. Two exports:
- *   - `mountAuthRoutes(app, auth)` — mounts /auth/login, /auth/callback,
- *     /auth/logout (and the rest of better-auth's handler) under one prefix.
+ *   - `mountAuthRoutes(app, auth)` — mounts better-auth's full request
+ *     handler (OAuth sign-in, callback, session, sign-out, email auth, …)
+ *     under `auth.config.basePath` (default `/auth`) via a catch-all.
  *   - `requireSession()` — Hono middleware for protecting routes, populating
  *     `c.get("session")` / `c.get("user")` for downstream handlers.
  */
 
-import type { Context, Hono, MiddlewareHandler } from "hono";
-import type { AuthInstance } from "../../core/auth";
-import type { ResolvedSession } from "../../core/session";
-import { verifyRequestOrigin } from "../../core/csrf";
+import type { Context, Hono, MiddlewareHandler } from 'hono'
+import type { AuthInstance } from '../../core/auth'
+import type { ResolvedSession } from '../../core/session'
+import { verifyRequestOrigin } from '../../core/csrf'
 
 export interface HonoAuthVariables {
-  session: ResolvedSession["session"] | null;
-  user: ResolvedSession["user"] | null;
+  session: ResolvedSession['session'] | null
+  user: ResolvedSession['user'] | null
 }
 
 export interface MountAuthRoutesOptions {
-  /** Path prefix better-auth's catch-all handler is mounted under. Default "/auth". */
-  basePath?: string;
+  /**
+   * Path prefix better-auth's catch-all handler is mounted under. Defaults to
+   * `auth.config.basePath` (itself `/auth` when unset). Must match the
+   * `basePath` the auth instance was configured with, so better-auth can
+   * resolve its internal endpoints against incoming request paths.
+   */
+  basePath?: string
 }
 
 /**
- * Mounts better-auth's request handler (which implements the full OAuth
- * flow, i.e. GET/POST /auth/login, /auth/callback, /auth/logout, session
- * endpoints, etc.) onto a Hono app, plus a `/session/refresh` endpoint this
- * package adds for forcing a cache-bypassing session re-check.
+ * Mounts better-auth's request handler (which implements the full OAuth and
+ * session flow, i.e. `POST /sign-in/social`, `POST /sign-up/email`,
+ * `GET /callback/:provider`, `GET /get-session`, `POST /sign-out`, …) under
+ * `auth.config.basePath` (default `/auth`), plus a `/session/refresh`
+ * endpoint this package adds for forcing a cache-bypassing session re-check.
  *
  * @example
  * ```ts
  * const app = new Hono();
- * mountAuthRoutes(app, auth);
+ * mountAuthRoutes(app, auth); // better-auth endpoints under /auth/*
  * ```
  */
-export function mountAuthRoutes<TBindings extends Record<string, unknown> = Record<string, unknown>>(
+export function mountAuthRoutes<
+  TBindings extends Record<string, unknown> = Record<string, unknown>,
+>(
   app: Hono<{ Bindings: TBindings; Variables: HonoAuthVariables }>,
   auth: AuthInstance,
-  options: MountAuthRoutesOptions = {}
+  options: MountAuthRoutesOptions = {},
 ): void {
-  const basePath = options.basePath ?? "/auth";
+  const basePath = options.basePath ?? auth.config.basePath ?? '/auth'
 
   // Register the specific route BEFORE the `/auth/*` catch-all, or Hono's
   // router would match the wildcard first and this endpoint would never run.
@@ -49,20 +58,25 @@ export function mountAuthRoutes<TBindings extends Record<string, unknown> = Reco
   // 60s cookie cache would otherwise serve stale data.
   app.post(`${basePath}/session/refresh`, async (c) => {
     if (auth.config.cors?.origins) {
-      const originCheck = verifyRequestOrigin(c.req.raw, { trustedOrigins: auth.config.cors.origins });
+      const originCheck = verifyRequestOrigin(c.req.raw, {
+        trustedOrigins: auth.config.cors.origins,
+      })
       if (!originCheck.ok) {
-        return c.json({ error: { kind: originCheck.error.kind, message: originCheck.error.message } }, 403);
+        return c.json(
+          { error: { kind: originCheck.error.kind, message: originCheck.error.message } },
+          403,
+        )
       }
     }
 
-    const result = await auth.refreshSession(c.req.raw.headers);
+    const result = await auth.refreshSession(c.req.raw.headers)
     if (!result.ok) {
-      return c.json({ error: { kind: result.error.kind, message: result.error.message } }, 401);
+      return c.json({ error: { kind: result.error.kind, message: result.error.message } }, 401)
     }
-    return c.json({ session: result.value.session, user: result.value.user });
-  });
+    return c.json({ session: result.value.session, user: result.value.user })
+  })
 
-  app.on(["GET", "POST"], `${basePath}/*`, (c: Context) => auth.raw.handler(c.req.raw));
+  app.on(['GET', 'POST'], `${basePath}/*`, (c: Context) => auth.raw.handler(c.req.raw))
 }
 
 /**
@@ -80,16 +94,19 @@ export function mountAuthRoutes<TBindings extends Record<string, unknown> = Reco
  */
 export function csrfProtection(auth: AuthInstance): MiddlewareHandler {
   return async (c, next) => {
-    const trustedOrigins = auth.config.cors?.origins;
+    const trustedOrigins = auth.config.cors?.origins
     if (trustedOrigins && trustedOrigins.length > 0) {
-      const result = verifyRequestOrigin(c.req.raw, { trustedOrigins });
+      const result = verifyRequestOrigin(c.req.raw, { trustedOrigins })
       if (!result.ok) {
-        auth.logger.warn("Blocked request failing origin check", { path: c.req.path, method: c.req.method });
-        return c.json({ error: { kind: result.error.kind, message: result.error.message } }, 403);
+        auth.logger.warn('Blocked request failing origin check', {
+          path: c.req.path,
+          method: c.req.method,
+        })
+        return c.json({ error: { kind: result.error.kind, message: result.error.message } }, 403)
       }
     }
-    await next();
-  };
+    await next()
+  }
 }
 
 /**
@@ -97,18 +114,20 @@ export function csrfProtection(auth: AuthInstance): MiddlewareHandler {
  * context, WITHOUT rejecting unauthenticated requests. Useful for routes
  * that behave differently when logged in vs. anonymous.
  */
-export function withSession(auth: AuthInstance): MiddlewareHandler<{ Variables: HonoAuthVariables }> {
+export function withSession(
+  auth: AuthInstance,
+): MiddlewareHandler<{ Variables: HonoAuthVariables }> {
   return async (c, next) => {
-    const result = await auth.getSession(c.req.raw.headers);
+    const result = await auth.getSession(c.req.raw.headers)
     if (result.ok) {
-      c.set("session", result.value.session);
-      c.set("user", result.value.user);
+      c.set('session', result.value.session)
+      c.set('user', result.value.user)
     } else {
-      c.set("session", null);
-      c.set("user", null);
+      c.set('session', null)
+      c.set('user', null)
     }
-    await next();
-  };
+    await next()
+  }
 }
 
 /**
@@ -116,23 +135,28 @@ export function withSession(auth: AuthInstance): MiddlewareHandler<{ Variables: 
  * Compose after `withSession` isn't required — this resolves the session
  * itself if it hasn't already been set on context.
  */
-export function requireSession(auth: AuthInstance): MiddlewareHandler<{ Variables: HonoAuthVariables }> {
+export function requireSession(
+  auth: AuthInstance,
+): MiddlewareHandler<{ Variables: HonoAuthVariables }> {
   return async (c, next) => {
-    let session = c.get("session");
-    let user = c.get("user");
+    let session = c.get('session')
+    let user = c.get('user')
 
     if (!session || !user) {
-      const result = await auth.getSession(c.req.raw.headers);
+      const result = await auth.getSession(c.req.raw.headers)
       if (!result.ok) {
-        auth.logger.debug("Rejected unauthenticated request", { path: c.req.path, kind: result.error.kind });
-        return c.json({ error: { kind: result.error.kind, message: result.error.message } }, 401);
+        auth.logger.debug('Rejected unauthenticated request', {
+          path: c.req.path,
+          kind: result.error.kind,
+        })
+        return c.json({ error: { kind: result.error.kind, message: result.error.message } }, 401)
       }
-      session = result.value.session;
-      user = result.value.user;
-      c.set("session", session);
-      c.set("user", user);
+      session = result.value.session
+      user = result.value.user
+      c.set('session', session)
+      c.set('user', user)
     }
 
-    await next();
-  };
+    await next()
+  }
 }
