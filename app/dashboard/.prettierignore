@@ -1,3 +1,15 @@
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
+
+# Dependencies / build outputs
+node_modules
+dist
+build
+.turbo
+coverage
+.next
+.vercel
+
+# Generated code
+*.gen.ts
