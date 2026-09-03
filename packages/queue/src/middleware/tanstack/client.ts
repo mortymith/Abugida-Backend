@@ -5,15 +5,15 @@
  * and API routes in TanStack Start.
  */
 
-import type { QueueClient } from "../../core/types.js";
-import type { QueueConfig } from "../../config/schema.js";
-import { createQueueClient } from "../../core/client.js";
+import type { QueueClient } from '../../core/types.js'
+import type { QueueConfig } from '../../config/schema.js'
+import { createQueueClient } from '../../core/client.js'
 
 // ---------------------------------------------------------------------------
 // Singleton
 // ---------------------------------------------------------------------------
 
-let _client: QueueClient | null = null;
+let _client: QueueClient | null = null
 
 /**
  * Get or create the singleton queue client for TanStack Start.
@@ -31,9 +31,9 @@ let _client: QueueClient | null = null;
  */
 export function getTanStackQueueClient(config: QueueConfig): QueueClient {
   if (!_client) {
-    _client = createQueueClient(config);
+    _client = createQueueClient(config)
   }
-  return _client;
+  return _client
 }
 
 /**
@@ -42,8 +42,8 @@ export function getTanStackQueueClient(config: QueueConfig): QueueClient {
  */
 export async function closeTanStackQueueClient(): Promise<void> {
   if (_client) {
-    await _client.close();
-    _client = null;
+    await _client.close()
+    _client = null
   }
 }
 
@@ -52,5 +52,5 @@ export async function closeTanStackQueueClient(): Promise<void> {
  * Useful for testing or isolated contexts.
  */
 export function createTanStackQueueClient(config: QueueConfig): QueueClient {
-  return createQueueClient(config);
+  return createQueueClient(config)
 }

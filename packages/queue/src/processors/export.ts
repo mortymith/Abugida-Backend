@@ -4,9 +4,9 @@
  * Generates user data exports in JSON or CSV format.
  */
 
-import type { JobProcessor, ProcessorEntry, DataExportJobData } from "../core/types.js";
-import { JobType } from "../core/types.js";
-import { QUEUE_NAMES } from "../definitions/queues.js";
+import type { JobProcessor, ProcessorEntry, DataExportJobData } from '../core/types.js'
+import { JobType } from '../core/types.js'
+import { QUEUE_NAMES } from '../definitions/queues.js'
 
 // ---------------------------------------------------------------------------
 // Data Export Processor
@@ -24,12 +24,12 @@ import { QUEUE_NAMES } from "../definitions/queues.js";
  * - Record export in audit log
  */
 export const processDataExport: JobProcessor<DataExportJobData> = async (data, job) => {
-  const { userId, format, idempotencyKey } = data;
+  const { userId, format, idempotencyKey } = data
 
   console.debug(`[export:data] Processing data export for user=${userId} format=${format}`, {
     jobId: job.id,
     idempotencyKey,
-  });
+  })
 
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
@@ -61,11 +61,11 @@ export const processDataExport: JobProcessor<DataExportJobData> = async (data, j
     userId,
     format,
     exportId: `export_${job.id}`,
-    status: "completed",
+    status: 'completed',
     downloadUrl: `/api/exports/${job.id}/download`,
     processedAt: new Date().toISOString(),
-  };
-};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Processor Entries
@@ -78,4 +78,4 @@ export const exportProcessors: ProcessorEntry<DataExportJobData>[] = [
     queueName: QUEUE_NAMES.EXPORTS,
     concurrency: 2,
   },
-];
+]

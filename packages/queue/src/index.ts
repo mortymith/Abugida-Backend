@@ -45,14 +45,14 @@ export {
   type MaintenanceTaskJobData,
   type DataRetentionJobData,
   type JobDataMap,
-} from "./core/types.js";
+} from './core/types.js'
 
 // ---------------------------------------------------------------------------
 // Core Implementation
 // ---------------------------------------------------------------------------
 
-export { createQueueClient } from "./core/client.js";
-export { createQueueWorker } from "./core/worker.js";
+export { createQueueClient } from './core/client.js'
+export { createQueueWorker } from './core/worker.js'
 export {
   createConnection,
   createBullMQConnection,
@@ -60,7 +60,7 @@ export {
   closeAllConnections,
   checkConnectionHealth,
   deriveHealthStatus,
-} from "./core/connection.js";
+} from './core/connection.js'
 
 // ---------------------------------------------------------------------------
 // Queue Definitions
@@ -73,27 +73,27 @@ export {
   PRIORITY,
   JOB_PRIORITY_MAP,
   getAllQueueNames,
-} from "./definitions/queues.js";
+} from './definitions/queues.js'
 
-export { type TypedProcessors, ProcessorRegistry } from "./definitions/processors.js";
+export { type TypedProcessors, ProcessorRegistry } from './definitions/processors.js'
 
 // ---------------------------------------------------------------------------
 // Processors
 // ---------------------------------------------------------------------------
 
-export { allProcessors, getProcessorsForQueue, getProcessorForJobType } from "./processors/index.js";
+export { allProcessors, getProcessorsForQueue, getProcessorForJobType } from './processors/index.js'
 
 // Re-export individual processor modules for selective imports
-export { purchaseProcessors } from "./processors/purchase.js";
-export { enrollmentProcessors } from "./processors/enrollment.js";
-export { lessonProcessors } from "./processors/lesson.js";
-export { exportProcessors } from "./processors/export.js";
-export { webhookProcessors } from "./processors/webhook.js";
-export { notificationProcessors } from "./processors/notification.js";
-export { moderationProcessors } from "./processors/moderation.js";
-export { statisticsProcessors } from "./processors/statistics.js";
-export { auditProcessors } from "./processors/audit.js";
-export { maintenanceProcessors } from "./processors/maintenance.js";
+export { purchaseProcessors } from './processors/purchase.js'
+export { enrollmentProcessors } from './processors/enrollment.js'
+export { lessonProcessors } from './processors/lesson.js'
+export { exportProcessors } from './processors/export.js'
+export { webhookProcessors } from './processors/webhook.js'
+export { notificationProcessors } from './processors/notification.js'
+export { moderationProcessors } from './processors/moderation.js'
+export { statisticsProcessors } from './processors/statistics.js'
+export { auditProcessors } from './processors/audit.js'
+export { maintenanceProcessors } from './processors/maintenance.js'
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -105,14 +105,14 @@ export type {
   QueueSpecificConfig,
   MonitoringConfig,
   LoggingConfig,
-} from "./config/schema.js";
+} from './config/schema.js'
 export {
   getDefaultConfig,
   mergeWithDefaults,
   REDIS_DEFAULTS,
   MONITORING_DEFAULTS,
   LOGGING_DEFAULTS,
-} from "./config/defaults.js";
+} from './config/defaults.js'
 export {
   detectEnvironment,
   isProduction,
@@ -122,16 +122,16 @@ export {
   requireEnv,
   envWithDefault,
   envNumber,
-} from "./config/env.js";
+} from './config/env.js'
 
 // ---------------------------------------------------------------------------
 // Monitoring
 // ---------------------------------------------------------------------------
 
-export { getLogger, type Logger } from "./monitoring/logger.js";
-export { runHealthCheck, aggregateHealthStatus } from "./monitoring/health.js";
-export { captureMetrics, incrementCounter, recordTiming } from "./monitoring/metrics.js";
-export { generateDashboardHtml } from "./monitoring/dashboard.js";
+export { getLogger, type Logger } from './monitoring/logger.js'
+export { runHealthCheck, aggregateHealthStatus } from './monitoring/health.js'
+export { captureMetrics, incrementCounter, recordTiming } from './monitoring/metrics.js'
+export { generateDashboardHtml } from './monitoring/dashboard.js'
 
 // ---------------------------------------------------------------------------
 // Utilities
@@ -143,7 +143,7 @@ export {
   acquireProcessingLock,
   storeIdempotencyResult,
   markProcessingFailed,
-} from "./utils/idempotency.js";
+} from './utils/idempotency.js'
 
 export {
   calculateBackoff,
@@ -151,43 +151,47 @@ export {
   withConditionalRetry,
   RetryPredicates,
   type RetryOptions,
-} from "./utils/retry.js";
+} from './utils/retry.js'
 
-export { validateJobData, assertJobData, type ValidationResult } from "./utils/validators.js";
+export { validateJobData, assertJobData, type ValidationResult } from './utils/validators.js'
 
-export { classifyError, safeErrorMessage } from "./utils/errors.js";
+export { classifyError, safeErrorMessage } from './utils/errors.js'
 
 // ---------------------------------------------------------------------------
 // Framework Middleware
 // ---------------------------------------------------------------------------
 
-export { createHonoQueueClient, createQueueMiddleware, type HonoQueueContext } from "./middleware/hono/client.js";
+export {
+  createHonoQueueClient,
+  createQueueMiddleware,
+  type HonoQueueContext,
+} from './middleware/hono/client.js'
 
-export { createHonoWorker, type HonoWorkerOptions } from "./middleware/hono/worker.js";
+export { createHonoWorker, type HonoWorkerOptions } from './middleware/hono/worker.js'
 
 export {
   getTanStackQueueClient,
   closeTanStackQueueClient,
   createTanStackQueueClient,
-} from "./middleware/tanstack/client.js";
+} from './middleware/tanstack/client.js'
 
 export {
   createTanStackWorker,
   setupGracefulShutdown,
   type TanStackWorkerOptions,
-} from "./middleware/tanstack/worker.js";
+} from './middleware/tanstack/worker.js'
 
 // ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
 
-import type { QueueConfig } from "./config/schema.js";
-import { createQueueClient } from "./core/client.js";
-import { createQueueWorker } from "./core/worker.js";
-import type { AnyProcessorEntry } from "./core/types.js";
-import { runHealthCheck } from "./monitoring/health.js";
-import { captureMetrics } from "./monitoring/metrics.js";
-import { closeAllConnections } from "./core/connection.js";
+import type { QueueConfig } from './config/schema.js'
+import { createQueueClient } from './core/client.js'
+import { createQueueWorker } from './core/worker.js'
+import type { AnyProcessorEntry } from './core/types.js'
+import { runHealthCheck } from './monitoring/health.js'
+import { captureMetrics } from './monitoring/metrics.js'
+import { closeAllConnections } from './core/connection.js'
 
 /**
  * Main factory: create the complete queue system (client + worker + monitoring).
@@ -220,7 +224,7 @@ import { closeAllConnections } from "./core/connection.js";
  * await queueSystem.shutdown();
  * ```
  */
-export function createQueueSystem(config: QueueConfig): import("./core/types.js").QueueFactory {
+export function createQueueSystem(config: QueueConfig): import('./core/types.js').QueueFactory {
   return {
     createClient: () => createQueueClient(config),
 
@@ -231,7 +235,7 @@ export function createQueueSystem(config: QueueConfig): import("./core/types.js"
     getMetrics: () => captureMetrics(config),
 
     shutdown: async () => {
-      await closeAllConnections();
+      await closeAllConnections()
     },
-  };
+  }
 }

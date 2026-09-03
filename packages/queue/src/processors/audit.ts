@@ -4,9 +4,9 @@
  * from the critical path to a background queue for better performance.
  */
 
-import type { JobProcessor, ProcessorEntry, AuditLogJobData } from "../core/types.js";
-import { JobType } from "../core/types.js";
-import { QUEUE_NAMES } from "../definitions/queues.js";
+import type { JobProcessor, ProcessorEntry, AuditLogJobData } from '../core/types.js'
+import { JobType } from '../core/types.js'
+import { QUEUE_NAMES } from '../definitions/queues.js'
 
 // ---------------------------------------------------------------------------
 // Audit Log Processor
@@ -22,12 +22,15 @@ import { QUEUE_NAMES } from "../definitions/queues.js";
  * - Handle bulk audit writes efficiently
  */
 export const processAuditLog: JobProcessor<AuditLogJobData> = async (data, job) => {
-  const { action, actorId, entityType, entityId, idempotencyKey } = data;
+  const { action, actorId, entityType, entityId, idempotencyKey } = data
 
-  console.debug(`[audit:log] Recording audit action="${action}" actor=${actorId} entity=${entityType}/${entityId}`, {
-    jobId: job.id,
-    idempotencyKey,
-  });
+  console.debug(
+    `[audit:log] Recording audit action="${action}" actor=${actorId} entity=${entityType}/${entityId}`,
+    {
+      jobId: job.id,
+      idempotencyKey,
+    },
+  )
 
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
@@ -48,8 +51,8 @@ export const processAuditLog: JobProcessor<AuditLogJobData> = async (data, job) 
     entityType,
     entityId,
     loggedAt: new Date().toISOString(),
-  };
-};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Processor Entries
@@ -62,4 +65,4 @@ export const auditProcessors: ProcessorEntry<AuditLogJobData>[] = [
     queueName: QUEUE_NAMES.AUDIT,
     concurrency: 5,
   },
-];
+]

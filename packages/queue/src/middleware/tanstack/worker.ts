@@ -5,10 +5,10 @@
  * management and graceful shutdown.
  */
 
-import type { QueueWorker } from "../../core/types.js";
-import type { QueueConfig } from "../../config/schema.js";
-import { createQueueWorker } from "../../core/worker.js";
-import { allProcessors } from "../../processors/index.js";
+import type { QueueWorker } from '../../core/types.js'
+import type { QueueConfig } from '../../config/schema.js'
+import { createQueueWorker } from '../../core/worker.js'
+import { allProcessors } from '../../processors/index.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -16,9 +16,9 @@ import { allProcessors } from "../../processors/index.js";
 
 export interface TanStackWorkerOptions {
   /** Queue configuration. */
-  config: QueueConfig;
+  config: QueueConfig
   /** Custom processors (defaults to all). */
-  processors?: import("../../core/types.js").AnyProcessorEntry[];
+  processors?: import('../../core/types.js').AnyProcessorEntry[]
 }
 
 // ---------------------------------------------------------------------------
@@ -46,8 +46,8 @@ export interface TanStackWorkerOptions {
  * ```
  */
 export function createTanStackWorker(options: TanStackWorkerOptions): QueueWorker {
-  const { config, processors = allProcessors } = options;
-  return createQueueWorker(config, processors);
+  const { config, processors = allProcessors } = options
+  return createQueueWorker(config, processors)
 }
 
 /**
@@ -63,17 +63,17 @@ export function createTanStackWorker(options: TanStackWorkerOptions): QueueWorke
  */
 export function setupGracefulShutdown(worker: QueueWorker): void {
   const shutdown = async (signal: string) => {
-    console.log(`\n[queue:shutdown] Received ${signal}. Shutting down gracefully…`);
+    console.log(`\n[queue:shutdown] Received ${signal}. Shutting down gracefully…`)
     try {
-      await worker.stop();
-      console.log("[queue:shutdown] Worker stopped successfully.");
-      process.exit(0);
+      await worker.stop()
+      console.log('[queue:shutdown] Worker stopped successfully.')
+      process.exit(0)
     } catch (err) {
-      console.error("[queue:shutdown] Error during shutdown:", err);
-      process.exit(1);
+      console.error('[queue:shutdown] Error during shutdown:', err)
+      process.exit(1)
     }
-  };
+  }
 
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
-  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on('SIGTERM', () => shutdown('SIGTERM'))
+  process.on('SIGINT', () => shutdown('SIGINT'))
 }

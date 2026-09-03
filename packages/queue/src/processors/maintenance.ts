@@ -4,9 +4,14 @@
  * retention (GDPR compliance).
  */
 
-import type { AnyProcessorEntry, JobProcessor, MaintenanceTaskJobData, DataRetentionJobData } from "../core/types.js";
-import { JobType } from "../core/types.js";
-import { QUEUE_NAMES } from "../definitions/queues.js";
+import type {
+  AnyProcessorEntry,
+  JobProcessor,
+  MaintenanceTaskJobData,
+  DataRetentionJobData,
+} from '../core/types.js'
+import { JobType } from '../core/types.js'
+import { QUEUE_NAMES } from '../definitions/queues.js'
 
 // ---------------------------------------------------------------------------
 // Maintenance Task Processor
@@ -23,12 +28,12 @@ import { QUEUE_NAMES } from "../definitions/queues.js";
  * - `session_cleanup` – Remove expired sessions
  */
 export const processMaintenanceTask: JobProcessor<MaintenanceTaskJobData> = async (data, job) => {
-  const { taskName, idempotencyKey } = data;
+  const { taskName, idempotencyKey } = data
 
   console.debug(`[maintenance:task] Running maintenance task="${taskName}"`, {
     jobId: job.id,
     idempotencyKey,
-  });
+  })
 
   // TODO: Replace with actual task implementations:
   // switch (taskName) {
@@ -50,10 +55,10 @@ export const processMaintenanceTask: JobProcessor<MaintenanceTaskJobData> = asyn
 
   return {
     taskName,
-    status: "completed",
+    status: 'completed',
     processedAt: new Date().toISOString(),
-  };
-};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Data Retention Processor
@@ -70,12 +75,15 @@ export const processMaintenanceTask: JobProcessor<MaintenanceTaskJobData> = asyn
  * Processes in batches to avoid overwhelming the database.
  */
 export const processDataRetention: JobProcessor<DataRetentionJobData> = async (data, job) => {
-  const { entityType, olderThanDays, batchSize, idempotencyKey } = data;
+  const { entityType, olderThanDays, batchSize, idempotencyKey } = data
 
-  console.debug(`[maintenance:retention] Purging ${entityType} older than ${olderThanDays} days (batch=${batchSize})`, {
-    jobId: job.id,
-    idempotencyKey,
-  });
+  console.debug(
+    `[maintenance:retention] Purging ${entityType} older than ${olderThanDays} days (batch=${batchSize})`,
+    {
+      jobId: job.id,
+      idempotencyKey,
+    },
+  )
 
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
@@ -105,8 +113,8 @@ export const processDataRetention: JobProcessor<DataRetentionJobData> = async (d
     olderThanDays,
     totalDeleted: 0,
     processedAt: new Date().toISOString(),
-  };
-};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Processor Entries
@@ -125,4 +133,4 @@ export const maintenanceProcessors: AnyProcessorEntry[] = [
     queueName: QUEUE_NAMES.MAINTENANCE,
     concurrency: 1,
   },
-];
+]

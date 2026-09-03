@@ -11,24 +11,24 @@
 
 export interface RetryOptions {
   /** Maximum number of retry attempts (not including the initial attempt). Default: 3. */
-  maxAttempts: number;
+  maxAttempts: number
   /** Type of backoff strategy. Default: `"exponential"`. */
-  type: "fixed" | "exponential";
+  type: 'fixed' | 'exponential'
   /** Base delay in milliseconds. Default: `1000`. */
-  baseDelay: number;
+  baseDelay: number
   /** Maximum delay cap in milliseconds. Default: `30000`. */
-  maxDelay: number;
+  maxDelay: number
   /** Whether to add jitter to prevent thundering herd. Default: `true`. */
-  jitter: boolean;
+  jitter: boolean
 }
 
 export const DEFAULT_RETRY_OPTIONS: RetryOptions = {
   maxAttempts: 3,
-  type: "exponential",
+  type: 'exponential',
   baseDelay: 1000,
   maxDelay: 30_000,
   jitter: true,
-};
+}
 
 /**
  * Calculate the delay in ms before the next retry.
@@ -37,25 +37,25 @@ export const DEFAULT_RETRY_OPTIONS: RetryOptions = {
  * @param options - Retry configuration.
  */
 export function calculateBackoff(attempt: number, options: Partial<RetryOptions> = {}): number {
-  const opts = { ...DEFAULT_RETRY_OPTIONS, ...options };
-  let delay: number;
+  const opts = { ...DEFAULT_RETRY_OPTIONS, ...options }
+  let delay: number
 
-  if (opts.type === "exponential") {
-    delay = opts.baseDelay * Math.pow(2, attempt - 1);
+  if (opts.type === 'exponential') {
+    delay = opts.baseDelay * Math.pow(2, attempt - 1)
   } else {
-    delay = opts.baseDelay;
+    delay = opts.baseDelay
   }
 
   // Add jitter (±25%) before capping so maxDelay is a hard upper bound
   if (opts.jitter) {
-    const jitterRange = delay * 0.25;
-    delay = delay - jitterRange + Math.random() * jitterRange * 2;
+    const jitterRange = delay * 0.25
+    delay = delay - jitterRange + Math.random() * jitterRange * 2
   }
 
   // Cap at max delay
-  delay = Math.min(delay, opts.maxDelay);
+  delay = Math.min(delay, opts.maxDelay)
 
-  return Math.round(Math.max(0, delay));
+  return Math.round(Math.max(0, delay))
 }
 
 /**
@@ -66,24 +66,27 @@ export function calculateBackoff(attempt: number, options: Partial<RetryOptions>
  * @returns The function result.
  * @throws The last error if all retries are exhausted.
  */
-export async function withRetry<T>(fn: () => Promise<T>, options: Partial<RetryOptions> = {}): Promise<T> {
-  const opts = { ...DEFAULT_RETRY_OPTIONS, ...options };
-  let lastError: unknown;
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: Partial<RetryOptions> = {},
+): Promise<T> {
+  const opts = { ...DEFAULT_RETRY_OPTIONS, ...options }
+  let lastError: unknown
 
   for (let attempt = 0; attempt <= opts.maxAttempts; attempt++) {
     try {
-      return await fn();
+      return await fn()
     } catch (error) {
-      lastError = error;
+      lastError = error
 
       if (attempt < opts.maxAttempts) {
-        const delay = calculateBackoff(attempt + 1, opts);
-        await sleep(delay);
+        const delay = calculateBackoff(attempt + 1, opts)
+        await sleep(delay)
       }
     }
   }
 
-  throw lastError;
+  throw lastError
 }
 
 /**
@@ -97,27 +100,27 @@ export async function withRetry<T>(fn: () => Promise<T>, options: Partial<RetryO
 export async function withConditionalRetry<T>(
   fn: () => Promise<T>,
   shouldRetry: (error: unknown) => boolean,
-  options: Partial<RetryOptions> = {}
+  options: Partial<RetryOptions> = {},
 ): Promise<T> {
-  const opts = { ...DEFAULT_RETRY_OPTIONS, ...options };
-  let lastError: unknown;
+  const opts = { ...DEFAULT_RETRY_OPTIONS, ...options }
+  let lastError: unknown
 
   for (let attempt = 0; attempt <= opts.maxAttempts; attempt++) {
     try {
-      return await fn();
+      return await fn()
     } catch (error) {
-      lastError = error;
+      lastError = error
 
       if (attempt < opts.maxAttempts && shouldRetry(error)) {
-        const delay = calculateBackoff(attempt + 1, opts);
-        await sleep(delay);
+        const delay = calculateBackoff(attempt + 1, opts)
+        await sleep(delay)
       } else {
-        throw error;
+        throw error
       }
     }
   }
 
-  throw lastError;
+  throw lastError
 }
 
 // ---------------------------------------------------------------------------
@@ -125,7 +128,7 @@ export async function withConditionalRetry<T>(
 // ---------------------------------------------------------------------------
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**
@@ -135,15 +138,16 @@ export const RetryPredicates = {
   /** Retry on connection-related errors. */
   isConnectionError: (err: unknown) =>
     err instanceof Error &&
-    (err.message.includes("ECONNREFUSED") ||
-      err.message.includes("ETIMEDOUT") ||
-      err.message.includes("connection") ||
-      err.message.includes("ECONNRESET")),
+    (err.message.includes('ECONNREFUSED') ||
+      err.message.includes('ETIMEDOUT') ||
+      err.message.includes('connection') ||
+      err.message.includes('ECONNRESET')),
 
   /** Retry on timeout errors. */
   isTimeoutError: (err: unknown) =>
-    err instanceof Error && (err.message.includes("timeout") || err.message.includes("ETIMEOUT")),
+    err instanceof Error && (err.message.includes('timeout') || err.message.includes('ETIMEOUT')),
 
   /** Retry on transient (recoverable) errors. */
-  isTransientError: (err: unknown) => RetryPredicates.isConnectionError(err) || RetryPredicates.isTimeoutError(err),
-};
+  isTransientError: (err: unknown) =>
+    RetryPredicates.isConnectionError(err) || RetryPredicates.isTimeoutError(err),
+}

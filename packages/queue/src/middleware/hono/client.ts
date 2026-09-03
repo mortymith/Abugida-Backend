@@ -5,9 +5,9 @@
  * app context and exposes helper methods for enqueuing jobs from routes.
  */
 
-import type { QueueClient } from "../../core/types.js";
-import type { QueueConfig } from "../../config/schema.js";
-import { createQueueClient } from "../../core/client.js";
+import type { QueueClient } from '../../core/types.js'
+import type { QueueConfig } from '../../config/schema.js'
+import { createQueueClient } from '../../core/client.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -16,7 +16,7 @@ import { createQueueClient } from "../../core/client.js";
 /** Hono app context augmented with queue client. */
 export interface HonoQueueContext {
   /** The queue client bound to this Hono app. */
-  queue: QueueClient;
+  queue: QueueClient
 }
 
 // ---------------------------------------------------------------------------
@@ -45,7 +45,7 @@ export interface HonoQueueContext {
  * ```
  */
 export function createHonoQueueClient(config: QueueConfig): QueueClient {
-  return createQueueClient(config);
+  return createQueueClient(config)
 }
 
 /**
@@ -66,13 +66,13 @@ export function createHonoQueueClient(config: QueueConfig): QueueClient {
  * ```
  */
 export function createQueueMiddleware(config: QueueConfig) {
-  const client = createQueueClient(config);
+  const client = createQueueClient(config)
 
   return async function queueMiddleware(
     _c: { set: (key: string, value: unknown) => void },
-    _next: () => Promise<void>
+    _next: () => Promise<void>,
   ) {
-    _c.set("queue", client);
-    await _next();
-  };
+    _c.set('queue', client)
+    await _next()
+  }
 }

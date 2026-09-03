@@ -24,4 +24,4 @@ export {
   type MaintenanceTaskJobData,
   type DataRetentionJobData,
   type JobDataMap,
-} from "../core/types.js";
+} from '../core/types.js'

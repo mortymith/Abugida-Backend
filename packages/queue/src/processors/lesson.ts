@@ -8,9 +8,9 @@ import type {
   JobProcessor,
   LessonCompletionUpdateJobData,
   QuizGradeJobData,
-} from "../core/types.js";
-import { JobType } from "../core/types.js";
-import { QUEUE_NAMES } from "../definitions/queues.js";
+} from '../core/types.js'
+import { JobType } from '../core/types.js'
+import { QUEUE_NAMES } from '../definitions/queues.js'
 
 // ---------------------------------------------------------------------------
 // Lesson Completion Update Processor
@@ -25,13 +25,19 @@ import { QUEUE_NAMES } from "../definitions/queues.js";
  * - Trigger next lesson unlock if applicable
  * - Enqueue `ENROLLMENT_PROGRESS_UPDATE` job
  */
-export const processLessonCompletionUpdate: JobProcessor<LessonCompletionUpdateJobData> = async (data, job) => {
-  const { enrollmentId, lessonId, completed, idempotencyKey } = data;
+export const processLessonCompletionUpdate: JobProcessor<LessonCompletionUpdateJobData> = async (
+  data,
+  job,
+) => {
+  const { enrollmentId, lessonId, completed, idempotencyKey } = data
 
-  console.debug(`[lesson:completion] Updating lesson=${lessonId} enrollment=${enrollmentId} completed=${completed}`, {
-    jobId: job.id,
-    idempotencyKey,
-  });
+  console.debug(
+    `[lesson:completion] Updating lesson=${lessonId} enrollment=${enrollmentId} completed=${completed}`,
+    {
+      jobId: job.id,
+      idempotencyKey,
+    },
+  )
 
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
@@ -55,8 +61,8 @@ export const processLessonCompletionUpdate: JobProcessor<LessonCompletionUpdateJ
     lessonId,
     completed,
     processedAt: new Date().toISOString(),
-  };
-};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Quiz Grade Processor
@@ -73,12 +79,12 @@ export const processLessonCompletionUpdate: JobProcessor<LessonCompletionUpdateJ
  * - Allow retry if score is below passing threshold
  */
 export const processQuizGrade: JobProcessor<QuizGradeJobData> = async (data, job) => {
-  const { quizId, submissionId, answers, idempotencyKey } = data;
+  const { quizId, submissionId, answers, idempotencyKey } = data
 
   console.debug(`[quiz:grade] Grading quiz=${quizId} submission=${submissionId}`, {
     jobId: job.id,
     idempotencyKey,
-  });
+  })
 
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
@@ -113,7 +119,7 @@ export const processQuizGrade: JobProcessor<QuizGradeJobData> = async (data, job
   // }).onConflictDoNothing();
 
   // Placeholder result
-  const totalQuestions = Object.keys(answers).length;
+  const totalQuestions = Object.keys(answers).length
   return {
     submissionId,
     quizId,
@@ -121,8 +127,8 @@ export const processQuizGrade: JobProcessor<QuizGradeJobData> = async (data, job
     totalQuestions,
     passed: false, // Will be determined by actual grading
     processedAt: new Date().toISOString(),
-  };
-};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Processor Entries
@@ -141,4 +147,4 @@ export const lessonProcessors: AnyProcessorEntry[] = [
     queueName: QUEUE_NAMES.QUIZZES,
     concurrency: 10,
   },
-];
+]

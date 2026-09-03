@@ -5,7 +5,7 @@
  * contracts, and queue configuration types used across the entire package.
  */
 
-import type { Processor } from "bullmq";
+import type { Processor } from 'bullmq'
 
 // ---------------------------------------------------------------------------
 // Job Types
@@ -17,38 +17,38 @@ import type { Processor } from "bullmq";
  */
 export enum JobType {
   // Purchase (FR-400, FR-500)
-  PURCHASE_INITIATE = "PURCHASE_INITIATE",
-  PURCHASE_COMPLETE = "PURCHASE_COMPLETE",
+  PURCHASE_INITIATE = 'PURCHASE_INITIATE',
+  PURCHASE_COMPLETE = 'PURCHASE_COMPLETE',
 
   // Enrollment (FR-500)
-  BUNDLE_ENROLLMENT_CREATE = "BUNDLE_ENROLLMENT_CREATE",
-  ENROLLMENT_PROGRESS_UPDATE = "ENROLLMENT_PROGRESS_UPDATE",
+  BUNDLE_ENROLLMENT_CREATE = 'BUNDLE_ENROLLMENT_CREATE',
+  ENROLLMENT_PROGRESS_UPDATE = 'ENROLLMENT_PROGRESS_UPDATE',
 
   // Lesson & Quiz (FR-500)
-  LESSON_COMPLETION_UPDATE = "LESSON_COMPLETION_UPDATE",
-  QUIZ_GRADE = "QUIZ_GRADE",
+  LESSON_COMPLETION_UPDATE = 'LESSON_COMPLETION_UPDATE',
+  QUIZ_GRADE = 'QUIZ_GRADE',
 
   // Export (FR-904)
-  DATA_EXPORT = "DATA_EXPORT",
+  DATA_EXPORT = 'DATA_EXPORT',
 
   // Webhook (FR-400, FR-1000)
-  WEBHOOK_PROCESS = "WEBHOOK_PROCESS",
+  WEBHOOK_PROCESS = 'WEBHOOK_PROCESS',
 
   // Notification
-  SMS_NOTIFICATION = "SMS_NOTIFICATION",
-  EMAIL_NOTIFICATION = "EMAIL_NOTIFICATION",
+  SMS_NOTIFICATION = 'SMS_NOTIFICATION',
+  EMAIL_NOTIFICATION = 'EMAIL_NOTIFICATION',
 
   // Moderation
-  MODERATION_SUBMIT = "MODERATION_SUBMIT",
+  MODERATION_SUBMIT = 'MODERATION_SUBMIT',
 
   // Statistics
-  RECALCULATE_STATS = "RECALCULATE_STATS",
-  AGGREGATE_METRICS = "AGGREGATE_METRICS",
+  RECALCULATE_STATS = 'RECALCULATE_STATS',
+  AGGREGATE_METRICS = 'AGGREGATE_METRICS',
 
   // Audit & Maintenance
-  AUDIT_LOG = "AUDIT_LOG",
-  MAINTENANCE_TASK = "MAINTENANCE_TASK",
-  DATA_RETENTION = "DATA_RETENTION",
+  AUDIT_LOG = 'AUDIT_LOG',
+  MAINTENANCE_TASK = 'MAINTENANCE_TASK',
+  DATA_RETENTION = 'DATA_RETENTION',
 }
 
 // ---------------------------------------------------------------------------
@@ -57,135 +57,135 @@ export enum JobType {
 
 /** Payload for PURCHASE_INITIATE jobs */
 export interface PurchaseInitiateJobData {
-  userId: string;
-  courseId: string;
-  amount: number;
-  currency: string;
-  paymentMethod: string;
-  idempotencyKey: string;
+  userId: string
+  courseId: string
+  amount: number
+  currency: string
+  paymentMethod: string
+  idempotencyKey: string
 }
 
 /** Payload for PURCHASE_COMPLETE jobs (Telebirr callback) */
 export interface PurchaseCompleteJobData {
-  purchaseId: string;
-  transactionId: string;
-  status: "success" | "failed" | "pending";
-  callbackPayload: Record<string, unknown>;
-  idempotencyKey: string;
+  purchaseId: string
+  transactionId: string
+  status: 'success' | 'failed' | 'pending'
+  callbackPayload: Record<string, unknown>
+  idempotencyKey: string
 }
 
 /** Payload for BUNDLE_ENROLLMENT_CREATE jobs */
 export interface BundleEnrollmentCreateJobData {
-  userId: string;
-  bundleId: string;
-  courseIds: string[];
-  idempotencyKey: string;
+  userId: string
+  bundleId: string
+  courseIds: string[]
+  idempotencyKey: string
 }
 
 /** Payload for ENROLLMENT_PROGRESS_UPDATE jobs */
 export interface EnrollmentProgressUpdateJobData {
-  enrollmentId: string;
-  lessonId?: string;
-  completedLessons: number;
-  totalLessons: number;
-  idempotencyKey: string;
+  enrollmentId: string
+  lessonId?: string
+  completedLessons: number
+  totalLessons: number
+  idempotencyKey: string
 }
 
 /** Payload for LESSON_COMPLETION_UPDATE jobs */
 export interface LessonCompletionUpdateJobData {
-  enrollmentId: string;
-  lessonId: string;
-  completed: boolean;
-  idempotencyKey: string;
+  enrollmentId: string
+  lessonId: string
+  completed: boolean
+  idempotencyKey: string
 }
 
 /** Payload for QUIZ_GRADE jobs */
 export interface QuizGradeJobData {
-  enrollmentId: string;
-  quizId: string;
-  submissionId: string;
-  answers: Record<string, string | number | boolean>;
-  idempotencyKey: string;
+  enrollmentId: string
+  quizId: string
+  submissionId: string
+  answers: Record<string, string | number | boolean>
+  idempotencyKey: string
 }
 
 /** Payload for DATA_EXPORT jobs (GDPR) */
 export interface DataExportJobData {
-  userId: string;
-  format: "json" | "csv";
-  requestedAt: string; // ISO-8601
-  idempotencyKey: string;
+  userId: string
+  format: 'json' | 'csv'
+  requestedAt: string // ISO-8601
+  idempotencyKey: string
 }
 
 /** Payload for WEBHOOK_PROCESS jobs */
 export interface WebhookProcessJobData {
-  source: "telebirr" | "sms_ethiopia" | "other";
-  payload: Record<string, unknown>;
-  headers: Record<string, string>;
-  idempotencyKey: string;
+  source: 'telebirr' | 'sms_ethiopia' | 'other'
+  payload: Record<string, unknown>
+  headers: Record<string, string>
+  idempotencyKey: string
 }
 
 /** Payload for SMS_NOTIFICATION jobs */
 export interface SmsNotificationJobData {
-  recipientPhone: string;
-  message: string;
-  templateId?: string;
-  idempotencyKey: string;
+  recipientPhone: string
+  message: string
+  templateId?: string
+  idempotencyKey: string
 }
 
 /** Payload for EMAIL_NOTIFICATION jobs */
 export interface EmailNotificationJobData {
-  recipientEmail: string;
-  subject: string;
-  htmlBody: string;
-  templateId?: string;
-  idempotencyKey: string;
+  recipientEmail: string
+  subject: string
+  htmlBody: string
+  templateId?: string
+  idempotencyKey: string
 }
 
 /** Payload for MODERATION_SUBMIT jobs */
 export interface ModerationSubmitJobData {
-  entityType: "review" | "comment" | "resource";
-  entityId: string;
-  content: string;
-  submittedBy: string;
-  idempotencyKey: string;
+  entityType: 'review' | 'comment' | 'resource'
+  entityId: string
+  content: string
+  submittedBy: string
+  idempotencyKey: string
 }
 
 /** Payload for RECALCULATE_STATS jobs */
 export interface RecalculateStatsJobData {
-  courseId: string;
-  idempotencyKey: string;
+  courseId: string
+  idempotencyKey: string
 }
 
 /** Payload for AGGREGATE_METRICS jobs */
 export interface AggregateMetricsJobData {
-  period: "daily" | "weekly" | "monthly";
-  date: string; // ISO-8601
-  idempotencyKey: string;
+  period: 'daily' | 'weekly' | 'monthly'
+  date: string // ISO-8601
+  idempotencyKey: string
 }
 
 /** Payload for AUDIT_LOG jobs */
 export interface AuditLogJobData {
-  action: string;
-  actorId: string;
-  entityType: string;
-  entityId: string;
-  metadata: Record<string, unknown>;
-  idempotencyKey: string;
+  action: string
+  actorId: string
+  entityType: string
+  entityId: string
+  metadata: Record<string, unknown>
+  idempotencyKey: string
 }
 
 /** Payload for MAINTENANCE_TASK jobs */
 export interface MaintenanceTaskJobData {
-  taskName: string;
-  params: Record<string, unknown>;
-  idempotencyKey: string;
+  taskName: string
+  params: Record<string, unknown>
+  idempotencyKey: string
 }
 
 /** Payload for DATA_RETENTION jobs */
 export interface DataRetentionJobData {
-  entityType: "audit_log" | "session" | "temp_export";
-  olderThanDays: number;
-  batchSize: number;
-  idempotencyKey: string;
+  entityType: 'audit_log' | 'session' | 'temp_export'
+  olderThanDays: number
+  batchSize: number
+  idempotencyKey: string
 }
 
 /**
@@ -193,23 +193,23 @@ export interface DataRetentionJobData {
  * The discriminator is the `jobType` field matching {@link JobType}.
  */
 export type JobDataMap = {
-  [JobType.PURCHASE_INITIATE]: PurchaseInitiateJobData;
-  [JobType.PURCHASE_COMPLETE]: PurchaseCompleteJobData;
-  [JobType.BUNDLE_ENROLLMENT_CREATE]: BundleEnrollmentCreateJobData;
-  [JobType.ENROLLMENT_PROGRESS_UPDATE]: EnrollmentProgressUpdateJobData;
-  [JobType.LESSON_COMPLETION_UPDATE]: LessonCompletionUpdateJobData;
-  [JobType.QUIZ_GRADE]: QuizGradeJobData;
-  [JobType.DATA_EXPORT]: DataExportJobData;
-  [JobType.WEBHOOK_PROCESS]: WebhookProcessJobData;
-  [JobType.SMS_NOTIFICATION]: SmsNotificationJobData;
-  [JobType.EMAIL_NOTIFICATION]: EmailNotificationJobData;
-  [JobType.MODERATION_SUBMIT]: ModerationSubmitJobData;
-  [JobType.RECALCULATE_STATS]: RecalculateStatsJobData;
-  [JobType.AGGREGATE_METRICS]: AggregateMetricsJobData;
-  [JobType.AUDIT_LOG]: AuditLogJobData;
-  [JobType.MAINTENANCE_TASK]: MaintenanceTaskJobData;
-  [JobType.DATA_RETENTION]: DataRetentionJobData;
-};
+  [JobType.PURCHASE_INITIATE]: PurchaseInitiateJobData
+  [JobType.PURCHASE_COMPLETE]: PurchaseCompleteJobData
+  [JobType.BUNDLE_ENROLLMENT_CREATE]: BundleEnrollmentCreateJobData
+  [JobType.ENROLLMENT_PROGRESS_UPDATE]: EnrollmentProgressUpdateJobData
+  [JobType.LESSON_COMPLETION_UPDATE]: LessonCompletionUpdateJobData
+  [JobType.QUIZ_GRADE]: QuizGradeJobData
+  [JobType.DATA_EXPORT]: DataExportJobData
+  [JobType.WEBHOOK_PROCESS]: WebhookProcessJobData
+  [JobType.SMS_NOTIFICATION]: SmsNotificationJobData
+  [JobType.EMAIL_NOTIFICATION]: EmailNotificationJobData
+  [JobType.MODERATION_SUBMIT]: ModerationSubmitJobData
+  [JobType.RECALCULATE_STATS]: RecalculateStatsJobData
+  [JobType.AGGREGATE_METRICS]: AggregateMetricsJobData
+  [JobType.AUDIT_LOG]: AuditLogJobData
+  [JobType.MAINTENANCE_TASK]: MaintenanceTaskJobData
+  [JobType.DATA_RETENTION]: DataRetentionJobData
+}
 
 // ---------------------------------------------------------------------------
 // Processor Types
@@ -221,18 +221,18 @@ export type JobDataMap = {
  */
 export type JobProcessor<T = unknown> = (
   data: T,
-  job: { id: string; name: string; attemptsMade: number; timestamp: number }
-) => Promise<unknown>;
+  job: { id: string; name: string; attemptsMade: number; timestamp: number },
+) => Promise<unknown>
 
 /**
  * Registry entry mapping a {@link JobType} to its processor implementation.
  */
 export interface ProcessorEntry<T = unknown> {
-  jobType: JobType;
-  processor: JobProcessor<T>;
-  queueName: string;
-  concurrency: number;
-  priority?: number;
+  jobType: JobType
+  processor: JobProcessor<T>
+  queueName: string
+  concurrency: number
+  priority?: number
 }
 
 /**
@@ -242,13 +242,13 @@ export interface ProcessorEntry<T = unknown> {
  * `JobProcessor<unknown>` which typed processors are not assignable to.
  */
 export type AnyProcessorEntry = {
-  [T in JobType]: ProcessorEntry<JobDataMap[T]>;
-}[JobType];
+  [T in JobType]: ProcessorEntry<JobDataMap[T]>
+}[JobType]
 
 /**
  * Function that builds a BullMQ-compatible Processor from a typed processor.
  */
-export type ProcessorAdapter = Processor;
+export type ProcessorAdapter = Processor
 
 // ---------------------------------------------------------------------------
 // Queue Client & Worker
@@ -259,34 +259,38 @@ export type ProcessorAdapter = Processor;
  */
 export interface QueueClient {
   /** Enqueue a single job. Returns the job ID. */
-  enqueue<T extends JobType>(jobType: T, data: JobDataMap[T], opts?: EnqueueOptions): Promise<string>;
+  enqueue<T extends JobType>(
+    jobType: T,
+    data: JobDataMap[T],
+    opts?: EnqueueOptions,
+  ): Promise<string>
 
   /** Enqueue a bulk set of jobs. Returns an array of job IDs. */
   enqueueBulk<T extends JobType>(
-    items: Array<{ jobType: T; data: JobDataMap[T]; opts?: EnqueueOptions }>
-  ): Promise<string[]>;
+    items: Array<{ jobType: T; data: JobDataMap[T]; opts?: EnqueueOptions }>,
+  ): Promise<string[]>
 
   /** Get current queue length (waiting + active + delayed). */
-  getQueueLength(queueName: string): Promise<number>;
+  getQueueLength(queueName: string): Promise<number>
 
   /** Get job counts grouped by state. */
-  getJobCounts(queueName: string): Promise<Record<string, number>>;
+  getJobCounts(queueName: string): Promise<Record<string, number>>
 
   /** Gracefully close all queue connections. */
-  close(): Promise<void>;
+  close(): Promise<void>
 }
 
 /** Options that can be passed when enqueuing a job. */
 export interface EnqueueOptions {
-  priority?: number;
-  delay?: number;
-  jobId?: string;
-  removeOnComplete?: boolean | number;
-  removeOnFail?: boolean | number;
+  priority?: number
+  delay?: number
+  jobId?: string
+  removeOnComplete?: boolean | number
+  removeOnFail?: boolean | number
   backoff?: {
-    type: "fixed" | "exponential";
-    delay: number;
-  };
+    type: 'fixed' | 'exponential'
+    delay: number
+  }
 }
 
 /**
@@ -294,16 +298,16 @@ export interface EnqueueOptions {
  */
 export interface QueueWorker {
   /** Start processing jobs. Resolves when the worker is ready. */
-  start(): Promise<void>;
+  start(): Promise<void>
 
   /** Gracefully stop the worker. Waits for in-flight jobs to finish. */
-  stop(): Promise<void>;
+  stop(): Promise<void>
 
   /** Check whether the worker is currently running. */
-  isRunning(): boolean;
+  isRunning(): boolean
 
   /** Register a custom processor at runtime (before start). */
-  registerProcessor(entry: AnyProcessorEntry): void;
+  registerProcessor(entry: AnyProcessorEntry): void
 }
 
 // ---------------------------------------------------------------------------
@@ -315,10 +319,10 @@ export class QueueError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly cause?: unknown
+    public readonly cause?: unknown,
   ) {
-    super(message);
-    this.name = "QueueError";
+    super(message)
+    this.name = 'QueueError'
   }
 }
 
@@ -328,10 +332,14 @@ export class JobExhaustedError extends QueueError {
     public readonly jobType: JobType,
     public readonly jobId: string,
     public readonly attemptsMade: number,
-    public readonly lastError: Error
+    public readonly lastError: Error,
   ) {
-    super(`Job ${jobType}#${jobId} exhausted after ${attemptsMade} attempts`, "JOB_EXHAUSTED", lastError);
-    this.name = "JobExhaustedError";
+    super(
+      `Job ${jobType}#${jobId} exhausted after ${attemptsMade} attempts`,
+      'JOB_EXHAUSTED',
+      lastError,
+    )
+    this.name = 'JobExhaustedError'
   }
 }
 
@@ -339,10 +347,10 @@ export class JobExhaustedError extends QueueError {
 export class DuplicateJobError extends QueueError {
   constructor(
     public readonly idempotencyKey: string,
-    public readonly jobType: JobType
+    public readonly jobType: JobType,
   ) {
-    super(`Duplicate job rejected: ${jobType} with key ${idempotencyKey}`, "DUPLICATE_JOB");
-    this.name = "DuplicateJobError";
+    super(`Duplicate job rejected: ${jobType} with key ${idempotencyKey}`, 'DUPLICATE_JOB')
+    this.name = 'DuplicateJobError'
   }
 }
 
@@ -350,10 +358,10 @@ export class DuplicateJobError extends QueueError {
 export class RedisConnectionError extends QueueError {
   constructor(
     public readonly endpoint: string,
-    cause?: unknown
+    cause?: unknown,
   ) {
-    super(`Redis connection error for ${endpoint}`, "REDIS_CONNECTION", cause);
-    this.name = "RedisConnectionError";
+    super(`Redis connection error for ${endpoint}`, 'REDIS_CONNECTION', cause)
+    this.name = 'RedisConnectionError'
   }
 }
 
@@ -361,10 +369,10 @@ export class RedisConnectionError extends QueueError {
 export class JobValidationError extends QueueError {
   constructor(
     public readonly jobType: JobType,
-    public readonly errors: string[]
+    public readonly errors: string[],
   ) {
-    super(`Job validation failed for ${jobType}: ${errors.join(", ")}`, "JOB_VALIDATION");
-    this.name = "JobValidationError";
+    super(`Job validation failed for ${jobType}: ${errors.join(', ')}`, 'JOB_VALIDATION')
+    this.name = 'JobValidationError'
   }
 }
 
@@ -373,56 +381,56 @@ export class JobValidationError extends QueueError {
 // ---------------------------------------------------------------------------
 
 export interface IdempotencyRecord {
-  id: string;
-  jobType: JobType;
-  processedAt: Date;
-  result: unknown;
-  status: "processing" | "completed" | "failed";
+  id: string
+  jobType: JobType
+  processedAt: Date
+  result: unknown
+  status: 'processing' | 'completed' | 'failed'
 }
 
 // ---------------------------------------------------------------------------
 // Health & Monitoring
 // ---------------------------------------------------------------------------
 
-export type QueueHealthStatus = "healthy" | "degraded" | "unhealthy";
+export type QueueHealthStatus = 'healthy' | 'degraded' | 'unhealthy'
 
 export interface QueueHealthReport {
-  queueName: string;
-  status: QueueHealthStatus;
-  redis: { connected: boolean; latencyMs: number | null };
-  waiting: number;
-  active: number;
-  completed: number;
-  failed: number;
-  delayed: number;
-  timestamp: string;
+  queueName: string
+  status: QueueHealthStatus
+  redis: { connected: boolean; latencyMs: number | null }
+  waiting: number
+  active: number
+  completed: number
+  failed: number
+  delayed: number
+  timestamp: string
 }
 
 export interface WorkerHealthReport {
-  workerId: string;
-  status: "running" | "stopped" | "error";
-  queues: string[];
-  uptime: number;
-  processedJobs: number;
-  failedJobs: number;
-  timestamp: string;
+  workerId: string
+  status: 'running' | 'stopped' | 'error'
+  queues: string[]
+  uptime: number
+  processedJobs: number
+  failedJobs: number
+  timestamp: string
 }
 
 export interface MetricsSnapshot {
-  totalEnqueued: number;
-  totalCompleted: number;
-  totalFailed: number;
-  avgProcessingTimeMs: number;
+  totalEnqueued: number
+  totalCompleted: number
+  totalFailed: number
+  avgProcessingTimeMs: number
   queues: Record<
     string,
     {
-      enqueued: number;
-      completed: number;
-      failed: number;
-      avgTimeMs: number;
+      enqueued: number
+      completed: number
+      failed: number
+      avgTimeMs: number
     }
-  >;
-  timestamp: string;
+  >
+  timestamp: string
 }
 
 // ---------------------------------------------------------------------------
@@ -435,13 +443,13 @@ export interface MetricsSnapshot {
  */
 export interface QueueFactory {
   /** Create a producer client. */
-  createClient(): QueueClient;
+  createClient(): QueueClient
   /** Create a consumer worker. */
-  createWorker(processors?: AnyProcessorEntry[]): QueueWorker;
+  createWorker(processors?: AnyProcessorEntry[]): QueueWorker
   /** Run an ad-hoc health check. */
-  healthCheck(): Promise<QueueHealthReport[]>;
+  healthCheck(): Promise<QueueHealthReport[]>
   /** Capture a metrics snapshot. */
-  getMetrics(): Promise<MetricsSnapshot>;
+  getMetrics(): Promise<MetricsSnapshot>
   /** Gracefully tear down everything. */
-  shutdown(): Promise<void>;
+  shutdown(): Promise<void>
 }
