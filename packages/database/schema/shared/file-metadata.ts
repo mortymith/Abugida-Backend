@@ -3,6 +3,7 @@ import {
   bigint,
   uuid,
   varchar,
+  text,
   boolean,
   timestamp,
   uniqueIndex,
@@ -34,7 +35,7 @@ export const fileMetadata = pgTable(
       onDelete: 'set null',
       onUpdate: 'cascade',
     }),
-    uploadedBy: bigint('uploaded_by', { mode: 'number' }).references(() => users.id, {
+    uploadedBy: text('uploaded_by').references(() => users.id, {
       onDelete: 'set null',
       onUpdate: 'cascade',
     }),

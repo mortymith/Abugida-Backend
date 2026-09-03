@@ -29,7 +29,7 @@ describe('auth schemas', () => {
       accountStatus: 'active' as const,
       phoneNumberHash: 'abc123def456',
       phoneNumberLast4: '1234',
-      displayName: 'Test User',
+      name: 'Test User',
       maxDevices: 3,
       deviceCount: 0,
       failedLoginAttempts: 0,
@@ -45,18 +45,18 @@ describe('auth schemas', () => {
       expect(result.success).toBe(true)
     })
 
-    it('strips publicId from insert', () => {
-      const result = insertUserSchema.safeParse({ ...validUser, publicId: 'test' })
+    it('strips id from insert', () => {
+      const result = insertUserSchema.safeParse({ ...validUser, id: 'user_abc123' })
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.publicId).toBeUndefined()
+        expect(result.data.id).toBeUndefined()
       }
     })
 
-    it('validates displayName max length', () => {
+    it('validates name max length', () => {
       const result = insertUserSchema.safeParse({
         ...validUser,
-        displayName: 'x'.repeat(101),
+        name: 'x'.repeat(101),
       })
       expect(result.success).toBe(false)
     })
@@ -95,16 +95,14 @@ describe('auth schemas', () => {
 
     it('accepts select schema', () => {
       const result = selectUserSchema.safeParse({
-        id: 1,
-        publicId: '550e8400-e29b-41d4-a716-446655440000',
+        id: 'user_abc123',
+        name: 'Test User',
         phoneNumberEncrypted: null,
         phoneNumberHash: null,
         phoneNumberLast4: null,
         hashVersion: null,
         deviceCount: 0,
         maxDevices: 3,
-        displayName: null,
-        betterAuthId: null,
         email: null,
         emailVerified: false,
         image: null,
@@ -126,7 +124,7 @@ describe('auth schemas', () => {
 
   describe('user profiles', () => {
     const validProfile = {
-      userId: 1,
+      userId: 'user_abc123',
       languagePreference: 'am',
       timezone: 'Africa/Addis_Ababa',
       onboardingStep: 2,
@@ -186,7 +184,7 @@ describe('auth schemas', () => {
 
   describe('devices', () => {
     const validDevice = {
-      userId: 1,
+      userId: 'user_abc123',
       deviceIdentifier: 'device-123',
       deviceName: 'iPhone 15',
       platform: 'ios' as const,
@@ -200,7 +198,7 @@ describe('auth schemas', () => {
 
     it('requires deviceIdentifier', () => {
       const result = insertDeviceSchema.safeParse({
-        userId: 1,
+        userId: 'user_abc123',
         platform: 'ios',
       })
       expect(result.success).toBe(false)
@@ -208,7 +206,7 @@ describe('auth schemas', () => {
 
     it('validates deviceIdentifier min length', () => {
       const result = insertDeviceSchema.safeParse({
-        userId: 1,
+        userId: 'user_abc123',
         deviceIdentifier: '',
         platform: 'ios',
       })
@@ -217,7 +215,7 @@ describe('auth schemas', () => {
 
     it('validates deviceIdentifier max length', () => {
       const result = insertDeviceSchema.safeParse({
-        userId: 1,
+        userId: 'user_abc123',
         deviceIdentifier: 'x'.repeat(256),
         platform: 'ios',
       })
@@ -226,7 +224,7 @@ describe('auth schemas', () => {
 
     it('validates deviceName max length', () => {
       const result = insertDeviceSchema.safeParse({
-        userId: 1,
+        userId: 'user_abc123',
         deviceIdentifier: 'test',
         deviceName: 'x'.repeat(101),
         platform: 'ios',
@@ -237,7 +235,7 @@ describe('auth schemas', () => {
 
   describe('user consents', () => {
     const validConsent = {
-      userId: 1,
+      userId: 'user_abc123',
       consentType: 'analytics' as const,
       consentVersion: '1.0',
       isGranted: true,
@@ -250,7 +248,7 @@ describe('auth schemas', () => {
 
     it('requires consentVersion', () => {
       const result = insertUserConsentSchema.safeParse({
-        userId: 1,
+        userId: 'user_abc123',
         consentType: 'analytics',
         isGranted: true,
       })
@@ -259,7 +257,7 @@ describe('auth schemas', () => {
 
     it('validates consentVersion length', () => {
       const result = insertUserConsentSchema.safeParse({
-        userId: 1,
+        userId: 'user_abc123',
         consentType: 'analytics',
         consentVersion: 'x'.repeat(21),
         isGranted: true,
@@ -270,7 +268,7 @@ describe('auth schemas', () => {
     it('accepts all consent types', () => {
       for (const type of consentTypeEnum.options) {
         const result = insertUserConsentSchema.safeParse({
-          userId: 1,
+          userId: 'user_abc123',
           consentType: type,
           consentVersion: '1.0',
           isGranted: true,
@@ -393,7 +391,6 @@ describe('auth schemas', () => {
     it('accepts optional fields', () => {
       const result = insertSessionSchema.safeParse({
         ...validSession,
-        refreshToken: 'ref_abc123',
         ipAddress: '192.168.1.1',
         userAgent: 'Mozilla/5.0',
       })
@@ -405,11 +402,11 @@ describe('auth schemas', () => {
         id: 'sess_abc123',
         userId: 'user_xyz789',
         token: 'tok_abc123',
-        refreshToken: null,
         expiresAt: new Date(),
         ipAddress: null,
         userAgent: null,
         createdAt: new Date(),
+        updatedAt: new Date(),
       })
       expect(result.success).toBe(true)
     })
@@ -470,7 +467,9 @@ describe('auth schemas', () => {
         accessToken: 'ya29.access_token',
         refreshToken: '1//-refresh_token',
         accessTokenExpiresAt: new Date('2026-01-01'),
+        refreshTokenExpiresAt: new Date('2026-01-01'),
         idToken: 'eyJhbGciOiJSUzI1NiJ9',
+        scope: 'openid email profile',
       })
       expect(result.success).toBe(true)
     })
@@ -484,8 +483,12 @@ describe('auth schemas', () => {
         accessToken: null,
         refreshToken: null,
         accessTokenExpiresAt: null,
+        refreshTokenExpiresAt: null,
         idToken: null,
+        scope: null,
+        password: null,
         createdAt: new Date(),
+        updatedAt: new Date(),
       })
       expect(result.success).toBe(true)
     })
@@ -546,6 +549,8 @@ describe('auth schemas', () => {
         identifier: 'user@example.com',
         value: '123456',
         expiresAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
       })
       expect(result.success).toBe(true)
     })

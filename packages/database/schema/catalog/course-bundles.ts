@@ -39,7 +39,7 @@ export const courseBundles = pgTable(
         onDelete: 'restrict',
         onUpdate: 'cascade',
       }),
-    instructorId: bigint('instructor_id', { mode: 'number' }).references(() => users.id, {
+    instructorId: text('instructor_id').references(() => users.id, {
       onDelete: 'set null',
       onUpdate: 'cascade',
     }),

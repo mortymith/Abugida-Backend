@@ -1,4 +1,4 @@
-import { pgTable, bigint, uuid, timestamp, uniqueIndex, index } from 'drizzle-orm/pg-core'
+import { pgTable, bigint, uuid, text, timestamp, uniqueIndex, index } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { z } from 'zod'
@@ -10,7 +10,7 @@ export const courseRoles = pgTable(
   {
     id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
     publicId: uuid('public_id').notNull().defaultRandom().unique(),
-    userId: bigint('user_id', { mode: 'number' })
+    userId: text('user_id')
       .notNull()
       .references(() => users.id, {
         onDelete: 'cascade',
@@ -26,7 +26,7 @@ export const courseRoles = pgTable(
         onDelete: 'restrict',
         onUpdate: 'cascade',
       }),
-    grantedBy: bigint('granted_by', { mode: 'number' }).references(() => users.id, {
+    grantedBy: text('granted_by').references(() => users.id, {
       onDelete: 'set null',
       onUpdate: 'cascade',
     }),

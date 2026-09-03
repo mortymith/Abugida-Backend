@@ -3,6 +3,7 @@ import {
   bigint,
   uuid,
   jsonb,
+  text,
   timestamp,
   inet,
   uniqueIndex,
@@ -75,7 +76,7 @@ export const auditLogs = pgTable(
   {
     id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
     publicId: uuid('public_id').notNull().defaultRandom().unique(),
-    actorId: bigint('actor_id', { mode: 'number' }).references(() => users.id, {
+    actorId: text('actor_id').references(() => users.id, {
       onDelete: 'set null',
       onUpdate: 'cascade',
     }),

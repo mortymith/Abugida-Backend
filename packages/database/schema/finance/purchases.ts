@@ -3,6 +3,7 @@ import {
   bigint,
   uuid,
   varchar,
+  text,
   numeric,
   char,
   timestamp,
@@ -36,7 +37,7 @@ export const purchases = pgTable(
   {
     id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
     publicId: uuid('public_id').notNull().defaultRandom().unique(),
-    studentId: bigint('student_id', { mode: 'number' })
+    studentId: text('student_id')
       .notNull()
       .references(() => users.id, {
         onDelete: 'restrict',

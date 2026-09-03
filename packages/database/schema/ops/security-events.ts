@@ -40,7 +40,7 @@ export const securityEvents = pgTable(
     id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
     publicId: uuid('public_id').notNull().defaultRandom().unique(),
     eventType: securityEventTypePgEnum(),
-    actorId: bigint('actor_id', { mode: 'number' }).references(() => users.id, {
+    actorId: text('actor_id').references(() => users.id, {
       onDelete: 'set null',
       onUpdate: 'cascade',
     }),

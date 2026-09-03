@@ -65,7 +65,7 @@ export const contentLicenses = pgTable(
     licensorContact: varchar('licensor_contact', { length: 300 }),
     costAmount: numeric('cost_amount', { precision: 19, scale: 4 }),
     costCurrency: char('cost_currency', { length: 3 }).notNull().default('ETB'),
-    createdBy: bigint('created_by', { mode: 'number' }).references(() => users.id, {
+    createdBy: text('created_by').references(() => users.id, {
       onDelete: 'set null',
       onUpdate: 'cascade',
     }),

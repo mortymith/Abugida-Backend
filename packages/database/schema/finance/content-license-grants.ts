@@ -2,6 +2,7 @@ import {
   pgTable,
   bigint,
   uuid,
+  text,
   timestamp,
   varchar,
   uniqueIndex,
@@ -33,7 +34,7 @@ export const contentLicenseGrants = pgTable(
         onDelete: 'cascade',
         onUpdate: 'cascade',
       }),
-    studentId: bigint('student_id', { mode: 'number' })
+    studentId: text('student_id')
       .notNull()
       .references(() => users.id, {
         onDelete: 'restrict',

@@ -12,7 +12,7 @@ export const courseTags = pgTable(
     name: varchar('name', { length: 100 }).notNull(),
     slug: varchar('slug', { length: 100 }).notNull().unique(),
     description: text('description'),
-    createdBy: bigint('created_by', { mode: 'number' }).references(() => users.id, {
+    createdBy: text('created_by').references(() => users.id, {
       onDelete: 'set null',
       onUpdate: 'cascade',
     }),
@@ -44,7 +44,7 @@ export const insertCourseTagSchema = createInsertSchema(courseTags, {
     .max(100)
     .regex(/^[a-z0-9-]+$/),
   description: z.string().nullable().optional(),
-  createdBy: z.number().positive().nullable().optional(),
+  createdBy: z.string().min(1).nullable().optional(),
 }).omit({
   publicId: true,
 })
