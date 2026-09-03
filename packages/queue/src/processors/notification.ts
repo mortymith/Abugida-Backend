@@ -8,9 +8,9 @@ import type {
   JobProcessor,
   SmsNotificationJobData,
   EmailNotificationJobData,
-} from "../core/types.js";
-import { JobType } from "../core/types.js";
-import { QUEUE_NAMES } from "../definitions/queues.js";
+} from '../core/types.js'
+import { JobType } from '../core/types.js'
+import { QUEUE_NAMES } from '../definitions/queues.js'
 
 // ---------------------------------------------------------------------------
 // SMS Notification Processor
@@ -26,13 +26,13 @@ import { QUEUE_NAMES } from "../definitions/queues.js";
  * - Handle delivery status callbacks
  */
 export const processSmsNotification: JobProcessor<SmsNotificationJobData> = async (data, job) => {
-  const { recipientPhone, templateId, idempotencyKey } = data;
+  const { recipientPhone, templateId, idempotencyKey } = data
 
   console.debug(`[notification:sms] Sending SMS to ${maskPhone(recipientPhone)}`, {
     jobId: job.id,
     idempotencyKey,
     templateId,
-  });
+  })
 
   // TODO: Replace with actual SMSEthiopia API integration:
   // const smsClient = getSMSEthiopiaClient();
@@ -52,11 +52,11 @@ export const processSmsNotification: JobProcessor<SmsNotificationJobData> = asyn
 
   return {
     recipientPhone: maskPhone(recipientPhone),
-    status: "sent",
+    status: 'sent',
     messageId: `sms_${job.id}`,
     processedAt: new Date().toISOString(),
-  };
-};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Email Notification Processor
@@ -71,14 +71,20 @@ export const processSmsNotification: JobProcessor<SmsNotificationJobData> = asyn
  * - Send via email service (e.g., Resend, SendGrid)
  * - Record the notification in the database
  */
-export const processEmailNotification: JobProcessor<EmailNotificationJobData> = async (data, job) => {
-  const { recipientEmail, subject, templateId, idempotencyKey } = data;
+export const processEmailNotification: JobProcessor<EmailNotificationJobData> = async (
+  data,
+  job,
+) => {
+  const { recipientEmail, subject, templateId, idempotencyKey } = data
 
-  console.debug(`[notification:email] Sending email to ${maskEmail(recipientEmail)} subject="${subject}"`, {
-    jobId: job.id,
-    idempotencyKey,
-    templateId,
-  });
+  console.debug(
+    `[notification:email] Sending email to ${maskEmail(recipientEmail)} subject="${subject}"`,
+    {
+      jobId: job.id,
+      idempotencyKey,
+      templateId,
+    },
+  )
 
   // TODO: Replace with actual email service integration:
   // const emailClient = getEmailClient();
@@ -101,26 +107,26 @@ export const processEmailNotification: JobProcessor<EmailNotificationJobData> = 
   return {
     recipientEmail: maskEmail(recipientEmail),
     subject,
-    status: "sent",
+    status: 'sent',
     messageId: `email_${job.id}`,
     processedAt: new Date().toISOString(),
-  };
-};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function maskPhone(phone: string): string {
-  if (phone.length <= 4) return "****";
-  return phone.slice(0, 3) + "****" + phone.slice(-2);
+  if (phone.length <= 4) return '****'
+  return phone.slice(0, 3) + '****' + phone.slice(-2)
 }
 
 function maskEmail(email: string): string {
-  const [local, domain] = email.split("@");
-  if (!local || !domain) return "****";
-  const masked = local.slice(0, 2) + "****";
-  return `${masked}@${domain}`;
+  const [local, domain] = email.split('@')
+  if (!local || !domain) return '****'
+  const masked = local.slice(0, 2) + '****'
+  return `${masked}@${domain}`
 }
 
 // ---------------------------------------------------------------------------
@@ -140,4 +146,4 @@ export const notificationProcessors: AnyProcessorEntry[] = [
     queueName: QUEUE_NAMES.NOTIFICATIONS,
     concurrency: 10,
   },
-];
+]

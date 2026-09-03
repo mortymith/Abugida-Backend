@@ -5,8 +5,8 @@
  * Abugida platform must be declared here.
  */
 
-import { JobType } from "../core/types.js";
-import type { QueueConfig } from "../config/schema.js";
+import { JobType } from '../core/types.js'
+import type { QueueConfig } from '../config/schema.js'
 
 // ---------------------------------------------------------------------------
 // Queue Names
@@ -14,20 +14,20 @@ import type { QueueConfig } from "../config/schema.js";
 
 export const QUEUE_NAMES = {
   /** High-priority: purchases, quiz grading */
-  PURCHASES: "abugida.purchases",
-  ENROLLMENTS: "abugida.enrollments",
-  LESSONS: "abugida.lessons",
-  QUIZZES: "abugida.quizzes",
+  PURCHASES: 'abugida.purchases',
+  ENROLLMENTS: 'abugida.enrollments',
+  LESSONS: 'abugida.lessons',
+  QUIZZES: 'abugida.quizzes',
   /** Medium-priority: notifications, exports, webhooks */
-  NOTIFICATIONS: "abugida.notifications",
-  EXPORTS: "abugida.exports",
-  WEBHOOKS: "abugida.webhooks",
-  MODERATION: "abugida.moderation",
+  NOTIFICATIONS: 'abugida.notifications',
+  EXPORTS: 'abugida.exports',
+  WEBHOOKS: 'abugida.webhooks',
+  MODERATION: 'abugida.moderation',
   /** Low-priority: statistics, maintenance, audit */
-  STATISTICS: "abugida.statistics",
-  AUDIT: "abugida.audit",
-  MAINTENANCE: "abugida.maintenance",
-} as const;
+  STATISTICS: 'abugida.statistics',
+  AUDIT: 'abugida.audit',
+  MAINTENANCE: 'abugida.maintenance',
+} as const
 
 // ---------------------------------------------------------------------------
 // Job → Queue Mapping
@@ -53,7 +53,7 @@ export const JOB_QUEUE_MAP: Record<JobType, string> = {
   [JobType.AUDIT_LOG]: QUEUE_NAMES.AUDIT,
   [JobType.MAINTENANCE_TASK]: QUEUE_NAMES.MAINTENANCE,
   [JobType.DATA_RETENTION]: QUEUE_NAMES.MAINTENANCE,
-};
+}
 
 // ---------------------------------------------------------------------------
 // Default Queue Options
@@ -63,12 +63,12 @@ export const JOB_QUEUE_MAP: Record<JobType, string> = {
  * Default BullMQ queue options per queue.  These can be overridden via
  * {@link QueueConfig.queues}.
  */
-export const DEFAULT_QUEUE_OPTIONS: Record<string, QueueConfig["queues"][string]> = {
+export const DEFAULT_QUEUE_OPTIONS: Record<string, QueueConfig['queues'][string]> = {
   [QUEUE_NAMES.PURCHASES]: {
     concurrency: 5,
     defaultJobOptions: {
       attempts: 5,
-      backoff: { type: "exponential", delay: 2000 },
+      backoff: { type: 'exponential', delay: 2000 },
       removeOnComplete: 1000,
       removeOnFail: 500,
     },
@@ -77,7 +77,7 @@ export const DEFAULT_QUEUE_OPTIONS: Record<string, QueueConfig["queues"][string]
     concurrency: 3,
     defaultJobOptions: {
       attempts: 3,
-      backoff: { type: "exponential", delay: 1000 },
+      backoff: { type: 'exponential', delay: 1000 },
       removeOnComplete: 1000,
       removeOnFail: 200,
     },
@@ -86,7 +86,7 @@ export const DEFAULT_QUEUE_OPTIONS: Record<string, QueueConfig["queues"][string]
     concurrency: 5,
     defaultJobOptions: {
       attempts: 3,
-      backoff: { type: "exponential", delay: 1000 },
+      backoff: { type: 'exponential', delay: 1000 },
       removeOnComplete: 2000,
       removeOnFail: 200,
     },
@@ -95,7 +95,7 @@ export const DEFAULT_QUEUE_OPTIONS: Record<string, QueueConfig["queues"][string]
     concurrency: 10,
     defaultJobOptions: {
       attempts: 3,
-      backoff: { type: "exponential", delay: 1000 },
+      backoff: { type: 'exponential', delay: 1000 },
       removeOnComplete: 2000,
       removeOnFail: 200,
     },
@@ -105,7 +105,7 @@ export const DEFAULT_QUEUE_OPTIONS: Record<string, QueueConfig["queues"][string]
     limiter: { max: 100, duration: 60_000 }, // 100/min
     defaultJobOptions: {
       attempts: 5,
-      backoff: { type: "exponential", delay: 5000 },
+      backoff: { type: 'exponential', delay: 5000 },
       removeOnComplete: 5000,
       removeOnFail: 1000,
     },
@@ -115,7 +115,7 @@ export const DEFAULT_QUEUE_OPTIONS: Record<string, QueueConfig["queues"][string]
     defaultJobOptions: {
       attempts: 2,
       timeout: 300_000, // 5 min for large exports
-      backoff: { type: "fixed", delay: 30_000 },
+      backoff: { type: 'fixed', delay: 30_000 },
       removeOnComplete: true,
       removeOnFail: 100,
     },
@@ -124,7 +124,7 @@ export const DEFAULT_QUEUE_OPTIONS: Record<string, QueueConfig["queues"][string]
     concurrency: 5,
     defaultJobOptions: {
       attempts: 5,
-      backoff: { type: "exponential", delay: 2000 },
+      backoff: { type: 'exponential', delay: 2000 },
       removeOnComplete: 5000,
       removeOnFail: 1000,
     },
@@ -133,7 +133,7 @@ export const DEFAULT_QUEUE_OPTIONS: Record<string, QueueConfig["queues"][string]
     concurrency: 3,
     defaultJobOptions: {
       attempts: 3,
-      backoff: { type: "fixed", delay: 5000 },
+      backoff: { type: 'fixed', delay: 5000 },
       removeOnComplete: 2000,
       removeOnFail: 500,
     },
@@ -142,7 +142,7 @@ export const DEFAULT_QUEUE_OPTIONS: Record<string, QueueConfig["queues"][string]
     concurrency: 1,
     defaultJobOptions: {
       attempts: 2,
-      backoff: { type: "fixed", delay: 10_000 },
+      backoff: { type: 'fixed', delay: 10_000 },
       removeOnComplete: true,
       removeOnFail: 100,
     },
@@ -152,7 +152,7 @@ export const DEFAULT_QUEUE_OPTIONS: Record<string, QueueConfig["queues"][string]
     limiter: { max: 500, duration: 60_000 },
     defaultJobOptions: {
       attempts: 3,
-      backoff: { type: "exponential", delay: 1000 },
+      backoff: { type: 'exponential', delay: 1000 },
       removeOnComplete: 10_000,
       removeOnFail: 2000,
     },
@@ -161,12 +161,12 @@ export const DEFAULT_QUEUE_OPTIONS: Record<string, QueueConfig["queues"][string]
     concurrency: 1,
     defaultJobOptions: {
       attempts: 2,
-      backoff: { type: "fixed", delay: 30_000 },
+      backoff: { type: 'fixed', delay: 30_000 },
       removeOnComplete: true,
       removeOnFail: 50,
     },
   },
-};
+}
 
 // ---------------------------------------------------------------------------
 // Priority Levels
@@ -179,7 +179,7 @@ export const PRIORITY = {
   HIGH: 1,
   MEDIUM: 5,
   LOW: 10,
-} as const;
+} as const
 
 /**
  * Maps job types to their default priority.
@@ -198,7 +198,7 @@ export const JOB_PRIORITY_MAP: Partial<Record<JobType, number>> = {
   [JobType.AUDIT_LOG]: PRIORITY.LOW,
   [JobType.MAINTENANCE_TASK]: PRIORITY.LOW,
   [JobType.DATA_RETENTION]: PRIORITY.LOW,
-};
+}
 
 // ---------------------------------------------------------------------------
 // All Queue Names helper
@@ -206,5 +206,5 @@ export const JOB_PRIORITY_MAP: Partial<Record<JobType, number>> = {
 
 /** Returns all declared queue names. */
 export function getAllQueueNames(): string[] {
-  return Object.values(QUEUE_NAMES);
+  return Object.values(QUEUE_NAMES)
 }

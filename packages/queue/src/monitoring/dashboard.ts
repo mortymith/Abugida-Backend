@@ -4,9 +4,9 @@
  * Generates a self-contained HTML page with queue status overview.
  */
 
-import type { QueueConfig } from "../config/schema.js";
-import { runHealthCheck } from "./health.js";
-import { captureMetrics } from "./metrics.js";
+import type { QueueConfig } from '../config/schema.js'
+import { runHealthCheck } from './health.js'
+import { captureMetrics } from './metrics.js'
 
 // ---------------------------------------------------------------------------
 // HTML Dashboard
@@ -16,18 +16,21 @@ import { captureMetrics } from "./metrics.js";
  * Generate a self-contained HTML dashboard page.
  */
 export async function generateDashboardHtml(config: QueueConfig): Promise<string> {
-  const [healthReports, metrics] = await Promise.all([runHealthCheck(config), captureMetrics(config)]);
+  const [healthReports, metrics] = await Promise.all([
+    runHealthCheck(config),
+    captureMetrics(config),
+  ])
 
   const statusColor = (status: string) => {
     switch (status) {
-      case "healthy":
-        return "#22c55e";
-      case "degraded":
-        return "#f59e0b";
+      case 'healthy':
+        return '#22c55e'
+      case 'degraded':
+        return '#f59e0b'
       default:
-        return "#ef4444";
+        return '#ef4444'
     }
-  };
+  }
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -65,7 +68,7 @@ export async function generateDashboardHtml(config: QueueConfig): Promise<string
     </div>
     <div class="stat-card">
       <h3>Total Failed</h3>
-      <div class="value" style="color: ${metrics.totalFailed > 0 ? "#ef4444" : "#22c55e"}">${metrics.totalFailed}</div>
+      <div class="value" style="color: ${metrics.totalFailed > 0 ? '#ef4444' : '#22c55e'}">${metrics.totalFailed}</div>
     </div>
   </div>
 
@@ -85,20 +88,20 @@ export async function generateDashboardHtml(config: QueueConfig): Promise<string
       ${healthReports
         .map(
           (r) => `<tr>
-        <td><span class="status-dot" style="background: ${statusColor(r.status)}"></span>${r.queueName.replace("abugida.", "")}</td>
+        <td><span class="status-dot" style="background: ${statusColor(r.status)}"></span>${r.queueName.replace('abugida.', '')}</td>
         <td style="color: ${statusColor(r.status)}; text-transform: uppercase">${r.status}</td>
         <td>${r.waiting}</td>
         <td>${r.active}</td>
         <td>${r.completed}</td>
-        <td style="color: ${r.failed > 0 ? "#ef4444" : "#22c55e"}">${r.failed}</td>
+        <td style="color: ${r.failed > 0 ? '#ef4444' : '#22c55e'}">${r.failed}</td>
         <td>${r.delayed}</td>
-      </tr>`
+      </tr>`,
         )
-        .join("")}
+        .join('')}
     </tbody>
   </table>
 </body>
-</html>`;
+</html>`
 
-  return html;
+  return html
 }

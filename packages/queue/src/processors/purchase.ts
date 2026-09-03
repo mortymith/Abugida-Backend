@@ -13,9 +13,9 @@ import type {
   JobProcessor,
   PurchaseInitiateJobData,
   PurchaseCompleteJobData,
-} from "../core/types.js";
-import { JobType } from "../core/types.js";
-import { QUEUE_NAMES } from "../definitions/queues.js";
+} from '../core/types.js'
+import { JobType } from '../core/types.js'
+import { QUEUE_NAMES } from '../definitions/queues.js'
 
 // ---------------------------------------------------------------------------
 // Purchase Initiate Processor
@@ -36,7 +36,7 @@ import { QUEUE_NAMES } from "../definitions/queues.js";
  * - Use Drizzle transactions for atomicity
  */
 export const processPurchaseInitiate: JobProcessor<PurchaseInitiateJobData> = async (data, job) => {
-  const { userId, courseId, amount, currency, idempotencyKey } = data;
+  const { userId, courseId, amount, currency, idempotencyKey } = data
 
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
@@ -55,16 +55,16 @@ export const processPurchaseInitiate: JobProcessor<PurchaseInitiateJobData> = as
 
   console.debug(
     `[purchase:initiate] Processing purchase for user=${userId} course=${courseId} amount=${amount}${currency}`,
-    { jobId: job.id, idempotencyKey }
-  );
+    { jobId: job.id, idempotencyKey },
+  )
 
   // Placeholder result – in production, return the payment reference
   return {
     purchaseId: `purchase_${job.id}`,
-    status: "pending",
+    status: 'pending',
     paymentReference: `ref_${Date.now()}`,
-  };
-};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Purchase Complete Processor
@@ -85,12 +85,12 @@ export const processPurchaseInitiate: JobProcessor<PurchaseInitiateJobData> = as
  * - Enqueue `BUNDLE_ENROLLMENT_CREATE` if the purchase is for a bundle
  */
 export const processPurchaseComplete: JobProcessor<PurchaseCompleteJobData> = async (data, job) => {
-  const { purchaseId, transactionId, status, idempotencyKey } = data;
+  const { purchaseId, transactionId, status, idempotencyKey } = data
 
   console.debug(
     `[purchase:complete] Processing completion for purchase=${purchaseId} tx=${transactionId} status=${status}`,
-    { jobId: job.id, idempotencyKey }
-  );
+    { jobId: job.id, idempotencyKey },
+  )
 
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
@@ -115,8 +115,8 @@ export const processPurchaseComplete: JobProcessor<PurchaseCompleteJobData> = as
     transactionId,
     status,
     processedAt: new Date().toISOString(),
-  };
-};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Processor Entries
@@ -135,4 +135,4 @@ export const purchaseProcessors: AnyProcessorEntry[] = [
     queueName: QUEUE_NAMES.PURCHASES,
     concurrency: 5,
   },
-];
+]

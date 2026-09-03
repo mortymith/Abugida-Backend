@@ -9,9 +9,9 @@ import type {
   JobProcessor,
   BundleEnrollmentCreateJobData,
   EnrollmentProgressUpdateJobData,
-} from "../core/types.js";
-import { JobType } from "../core/types.js";
-import { QUEUE_NAMES } from "../definitions/queues.js";
+} from '../core/types.js'
+import { JobType } from '../core/types.js'
+import { QUEUE_NAMES } from '../definitions/queues.js'
 
 // ---------------------------------------------------------------------------
 // Bundle Enrollment Create Processor
@@ -32,13 +32,16 @@ import { QUEUE_NAMES } from "../definitions/queues.js";
  * - Import `bundles` from `@abugida/db-schemas/course`
  * - Use Drizzle transaction for atomicity
  */
-export const processBundleEnrollmentCreate: JobProcessor<BundleEnrollmentCreateJobData> = async (data, job) => {
-  const { userId, bundleId, courseIds, idempotencyKey } = data;
+export const processBundleEnrollmentCreate: JobProcessor<BundleEnrollmentCreateJobData> = async (
+  data,
+  job,
+) => {
+  const { userId, bundleId, courseIds, idempotencyKey } = data
 
   console.debug(
     `[enrollment:bundle] Creating enrollments for user=${userId} bundle=${bundleId} courses=${courseIds.length}`,
-    { jobId: job.id, idempotencyKey }
-  );
+    { jobId: job.id, idempotencyKey },
+  )
 
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
@@ -67,8 +70,8 @@ export const processBundleEnrollmentCreate: JobProcessor<BundleEnrollmentCreateJ
       courseId,
       enrollmentId: `enrollment_${job.id}_${courseId}`,
     })),
-  };
-};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Enrollment Progress Update Processor
@@ -83,15 +86,17 @@ export const processBundleEnrollmentCreate: JobProcessor<BundleEnrollmentCreateJ
  * - Check for course completion
  * - Trigger certificate generation if 100%
  */
-export const processEnrollmentProgressUpdate: JobProcessor<EnrollmentProgressUpdateJobData> = async (data, job) => {
-  const { enrollmentId, completedLessons, totalLessons, idempotencyKey } = data;
+export const processEnrollmentProgressUpdate: JobProcessor<
+  EnrollmentProgressUpdateJobData
+> = async (data, job) => {
+  const { enrollmentId, completedLessons, totalLessons, idempotencyKey } = data
 
-  const progress = Math.round((completedLessons / totalLessons) * 100);
+  const progress = Math.round((completedLessons / totalLessons) * 100)
 
   console.debug(`[enrollment:progress] Updating enrollment=${enrollmentId} progress=${progress}%`, {
     jobId: job.id,
     idempotencyKey,
-  });
+  })
 
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
@@ -103,8 +108,8 @@ export const processEnrollmentProgressUpdate: JobProcessor<EnrollmentProgressUpd
   //   // Enqueue certificate generation
   // }
 
-  return { enrollmentId, progress, completedLessons, totalLessons };
-};
+  return { enrollmentId, progress, completedLessons, totalLessons }
+}
 
 // ---------------------------------------------------------------------------
 // Processor Entries
@@ -123,4 +128,4 @@ export const enrollmentProcessors: AnyProcessorEntry[] = [
     queueName: QUEUE_NAMES.ENROLLMENTS,
     concurrency: 3,
   },
-];
+]

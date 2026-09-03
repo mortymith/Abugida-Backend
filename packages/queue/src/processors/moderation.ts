@@ -3,9 +3,9 @@
  * @description Processor for submitting content into the moderation queue.
  */
 
-import type { JobProcessor, ProcessorEntry, ModerationSubmitJobData } from "../core/types.js";
-import { JobType } from "../core/types.js";
-import { QUEUE_NAMES } from "../definitions/queues.js";
+import type { JobProcessor, ProcessorEntry, ModerationSubmitJobData } from '../core/types.js'
+import { JobType } from '../core/types.js'
+import { QUEUE_NAMES } from '../definitions/queues.js'
 
 // ---------------------------------------------------------------------------
 // Moderation Submit Processor
@@ -22,12 +22,15 @@ import { QUEUE_NAMES } from "../definitions/queues.js";
  * - Record in audit log
  */
 export const processModerationSubmit: JobProcessor<ModerationSubmitJobData> = async (data, job) => {
-  const { entityType, entityId, submittedBy, idempotencyKey } = data;
+  const { entityType, entityId, submittedBy, idempotencyKey } = data
 
-  console.debug(`[moderation:submit] Processing ${entityType}=${entityId} from user=${submittedBy}`, {
-    jobId: job.id,
-    idempotencyKey,
-  });
+  console.debug(
+    `[moderation:submit] Processing ${entityType}=${entityId} from user=${submittedBy}`,
+    {
+      jobId: job.id,
+      idempotencyKey,
+    },
+  )
 
   // TODO: Replace with actual integration:
   // const db = getDatabase();
@@ -55,10 +58,10 @@ export const processModerationSubmit: JobProcessor<ModerationSubmitJobData> = as
     entityType,
     entityId,
     moderationId: `mod_${job.id}`,
-    status: "pending_review",
+    status: 'pending_review',
     processedAt: new Date().toISOString(),
-  };
-};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Processor Entries
@@ -71,4 +74,4 @@ export const moderationProcessors: ProcessorEntry<ModerationSubmitJobData>[] = [
     queueName: QUEUE_NAMES.MODERATION,
     concurrency: 3,
   },
-];
+]

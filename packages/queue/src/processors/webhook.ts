@@ -4,9 +4,9 @@
  * and SMSEthiopia (FR-400, FR-1000).
  */
 
-import type { JobProcessor, ProcessorEntry, WebhookProcessJobData } from "../core/types.js";
-import { JobType } from "../core/types.js";
-import { QUEUE_NAMES } from "../definitions/queues.js";
+import type { JobProcessor, ProcessorEntry, WebhookProcessJobData } from '../core/types.js'
+import { JobType } from '../core/types.js'
+import { QUEUE_NAMES } from '../definitions/queues.js'
 
 // ---------------------------------------------------------------------------
 // Webhook Process Processor
@@ -24,15 +24,15 @@ import { QUEUE_NAMES } from "../definitions/queues.js";
  * - Store raw webhook for audit purposes
  */
 export const processWebhook: JobProcessor<WebhookProcessJobData> = async (data, job) => {
-  const { source, idempotencyKey } = data;
+  const { source, idempotencyKey } = data
 
   console.debug(`[webhook:process] Processing webhook from ${source}`, {
     jobId: job.id,
     idempotencyKey,
-  });
+  })
 
   switch (source) {
-    case "telebirr": {
+    case 'telebirr': {
       // TODO: Verify Telebirr signature
       // const isValid = verifyTelebirrSignature(payload, headers);
       // if (!isValid) throw new Error('Invalid Telebirr signature');
@@ -44,12 +44,12 @@ export const processWebhook: JobProcessor<WebhookProcessJobData> = async (data, 
       return {
         source,
         processed: true,
-        routedTo: "PURCHASE_COMPLETE",
+        routedTo: 'PURCHASE_COMPLETE',
         processedAt: new Date().toISOString(),
-      };
+      }
     }
 
-    case "sms_ethiopia": {
+    case 'sms_ethiopia': {
       // TODO: Process SMS delivery receipt
       // const messageId = payload.messageId;
       // const status = payload.status; // 'delivered' | 'failed'
@@ -58,24 +58,24 @@ export const processWebhook: JobProcessor<WebhookProcessJobData> = async (data, 
       return {
         source,
         processed: true,
-        routedTo: "SMS_DELIVERY_RECEIPT",
+        routedTo: 'SMS_DELIVERY_RECEIPT',
         processedAt: new Date().toISOString(),
-      };
+      }
     }
 
     default: {
       console.warn(`[webhook:process] Unknown webhook source: ${source}`, {
         jobId: job.id,
-      });
+      })
       return {
         source,
         processed: false,
-        reason: "Unknown source",
+        reason: 'Unknown source',
         processedAt: new Date().toISOString(),
-      };
+      }
     }
   }
-};
+}
 
 // ---------------------------------------------------------------------------
 // Processor Entries
@@ -88,4 +88,4 @@ export const webhookProcessors: ProcessorEntry<WebhookProcessJobData>[] = [
     queueName: QUEUE_NAMES.WEBHOOKS,
     concurrency: 5,
   },
-];
+]

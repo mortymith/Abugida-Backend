@@ -4,14 +4,14 @@
  * a Hono API. Provides health check routes and graceful shutdown hooks.
  */
 
-import { Hono } from "hono";
-import type { QueueWorker } from "../../core/types.js";
-import type { QueueConfig } from "../../config/schema.js";
-import { createQueueWorker } from "../../core/worker.js";
-import { allProcessors } from "../../processors/index.js";
-import { runHealthCheck } from "../../monitoring/health.js";
-import { captureMetrics } from "../../monitoring/metrics.js";
-import { generateDashboardHtml } from "../../monitoring/dashboard.js";
+import { Hono } from 'hono'
+import type { QueueWorker } from '../../core/types.js'
+import type { QueueConfig } from '../../config/schema.js'
+import { createQueueWorker } from '../../core/worker.js'
+import { allProcessors } from '../../processors/index.js'
+import { runHealthCheck } from '../../monitoring/health.js'
+import { captureMetrics } from '../../monitoring/metrics.js'
+import { generateDashboardHtml } from '../../monitoring/dashboard.js'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,13 +19,13 @@ import { generateDashboardHtml } from "../../monitoring/dashboard.js";
 
 export interface HonoWorkerOptions {
   /** Queue configuration. */
-  config: QueueConfig;
+  config: QueueConfig
   /** Custom processors (defaults to all). */
-  processors?: import("../../core/types.js").AnyProcessorEntry[];
+  processors?: import('../../core/types.js').AnyProcessorEntry[]
   /** Enable health check routes. Default: true. */
-  enableHealthRoutes?: boolean;
+  enableHealthRoutes?: boolean
   /** Custom health check path. Default: from config. */
-  healthPath?: string;
+  healthPath?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -54,43 +54,43 @@ export interface HonoWorkerOptions {
  * ```
  */
 export function createHonoWorker(options: HonoWorkerOptions): {
-  app: Hono;
-  worker: QueueWorker;
-  start: () => Promise<void>;
-  stop: () => Promise<void>;
+  app: Hono
+  worker: QueueWorker
+  start: () => Promise<void>
+  stop: () => Promise<void>
 } {
-  const { config, processors = allProcessors } = options;
-  const worker = createQueueWorker(config, processors);
-  const app = new Hono();
+  const { config, processors = allProcessors } = options
+  const worker = createQueueWorker(config, processors)
+  const app = new Hono()
 
-  const healthPath = options.healthPath ?? config.monitoring.healthCheckEndpoint ?? "/health/queue";
+  const healthPath = options.healthPath ?? config.monitoring.healthCheckEndpoint ?? '/health/queue'
 
   // Health check routes
   if (options.enableHealthRoutes !== false) {
     app.get(healthPath, async (c) => {
-      const reports = await runHealthCheck(config);
-      return c.json({ timestamp: new Date().toISOString(), queues: reports });
-    });
+      const reports = await runHealthCheck(config)
+      return c.json({ timestamp: new Date().toISOString(), queues: reports })
+    })
 
     app.get(`${healthPath}/metrics`, async (c) => {
-      const metrics = await captureMetrics(config);
-      return c.json(metrics);
-    });
+      const metrics = await captureMetrics(config)
+      return c.json(metrics)
+    })
 
     app.get(`${healthPath}/dashboard`, async (c) => {
-      const html = await generateDashboardHtml(config);
-      return c.html(html);
-    });
+      const html = await generateDashboardHtml(config)
+      return c.html(html)
+    })
   }
 
   return {
     app,
     worker,
     start: async () => {
-      await worker.start();
+      await worker.start()
     },
     stop: async () => {
-      await worker.stop();
+      await worker.stop()
     },
-  };
+  }
 }

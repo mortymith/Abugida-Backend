@@ -9,9 +9,9 @@ import type {
   JobProcessor,
   RecalculateStatsJobData,
   AggregateMetricsJobData,
-} from "../core/types.js";
-import { JobType } from "../core/types.js";
-import { QUEUE_NAMES } from "../definitions/queues.js";
+} from '../core/types.js'
+import { JobType } from '../core/types.js'
+import { QUEUE_NAMES } from '../definitions/queues.js'
 
 // ---------------------------------------------------------------------------
 // Recalculate Stats Processor
@@ -28,12 +28,12 @@ import { QUEUE_NAMES } from "../definitions/queues.js";
  * - Cache results for fast read access
  */
 export const processRecalculateStats: JobProcessor<RecalculateStatsJobData> = async (data, job) => {
-  const { courseId, idempotencyKey } = data;
+  const { courseId, idempotencyKey } = data
 
   console.debug(`[statistics:recalculate] Recalculating stats for course=${courseId}`, {
     jobId: job.id,
     idempotencyKey,
-  });
+  })
 
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
@@ -65,8 +65,8 @@ export const processRecalculateStats: JobProcessor<RecalculateStatsJobData> = as
     completionRate: 0,
     avgScore: 0,
     processedAt: new Date().toISOString(),
-  };
-};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Aggregate Metrics Processor
@@ -82,12 +82,12 @@ export const processRecalculateStats: JobProcessor<RecalculateStatsJobData> = as
  * - Trigger alerts if metrics exceed thresholds
  */
 export const processAggregateMetrics: JobProcessor<AggregateMetricsJobData> = async (data, job) => {
-  const { period, date, idempotencyKey } = data;
+  const { period, date, idempotencyKey } = data
 
   console.debug(`[statistics:aggregate] Aggregating ${period} metrics for ${date}`, {
     jobId: job.id,
     idempotencyKey,
-  });
+  })
 
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
@@ -119,10 +119,10 @@ export const processAggregateMetrics: JobProcessor<AggregateMetricsJobData> = as
   return {
     period,
     date,
-    status: "completed",
+    status: 'completed',
     processedAt: new Date().toISOString(),
-  };
-};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Processor Entries
@@ -141,4 +141,4 @@ export const statisticsProcessors: AnyProcessorEntry[] = [
     queueName: QUEUE_NAMES.STATISTICS,
     concurrency: 1,
   },
-];
+]

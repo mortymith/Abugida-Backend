@@ -9,27 +9,27 @@
  */
 export interface RedisConfig {
   /** Redis hostname or IP. Default: `"localhost"`. */
-  hostname: string;
+  hostname: string
   /** Redis port. Default: `6379`. */
-  port: number;
+  port: number
   /** Optional username for ACL-based AUTH (Redis 6+). */
-  username?: string;
+  username?: string
   /** Optional password for AUTH. */
-  password?: string;
+  password?: string
   /** Redis database index (0-15). Default: `0`. */
-  db?: number;
+  db?: number
   /** Enable TLS (required in production). Default: `false`. */
-  tls?: boolean;
+  tls?: boolean
   /** Connection timeout in ms. Default: `10000`. */
-  connectionTimeout?: number;
+  connectionTimeout?: number
   /** Automatically reconnect on an unexpected disconnect. Default: `true`. */
-  autoReconnect?: boolean;
+  autoReconnect?: boolean
   /** Maximum reconnection attempts. Default: `10`. */
-  maxRetries?: number;
+  maxRetries?: number
   /** Queue commands while disconnected instead of failing immediately. Default: `true`. */
-  enableOfflineQueue?: boolean;
+  enableOfflineQueue?: boolean
   /** Coalesce pipelined commands into a single write. Default: `true`. */
-  enableAutoPipelining?: boolean;
+  enableAutoPipelining?: boolean
 }
 
 /**
@@ -37,30 +37,30 @@ export interface RedisConfig {
  */
 export interface QueueSpecificConfig {
   /** Max concurrent jobs for this queue's worker. */
-  concurrency?: number;
+  concurrency?: number
   /** Interval in ms at which to check for stalled jobs. Default: `30000`. */
-  stalledInterval?: number;
+  stalledInterval?: number
   /** Rate limiter – max jobs per duration window. */
   limiter?: {
-    max: number;
-    duration: number;
-  };
+    max: number
+    duration: number
+  }
   /** Default job options applied to every job in this queue. */
   defaultJobOptions?: {
     /** Number of retry attempts. Default: `3`. */
-    attempts?: number;
+    attempts?: number
     /** Job timeout in ms. Default: no timeout. */
-    timeout?: number;
+    timeout?: number
     /** Backoff strategy for retries. */
     backoff?: {
-      type: "fixed" | "exponential";
-      delay: number;
-    };
+      type: 'fixed' | 'exponential'
+      delay: number
+    }
     /** Remove completed jobs (true) or keep N most recent (number). Default: `false`. */
-    removeOnComplete?: boolean | number;
+    removeOnComplete?: boolean | number
     /** Remove failed jobs (true) or keep N most recent (number). Default: `false`. */
-    removeOnFail?: boolean | number;
-  };
+    removeOnFail?: boolean | number
+  }
 }
 
 /**
@@ -68,11 +68,11 @@ export interface QueueSpecificConfig {
  */
 export interface MonitoringConfig {
   /** Enable health checks and metrics collection. Default: `true`. */
-  enabled: boolean;
+  enabled: boolean
   /** Prefix for metrics keys in Redis. Default: `"abugida:queue:metrics"`. */
-  metricsPrefix?: string;
+  metricsPrefix?: string
   /** HTTP path for health check endpoint. Default: `"/health/queue"`. */
-  healthCheckEndpoint?: string;
+  healthCheckEndpoint?: string
 }
 
 /**
@@ -80,9 +80,9 @@ export interface MonitoringConfig {
  */
 export interface LoggingConfig {
   /** Minimum log level. Default: `"info"`. */
-  level: "debug" | "info" | "warn" | "error";
+  level: 'debug' | 'info' | 'warn' | 'error'
   /** Output format. Default: `"json"` in production, `"pretty"` in development. */
-  format: "json" | "pretty";
+  format: 'json' | 'pretty'
 }
 
 /**
@@ -91,13 +91,13 @@ export interface LoggingConfig {
  */
 export interface QueueConfig {
   /** Application environment label. */
-  env?: "development" | "staging" | "production";
+  env?: 'development' | 'staging' | 'production'
   /** Redis connection parameters. */
-  redis: RedisConfig;
+  redis: RedisConfig
   /** Per-queue overrides keyed by queue name. */
-  queues: Record<string, QueueSpecificConfig>;
+  queues: Record<string, QueueSpecificConfig>
   /** Monitoring settings. */
-  monitoring: MonitoringConfig;
+  monitoring: MonitoringConfig
   /** Logging settings. */
-  logging: LoggingConfig;
+  logging: LoggingConfig
 }
