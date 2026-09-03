@@ -1,10 +1,8 @@
 import {
   pgTable,
-  bigint,
-  uuid,
+  text,
   varchar,
   char,
-  text,
   boolean,
   integer,
   smallint,
@@ -27,6 +25,7 @@ import { enrollments } from '../learning/enrollments'
 import { courseRoles } from '../ops/course-roles'
 import { auditLogs } from '../ops/audit-logs'
 import { securityEvents } from '../ops/security-events'
+
 export const accountStatusEnum = z.enum([
   'pending_verification',
   'active',
@@ -42,19 +41,28 @@ export const accountStatusPgEnum = pgEnum('account_status', [
   'suspended',
   'deleted',
 ])
+
+/**
+ * Central identity table (auth.users).
+ *
+ * This IS Better Auth's `user` model — the primary key is the better-auth
+ * generated id (UUID) and Better Auth owns the write path for the core
+ * columns (`id`, `name`, `email`, `email_verified`, `image`,
+ * `created_at`, `updated_at`). Domain-specific fields below are optional
+ * extensions that better-auth never writes; they have DB defaults so
+ * better-auth inserts do not need to provide them.
+ */
 export const users = pgTable(
   'users',
   {
-    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
-    publicId: uuid('public_id').notNull().defaultRandom().unique(),
+    id: text('id').primaryKey(),
+    name: text('name'),
     phoneNumberEncrypted: bytea('phone_number_encrypted'),
     phoneNumberHash: varchar('phone_number_hash', { length: 64 }),
     phoneNumberLast4: char('phone_number_last4', { length: 4 }),
     hashVersion: smallint('hash_version').default(1),
     deviceCount: integer('device_count').notNull().default(0),
     maxDevices: integer('max_devices').notNull().default(3),
-    displayName: varchar('display_name', { length: 100 }),
-    betterAuthId: text('better_auth_id').unique(),
     email: text('email').unique(),
     emailVerified: boolean('email_verified').notNull().default(false),
     image: text('image'),
@@ -80,8 +88,6 @@ export const users = pgTable(
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (table) => [
-    uniqueIndex('idx_users_public_id').on(table.publicId),
-    uniqueIndex('idx_users_better_auth_id').on(table.betterAuthId),
     uniqueIndex('idx_users_email').on(table.email),
     uniqueIndex('idx_users_phone_hash').on(table.phoneNumberHash),
     index('idx_users_status').on(table.accountStatus),
@@ -109,13 +115,13 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   auditLogs: many(auditLogs),
   securityEvents: many(securityEvents),
 }))
+
 export const insertUserSchema = createInsertSchema(users, {
+  name: z.string().max(100).nullable().optional(),
   phoneNumberEncrypted: z.instanceof(Buffer).nullable().optional(),
   phoneNumberHash: z.string().max(64).nullable().optional(),
   phoneNumberLast4: z.string().length(4).nullable().optional(),
   accountStatus: accountStatusEnum,
-  displayName: z.string().max(100).nullable().optional(),
-  betterAuthId: z.string().nullable().optional(),
   email: z.string().email().nullable().optional(),
   emailVerified: z.boolean().default(false),
   image: z.string().url().nullable().optional(),
@@ -123,7 +129,7 @@ export const insertUserSchema = createInsertSchema(users, {
   deviceCount: z.number().int().min(0).default(0),
   failedLoginAttempts: z.number().int().min(0).default(0),
 }).omit({
-  publicId: true,
+  id: true,
 })
 export const selectUserSchema = createSelectSchema(users)
 export const updateUserSchema = createUpdateSchema(users).partial()

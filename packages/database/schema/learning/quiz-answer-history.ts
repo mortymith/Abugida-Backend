@@ -29,7 +29,7 @@ export const quizAnswerHistory = pgTable(
     newIsCorrect: boolean('new_is_correct'),
     oldStudentAnswer: text('old_student_answer'),
     newStudentAnswer: text('new_student_answer'),
-    changedBy: bigint('changed_by', { mode: 'number' })
+    changedBy: text('changed_by')
       .notNull()
       .references(() => users.id, {
         onDelete: 'restrict',

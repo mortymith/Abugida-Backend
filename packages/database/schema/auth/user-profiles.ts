@@ -3,6 +3,7 @@ import {
   bigint,
   uuid,
   varchar,
+  text,
   jsonb,
   boolean,
   smallint,
@@ -30,7 +31,7 @@ export const userProfiles = pgTable(
   {
     id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
     publicId: uuid('public_id').notNull().defaultRandom().unique(),
-    userId: bigint('user_id', { mode: 'number' })
+    userId: text('user_id')
       .notNull()
       .unique()
       .references(() => users.id, {

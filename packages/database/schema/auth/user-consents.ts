@@ -3,6 +3,7 @@ import {
   bigint,
   uuid,
   varchar,
+  text,
   boolean,
   timestamp,
   inet,
@@ -34,7 +35,7 @@ export const userConsents = pgTable(
   {
     id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
     publicId: uuid('public_id').notNull().defaultRandom().unique(),
-    userId: bigint('user_id', { mode: 'number' })
+    userId: text('user_id')
       .notNull()
       .references(() => users.id, {
         onDelete: 'cascade',

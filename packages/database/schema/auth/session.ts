@@ -10,13 +10,13 @@ export const session = pgTable(
     id: text('id').primaryKey(),
     userId: text('user_id')
       .notNull()
-      .references(() => users.betterAuthId, { onDelete: 'cascade' }),
+      .references(() => users.id, { onDelete: 'cascade' }),
     token: text('token').notNull().unique(),
-    refreshToken: text('refresh_token'),
     expiresAt: timestamp('expires_at').notNull(),
     ipAddress: text('ip_address'),
     userAgent: text('user_agent'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex('idx_session_token').on(table.token),
@@ -28,7 +28,7 @@ export const session = pgTable(
 export const sessionRelations = relations(session, ({ one }) => ({
   user: one(users, {
     fields: [session.userId],
-    references: [users.betterAuthId],
+    references: [users.id],
   }),
 }))
 

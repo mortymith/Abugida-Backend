@@ -10,14 +10,18 @@ export const account = pgTable(
     id: text('id').primaryKey(),
     userId: text('user_id')
       .notNull()
-      .references(() => users.betterAuthId, { onDelete: 'cascade' }),
+      .references(() => users.id, { onDelete: 'cascade' }),
     providerId: text('provider_id').notNull(),
     accountId: text('account_id').notNull(),
     accessToken: text('access_token'),
     refreshToken: text('refresh_token'),
     accessTokenExpiresAt: timestamp('access_token_expires_at'),
+    refreshTokenExpiresAt: timestamp('refresh_token_expires_at'),
     idToken: text('id_token'),
+    scope: text('scope'),
+    password: text('password'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex('idx_account_provider_account').on(table.providerId, table.accountId),
@@ -28,7 +32,7 @@ export const account = pgTable(
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(users, {
     fields: [account.userId],
-    references: [users.betterAuthId],
+    references: [users.id],
   }),
 }))
 

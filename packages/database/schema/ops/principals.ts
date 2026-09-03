@@ -25,7 +25,7 @@ export const principals = pgTable(
   {
     id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
     publicId: uuid('public_id').notNull().defaultRandom().unique(),
-    userId: bigint('user_id', { mode: 'number' }).references(() => users.id, {
+    userId: text('user_id').references(() => users.id, {
       onDelete: 'cascade',
       onUpdate: 'cascade',
     }),
