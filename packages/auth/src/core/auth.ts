@@ -11,17 +11,18 @@
  * only the returned `AuthInstance` — they never touch better-auth directly.
  */
 
-import { betterAuth, type Auth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import type { AuthConfig, AuthDatabaseSchema } from "./types";
-import { validateAuthConfig, withDefaults } from "../config";
-import { appleProvider, googleProvider } from "../providers";
-import { ProviderRegistry } from "../providers/base";
-import { resolveSession, revokeSession, refreshSession } from "./session";
-import { getValidAccessToken } from "./token-refresh";
-import { buildTokenPlugins } from "./tokens";
-import { noopLogger, redact, type Logger } from "./logger";
-import { isProduction } from "./environment";
+import { betterAuth, type Auth } from 'better-auth'
+import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { randomUUID } from 'node:crypto'
+import type { AuthConfig, AuthDatabaseSchema } from './types'
+import { validateAuthConfig, withDefaults } from '../config'
+import { appleProvider, googleProvider } from '../providers'
+import { ProviderRegistry } from '../providers/base'
+import { resolveSession, revokeSession, refreshSession } from './session'
+import { getValidAccessToken } from './token-refresh'
+import { buildTokenPlugins } from './tokens'
+import { noopLogger, redact, type Logger } from './logger'
+import { isProduction } from './environment'
 
 export interface AuthInstance {
   /**
@@ -31,18 +32,21 @@ export interface AuthInstance {
    * since consumers pass this across module/package boundaries where the
    * exact literal options type isn't meaningful.
    */
-  raw: Auth;
+  raw: Auth
   /** Resolve a session from a Headers object (Hono, TanStack, anywhere with a Request). */
-  getSession: (headers: Headers) => ReturnType<typeof resolveSession>;
+  getSession: (headers: Headers) => ReturnType<typeof resolveSession>
   /** Same as getSession, but bypasses better-auth's short-lived cookie cache. */
-  refreshSession: (headers: Headers) => ReturnType<typeof refreshSession>;
-  signOut: (headers: Headers) => ReturnType<typeof revokeSession>;
+  refreshSession: (headers: Headers) => ReturnType<typeof refreshSession>
+  signOut: (headers: Headers) => ReturnType<typeof revokeSession>
   /** Returns a valid (auto-refreshed) OAuth access token for a linked provider account. */
-  getAccessToken: (params: { userId: string; providerId: string }) => ReturnType<typeof getValidAccessToken>;
+  getAccessToken: (params: {
+    userId: string
+    providerId: string
+  }) => ReturnType<typeof getValidAccessToken>
   /** The resolved (defaults-applied) config, useful for framework adapters. */
-  config: AuthConfig;
+  config: AuthConfig
   /** The logger this instance was created with (defaults to a no-op logger). */
-  logger: Logger;
+  logger: Logger
 }
 
 // ---------------------------------------------------------------------------
@@ -51,31 +55,34 @@ export interface AuthInstance {
 // ---------------------------------------------------------------------------
 
 export function buildProviderRegistry(config: AuthConfig): ProviderRegistry {
-  const registry = new ProviderRegistry();
-  registry.register(appleProvider);
-  registry.register(googleProvider);
+  const registry = new ProviderRegistry()
+  registry.register(appleProvider)
+  registry.register(googleProvider)
 
   for (const [id, entry] of Object.entries(config.providers.custom ?? {})) {
-    registry.register({ ...entry.definition, id });
+    registry.register({ ...entry.definition, id })
   }
 
-  return registry;
+  return registry
 }
 
-export function buildSocialProviders(config: AuthConfig, registry: ProviderRegistry): Record<string, unknown> {
-  const social: Record<string, unknown> = {};
+export function buildSocialProviders(
+  config: AuthConfig,
+  registry: ProviderRegistry,
+): Record<string, unknown> {
+  const social: Record<string, unknown> = {}
 
   if (config.providers.apple) {
-    social.apple = registry.get("apple")!.toBetterAuthConfig(config.providers.apple);
+    social.apple = registry.get('apple')!.toBetterAuthConfig(config.providers.apple)
   }
   if (config.providers.google) {
-    social.google = registry.get("google")!.toBetterAuthConfig(config.providers.google);
+    social.google = registry.get('google')!.toBetterAuthConfig(config.providers.google)
   }
   for (const [id, entry] of Object.entries(config.providers.custom ?? {})) {
-    social[id] = registry.get(id)!.toBetterAuthConfig(entry.credentials);
+    social[id] = registry.get(id)!.toBetterAuthConfig(entry.credentials)
   }
 
-  return social;
+  return social
 }
 
 export function buildSessionOptions(config: AuthConfig) {
@@ -89,7 +96,7 @@ export function buildSessionOptions(config: AuthConfig) {
     // instead of `getSession()` wherever staleness of this magnitude is a
     // problem (e.g. immediately after a permission change).
     cookieCache: { enabled: true, maxAge: 60 },
-  };
+  }
 }
 
 export function buildAdvancedOptions(config: AuthConfig) {
@@ -100,20 +107,28 @@ export function buildAdvancedOptions(config: AuthConfig) {
     useSecureCookies: config.session?.cookie?.secure ?? isProduction(config),
     defaultCookieAttributes: {
       httpOnly: true,
-      sameSite: config.session?.cookie?.sameSite ?? "lax",
+      sameSite: config.session?.cookie?.sameSite ?? 'lax',
       domain: config.session?.cookie?.domain,
     },
-    cookiePrefix: config.session?.cookie?.name ?? "abugida.session",
-  };
+    cookiePrefix: config.session?.cookie?.name ?? 'abugida.session',
+    // The app `users` table's PK (text) is fully better-auth-owned; mint the
+    // ids as UUIDs server-side so every environment generates the same
+    // format regardless of DB driver. See packages/database schema auth.
+    database: {
+      generateId: () => randomUUID(),
+    },
+  }
 }
 
-export function buildRateLimitOptions(config: AuthConfig): { enabled: true; window: number; max: number } | undefined {
-  if (!config.rateLimit) return undefined;
+export function buildRateLimitOptions(
+  config: AuthConfig,
+): { enabled: true; window: number; max: number } | undefined {
+  if (!config.rateLimit) return undefined
   return {
     enabled: true,
     window: config.rateLimit.windowSeconds,
     max: config.rateLimit.max,
-  };
+  }
 }
 
 /**
@@ -135,22 +150,29 @@ export function buildRateLimitOptions(config: AuthConfig): { enabled: true; wind
  * });
  * ```
  */
-export function createAuth<TSchema extends AuthDatabaseSchema>(inputConfig: AuthConfig<TSchema>): AuthInstance {
-  const logger = inputConfig.logger ?? noopLogger;
+export function createAuth<TSchema extends AuthDatabaseSchema>(
+  inputConfig: AuthConfig<TSchema>,
+): AuthInstance {
+  const logger = inputConfig.logger ?? noopLogger
 
-  validateAuthConfig(inputConfig, logger);
-  const config = withDefaults(inputConfig) as AuthConfig;
+  validateAuthConfig(inputConfig, logger)
+  const config = withDefaults(inputConfig) as AuthConfig
 
-  const registry = buildProviderRegistry(config);
-  const socialProviders = buildSocialProviders(config, registry);
+  const registry = buildProviderRegistry(config)
+  const socialProviders = buildSocialProviders(config, registry)
 
-  logger.info("Initializing auth instance", {
+  logger.info('Initializing auth instance', {
     environment: config.environment,
-    providers: Object.keys(socialProviders).join(","),
-  });
+    providers: Object.keys(socialProviders).join(','),
+  })
 
   const raw = betterAuth({
     baseURL: config.baseUrl,
+    // Must equal the prefix the consuming app mounts the auth request handler
+    // under (see middleware/hono `mountAuthRoutes`). better-auth resolves its
+    // internal endpoints (sign-in/social, sign-up/email, callback/:provider,
+    // get-session, sign-out, …) relative to this path.
+    basePath: config.basePath,
     secret: config.secret,
     database: drizzleAdapter(config.database.db as never, {
       provider: config.database.provider,
@@ -170,9 +192,9 @@ export function createAuth<TSchema extends AuthDatabaseSchema>(inputConfig: Auth
     // for the additional origin-check layer applied to non-OAuth mutating
     // endpoints (logout, session refresh) by the framework middleware.
     ...config.betterAuthOverrides,
-  });
+  })
 
-  const authApi = raw as unknown as Auth;
+  const authApi = raw as unknown as Auth
 
   return {
     raw: authApi,
@@ -182,9 +204,9 @@ export function createAuth<TSchema extends AuthDatabaseSchema>(inputConfig: Auth
     getAccessToken: (params) => getValidAccessToken(authApi, params, logger),
     config,
     logger,
-  };
+  }
 }
 
 // Re-export so consumers can log config fields safely if they build their
 // own diagnostics around AuthInstance.
-export { redact };
+export { redact }

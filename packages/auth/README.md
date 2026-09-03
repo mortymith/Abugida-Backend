@@ -29,23 +29,23 @@ definitions. They just need to match the shape below — see
 `examples/fixtures/schema.ts` for a complete, copy-pasteable version.
 
 ```ts
-export const authSchema = { user, session, account, verification };
+export const authSchema = { user, session, account, verification }
 ```
 
 ### 2. Create the auth instance
 
 ```ts
-import { drizzle } from "drizzle-orm/node-postgres";
-import { createAuth } from "@abugida/auth";
-import { authSchema } from "@abugida/db-schemas/auth";
+import { drizzle } from 'drizzle-orm/node-postgres'
+import { createAuth } from '@abugida/auth'
+import { authSchema } from '@abugida/db-schemas/auth'
 
-const db = drizzle(process.env.DATABASE_URL!);
+const db = drizzle(process.env.DATABASE_URL!)
 
 export const auth = createAuth({
-  environment: process.env.NODE_ENV as "development" | "production" | "test",
+  environment: process.env.NODE_ENV as 'development' | 'production' | 'test',
   baseUrl: process.env.AUTH_BASE_URL!,
   secret: process.env.AUTH_SECRET!, // openssl rand -hex 32
-  database: { db, schema: authSchema, provider: "pg" },
+  database: { db, schema: authSchema, provider: 'pg' },
   providers: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -60,7 +60,7 @@ export const auth = createAuth({
   },
   cors: { origins: [process.env.WEB_APP_URL!], credentials: true },
   rateLimit: { max: 20, windowSeconds: 60 },
-});
+})
 ```
 
 Required env vars, at minimum:
@@ -75,14 +75,17 @@ Required env vars, at minimum:
 ### 3a. Hono
 
 ```ts
-import { Hono } from "hono";
-import { mountAuthRoutes, requireSession, type HonoAuthVariables } from "@abugida/auth/hono";
+import { Hono } from 'hono'
+import { mountAuthRoutes, requireSession, type HonoAuthVariables } from '@abugida/auth/hono'
 
-const app = new Hono<{ Variables: HonoAuthVariables }>();
+const app = new Hono<{ Variables: HonoAuthVariables }>()
 
-mountAuthRoutes(app, auth); // /auth/login, /auth/callback/:provider, /auth/logout, ...
+mountAuthRoutes(app, auth)
+// Mounts better-auth's full handler under auth.config.basePath (default
+// /auth): POST /sign-in/social, POST /sign-up/email, GET /callback/:provider,
+// GET /get-session, POST /sign-out, POST /session/refresh, ...
 
-app.get("/me", requireSession(auth), (c) => c.json({ user: c.get("user") }));
+app.get('/me', requireSession(auth), (c) => c.json({ user: c.get('user') }))
 ```
 
 See `examples/hono-example.ts` for the full setup.
@@ -91,20 +94,20 @@ See `examples/hono-example.ts` for the full setup.
 
 ```ts
 // app/lib/auth.server.ts
-export const authServerFns = createAuthServerFunctions(auth);
+export const authServerFns = createAuthServerFunctions(auth)
 
 // app/routes/dashboard.tsx
-export const Route = createFileRoute("/dashboard")({
-  beforeLoad: requireAuthBeforeLoad(authServerFns, { loginPath: "/login" }),
+export const Route = createFileRoute('/dashboard')({
+  beforeLoad: requireAuthBeforeLoad(authServerFns, { loginPath: '/login' }),
   loader: () => authServerFns.getServerSession(),
   component: DashboardPage,
-});
+})
 
 // app/lib/auth.client.ts
-export const authClient = createAuthClient({ baseUrl: import.meta.env.VITE_AUTH_BASE_URL });
+export const authClient = createAuthClient({ baseUrl: import.meta.env.VITE_AUTH_BASE_URL })
 
 function DashboardPage() {
-  const { data: session } = authClient.useSession();
+  const { data: session } = authClient.useSession()
   // ...
 }
 ```
@@ -120,13 +123,13 @@ nothing is required to get started, and nothing is ever logged that
 contains a secret, private key, or token (see `redact()` in `core/logger.ts`).
 
 ```ts
-import { createConsoleLogger } from "@abugida/auth";
+import { createConsoleLogger } from '@abugida/auth'
 
 createAuth({
   // ...
-  logger: createConsoleLogger("auth"), // dev-friendly console adapter
+  logger: createConsoleLogger('auth'), // dev-friendly console adapter
   // or plug in your own: any object implementing { debug, info, warn, error }
-});
+})
 ```
 
 ## Token refresh (calling a provider's API on the user's behalf)
@@ -136,18 +139,19 @@ linked provider account — useful when your app needs to call back into
 Google/Apple/GitHub APIs after sign-in, not just authenticate the user.
 
 ```ts
-const token = await auth.getAccessToken({ userId, providerId: "google" });
+const token = await auth.getAccessToken({ userId, providerId: 'google' })
 if (token.ok) {
-  await fetch("https://www.googleapis.com/calendar/v3/users/me/calendarList", {
+  await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
     headers: { Authorization: `Bearer ${token.value.accessToken}` },
-  });
+  })
 }
 ```
 
 ## JWT issuance for external services (PowerSync)
 
 Pass a `tokens` block to opt in to better-auth's `jwt` + `bearer` plugins.
-Keys are served at `GET <basePath>/jwks` (default `/api/auth/jwks`) and
+Keys are served at `GET <basePath>/jwks` (with the package default `basePath`
+of `/auth`, that is `GET /auth/jwks`) and
 tokens carry `sub` = user id, which PowerSync sync streams read via
 `auth.user_id()`:
 
@@ -157,9 +161,9 @@ createAuth({
   tokens: {
     // issuer defaults to baseUrl; audience must match the consumer's config:
     // docker/config/powersync/service.yaml sets client_auth.audience = ["abugida"]
-    audience: "abugida",
+    audience: 'abugida',
   },
-});
+})
 ```
 
 Requirements and wiring:
@@ -167,7 +171,7 @@ Requirements and wiring:
 - Add better-auth's generated `jwks` table to your Drizzle schema
   (`@better-auth/cli generate` after enabling) — the plugin stores its
   encrypted private keys there.
-- Point `PS_JWKS_URI` (see `.env.example`) at `<api-base>/api/auth/jwks`.
+- Point `PS_JWKS_URI` (see `.env.example`) at `<api-base>/auth/jwks`.
 - Clients obtain tokens via the plugin's `/token` endpoint while a session
   is active; the `bearer` plugin accepts them on API requests.
 
@@ -197,7 +201,7 @@ createAuth({
       github: { definition: githubProviderDefinition, credentials: { clientId, clientSecret } },
     },
   },
-});
+})
 ```
 
 No changes to this package are required. `examples/custom-provider-github.ts`

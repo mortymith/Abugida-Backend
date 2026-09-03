@@ -6,22 +6,35 @@
  * built-in Apple/Google ones.
  */
 
-import type { AuthProviderDefinition, BaseProviderCredentials, AuthConfigError } from "../core/types";
+import type {
+  AuthProviderDefinition,
+  BaseProviderCredentials,
+  AuthConfigError,
+} from '../core/types'
 
 /** Throws a structured AuthConfigError-shaped error for provider validation failures. */
-export function invalidCredential(providerId: string, field: string, message: string, cause?: unknown): never {
+export function invalidCredential(
+  providerId: string,
+  field: string,
+  message: string,
+  cause?: unknown,
+): never {
   const error: AuthConfigError = {
-    kind: "config_invalid",
+    kind: 'config_invalid',
     field: `providers.${providerId}.${field}`,
     message,
     cause,
-  };
-  throw error;
+  }
+  throw error
 }
 
-export function assertNonEmpty(providerId: string, field: string, value: string | undefined): asserts value is string {
+export function assertNonEmpty(
+  providerId: string,
+  field: string,
+  value: string | undefined,
+): asserts value is string {
   if (!value || value.trim().length === 0) {
-    invalidCredential(providerId, field, `"${field}" is required for the ${providerId} provider.`);
+    invalidCredential(providerId, field, `"${field}" is required for the ${providerId} provider.`)
   }
 }
 
@@ -31,17 +44,17 @@ export function assertNonEmpty(providerId: string, field: string, value: string 
  * `config.providers.custom` without forking this package.
  */
 export class ProviderRegistry {
-  private readonly providers = new Map<string, AuthProviderDefinition>();
+  private readonly providers = new Map<string, AuthProviderDefinition>()
 
   register<T extends BaseProviderCredentials>(definition: AuthProviderDefinition<T>): void {
-    this.providers.set(definition.id, definition as unknown as AuthProviderDefinition);
+    this.providers.set(definition.id, definition as unknown as AuthProviderDefinition)
   }
 
   get(id: string): AuthProviderDefinition | undefined {
-    return this.providers.get(id);
+    return this.providers.get(id)
   }
 
   list(): AuthProviderDefinition[] {
-    return Array.from(this.providers.values());
+    return Array.from(this.providers.values())
   }
 }

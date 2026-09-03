@@ -8,42 +8,42 @@
  * mobile apps that verify a Google `id_token` issued to a native client).
  */
 
-import type { AuthProviderDefinition, GoogleProviderCredentials } from "../core/types";
-import { assertNonEmpty, invalidCredential } from "./base";
+import type { AuthProviderDefinition, GoogleProviderCredentials } from '../core/types'
+import { assertNonEmpty, invalidCredential } from './base'
 
 export const googleProvider: AuthProviderDefinition<GoogleProviderCredentials> = {
-  id: "google",
-  name: "Google",
-  scopes: ["profile", "email"],
+  id: 'google',
+  name: 'Google',
+  scopes: ['profile', 'email'],
 
   validateCredentials(credentials) {
-    assertNonEmpty("google", "clientId", credentials.clientId);
-    assertNonEmpty("google", "clientSecret", credentials.clientSecret);
+    assertNonEmpty('google', 'clientId', credentials.clientId)
+    assertNonEmpty('google', 'clientSecret', credentials.clientSecret)
 
-    if (!credentials.clientId.endsWith(".apps.googleusercontent.com")) {
+    if (!credentials.clientId.endsWith('.apps.googleusercontent.com')) {
       invalidCredential(
-        "google",
-        "clientId",
-        'Google client IDs are expected to end in ".apps.googleusercontent.com" — double check the value from Google Cloud Console.'
-      );
+        'google',
+        'clientId',
+        'Google client IDs are expected to end in ".apps.googleusercontent.com" — double check the value from Google Cloud Console.',
+      )
     }
   },
 
   toBetterAuthConfig(credentials) {
-    this.validateCredentials(credentials);
+    this.validateCredentials(credentials)
 
     return {
       clientId: credentials.clientId,
       clientSecret: credentials.clientSecret,
       redirectURI: credentials.redirectUri,
-      scope: ["profile", "email"],
-      accessType: credentials.accessType ?? "offline", // required to receive refresh_token
-      prompt: credentials.prompt ?? "select_account",
+      scope: ['profile', 'email'],
+      accessType: credentials.accessType ?? 'offline', // required to receive refresh_token
+      prompt: credentials.prompt ?? 'select_account',
       // Accept id_tokens minted for sibling client IDs (e.g. native iOS/Android
       // clients that authenticate the user on-device and hand the backend an
       // id_token to verify) in addition to the primary web client id.
       overrideUserInfoOnSignIn: true,
       additionalClientIds: credentials.additionalClientIds ?? [],
-    };
+    }
   },
-};
+}

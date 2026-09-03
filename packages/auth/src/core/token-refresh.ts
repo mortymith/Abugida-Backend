@@ -13,21 +13,21 @@
  * between Hono and TanStack call sites.
  */
 
-import type { Auth } from "better-auth";
-import type { AuthResult } from "./types";
-import { ok, err } from "./types";
-import { noopLogger, type Logger } from "./logger";
+import type { Auth } from 'better-auth'
+import type { AuthResult } from './types'
+import { ok, err } from './types'
+import { noopLogger, type Logger } from './logger'
 
 export interface GetAccessTokenParams {
-  userId: string;
+  userId: string
   /** Provider id as configured, e.g. "google" or "apple". */
-  providerId: string;
+  providerId: string
 }
 
 export interface AccessTokenResult {
-  accessToken: string;
+  accessToken: string
   /** undefined if the provider/response didn't include an expiry. */
-  expiresAt: Date | undefined;
+  expiresAt: Date | undefined
 }
 
 /**
@@ -49,7 +49,7 @@ export interface AccessTokenResult {
 export async function getValidAccessToken(
   auth: Auth,
   params: GetAccessTokenParams,
-  logger: Logger = noopLogger
+  logger: Logger = noopLogger,
 ): Promise<AuthResult<AccessTokenResult>> {
   try {
     // better-auth's account plugin exposes `getAccessToken`, which checks
@@ -57,34 +57,38 @@ export async function getValidAccessToken(
     // exchange automatically when needed, persisting the rotated token.
     const result = await auth.api.getAccessToken({
       body: { providerId: params.providerId, userId: params.userId },
-    });
+    })
 
     if (!result?.accessToken) {
-      logger.warn("No access token available for provider", { providerId: params.providerId, userId: params.userId });
-      return err({
-        kind: "provider_error",
+      logger.warn('No access token available for provider', {
         providerId: params.providerId,
-        message: "No linked account found, or the provider did not return an access token.",
-      });
+        userId: params.userId,
+      })
+      return err({
+        kind: 'provider_error',
+        providerId: params.providerId,
+        message: 'No linked account found, or the provider did not return an access token.',
+      })
     }
 
-    logger.debug("Access token resolved", { providerId: params.providerId, userId: params.userId });
+    logger.debug('Access token resolved', { providerId: params.providerId, userId: params.userId })
 
     return ok({
       accessToken: result.accessToken,
       expiresAt: result.accessTokenExpiresAt ? new Date(result.accessTokenExpiresAt) : undefined,
-    });
+    })
   } catch (cause) {
-    logger.error("Access token refresh failed", {
+    logger.error('Access token refresh failed', {
       providerId: params.providerId,
       userId: params.userId,
-      message: cause instanceof Error ? cause.message : "unknown",
-    });
+      message: cause instanceof Error ? cause.message : 'unknown',
+    })
     return err({
-      kind: "provider_error",
+      kind: 'provider_error',
       providerId: params.providerId,
-      message: "Failed to refresh the provider access token. The user may need to reconnect this account.",
+      message:
+        'Failed to refresh the provider access token. The user may need to reconnect this account.',
       cause,
-    });
+    })
   }
 }
