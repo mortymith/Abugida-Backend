@@ -283,7 +283,7 @@ const appConfigSchema = z
 
     // ── Production hardening ────────────────────────────────────────────────
     if (effectiveEnv === 'production') {
-      if (!googleId && appleCount === 0) {
+      if (!env.GOOGLE_CLIENT_ID && !env.APPLE_CLIENT_ID) {
         ctx.addIssue({
           code: 'custom',
           path: ['GOOGLE_CLIENT_ID'],

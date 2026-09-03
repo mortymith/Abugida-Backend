@@ -13,7 +13,7 @@ import type { HonoAuthVariables } from '@abugida/auth/hono'
 export interface ResolvedApiKey {
   publicId: string
   name: string
-  userId: number
+  userId: string
   scopes: string[]
   rateLimit: number
   keyPrefix: string

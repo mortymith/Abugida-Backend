@@ -5,7 +5,7 @@
  * single registration point used by `app.ts`; ordering here is deliberate:
  *
  *   requestId → observability → logging → cors → timeout
- *     → /api/v1/*:  bodyLimit → withSession → rateLimit → requireAuth
+ *     → feature routes (root-level): bodyLimit → withSession → rateLimit → requireAuth
  *     → /webhooks/*: bodyLimit → apiKeyAuth → rateLimit
  *   then notFound/onError as the final catch-all.
  *
@@ -57,6 +57,30 @@ export interface MiddlewareDependencies {
   limiters: RateLimiters
 }
 
+/**
+ * Every feature route is mounted at the root (no `/api/v1` prefix). The
+ * session/rate-limit/auth stack is applied to those root prefixes below, with
+ * public catalog GETs and the `/auth` flow let through by the allowlist in
+ * `auth.middleware.ts`. Webhooks are authenticated separately by API key.
+ */
+const FEATURE_ROUTE_PREFIXES = [
+  '/auth/*',
+  '/users/*',
+  '/courses/*',
+  '/exam-types/*',
+  '/tags/*',
+  '/bundles/*',
+  '/modules/*',
+  '/lessons/*',
+  '/resources/*',
+  '/quiz/*',
+  '/search/*',
+  '/purchases/*',
+  '/health*',
+  '/doc*',
+  '/openapi*',
+]
+
 export function applyMiddleware(app: AppHono, deps: MiddlewareDependencies): void {
   // ── Global chain (every request, every path) ─────────────────────────────
   app.use('*', requestIdMiddleware())
@@ -65,11 +89,16 @@ export function applyMiddleware(app: AppHono, deps: MiddlewareDependencies): voi
   app.use('*', corsMiddleware())
   app.use('*', timeout(REQUEST_TIMEOUT_MS, requestTimedOut))
 
-  // ── Versioned API routes ─────────────────────────────────────────────────
-  app.use('/api/v1/*', bodyLimit({ maxSize: BODY_LIMIT_BYTES, onError: bodyTooLarge }))
-  app.use('/api/v1/*', optionalSessionMiddleware(deps.auth))
-  app.use('/api/v1/*', rateLimitMiddleware(deps.limiters))
-  app.use('/api/v1/*', requireAuthMiddleware(deps.auth))
+  // ── Feature routes (root-level) ──────────────────────────────────────────
+  for (const prefix of FEATURE_ROUTE_PREFIXES) {
+    app.use(
+      prefix,
+      bodyLimit({ maxSize: BODY_LIMIT_BYTES, onError: bodyTooLarge }),
+      optionalSessionMiddleware(deps.auth),
+      rateLimitMiddleware(deps.limiters),
+      requireAuthMiddleware(deps.auth),
+    )
+  }
 
   // ── Webhook routes (API-key authenticated) ───────────────────────────────
   app.use('/webhooks/*', bodyLimit({ maxSize: BODY_LIMIT_BYTES, onError: bodyTooLarge }))

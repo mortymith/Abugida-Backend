@@ -79,10 +79,10 @@ describe('requireAuthMiddleware', () => {
       return c.json({ type: 'https://api.abugida.com/errors/unauthorized', status: 401 }, 401)
     })
 
-    app.use('/api/v1/*', requireAuthMiddleware(auth))
-    app.get('/api/v1/courses', (c) => c.json({ ok: true }))
+    app.use('*', requireAuthMiddleware(auth))
+    app.get('/users/me', (c) => c.json({ ok: true }))
 
-    const res = await app.request('/api/v1/courses')
+    const res = await app.request('/users/me')
     expect(res.status).toBe(401)
   })
 
@@ -97,14 +97,14 @@ describe('requireAuthMiddleware', () => {
       return next()
     })
 
-    app.use('/api/v1/*', requireAuthMiddleware(auth))
-    app.get('/api/v1/courses', (c) => c.json({ ok: true }))
+    app.use('*', requireAuthMiddleware(auth))
+    app.get('/users/me', (c) => c.json({ ok: true }))
 
-    const res = await app.request('/api/v1/courses')
+    const res = await app.request('/users/me')
     expect(res.status).toBe(200)
   })
 
-  it('allows public paths to bypass auth', async () => {
+  it('allows public catalog GETs to bypass auth', async () => {
     const { requireAuthMiddleware } = await import('@/middleware/auth.middleware')
     const app = new Hono<AppEnv>()
     const auth = {} as AuthInstance
@@ -113,11 +113,43 @@ describe('requireAuthMiddleware', () => {
       return c.json({ type: 'https://api.abugida.com/errors/unauthorized', status: 401 }, 401)
     })
 
-    app.use('/api/v1/*', requireAuthMiddleware(auth))
-    app.get('/api/v1/exam-types', (c) => c.json({ ok: true }))
+    app.use('*', requireAuthMiddleware(auth))
+    app.get('/exam-types', (c) => c.json({ ok: true }))
 
-    const res = await app.request('/api/v1/exam-types')
-    // Public paths bypass auth — the requireSession guard is skipped
+    const res = await app.request('/exam-types')
+    // Public catalog GETs bypass auth — the requireSession guard is skipped
+    expect(res.status).toBe(200)
+  })
+
+  it('requires auth for mutations on otherwise-public roots', async () => {
+    const { requireAuthMiddleware } = await import('@/middleware/auth.middleware')
+    const app = new Hono<AppEnv>()
+    const auth = {} as AuthInstance
+
+    mockRequireSession.mockImplementationOnce(() => async (c: any) => {
+      return c.json({ type: 'https://api.abugida.com/errors/unauthorized', status: 401 }, 401)
+    })
+
+    app.use('*', requireAuthMiddleware(auth))
+    app.post('/exam-types', (c) => c.json({ ok: true }))
+
+    const res = await app.request('/exam-types', { method: 'POST' })
+    expect(res.status).toBe(401)
+  })
+
+  it('always lets the better-auth /auth flow through', async () => {
+    const { requireAuthMiddleware } = await import('@/middleware/auth.middleware')
+    const app = new Hono<AppEnv>()
+    const auth = {} as AuthInstance
+
+    mockRequireSession.mockImplementationOnce(() => async (c: any) => {
+      return c.json({ type: 'https://api.abugida.com/errors/unauthorized', status: 401 }, 401)
+    })
+
+    app.use('*', requireAuthMiddleware(auth))
+    app.post('/auth/sign-in/social', (c) => c.json({ ok: true }))
+
+    const res = await app.request('/auth/sign-in/social', { method: 'POST' })
     expect(res.status).toBe(200)
   })
 })
