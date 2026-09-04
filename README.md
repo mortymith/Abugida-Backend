@@ -229,6 +229,8 @@ flowchart TD
 
 ## Common Commands
 
+### Infrastructure (Just)
+
 ```bash
 just                    # List all available commands
 just setup-dev          # Full dev bootstrap (.env + services)
@@ -245,6 +247,19 @@ just deploy prod        # Full production deployment
 just rollback           # Rollback to previous version
 just backup-full        # Full backup (Postgres + Redis + MinIO + config)
 ```
+
+### Application Development (pnpm + Turborepo)
+
+```bash
+pnpm dev                                # Start all workspaces (Turborepo TUI)
+pnpm dev --filter=@abugida/api          # Start only the API
+pnpm dev --filter=@abugida/dashboard    # Start only the Dashboard
+pnpm build                              # Build all workspaces
+pnpm test                               # Run all tests
+pnpm typecheck                          # Typecheck all workspaces
+```
+
+See [docs/development/dev-workflow.md](docs/development/dev-workflow.md) for TUI navigation, `--filter` usage, and service ports.
 
 ---
 
