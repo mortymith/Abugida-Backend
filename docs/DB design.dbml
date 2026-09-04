@@ -225,15 +225,17 @@ Enum moderation_content_type {
 // ============================================================================
 
 Table auth.users {
-  id bigint [pk, increment]
-  public_id uuid [not null, default: `uuid_generate_v7()`, unique]
+  id text [pk, note: "Better Auth generated UUID — the users table is Better Auth's user model."]
+  name text
+  email text [unique]
+  email_verified boolean [not null, default: false]
+  image text
   phone_number_encrypted bytea [note: 'AES-256-GCM encrypted. NULL for social-login users.']
   phone_number_hash varchar(64) [note: 'SHA-256 hash for lookups. NULL for social-login users.']
   phone_number_last4 char(4) [note: 'Last 4 digits for support. NULL for social-login users.']
   hash_version smallint [default: 1]
   device_count integer [not null, default: 0]
   max_devices integer [not null, default: 3]
-  display_name varchar(100)
   account_status account_status [not null, default: 'active']
   failed_login_attempts smallint [not null, default: 0, check: `failed_login_attempts >= 0`]
   locked_until timestamptz
@@ -247,7 +249,6 @@ Table auth.users {
   deleted_at timestamptz
   Note: 'Central identity table. Roles managed via ops.course_roles (course-scoped RBAC).'
   Indexes {
-    (public_id) [unique, name: "idx_users_public_id"]
     (phone_number_hash) [unique, name: "idx_users_phone_hash"]
     (account_status) [name: "idx_users_status"]
     (deleted_at) [name: "idx_users_deleted"]
@@ -256,10 +257,61 @@ Table auth.users {
   }
 }
 
+Table auth.session {
+  id text [pk]
+  user_id text [not null]
+  token text [not null, unique]
+  expires_at timestamp [not null]
+  ip_address text
+  user_agent text
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+  Note: 'Better Auth session store.'
+  Indexes {
+    (token) [unique, name: "idx_auth_session_token"]
+    (user_id) [name: "idx_auth_session_user"]
+    (expires_at) [name: "idx_auth_session_expires"]
+  }
+}
+
+Table auth.account {
+  id text [pk]
+  user_id text [not null]
+  provider_id text [not null]
+  account_id text [not null]
+  access_token text
+  refresh_token text
+  id_token text
+  scope text
+  password text
+  access_token_expires_at timestamp
+  refresh_token_expires_at timestamp
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+  Note: 'Better Auth OAuth / credential accounts.'
+  Indexes {
+    (provider_id, account_id) [unique, name: "idx_auth_account_provider"]
+    (user_id) [name: "idx_auth_account_user"]
+  }
+}
+
+Table auth.verification {
+  id text [pk]
+  identifier text [not null]
+  value text [not null]
+  expires_at timestamp [not null]
+  created_at timestamp [not null, default: `now()`]
+  updated_at timestamp [not null, default: `now()`]
+  Note: 'Better Auth verification tokens (password reset / email verification).'
+  Indexes {
+    (identifier, expires_at) [name: "idx_auth_verification_identifier_expires"]
+  }
+}
+
 Table auth.user_profiles {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  user_id bigint [not null]
+  user_id text [not null]
   avatar_object_key varchar(500)
   email_encrypted bytea [note: 'AES-256-GCM encrypted email']
   email_hash varchar(64) [note: 'SHA-256 hash of lowercase email for lookups']
@@ -284,7 +336,7 @@ Table auth.user_profiles {
 Table auth.devices {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  user_id bigint [not null]
+  user_id text [not null]
   device_identifier varchar(255) [not null]
   device_name varchar(100)
   platform platform
@@ -305,7 +357,7 @@ Table auth.devices {
 Table auth.user_consents {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  user_id bigint [not null]
+  user_id text [not null]
   consent_type consent_type [not null]
   consent_version varchar(20) [not null]
   is_granted boolean [not null]
@@ -385,7 +437,7 @@ Table catalog.courses {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   exam_type_id bigint [not null]
-  instructor_id bigint [note: 'FK to auth.users.id. Course owner/creator.']
+  instructor_id text [note: 'FK to auth.users.id. Course owner/creator.']
   title varchar(300) [not null]
   slug varchar(200) [not null]
   description text
@@ -451,7 +503,7 @@ Table catalog.modules {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   course_id bigint [not null]
-  instructor_id bigint [note: 'Module author.']
+  instructor_id text [note: 'Module author.']
   title varchar(300) [not null]
   description text
   sort_order smallint [not null, check: `sort_order >= 0`]
@@ -476,7 +528,7 @@ Table catalog.lessons {
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   module_id bigint [not null]
   course_id bigint [not null, note: 'Denormalized from modules.course_id via trigger.']
-  instructor_id bigint [note: 'Lesson author.']
+  instructor_id text [note: 'Lesson author.']
   title varchar(300) [not null]
   description text
   content_type content_type [not null]
@@ -515,7 +567,7 @@ Table catalog.course_tags {
   name varchar(100) [not null]
   slug varchar(100) [not null]
   description text
-  created_by bigint
+  created_by text
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
@@ -547,7 +599,7 @@ Table catalog.course_bundles {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   exam_type_id bigint [not null, note: 'Bundles are themed around an exam_type. All courses in the bundle should belong to this exam_type (enforced via trigger).']
-  instructor_id bigint [note: 'Bundle creator. FK to auth.users.id.']
+  instructor_id text [note: 'Bundle creator. FK to auth.users.id.']
   title varchar(300) [not null]
   slug varchar(200) [not null]
   description text
@@ -627,7 +679,7 @@ Table finance.content_licenses {
   licensor_contact varchar(300)
   cost_amount numeric(19, 4) [check: `cost_amount IS NULL OR cost_amount >= 0`]
   cost_currency char(3) [not null, default: 'ETB', check: `cost_currency ~ '^[A-Z]{3}$'`]
-  created_by bigint
+  created_by text
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
@@ -642,7 +694,7 @@ Table finance.content_license_grants {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   content_license_id bigint [not null]
-  student_id bigint [not null]
+  student_id text [not null]
   purchase_id bigint
   granted_at timestamptz [not null, default: `now()`]
   access_expires_at timestamptz [not null]
@@ -717,7 +769,7 @@ Table finance.purchase_options {
 Table finance.purchases {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  student_id bigint [not null]
+  student_id text [not null]
   // [MODIFIED] course_id is now nullable — exactly one of course_id or bundle_id
   course_id bigint [note: '[MODIFIED] Nullable. Set for individual course purchases.']
   bundle_id bigint [note: '[NEW] Nullable. Set for bundle purchases.']
@@ -780,7 +832,7 @@ Table finance.purchase_transactions {
 Table learning.enrollments {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  student_id bigint [not null]
+  student_id text [not null]
   course_id bigint [not null]
   purchase_id bigint
   bundle_id bigint [note: '[NEW] Set when enrollment was created from a bundle purchase.']
@@ -814,7 +866,7 @@ Table learning.enrollments {
 Table learning.lesson_completions {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  student_id bigint [not null]
+  student_id text [not null]
   lesson_id bigint [not null]
   enrollment_id bigint [not null]
   is_completed boolean [not null, default: false]
@@ -856,7 +908,7 @@ Table learning.quiz_questions {
 Table learning.quiz_attempts {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  student_id bigint [not null]
+  student_id text [not null]
   lesson_id bigint [not null]
   attempt_number smallint [not null, check: `attempt_number >= 1`]
   total_questions smallint [not null, check: `total_questions > 0`]
@@ -905,7 +957,7 @@ Table learning.quiz_answer_history {
   new_is_correct boolean
   old_student_answer text
   new_student_answer text
-  changed_by bigint [not null]
+  changed_by text [not null]
   change_reason varchar(200)
   changed_at timestamptz [not null, default: `now()`]
   Note: 'Immutable grade audit trail. Append-only.'
@@ -920,7 +972,7 @@ Table learning.quiz_answer_history {
 Table learning.course_reviews {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  student_id bigint [not null]
+  student_id text [not null]
   course_id bigint [not null]
   rating smallint [not null, check: `rating >= 1 AND rating <= 5`]
   title varchar(200) [not null]
@@ -944,7 +996,7 @@ Table learning.course_reviews {
 Table ops.audit_logs {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  actor_id bigint
+  actor_id text
   actor_ip inet
   action audit_action [not null]
   resource_type audit_resource_type [not null]
@@ -974,7 +1026,7 @@ Table ops.principals {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   principal_type varchar(20) [not null, check: `principal_type IN ('user', 'service', 'integration')`]
-  user_id bigint
+  user_id text
   service_name varchar(100)
   integration_name varchar(100)
   created_at timestamptz [not null, default: `now()`]
@@ -1006,10 +1058,10 @@ Table ops.roles {
 Table ops.course_roles {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
-  user_id bigint [not null]
+  user_id text [not null]
   course_id bigint [note: 'NULL = global role. Non-null = course-scoped role.']
   role_id bigint [not null]
-  granted_by bigint
+  granted_by text
   granted_at timestamptz [not null, default: `now()`]
   revoked_at timestamptz
   created_at timestamptz [not null, default: `now()`]
@@ -1038,7 +1090,7 @@ Table ops.security_events {
   id bigint [pk, increment]
   public_id uuid [not null, default: `uuid_generate_v7()`, unique]
   event_type security_event_type [not null]
-  actor_id bigint
+  actor_id text
   actor_ip inet
   severity severity_level [not null, default: 'info']
   description text [not null]
@@ -1066,7 +1118,7 @@ Table ops.feature_flags {
   target_segments jsonb
   start_date timestamptz
   end_date timestamptz [check: `end_date IS NULL OR end_date > start_date`]
-  created_by bigint
+  created_by text
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
@@ -1084,7 +1136,7 @@ Table ops.system_configs {
   config_value jsonb [not null]
   description text
   is_sensitive boolean [not null, default: false]
-  updated_by bigint
+  updated_by text
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
@@ -1187,8 +1239,8 @@ Table ops.moderation_queue {
   content_type moderation_content_type [not null]
   content_id bigint [not null]
   status moderation_status [not null, default: 'pending']
-  submitted_by bigint
-  assigned_to bigint
+  submitted_by text
+  assigned_to text
   priority smallint [not null, default: 0, check: `priority >= 0 AND priority <= 10`]
   submitted_at timestamptz [not null, default: `now()`]
   sla_deadline_at timestamptz [not null]
@@ -1222,7 +1274,7 @@ Table shared.file_metadata {
   encryption_key_reference varchar(500)
   is_public boolean [not null, default: false]
   lesson_id bigint [note: 'FK to catalog.lessons.id. Direct ownership link.']
-  uploaded_by bigint
+  uploaded_by text
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   deleted_at timestamptz
@@ -1243,6 +1295,8 @@ Table shared.file_metadata {
 Ref: auth.user_profiles.user_id > auth.users.id [delete: cascade, update: cascade]
 Ref: auth.devices.user_id > auth.users.id [delete: cascade, update: cascade]
 Ref: auth.user_consents.user_id > auth.users.id [delete: cascade, update: cascade]
+Ref: auth.session.user_id > auth.users.id [delete: cascade, update: cascade]
+Ref: auth.account.user_id > auth.users.id [delete: cascade, update: cascade]
 
 // --- catalog ---
 // [REMOVED] exam_types.education_level_id FK — education_levels deleted

@@ -17,7 +17,7 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
-    "format": "turbo format && prettier --write \"**/*.{md,mdx,yaml,yml}\" && shfmt -f . | grep -v -E '/node_modules/|^\\.git/|\\.husky/_/' | xargs -r -d '\\n' shfmt -w -i 2 -sr -ln bash",
+    "format": "turbo format",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "clean": "turbo clean && rm -rf node_modules .turbo",
