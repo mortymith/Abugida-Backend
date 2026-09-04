@@ -2,7 +2,7 @@
  * Unit tests for environment configuration.
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, test, expect } from 'bun:test'
 import { configFromEnv, hasEnvConfig } from '../../src/config/env.ts'
 
 describe('configFromEnv', () => {
@@ -15,7 +15,7 @@ describe('configFromEnv', () => {
     STORAGE_BUCKET: 'test-bucket',
   }
 
-  it('builds config from valid environment', () => {
+  test('builds config from valid environment', () => {
     const config = configFromEnv(validEnv)
     expect(config.provider).toBe('minio')
     expect(config.endpoint).toBe('http://localhost:9000')
@@ -25,15 +25,15 @@ describe('configFromEnv', () => {
     expect(config.bucket).toBe('test-bucket')
   })
 
-  it('throws on missing provider', () => {
+  test('throws on missing provider', () => {
     expect(() => configFromEnv({})).toThrow('STORAGE_PROVIDER')
   })
 
-  it('throws on missing access key', () => {
+  test('throws on missing access key', () => {
     expect(() => configFromEnv({ STORAGE_PROVIDER: 'minio' })).toThrow('STORAGE_ACCESS_KEY_ID')
   })
 
-  it('parses numeric options', () => {
+  test('parses numeric options', () => {
     const config = configFromEnv({
       ...validEnv,
       STORAGE_MAX_ATTEMPTS: '5',
@@ -43,7 +43,7 @@ describe('configFromEnv', () => {
     expect(config.requestTimeout).toBe(60000)
   })
 
-  it('parses boolean forcePathStyle', () => {
+  test('parses boolean forcePathStyle', () => {
     const config = configFromEnv({
       ...validEnv,
       STORAGE_FORCE_PATH_STYLE: 'true',
@@ -53,7 +53,7 @@ describe('configFromEnv', () => {
 })
 
 describe('hasEnvConfig', () => {
-  it('returns true when all required vars are present', () => {
+  test('returns true when all required vars are present', () => {
     expect(
       hasEnvConfig({
         STORAGE_PROVIDER: 'minio',
@@ -64,7 +64,7 @@ describe('hasEnvConfig', () => {
     ).toBe(true)
   })
 
-  it('returns false when vars are missing', () => {
+  test('returns false when vars are missing', () => {
     expect(hasEnvConfig({})).toBe(false)
   })
 })

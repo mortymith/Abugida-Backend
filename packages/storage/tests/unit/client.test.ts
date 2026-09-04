@@ -2,7 +2,7 @@
  * Unit tests for the S3 client module.
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, test, expect } from 'bun:test'
 import { validateConfig, PROVIDER_DEFAULTS } from '../../src/config/schema.ts'
 
 describe('validateConfig', () => {
@@ -15,7 +15,7 @@ describe('validateConfig', () => {
     bucket: 'test-bucket',
   }
 
-  it('should apply defaults to a valid config', () => {
+  test('should apply defaults to a valid config', () => {
     const result = validateConfig(baseConfig)
     expect(result.forcePathStyle).toBe(true) // MinIO default
     expect(result.maxAttempts).toBe(3)
@@ -27,23 +27,23 @@ describe('validateConfig', () => {
     expect(result.quotas?.maxFileSize).toBe(5120)
   })
 
-  it('should throw on invalid provider', () => {
+  test('should throw on invalid provider', () => {
     expect(() => validateConfig({ ...baseConfig, provider: 'invalid' as any })).toThrow(
       'Invalid provider',
     )
   })
 
-  it('should throw on missing accessKeyId', () => {
+  test('should throw on missing accessKeyId', () => {
     expect(() => validateConfig({ ...baseConfig, accessKeyId: '' })).toThrow(
       '"accessKeyId" is required',
     )
   })
 
-  it('should throw on missing bucket', () => {
+  test('should throw on missing bucket', () => {
     expect(() => validateConfig({ ...baseConfig, bucket: '' })).toThrow('"bucket" is required')
   })
 
-  it('should throw when aws:kms is used without keyId', () => {
+  test('should throw when aws:kms is used without keyId', () => {
     expect(() =>
       validateConfig({
         ...baseConfig,
@@ -52,7 +52,7 @@ describe('validateConfig', () => {
     ).toThrow('"encryption.keyId" is required')
   })
 
-  it('should accept aws:kms with a keyId', () => {
+  test('should accept aws:kms with a keyId', () => {
     const result = validateConfig({
       ...baseConfig,
       encryption: { enabled: true, algorithm: 'aws:kms', keyId: 'arn:aws:kms:...' },
@@ -60,13 +60,13 @@ describe('validateConfig', () => {
     expect(result.encryption?.algorithm).toBe('aws:kms')
   })
 
-  it('should throw on invalid maxFileSize', () => {
+  test('should throw on invalid maxFileSize', () => {
     expect(() => validateConfig({ ...baseConfig, quotas: { maxFileSize: 0 } })).toThrow(
       '"quotas.maxFileSize" must be > 0',
     )
   })
 
-  it('should preserve user overrides', () => {
+  test('should preserve user overrides', () => {
     const result = validateConfig({
       ...baseConfig,
       maxAttempts: 7,
@@ -80,7 +80,7 @@ describe('validateConfig', () => {
 })
 
 describe('PROVIDER_DEFAULTS', () => {
-  it('should have defaults for all providers', () => {
+  test('should have defaults for all providers', () => {
     const providers = ['aws-s3', 'minio', 'r2', 'spaces', 'wasabi', 'b2'] as const
     for (const provider of providers) {
       expect(PROVIDER_DEFAULTS[provider]).toBeDefined()
@@ -88,11 +88,11 @@ describe('PROVIDER_DEFAULTS', () => {
     }
   })
 
-  it('should set forcePathStyle true for MinIO', () => {
+  test('should set forcePathStyle true for MinIO', () => {
     expect(PROVIDER_DEFAULTS.minio.forcePathStyle).toBe(true)
   })
 
-  it('should set forcePathStyle false for AWS S3', () => {
+  test('should set forcePathStyle false for AWS S3', () => {
     expect(PROVIDER_DEFAULTS['aws-s3'].forcePathStyle).toBe(false)
   })
 })

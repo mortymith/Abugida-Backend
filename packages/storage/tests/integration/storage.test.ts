@@ -13,25 +13,26 @@
  * Set SKIP_INTEGRATION=1 to skip these tests.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, test, expect } from 'bun:test'
 
 // Skip integration tests unless explicitly enabled
 const skip = !process.env.RUN_INTEGRATION
 
-describe.skipIf(skip)('Storage integration tests', () => {
-  // Integration tests would go here, using a real MinIO instance.
-  // They are skipped by default to avoid CI dependency on Docker.
+if (!skip)
+  describe('Storage integration tests', () => {
+    // Integration tests would go here, using a real MinIO instance.
+    // They are skipped by default to avoid CI dependency on Docker.
 
-  it('should upload and download an object', async () => {
-    // Placeholder — requires real MinIO
-    expect(true).toBe(true)
-  })
+    test('should upload and download an object', async () => {
+      // Placeholder — requires real MinIO
+      expect(true).toBe(true)
+    })
 
-  it('should generate and use presigned URLs', async () => {
-    expect(true).toBe(true)
-  })
+    test('should generate and use presigned URLs', async () => {
+      expect(true).toBe(true)
+    })
 
-  it('should handle multipart uploads', async () => {
-    expect(true).toBe(true)
+    test('should handle multipart uploads', async () => {
+      expect(true).toBe(true)
+    })
   })
-})
