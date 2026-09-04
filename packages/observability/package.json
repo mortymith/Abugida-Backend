@@ -3,12 +3,31 @@
   "version": "1.0.0",
   "description": "Shared observability layer for the Abugida backend ecosystem — Pino logging + OpenTelemetry tracing & metrics over OTLP",
   "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./hono": "./src/integrations/hono.ts",
-    "./tanstack": "./src/integrations/tanstack.ts",
-    "./astro": "./src/integrations/astro.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./hono": {
+      "types": "./dist/integrations/hono.d.ts",
+      "import": "./dist/integrations/hono.js"
+    },
+    "./tanstack": {
+      "types": "./dist/integrations/tanstack.d.ts",
+      "import": "./dist/integrations/tanstack.js"
+    },
+    "./astro": {
+      "types": "./dist/integrations/astro.d.ts",
+      "import": "./dist/integrations/astro.js"
+    }
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "bun test",
