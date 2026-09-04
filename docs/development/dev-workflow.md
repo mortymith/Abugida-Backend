@@ -56,3 +56,52 @@ security(vault): add firewall rules for port 8200
 
 **Types:** `feat`, `fix`, `chore`, `docs`, `refactor`, `security`, `test`, `ci`.
 **Scope:** Service or component name (e.g., `api`, `redis`, `vault`, `otel`, `compose`).
+
+## Local Development (Turborepo)
+
+### Running All Workspaces
+
+```bash
+pnpm dev
+```
+
+This starts every workspace in parallel via Turborepo. The built-in TUI renders live logs from all services. Use the number keys `1`, `2`, `3` to switch between workspace log streams.
+
+> **Note:** The TUI requires `"ui": "tui"` in `turbo.json`. This is already configured in the repo.
+
+### Running a Single Workspace
+
+Use `--filter` to run only one workspace (and its dependencies):
+
+```bash
+pnpm dev --filter=@abugida/api
+pnpm dev --filter=@abugida/dashboard
+pnpm dev --filter=@abugida/marketing
+```
+
+Filtering starts only the specified package plus any workspace packages it depends on. Useful for focused debugging without noise from unrelated services.
+
+### Running Workspaces in Separate Terminals
+
+For deeper debugging, open separate terminal tabs and run each workspace individually:
+
+```bash
+# Terminal 1 — API
+pnpm dev --filter=@abugida/api
+
+# Terminal 2 — Dashboard
+pnpm dev --filter=@abugida/dashboard
+
+# Terminal 3 — Marketing
+pnpm dev --filter=@abugida/marketing
+```
+
+Each terminal shows only that workspace's output, making it easier to inspect logs and attach debuggers.
+
+### Service Ports (Dev)
+
+| Service   | URL                     |
+| --------- | ----------------------- |
+| API       | `http://localhost:3001` |
+| Dashboard | `http://localhost:3000` |
+| Marketing | `http://localhost:4321` |
