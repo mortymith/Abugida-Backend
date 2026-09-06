@@ -48,6 +48,36 @@ describe('validateAuthConfig', () => {
     expect(() => validateAuthConfig(baseConfig({ providers: {} }))).toThrow()
   })
 
+  it('accepts a telegram-only config', () => {
+    expect(() =>
+      validateAuthConfig(
+        baseConfig({
+          providers: {
+            telegram: {
+              clientId: '123456789',
+              clientSecret: 'shh-its-a-secret',
+            },
+          },
+        }),
+      ),
+    ).not.toThrow()
+  })
+
+  it('rejects a telegram config missing clientSecret', () => {
+    expect(() =>
+      validateAuthConfig(
+        baseConfig({
+          providers: {
+            telegram: {
+              clientId: '123456789',
+              clientSecret: '',
+            },
+          },
+        }),
+      ),
+    ).toThrow()
+  })
+
   it('rejects a missing database schema', () => {
     // @ts-expect-error - intentionally malformed for the test
     expect(() => validateAuthConfig(baseConfig({ database: { db: {}, provider: 'pg' } }))).toThrow()
@@ -93,7 +123,15 @@ describe('withDefaults', () => {
 
   it('defaults rate limiting when unset', () => {
     const resolved = withDefaults(baseConfig())
-    expect(resolved.rateLimit).toEqual({ max: 20, windowSeconds: 60 })
+    expect(resolved.rateLimit).toEqual({
+      max: 20,
+      windowSeconds: 60,
+      customRules: {
+        '/sign-in/email': { window: 60, max: 5 },
+        '/sign-up/email': { window: 60, max: 3 },
+        '/change-password': { window: 60, max: 5 },
+      },
+    })
   })
 
   it('preserves an explicit rate limit override', () => {

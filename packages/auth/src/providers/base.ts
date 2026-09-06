@@ -3,7 +3,7 @@
  *
  * Shared helpers for building AuthProviderDefinition implementations, plus a
  * tiny registry consumers can use to add custom providers alongside the
- * built-in Apple/Google ones.
+ * built-in Google one (Telegram is a plugin, not a social provider).
  */
 
 import type {
@@ -39,7 +39,7 @@ export function assertNonEmpty(
 }
 
 /**
- * Registry of providers keyed by id. Built-in providers (apple, google) are
+ * Registry of providers keyed by id. Built-in providers (google) are
  * registered by `createAuth()`; consumers can add their own via
  * `config.providers.custom` without forking this package.
  */

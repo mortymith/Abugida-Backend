@@ -32,7 +32,7 @@ describe('getValidAccessToken', () => {
 
   it('handles a missing expiry gracefully', async () => {
     const auth = fakeAuth(() => ({ accessToken: 'at_123' }))
-    const result = await getValidAccessToken(auth, { userId: 'u1', providerId: 'apple' })
+    const result = await getValidAccessToken(auth, { userId: 'u1', providerId: 'telegram-oidc' })
     expect(result.ok).toBe(true)
     if (result.ok) expect(result.value.expiresAt).toBeUndefined()
   })

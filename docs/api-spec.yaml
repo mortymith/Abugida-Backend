@@ -21,7 +21,7 @@ info:
 
     Authentication endpoints (`/auth/*`) are provided by **Better Auth** framework.
     The API uses **JWT Bearer tokens** for user authentication:
-    - Sign-in providers: **Google Sign-In** and **Apple ID**
+    - Sign-in providers: **Google Sign-In** and **Telegram**
     - Access and refresh token lifecycle managed by Better Auth
     - Include as: `Authorization: Bearer <access_token>`
 
@@ -161,7 +161,7 @@ info:
 
     | Service | Purpose | Availability |
     |---------|---------|-------------|
-    | Better Auth | OAuth/authentication framework (Google + Apple ID) | Production only |
+    | Better Auth | OAuth/authentication framework (Google + Telegram) | Production only |
     | SMSEthiopia | SMS payment confirmations | Production only |
     | Telebirr C2B | Sole payment method (all platforms) | Production only |
 
@@ -3086,7 +3086,7 @@ components:
       bearerFormat: JWT
       description: |
         JWT Bearer Token Authentication via Better Auth.
-        Supported sign-in providers: **Google Sign-In** and **Apple ID**.
+        Supported sign-in providers: **Google Sign-In** and **Telegram**.
     apiKeyHeader:
       type: apiKey
       in: header

@@ -45,7 +45,7 @@ export const auth = createAuth({
     provider: 'pg',
   },
   providers: {
-    // Apple/Google still work side by side with a custom provider:
+    // Google/Telegram still work side by side with a custom provider:
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,

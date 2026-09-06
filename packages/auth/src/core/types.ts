@@ -65,14 +65,14 @@ export interface BaseProviderCredentials {
 }
 
 /**
- * The interface every OAuth provider module must implement. `apple.ts` and
- * `google.ts` both satisfy this, and it's the shape a consumer implements to
- * register a brand-new provider (see README "Adding a provider").
+ * The interface every OAuth provider module must implement. `google.ts`
+ * satisfies this, and it's the shape a consumer implements to register a
+ * brand-new provider (see README "Adding a provider").
  */
 export interface AuthProviderDefinition<
   TCredentials extends BaseProviderCredentials = BaseProviderCredentials,
 > {
-  /** Unique provider id, e.g. "apple" | "google" | "github". */
+  /** Unique provider id, e.g. "google" | "telegram-oidc" | "github". */
   id: string
   /** Human-readable name for logs/UI. */
   name: string
@@ -88,21 +88,6 @@ export interface AuthProviderDefinition<
 // Provider credential shapes
 // ---------------------------------------------------------------------------
 
-export interface AppleProviderCredentials extends BaseProviderCredentials {
-  /** Apple "Services ID" — used as the OAuth client_id. */
-  clientId: string
-  /** Apple Team ID (10-char alphanumeric). */
-  teamId: string
-  /** Key ID for the private key registered in App Store Connect. */
-  keyId: string
-  /** PKCS#8 private key (.p8 contents) used to sign the client secret JWT. */
-  privateKey: string
-  /** Client secret lifetime in seconds. Apple caps this at 15777000 (~6mo). */
-  clientSecretTtlSeconds?: number
-  /** true for native iOS/macOS app flows using Sign in with Apple SDK. */
-  appBundleIdentifier?: string
-}
-
 export interface GoogleProviderCredentials extends BaseProviderCredentials {
   clientId: string
   clientSecret: string
@@ -110,6 +95,29 @@ export interface GoogleProviderCredentials extends BaseProviderCredentials {
   additionalClientIds?: string[]
   accessType?: 'online' | 'offline'
   prompt?: 'none' | 'consent' | 'select_account'
+}
+
+/**
+ * Telegram credentials, consumed by the `better-auth-telegram` plugin (see
+ * `providers/telegram.ts`). Telegram sign-in is supported exclusively through
+ * Telegram OpenID Connect (oauth.telegram.org) — a standard OAuth 2.0 + PKCE
+ * redirect flow the plugin registers as a real social provider, exposed via
+ * better-auth's own social sign-in routes (`POST /sign-in/social` with
+ * `provider: "telegram-oidc"`). The plugin's legacy Login Widget and Mini App
+ * flows are deliberately not configured; no bot token is involved.
+ */
+export interface TelegramProviderCredentials {
+  /** Client ID from @BotFather's Web Login (OpenID Connect) settings. */
+  clientId: string
+  /**
+   * Client Secret from @BotFather's Web Login (Bot Settings > Web Login) —
+   * NOT the bot token. BotFather issues a separate secret for Web Login.
+   */
+  clientSecret: string
+  /** Request the phone-number scope. Default: false. */
+  requestPhone?: boolean
+  /** Additional OIDC scopes beyond the default "openid profile". */
+  scopes?: string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -138,11 +146,13 @@ export interface RateLimitConfig {
   /** Requests allowed within `windowSeconds` per IP+route. */
   max: number
   windowSeconds: number
+  /** Optional endpoint-specific overrides for sensitive Better Auth routes. */
+  customRules?: Record<string, { window: number; max: number } | false>
 }
 
 export interface ProvidersConfig {
-  apple?: AppleProviderCredentials
   google?: GoogleProviderCredentials
+  telegram?: TelegramProviderCredentials
   /** Escape hatch for consumer-defined providers (see AuthProviderDefinition). */
   custom?: Record<
     string,

@@ -26,9 +26,8 @@ function baseConfig(overrides: Partial<AuthConfig> = {}): AuthConfig {
 }
 
 describe('buildProviderRegistry', () => {
-  it('always registers apple and google', () => {
+  it('always registers google', () => {
     const registry = buildProviderRegistry(baseConfig())
-    expect(registry.get('apple')?.id).toBe('apple')
     expect(registry.get('google')?.id).toBe('google')
   })
 
@@ -63,22 +62,19 @@ describe('buildSocialProviders', () => {
     expect(Object.keys(social)).toEqual(['google'])
   })
 
-  it('includes both apple and google when both are configured', () => {
+  it('never emits a social entry for telegram (its OIDC provider is registered by the plugin)', () => {
     const config = baseConfig({
       providers: {
         google: { clientId: 'id.apps.googleusercontent.com', clientSecret: 'secret' },
-        apple: {
-          clientId: 'com.abugida.web',
-          teamId: 'ABCDE12345',
-          keyId: 'KEYID1234',
-          privateKey:
-            '-----BEGIN PRIVATE KEY-----\nMIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgjSfHO1N3ZL0AaCjT\noXn2LznaqKWvZmPhrWGHaAqENiihRANCAATz9N67V7SBkHtyR6A+R/jnsxfrgmLz\nVCw8F8UmW9Hau5V2qVm7oaEBoFbkXJ+nuOFqTgFfzXmBQroDve3pS1j3\n-----END PRIVATE KEY-----',
+        telegram: {
+          clientId: '123456789',
+          clientSecret: 'shh-its-a-secret',
         },
       },
     })
     const registry = buildProviderRegistry(config)
     const social = buildSocialProviders(config, registry)
-    expect(Object.keys(social).sort()).toEqual(['apple', 'google'])
+    expect(Object.keys(social)).toEqual(['google'])
   })
 })
 
@@ -93,7 +89,7 @@ describe('buildSessionOptions', () => {
 
   it('always enables a bounded cookie cache', () => {
     const options = buildSessionOptions(baseConfig())
-    expect(options.cookieCache).toEqual({ enabled: true, maxAge: 60 })
+    expect(options.cookieCache).toEqual({ enabled: true, maxAge: 60, strategy: 'jwe' })
   })
 })
 

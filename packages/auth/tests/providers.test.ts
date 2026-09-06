@@ -1,69 +1,33 @@
 import { describe, it, expect } from 'bun:test'
-import { appleProvider } from '../src/providers/apple'
 import { googleProvider } from '../src/providers/google'
-import type { AppleProviderCredentials, GoogleProviderCredentials } from '../src/core/types'
-
-const TEST_APPLE_PRIVATE_KEY =
-  '-----BEGIN PRIVATE KEY-----\nMIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgjSfHO1N3ZL0AaCjT\noXn2LznaqKWvZmPhrWGHaAqENiihRANCAATz9N67V7SBkHtyR6A+R/jnsxfrgmLz\nVCw8F8UmW9Hau5V2qVm7oaEBoFbkXJ+nuOFqTgFfzXmBQroDve3pS1j3\n-----END PRIVATE KEY-----'
-
-const validApple: AppleProviderCredentials = {
-  clientId: 'com.abugida.web',
-  teamId: 'ABCDE12345',
-  keyId: 'KEYID1234',
-  privateKey: TEST_APPLE_PRIVATE_KEY,
-}
+import { buildTelegramPlugins, validateTelegramCredentials } from '../src/providers/telegram'
+import type { GoogleProviderCredentials, TelegramProviderCredentials } from '../src/core/types'
+import type { AuthConfig } from '../src/core/types'
 
 const validGoogle: GoogleProviderCredentials = {
   clientId: '1234567890-abcdefg.apps.googleusercontent.com',
   clientSecret: 'shh-its-a-secret',
 }
 
-describe('appleProvider.validateCredentials', () => {
-  it('accepts a well-formed credential set', () => {
-    expect(() => appleProvider.validateCredentials(validApple)).not.toThrow()
-  })
+const validTelegram: TelegramProviderCredentials = {
+  clientId: '123456789',
+  clientSecret: 'shh-its-a-secret',
+}
 
-  it('rejects a missing clientId', () => {
-    expect(() => appleProvider.validateCredentials({ ...validApple, clientId: '' })).toThrow()
-  })
-
-  it("rejects a teamId that isn't 10 characters", () => {
-    expect(() => appleProvider.validateCredentials({ ...validApple, teamId: 'short' })).toThrow()
-  })
-
-  it("rejects a private key that isn't PEM-encoded", () => {
-    expect(() =>
-      appleProvider.validateCredentials({ ...validApple, privateKey: 'not-a-pem-key' }),
-    ).toThrow()
-  })
-})
-
-describe('appleProvider.toBetterAuthConfig', () => {
-  it('requests name and email scopes', () => {
-    const config = appleProvider.toBetterAuthConfig(validApple)
-    expect(config.scope).toEqual(['name', 'email'])
-  })
-
-  it('returns a signed ES256 client-secret JWT rather than a function', () => {
-    const config = appleProvider.toBetterAuthConfig(validApple)
-    expect(typeof config.clientSecret).toBe('string')
-    const secret = config.clientSecret as string
-    const [header, , signature] = secret.split('.')
-    expect(header).toBeDefined()
-    expect(signature).toBeDefined()
-    const decodedHeader = JSON.parse(Buffer.from(header!, 'base64url').toString('utf8'))
-    expect(decodedHeader.alg).toBe('ES256')
-    expect(decodedHeader.kid).toBe('KEYID1234')
-  })
-
-  it('passes through the native app bundle identifier when present', () => {
-    const config = appleProvider.toBetterAuthConfig({
-      ...validApple,
-      appBundleIdentifier: 'com.abugida.ios',
-    })
-    expect(config.appBundleIdentifier).toBe('com.abugida.ios')
-  })
-})
+function baseConfig(overrides: Partial<AuthConfig> = {}): AuthConfig {
+  return {
+    environment: 'development',
+    baseUrl: 'http://localhost:3000',
+    secret: 'a'.repeat(32),
+    database: {
+      db: {},
+      schema: { user: {}, session: {}, account: {}, verification: {} },
+      provider: 'pg',
+    },
+    providers: {},
+    ...overrides,
+  }
+}
 
 describe('googleProvider.validateCredentials', () => {
   it('accepts a well-formed credential set', () => {
@@ -98,5 +62,71 @@ describe('googleProvider.toBetterAuthConfig', () => {
       additionalClientIds: ['ios-client-id', 'android-client-id'],
     })
     expect(config.additionalClientIds).toEqual(['ios-client-id', 'android-client-id'])
+  })
+})
+
+describe('validateTelegramCredentials', () => {
+  it('accepts a well-formed credential set', () => {
+    expect(() => validateTelegramCredentials(validTelegram)).not.toThrow()
+  })
+
+  it('rejects a missing clientId', () => {
+    expect(() => validateTelegramCredentials({ ...validTelegram, clientId: '' })).toThrow()
+  })
+
+  it('rejects a missing clientSecret', () => {
+    expect(() => validateTelegramCredentials({ ...validTelegram, clientSecret: '' })).toThrow()
+  })
+
+  it('rejects empty scope entries', () => {
+    expect(() =>
+      validateTelegramCredentials({ ...validTelegram, scopes: ['profile', '  '] }),
+    ).toThrow()
+  })
+})
+
+describe('buildTelegramPlugins', () => {
+  it('returns an empty array when Telegram is not configured', () => {
+    expect(buildTelegramPlugins(baseConfig())).toEqual([])
+  })
+
+  it('builds a plugin instance with the telegram id when configured', () => {
+    const plugins = buildTelegramPlugins(baseConfig({ providers: { telegram: validTelegram } }))
+    expect(plugins).toHaveLength(1)
+    expect(plugins[0]!.id).toBe('telegram')
+  })
+
+  it('registers the Telegram OIDC social provider during plugin init', () => {
+    const plugins = buildTelegramPlugins(baseConfig({ providers: { telegram: validTelegram } }))
+    const plugin = plugins[0]!
+    expect(plugin.init).toBeDefined()
+    const result = plugin.init!({ socialProviders: [] } as never) as {
+      context: { socialProviders: Array<{ id: string }> }
+    }
+    const ids = result.context.socialProviders.map((provider) => provider.id)
+    expect(ids).toContain('telegram-oidc')
+  })
+
+  it('never registers the legacy Login Widget or Mini App endpoints', () => {
+    const plugins = buildTelegramPlugins(baseConfig({ providers: { telegram: validTelegram } }))
+    const plugin = plugins[0]!
+    const endpoints = plugin.endpoints as Record<string, unknown>
+    expect(endpoints.signInWithTelegram).toBeUndefined()
+    expect(endpoints.linkTelegram).toBeUndefined()
+    expect(endpoints.unlinkTelegram).toBeUndefined()
+    expect(endpoints.signInWithMiniApp).toBeUndefined()
+    expect(endpoints.validateMiniApp).toBeUndefined()
+    // Only the plugin's config discovery endpoint remains.
+    expect(endpoints.getTelegramConfig).toBeDefined()
+  })
+
+  it('registers no plugin rate limits (widget/miniapp limits are widget-only)', () => {
+    const plugins = buildTelegramPlugins(baseConfig({ providers: { telegram: validTelegram } }))
+    expect(plugins[0]!.rateLimit).toEqual([])
+  })
+
+  it('contributes no extra user/account schema fields', () => {
+    const plugins = buildTelegramPlugins(baseConfig({ providers: { telegram: validTelegram } }))
+    expect(plugins[0]!.schema).toBeUndefined()
   })
 })
