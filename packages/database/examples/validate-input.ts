@@ -73,14 +73,15 @@ function validateAuditLogInput(body: unknown) {
 
 // Usage examples:
 const validUser = validateUserInput({
-  displayName: 'Abebe Kebede',
+  name: 'Abebe Kebede',
+  phoneNumberEncrypted: Buffer.from('aes-256-gcm-ciphertext'),
   phoneNumberHash: 'abc123',
   phoneNumberLast4: '1234',
 })
 console.log('Valid user:', validUser)
 
 const invalidUser = validateUserInput({
-  displayName: 'x'.repeat(101), // too long
+  name: 'x'.repeat(101), // too long
 })
 console.log('Invalid user:', invalidUser) // null
 

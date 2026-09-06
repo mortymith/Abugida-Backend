@@ -27,6 +27,7 @@ describe('auth schemas', () => {
   describe('users', () => {
     const validUser = {
       accountStatus: 'active' as const,
+      phoneNumberEncrypted: Buffer.from('encrypted-phone-bytes'),
       phoneNumberHash: 'abc123def456',
       phoneNumberLast4: '1234',
       name: 'Test User',
@@ -93,6 +94,30 @@ describe('auth schemas', () => {
       )
     })
 
+    it('rejects a partial phone trio', () => {
+      expect(
+        insertUserSchema.safeParse({
+          ...validUser,
+          phoneNumberEncrypted: undefined,
+        }).success,
+      ).toBe(false)
+      expect(
+        insertUserSchema.safeParse({
+          ...validUser,
+          phoneNumberEncrypted: undefined,
+          phoneNumberLast4: undefined,
+        }).success,
+      ).toBe(false)
+      expect(
+        insertUserSchema.safeParse({
+          ...validUser,
+          phoneNumberEncrypted: undefined,
+          phoneNumberHash: undefined,
+          phoneNumberLast4: undefined,
+        }).success,
+      ).toBe(true)
+    })
+
     it('accepts select schema', () => {
       const result = selectUserSchema.safeParse({
         id: 'user_abc123',
@@ -100,7 +125,7 @@ describe('auth schemas', () => {
         phoneNumberEncrypted: null,
         phoneNumberHash: null,
         phoneNumberLast4: null,
-        hashVersion: null,
+        hashVersion: 1,
         deviceCount: 0,
         maxDevices: 3,
         email: null,
@@ -110,7 +135,6 @@ describe('auth schemas', () => {
         failedLoginAttempts: 0,
         lockedUntil: null,
         lastLoginAt: null,
-        lastActiveAt: null,
         deletionRequestedAt: null,
         deletionCompletedAt: null,
         retentionExpiresAt: null,

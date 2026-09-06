@@ -227,33 +227,33 @@ Enum moderation_content_type {
 Table auth.users {
   id text [pk, note: "Better Auth generated UUID — the users table is Better Auth's user model."]
   name text
-  email text [unique]
+  email text [note: 'Unique via idx_users_email. Purged to NULL at retention expiry (GDPR), freeing the value for re-registration.']
   email_verified boolean [not null, default: false]
   image text
   phone_number_encrypted bytea [note: 'AES-256-GCM encrypted. NULL for social-login users.']
   phone_number_hash varchar(64) [note: 'SHA-256 hash for lookups. NULL for social-login users.']
   phone_number_last4 char(4) [note: 'Last 4 digits for support. NULL for social-login users.']
-  hash_version smallint [default: 1]
+  hash_version smallint [not null, default: 1]
   device_count integer [not null, default: 0]
   max_devices integer [not null, default: 3]
   account_status account_status [not null, default: 'active']
   failed_login_attempts smallint [not null, default: 0, check: `failed_login_attempts >= 0`]
   locked_until timestamptz
   last_login_at timestamptz
-  last_active_at timestamptz
   deletion_requested_at timestamptz
   deletion_completed_at timestamptz
   retention_expires_at timestamptz [note: 'When PII columns must be purged (GDPR)']
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
-  deleted_at timestamptz
-  Note: 'Central identity table. Roles managed via ops.course_roles (course-scoped RBAC).'
+  deleted_at timestamptz [note: 'Set when deletion is requested; drives soft-delete filtering.']
+  Note: 'Central identity table. Roles managed via ops.course_roles (course-scoped RBAC). CHECKs: phone trio (encrypted/hash/last4) all-or-nothing; deletion lifecycle timestamps require deletion_requested_at; max_devices 1-10; device_count >= 0; hash_version >= 1.'
   Indexes {
+    (email) [unique, name: "idx_users_email"]
     (phone_number_hash) [unique, name: "idx_users_phone_hash"]
-    (account_status) [name: "idx_users_status"]
-    (deleted_at) [name: "idx_users_deleted"]
-    (deletion_requested_at) [name: "idx_users_deletion_sla"]
-    (retention_expires_at) [name: "idx_users_retention"]
+    (account_status, deleted_at) [name: "idx_users_status"]
+    (deleted_at) [name: "idx_users_deleted", where: "deleted_at IS NOT NULL"]
+    (deletion_requested_at) [name: "idx_users_deletion_sla", where: "deletion_requested_at IS NOT NULL"]
+    (retention_expires_at) [name: "idx_users_retention", where: "retention_expires_at IS NOT NULL"]
   }
 }
 
