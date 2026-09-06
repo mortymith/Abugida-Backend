@@ -11,7 +11,8 @@ import { users, userProfiles } from '../schema'
 
 // 1. Validate input using the insert schema
 const userInput = {
-  displayName: 'Abebe Kebede',
+  name: 'Abebe Kebede',
+  phoneNumberEncrypted: Buffer.from('aes-256-gcm-ciphertext'),
   phoneNumberHash: 'sha256-hash-here',
   phoneNumberLast4: '1234',
 }
