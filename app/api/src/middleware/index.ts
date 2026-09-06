@@ -28,6 +28,7 @@ import { errorHandler, notFoundHandler, problemResponse } from './error-handler.
 import { rateLimitMiddleware } from './rate-limit.middleware'
 import { optionalSessionMiddleware, requireAuthMiddleware } from './auth.middleware'
 import { apiKeyAuthMiddleware } from './api-key-auth.middleware'
+import { csrfProtection } from '@abugida/auth/hono'
 import type { AppEnv, AppHono } from './types'
 
 /** Max request body — 10 MB per API spec (shared by API and webhook routes). */
@@ -88,6 +89,15 @@ export function applyMiddleware(app: AppHono, deps: MiddlewareDependencies): voi
   app.use('*', loggingMiddleware())
   app.use('*', corsMiddleware())
   app.use('*', timeout(REQUEST_TIMEOUT_MS, requestTimedOut))
+
+  // Reject cross-origin cookie-authenticated mutations before resolving a
+  // session or touching application handlers. Better Auth's own endpoints are
+  // excluded because it performs OAuth state and origin validation itself.
+  app.use('*', async (c, next) => {
+    if (c.req.path === '/auth' || c.req.path.startsWith('/auth/')) return next()
+    if (c.req.path === '/webhooks' || c.req.path.startsWith('/webhooks/')) return next()
+    return csrfProtection(deps.auth)(c, next)
+  })
 
   // ── Feature routes (root-level) ──────────────────────────────────────────
   for (const prefix of FEATURE_ROUTE_PREFIXES) {

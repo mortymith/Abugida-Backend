@@ -15,6 +15,7 @@
 export {
   socialSignInRoute,
   oauthCallbackRoute,
+  telegramConfigRoute,
   signOutRoute,
   getSessionRoute,
   refreshSessionRoute,
@@ -23,9 +24,10 @@ export {
 export type {
   SocialSignInRoute,
   OAuthCallbackRoute,
+  TelegramConfigRoute,
   SignOutRoute,
   GetSessionRoute,
   RefreshSessionRoute,
 } from './auth.routes'
 
-export { UserSchema, SessionSchema, MeResponseSchema } from './auth.schemas'
+export { UserSchema, SessionSchema, MeResponseSchema, TelegramConfigSchema } from './auth.schemas'
