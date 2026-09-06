@@ -128,6 +128,7 @@ export function createUsersService(repo: UserRepository, queue?: QueueClient): U
 
       await repo.updateUserById(publicId, {
         deletionRequestedAt: deletionScheduledAt,
+        deletedAt: deletionScheduledAt,
         accountStatus: 'deleted',
       })
 
@@ -317,7 +318,7 @@ function toProfileView(
     name: string | null
     email: string | null
     image: string | null
-    accountStatus: string | null
+    accountStatus: string
     createdAt: Date
   },
   profile: {
@@ -342,7 +343,7 @@ function toProfileView(
     examPreferences: (profile?.examPreferences as unknown[]) ?? [],
     isOnboardingCompleted: profile?.isOnboardingCompleted ?? false,
     onboardingStep: profile?.onboardingStep ?? 0,
-    accountStatus: user.accountStatus ?? 'active',
+    accountStatus: user.accountStatus,
     createdAt: user.createdAt.toISOString(),
   }
 }

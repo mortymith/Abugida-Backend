@@ -54,6 +54,14 @@ describe('auth module', () => {
     }
   })
 
+  it('buildProviders includes Telegram OIDC when credentials are set', async () => {
+    const mod = await import('@/config/auth')
+    if (mod.authConfig.providers?.telegram) {
+      expect(mod.authConfig.providers.telegram.clientId).toBeDefined()
+      expect(mod.authConfig.providers.telegram.clientSecret).toBeDefined()
+    }
+  })
+
   it('authConfig includes CORS when WEB_APP_URL is set', async () => {
     const mod = await import('@/config/auth')
     // WEB_APP_URL may or may not be set in test env
@@ -62,5 +70,16 @@ describe('auth module', () => {
       expect(Array.isArray(mod.authConfig.cors.origins)).toBe(true)
       expect(mod.authConfig.cors.credentials).toBe(true)
     }
+  })
+
+  it('does not expose client-controlled social sign-in options in the public schema', async () => {
+    const { SocialLoginBodySchema } = await import('@/modules/auth/auth.schemas')
+    expect(SocialLoginBodySchema.safeParse({ provider: 'telegram' }).success).toBe(true)
+    expect(
+      SocialLoginBodySchema.safeParse({
+        provider: 'telegram',
+        callbackURL: 'https://client-controlled.example',
+      }).data,
+    ).toEqual({ provider: 'telegram' })
   })
 })

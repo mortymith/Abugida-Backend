@@ -15,13 +15,12 @@ import type { RedisClient } from 'bun'
 import { createStorage, type Storage, type StorageConfig } from '@abugida/storage'
 import type { QueueClient } from '@abugida/queue'
 import { mountAuthRoutes } from '@abugida/auth/hono'
-import { verifyRequestOrigin } from '@abugida/auth'
 import {
   socialSignInRoute,
   oauthCallbackRoute,
+  telegramConfigRoute,
   signOutRoute,
   getSessionRoute,
-  refreshSessionRoute,
 } from './modules/auth'
 
 import { appConfig } from './config/app_config'
@@ -175,45 +174,46 @@ export function createApp(): ApiApplication {
   // the response types declared by these documentation-only routes.
   // OpenAPI validation consumes JSON request bodies before invoking the handler.
   // Rebuild the social sign-in request so Better Auth can parse the body too.
+  // Redirect destinations and OAuth controls are deliberately backend-owned.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const socialAuthHandler = ((c: any) => {
     const body = c.req.valid('json')
+    const callbackURL =
+      appConfig.AUTH_CALLBACK_URL ?? appConfig.WEB_APP_URL ?? appConfig.BETTER_AUTH_URL
+    const backendBody = {
+      provider: body.provider === 'telegram' ? 'telegram-oidc' : body.provider,
+      callbackURL,
+      errorCallbackURL:
+        appConfig.AUTH_ERROR_CALLBACK_URL ?? appConfig.WEB_APP_URL ?? appConfig.BETTER_AUTH_URL,
+      newUserCallbackURL:
+        appConfig.AUTH_NEW_USER_CALLBACK_URL ?? appConfig.WEB_APP_URL ?? appConfig.BETTER_AUTH_URL,
+      disableRedirect: true,
+    }
     const request = new Request(c.req.raw.url, {
       method: c.req.raw.method,
       headers: c.req.raw.headers,
-      body: JSON.stringify(body),
+      body: JSON.stringify(backendBody),
     })
     return auth.raw.handler(request)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   }) as any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const authHandler = ((c: any) => auth.raw.handler(c.req.raw)) as any
+  // Wraps Better Auth's /telegram/config response to add the client-facing
+  // provider id so clients know what to pass to POST /auth/sign-in/social.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const refreshHandler = async (c: any) => {
-    if (auth.config.cors?.origins) {
-      const originCheck = verifyRequestOrigin(c.req.raw, {
-        trustedOrigins: auth.config.cors.origins,
-      })
-      if (!originCheck.ok) {
-        return c.json(
-          { error: { kind: originCheck.error.kind, message: originCheck.error.message } },
-          403,
-        )
-      }
-    }
-
-    const result = await auth.refreshSession(c.req.raw.headers)
-    if (!result.ok) {
-      return c.json({ error: { kind: result.error.kind, message: result.error.message } }, 401)
-    }
-    return c.json({ session: result.value.session, user: result.value.user })
+  const telegramConfigHandler = async (c: any) => {
+    const res = await auth.raw.handler(c.req.raw)
+    const body = await res.json()
+    return c.json({ provider: 'telegram', ...body })
   }
   app.openapi(socialSignInRoute, socialAuthHandler)
   app.openapi(oauthCallbackRoute, authHandler)
+  // Telegram OIDC discovery endpoint registered by the better-auth-telegram
+  // plugin (OIDC-only: no widget/miniapp endpoints exist to document).
+  app.openapi(telegramConfigRoute, telegramConfigHandler)
   app.openapi(signOutRoute, authHandler)
   app.openapi(getSessionRoute, authHandler)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  app.openapi(refreshSessionRoute, refreshHandler as any)
   mountAuthRoutes(app as unknown as Parameters<typeof mountAuthRoutes>[0], auth)
 
   // Users module — profile, onboarding, consents, devices, dashboard

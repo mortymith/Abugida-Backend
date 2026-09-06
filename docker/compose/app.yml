@@ -62,13 +62,13 @@ services:
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://${DOMAIN_API:-api.localhost}}
       AUTH_BASE_URL: ${AUTH_BASE_URL:-}
       WEB_APP_URL: ${WEB_APP_URL:-}
-      # At least one OAuth provider (Google or Apple) is required to start.
+      # At least one OAuth provider (Google or Telegram) is required to start.
+      # Telegram sign-in is Telegram OIDC only (BotFather > Bot Settings >
+      # Web Login); no bot token is involved.
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-}
-      APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
-      APPLE_KEY_ID: ${APPLE_KEY_ID:-}
-      APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
+      TELEGRAM_OIDC_CLIENT_ID: ${TELEGRAM_OIDC_CLIENT_ID:-}
+      TELEGRAM_OIDC_CLIENT_SECRET: ${TELEGRAM_OIDC_CLIENT_SECRET:-}
       # Object storage (MinIO, ADR-008)
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-minio}
       STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-http://minio:9000}

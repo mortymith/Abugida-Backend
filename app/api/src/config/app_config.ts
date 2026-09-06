@@ -38,6 +38,19 @@ const booleanFromEnv = z
 
 const positiveIntFromEnv = z.coerce.number().int().positive()
 
+/**
+ * Compose services always pass optional vars as `${VAR:-}`, which resolves to
+ * an empty string when unset in `.env`. Normalize `""`/whitespace-only values
+ * to `undefined` so "not configured" reads as absent instead of failing
+ * min-length/URL validation (and so the "set together" pair checks in
+ * `superRefine` see both halves as unset).
+ */
+function emptyToUndefined(value: unknown): unknown {
+  return typeof value === 'string' && value.trim() === '' ? undefined : value
+}
+
+const optionalNonEmptyString = z.preprocess(emptyToUndefined, z.string().min(1).optional())
+
 const WEAK_SECRETS = new Set([
   'change-me',
   'change_me',
@@ -70,10 +83,15 @@ function isWeakSecret(value: string): boolean {
  * deduplicated origin list consumed by the CORS middleware.
  */
 function buildCorsOrigins(
+  authUrl: string,
   webAppUrl: string | undefined,
   corsOrigins: string | undefined,
 ): string[] {
   const origins = new Set<string>()
+  // Better Auth validates the request Origin against this same allowlist. The
+  // public API origin must therefore be trusted even when no separate browser
+  // frontend has been configured.
+  origins.add(new URL(authUrl).origin)
   if (webAppUrl) origins.add(webAppUrl)
   if (corsOrigins) {
     for (const part of corsOrigins.split(',')) {
@@ -97,7 +115,7 @@ const appConfigSchema = z
     ENVIRONMENT: z.enum(ENV_NAMES).optional(),
     NODE_ENV: z.enum(ENV_NAMES).optional(),
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
-    HOST: z.string().min(1).default('0.0.0.0'),
+    HOST: z.string().min(1).default('localhost'),
     LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
 
     // ── Database (PostgreSQL via PgBouncer, ADR-019) ───────────────────────
@@ -116,22 +134,42 @@ const appConfigSchema = z
         'BETTER_AUTH_SECRET must not be a well-known placeholder or trivially guessable value.',
       ),
     BETTER_AUTH_URL: z.string().url('BETTER_AUTH_URL must be a valid URL.'),
+    AUTH_CALLBACK_URL: z.preprocess(
+      emptyToUndefined,
+      z.string().url('AUTH_CALLBACK_URL must be a valid URL.').optional(),
+    ),
+    AUTH_ERROR_CALLBACK_URL: z.preprocess(
+      emptyToUndefined,
+      z.string().url('AUTH_ERROR_CALLBACK_URL must be a valid URL.').optional(),
+    ),
+    AUTH_NEW_USER_CALLBACK_URL: z.preprocess(
+      emptyToUndefined,
+      z.string().url('AUTH_NEW_USER_CALLBACK_URL must be a valid URL.').optional(),
+    ),
     // JWT issuer / audience — opt-in token issuance for PowerSync. Requires
     // better-auth's generated `jwks` table in the Drizzle schema.
-    AUTH_BASE_URL: z.string().url('AUTH_BASE_URL must be a valid URL.').optional(),
+    AUTH_BASE_URL: z.preprocess(
+      emptyToUndefined,
+      z.string().url('AUTH_BASE_URL must be a valid URL.').optional(),
+    ),
     TOKEN_AUDIENCE: z.string().min(1).optional(),
-    WEB_APP_URL: z.string().url('WEB_APP_URL must be a valid URL.').optional(),
+    WEB_APP_URL: z.preprocess(
+      emptyToUndefined,
+      z.string().url('WEB_APP_URL must be a valid URL.').optional(),
+    ),
     // Additional browser/WebView origins allowed to call the API. Comma-separated
     // list merged with WEB_APP_URL into the resolved `corsOrigins`.
     CORS_ORIGINS: z.string().optional(),
 
-    // ── OAuth providers (Google + Apple ID per API spec) ───────────────────
-    GOOGLE_CLIENT_ID: z.string().min(1).optional(),
-    GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
-    APPLE_CLIENT_ID: z.string().min(1).optional(),
-    APPLE_TEAM_ID: z.string().length(10, 'APPLE_TEAM_ID must be exactly 10 characters.').optional(),
-    APPLE_KEY_ID: z.string().min(1).optional(),
-    APPLE_PRIVATE_KEY: z.string().min(1).optional(),
+    // ── OAuth providers (Google + Telegram per API spec) ───────────────────
+    GOOGLE_CLIENT_ID: optionalNonEmptyString,
+    GOOGLE_CLIENT_SECRET: optionalNonEmptyString,
+    // Telegram sign-in runs exclusively through Telegram OIDC
+    // (oauth.telegram.org). Credentials come from BotFather's "Web Login"
+    // settings (Bot Settings > Web Login) and are required as a pair; the
+    // client secret is NOT the bot token.
+    TELEGRAM_OIDC_CLIENT_ID: optionalNonEmptyString,
+    TELEGRAM_OIDC_CLIENT_SECRET: optionalNonEmptyString,
 
     // ── Queue (BullMQ / Redis) ──────────────────────────────────────────────
     REDIS_HOST: z.string().min(1).default('localhost'),
@@ -225,19 +263,14 @@ const appConfigSchema = z
       })
     }
 
-    const appleParts = [
-      env.APPLE_CLIENT_ID,
-      env.APPLE_TEAM_ID,
-      env.APPLE_KEY_ID,
-      env.APPLE_PRIVATE_KEY,
-    ]
-    const appleCount = appleParts.filter(Boolean).length
-    if (appleCount > 0 && appleCount < 4) {
+    const telegramOidcParts = [env.TELEGRAM_OIDC_CLIENT_ID, env.TELEGRAM_OIDC_CLIENT_SECRET]
+    const telegramOidcCount = telegramOidcParts.filter(Boolean).length
+    if (telegramOidcCount > 0 && telegramOidcCount < 2) {
       ctx.addIssue({
         code: 'custom',
-        path: ['APPLE_CLIENT_ID'],
+        path: ['TELEGRAM_OIDC_CLIENT_ID'],
         message:
-          'APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID and APPLE_PRIVATE_KEY must be set together (or all left unset).',
+          'TELEGRAM_OIDC_CLIENT_ID and TELEGRAM_OIDC_CLIENT_SECRET must be set together (or both left unset).',
       })
     }
 
@@ -283,12 +316,12 @@ const appConfigSchema = z
 
     // ── Production hardening ────────────────────────────────────────────────
     if (effectiveEnv === 'production') {
-      if (!env.GOOGLE_CLIENT_ID && !env.APPLE_CLIENT_ID) {
+      if (!env.GOOGLE_CLIENT_ID && !env.TELEGRAM_OIDC_CLIENT_ID) {
         ctx.addIssue({
           code: 'custom',
           path: ['GOOGLE_CLIENT_ID'],
           message:
-            'At least one OAuth provider (Google or Apple) must be configured in production.',
+            'At least one OAuth provider (Google or Telegram) must be configured in production.',
         })
       }
       if (env.BETTER_AUTH_URL && !env.BETTER_AUTH_URL.startsWith('https://')) {
@@ -304,6 +337,19 @@ const appConfigSchema = z
           path: ['WEB_APP_URL'],
           message: 'WEB_APP_URL must use https in production.',
         })
+      }
+      for (const [key, value] of [
+        ['AUTH_CALLBACK_URL', env.AUTH_CALLBACK_URL],
+        ['AUTH_ERROR_CALLBACK_URL', env.AUTH_ERROR_CALLBACK_URL],
+        ['AUTH_NEW_USER_CALLBACK_URL', env.AUTH_NEW_USER_CALLBACK_URL],
+      ] as const) {
+        if (value && !value.startsWith('https://')) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message: `${key} must use https in production.`,
+          })
+        }
       }
       if (env.CORS_ORIGINS) {
         for (const part of env.CORS_ORIGINS.split(',')) {
@@ -325,7 +371,7 @@ const appConfigSchema = z
       ...env,
       NODE_ENV: environment,
       OTEL_DEPLOYMENT_ENVIRONMENT: env.OTEL_DEPLOYMENT_ENVIRONMENT ?? environment,
-      corsOrigins: buildCorsOrigins(env.WEB_APP_URL, env.CORS_ORIGINS),
+      corsOrigins: buildCorsOrigins(env.BETTER_AUTH_URL, env.WEB_APP_URL, env.CORS_ORIGINS),
     }
   })
 

@@ -26,7 +26,7 @@ describe('parseAppConfig', () => {
   it('applies default values for optional fields', () => {
     const config = parseAppConfig(baseEnv())
     expect(config.PORT).toBe(3000)
-    expect(config.HOST).toBe('0.0.0.0')
+    expect(config.HOST).toBe('localhost')
     expect(config.LOG_LEVEL).toBe('info')
     expect(config.DATABASE_POOL_MAX).toBe(20)
     expect(config.REDIS_HOST).toBe('localhost')
@@ -137,36 +137,36 @@ describe('parseAppConfig', () => {
       ).toThrow('GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together')
     })
 
-    it('accepts all four Apple credentials together', () => {
+    it('accepts both Telegram OIDC credentials together', () => {
       const config = parseAppConfig(
         baseEnv({
-          APPLE_CLIENT_ID: 'client',
-          APPLE_TEAM_ID: '1234567890',
-          APPLE_KEY_ID: 'key',
-          APPLE_PRIVATE_KEY: 'private',
+          TELEGRAM_OIDC_CLIENT_ID: 'oidc-client',
+          TELEGRAM_OIDC_CLIENT_SECRET: 'oidc-secret',
         }),
       )
-      expect(config.APPLE_CLIENT_ID).toBe('client')
-      expect(config.APPLE_TEAM_ID).toBe('1234567890')
+      expect(config.TELEGRAM_OIDC_CLIENT_ID).toBe('oidc-client')
+      expect(config.TELEGRAM_OIDC_CLIENT_SECRET).toBe('oidc-secret')
     })
 
-    it('throws when Apple credentials are incomplete', () => {
-      expect(() => parseAppConfig(baseEnv({ APPLE_CLIENT_ID: 'client' }))).toThrow(
-        'APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID and APPLE_PRIVATE_KEY must be set together',
+    it('throws when Telegram OIDC credentials are incomplete', () => {
+      expect(() => parseAppConfig(baseEnv({ TELEGRAM_OIDC_CLIENT_ID: 'oidc-client' }))).toThrow(
+        'TELEGRAM_OIDC_CLIENT_ID and TELEGRAM_OIDC_CLIENT_SECRET must be set together',
       )
     })
 
-    it('throws when APPLE_TEAM_ID is not exactly 10 characters', () => {
-      expect(() =>
-        parseAppConfig(
-          baseEnv({
-            APPLE_CLIENT_ID: 'client',
-            APPLE_TEAM_ID: 'short',
-            APPLE_KEY_ID: 'key',
-            APPLE_PRIVATE_KEY: 'private',
-          }),
-        ),
-      ).toThrow('10 characters')
+    it('treats empty-string OAuth credentials as unset (compose passes ${VAR:-})', () => {
+      const config = parseAppConfig(
+        baseEnv({
+          GOOGLE_CLIENT_ID: '',
+          GOOGLE_CLIENT_SECRET: '',
+          TELEGRAM_OIDC_CLIENT_ID: '',
+          TELEGRAM_OIDC_CLIENT_SECRET: '',
+        }),
+      )
+      expect(config.GOOGLE_CLIENT_ID).toBeUndefined()
+      expect(config.GOOGLE_CLIENT_SECRET).toBeUndefined()
+      expect(config.TELEGRAM_OIDC_CLIENT_ID).toBeUndefined()
+      expect(config.TELEGRAM_OIDC_CLIENT_SECRET).toBeUndefined()
     })
   })
 
@@ -274,6 +274,12 @@ describe('parseAppConfig', () => {
       ).toThrow('https')
     })
 
+    it('requires HTTPS for backend-owned auth callback URLs in production', () => {
+      expect(() =>
+        parseAppConfig(productionBase({ AUTH_CALLBACK_URL: 'http://app.example.com/callback' })),
+      ).toThrow('AUTH_CALLBACK_URL must use https')
+    })
+
     it('requires HTTPS for CORS origins in production', () => {
       expect(() => parseAppConfig(productionBase({ CORS_ORIGINS: 'http://insecure.com' }))).toThrow(
         'https',
@@ -282,6 +288,13 @@ describe('parseAppConfig', () => {
   })
 
   describe('buildCorsOrigins', () => {
+    it('always includes the public Better Auth API origin', () => {
+      const config = parseAppConfig(
+        baseEnv({ BETTER_AUTH_URL: 'https://accuracy-flip-playing.ngrok-free.dev' }),
+      )
+      expect(config.corsOrigins).toContain('https://accuracy-flip-playing.ngrok-free.dev')
+    })
+
     it('includes WEB_APP_URL in corsOrigins', () => {
       const config = parseAppConfig(baseEnv({ WEB_APP_URL: 'https://app.example.com' }))
       expect(config.corsOrigins).toContain('https://app.example.com')
@@ -292,9 +305,9 @@ describe('parseAppConfig', () => {
       expect(config.corsOrigins).toContain('https://other.com')
     })
 
-    it('returns empty array when neither WEB_APP_URL nor CORS_ORIGINS set', () => {
+    it('includes the API origin when neither WEB_APP_URL nor CORS_ORIGINS is set', () => {
       const config = parseAppConfig(baseEnv())
-      expect(config.corsOrigins).toEqual([])
+      expect(config.corsOrigins).toEqual(['http://localhost:3000'])
     })
 
     it('trims whitespace from CORS_ORIGINS entries', () => {

@@ -21,9 +21,13 @@
  * ```
  */
 
-export { rootRoute, healthLivenessRoute, healthReadinessRoute } from './system.routes'
+export {
+  rootRoute,
+  healthLivenessRoute,
+  healthReadinessRoute,
+  registerSystemDocumentation,
+} from './system.routes'
 
 export type { RootRoute, HealthLivenessRoute, HealthReadinessRoute } from './system.routes'
 
 export { createSystemHandlers, createSystemRouteMap } from './system.handlers'
-export { registerSystemDocumentation } from './system.documentation'

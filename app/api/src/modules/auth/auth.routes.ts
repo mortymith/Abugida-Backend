@@ -7,7 +7,15 @@
  */
 
 import { createRoute, z } from '@hono/zod-openapi'
-import { MeResponseSchema, SessionSchema, SocialLoginBodySchema, UserSchema } from './auth.schemas'
+import {
+  MeResponseSchema,
+  SessionSchema,
+  SocialLoginBodySchema,
+  SocialSignInResponseSchema,
+  TelegramConfigSchema,
+  UserSchema,
+  ValidationErrorSchema,
+} from './auth.schemas'
 
 const AuthErrorSchema = z
   .object({
@@ -23,11 +31,39 @@ export const socialSignInRoute = createRoute({
   path: '/auth/sign-in/social',
   tags: ['Auth'],
   summary: 'Start social sign-in',
-  description: 'Starts an OAuth sign-in flow for a configured provider.',
-  request: { body: { content: { 'application/json': { schema: SocialLoginBodySchema } } } },
+  description:
+    'Initiates an OAuth sign-in flow. Only provider is required; redirect destinations and OAuth options are configured by the backend.',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: SocialLoginBodySchema,
+          examples: {
+            google: {
+              summary: 'Sign in with Google',
+              value: { provider: 'google' },
+            },
+            telegram: {
+              summary: 'Sign in with Telegram',
+              value: { provider: 'telegram' },
+            },
+          },
+        },
+      },
+    },
+  },
   responses: {
-    200: { description: 'OAuth redirect or callback response.' },
-    400: { description: 'Invalid provider or request.' },
+    200: {
+      description: 'Authorization URL for the requested provider.',
+      content: { 'application/json': { schema: SocialSignInResponseSchema } },
+    },
+    400: {
+      description: 'The OAuth flow could not be started (e.g. the provider is misconfigured).',
+    },
+    422: {
+      description: 'Request body validation failed (e.g. unknown provider).',
+      content: { 'application/problem+json': { schema: ValidationErrorSchema } },
+    },
     429: { description: 'Authentication rate limit exceeded.' },
   },
 })
@@ -37,11 +73,35 @@ export const oauthCallbackRoute = createRoute({
   path: '/auth/callback/{provider}',
   tags: ['Auth'],
   summary: 'Complete social sign-in',
-  description: 'Handles the OAuth provider callback and establishes a session.',
-  request: { params: z.object({ provider: z.string().openapi({ example: 'google' }) }) },
+  description: 'Handles the OAuth provider redirect and establishes a session.',
+  request: {
+    params: z.object({
+      provider: z.enum(['google', 'telegram-oidc']).openapi({
+        description:
+          "Provider id embedded in the redirect URI registered with the provider console. Telegram OIDC uses Better Auth's internal id `telegram-oidc` (the public sign-in id `telegram` maps to it server-side).",
+        example: 'telegram-oidc',
+      }),
+    }),
+  },
   responses: {
-    302: { description: 'Redirect after authentication.' },
-    400: { description: 'Invalid or rejected OAuth callback.' },
+    302: {
+      description: 'Redirect to the post-login callback URL with the session cookie set.',
+    },
+    400: { description: 'Invalid or rejected OAuth callback (state mismatch, rejected code).' },
+  },
+})
+
+export const telegramConfigRoute = createRoute({
+  method: 'get',
+  path: '/auth/telegram/config',
+  tags: ['Auth'],
+  summary: 'Get Telegram sign-in configuration',
+  description: 'Returns Telegram sign-in capability flags for client-side UI rendering.',
+  responses: {
+    200: {
+      description: 'Telegram sign-in capability flags.',
+      content: { 'application/json': { schema: TelegramConfigSchema } },
+    },
   },
 })
 
@@ -104,6 +164,7 @@ export const refreshSessionRoute = createRoute({
 
 export type SocialSignInRoute = typeof socialSignInRoute
 export type OAuthCallbackRoute = typeof oauthCallbackRoute
+export type TelegramConfigRoute = typeof telegramConfigRoute
 export type GetSessionRoute = typeof getSessionRoute
 export type SignOutRoute = typeof signOutRoute
 export type RefreshSessionRoute = typeof refreshSessionRoute

@@ -2,8 +2,9 @@
  * @module auth
  *
  * API-specific authentication composition on top of the shared `@abugida/auth`
- * package (Better Auth). Builds the provider registry (Google + Apple ID) and
- * the validated Better Auth configuration from `app_config`.
+ * package (Better Auth). Builds the provider registry (Google) and the
+ * Telegram OIDC credentials (better-auth-telegram, BotFather "Web Login"
+ * pair) and the validated Better Auth configuration from `app_config`.
  *
  * Direction:
  *   app_config → database → auth
@@ -29,17 +30,14 @@ function buildProviders(): AuthConfig['providers'] {
     }
   }
 
-  if (
-    appConfig.APPLE_CLIENT_ID &&
-    appConfig.APPLE_TEAM_ID &&
-    appConfig.APPLE_KEY_ID &&
-    appConfig.APPLE_PRIVATE_KEY
-  ) {
-    providers.apple = {
-      clientId: appConfig.APPLE_CLIENT_ID,
-      teamId: appConfig.APPLE_TEAM_ID,
-      keyId: appConfig.APPLE_KEY_ID,
-      privateKey: appConfig.APPLE_PRIVATE_KEY,
+  // Telegram is supported exclusively through Telegram OIDC
+  // (oauth.telegram.org) — the BotFather "Web Login" credential pair enables
+  // the standard redirect flow; no bot token is involved.
+  if (appConfig.TELEGRAM_OIDC_CLIENT_ID && appConfig.TELEGRAM_OIDC_CLIENT_SECRET) {
+    providers.telegram = {
+      clientId: appConfig.TELEGRAM_OIDC_CLIENT_ID,
+      clientSecret: appConfig.TELEGRAM_OIDC_CLIENT_SECRET,
+      requestPhone: true,
     }
   }
 
@@ -68,9 +66,10 @@ export const authConfig: AuthConfig = {
   secret: appConfig.BETTER_AUTH_SECRET,
   database: { db, schema: authSchema, provider: 'pg' },
   providers: buildProviders(),
-  ...(appConfig.corsOrigins.length > 0
-    ? { cors: { origins: appConfig.corsOrigins, credentials: true } }
-    : {}),
+  // Use one exact origin list for CORS and Better Auth's trusted-origin check.
+  // Include BETTER_AUTH_URL even when WEB_APP_URL is not configured, which is
+  // required when the API is called directly through a public tunnel.
+  cors: { origins: appConfig.corsOrigins, credentials: true },
   rateLimit: {
     max: appConfig.AUTH_RATE_LIMIT_MAX,
     windowSeconds: appConfig.AUTH_RATE_LIMIT_WINDOW_SECONDS,
