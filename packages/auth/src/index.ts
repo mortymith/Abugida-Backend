@@ -33,8 +33,8 @@ export type {
   CorsConfig,
   RateLimitConfig,
   TokensConfig,
-  AppleProviderCredentials,
   GoogleProviderCredentials,
+  TelegramProviderCredentials,
   BaseProviderCredentials,
   AuthProviderDefinition,
   AuthError,
@@ -44,8 +44,8 @@ export type {
 export { ok, err } from './core/types'
 
 // Providers
-export { appleProvider, googleProvider, ProviderRegistry } from './providers'
-export { generateAppleClientSecret } from './providers/apple'
+export { googleProvider, ProviderRegistry } from './providers'
+export { buildTelegramPlugins, validateTelegramCredentials } from './providers/telegram'
 
 // Config
 export { validateAuthConfig, withDefaults } from './config'

@@ -44,6 +44,14 @@ const rateLimitSchema = z
   .object({
     max: z.number().int().positive(),
     windowSeconds: z.number().int().positive(),
+    customRules: z
+      .record(
+        z.union([
+          z.object({ window: z.number().int().positive(), max: z.number().int().positive() }),
+          z.literal(false),
+        ]),
+      )
+      .optional(),
   })
   .optional()
 
@@ -51,18 +59,6 @@ const tokensSchema = z
   .object({
     issuer: z.string().url().optional(),
     audience: z.union([z.string().min(1), z.array(z.string().min(1))]).optional(),
-  })
-  .optional()
-
-const appleCredentialsSchema = z
-  .object({
-    clientId: z.string().min(1),
-    teamId: z.string().length(10),
-    keyId: z.string().min(1),
-    privateKey: z.string().min(1),
-    redirectUri: z.string().url().optional(),
-    clientSecretTtlSeconds: z.number().int().positive().max(15_777_000).optional(),
-    appBundleIdentifier: z.string().min(1).optional(),
   })
   .optional()
 
@@ -74,6 +70,17 @@ const googleCredentialsSchema = z
     additionalClientIds: z.array(z.string().min(1)).optional(),
     accessType: z.enum(['online', 'offline']).optional(),
     prompt: z.enum(['none', 'consent', 'select_account']).optional(),
+  })
+  .optional()
+
+const telegramCredentialsSchema = z
+  .object({
+    // Telegram OIDC (oauth.telegram.org) credential pair from BotFather's
+    // "Web Login" settings — the client secret is NOT the bot token.
+    clientId: z.string().min(1),
+    clientSecret: z.string().min(1),
+    requestPhone: z.boolean().optional(),
+    scopes: z.array(z.string().min(1)).optional(),
   })
   .optional()
 
@@ -97,8 +104,8 @@ const baseConfigSchema = z.object({
   rateLimit: rateLimitSchema,
   tokens: tokensSchema,
   providers: z.object({
-    apple: appleCredentialsSchema,
     google: googleCredentialsSchema,
+    telegram: telegramCredentialsSchema,
   }),
 })
 
@@ -132,11 +139,12 @@ export function validateAuthConfig<TSchema extends AuthDatabaseSchema>(
     })
   }
 
-  if (!config.providers.apple && !config.providers.google && !config.providers.custom) {
+  const hasCustomProvider = Object.keys(config.providers.custom ?? {}).length > 0
+  if (!config.providers.google && !config.providers.telegram && !hasCustomProvider) {
     fail({
       kind: 'config_invalid',
       field: 'providers',
-      message: 'At least one provider (apple, google, or a custom provider) must be configured.',
+      message: 'At least one provider (google, telegram, or a custom provider) must be configured.',
     })
   }
 
@@ -178,6 +186,14 @@ export function withDefaults<TSchema extends AuthDatabaseSchema>(
       },
       ...config.session,
     },
-    rateLimit: config.rateLimit ?? { max: 20, windowSeconds: 60 },
+    rateLimit: config.rateLimit ?? {
+      max: 20,
+      windowSeconds: 60,
+      customRules: {
+        '/sign-in/email': { window: 60, max: 5 },
+        '/sign-up/email': { window: 60, max: 3 },
+        '/change-password': { window: 60, max: 5 },
+      },
+    },
   }
 }

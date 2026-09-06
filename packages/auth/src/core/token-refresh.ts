@@ -2,9 +2,9 @@
  * @module core/token-refresh
  *
  * Wraps better-auth's account/access-token API so consumers who need to call
- * a provider's API on the user's behalf (e.g. reading a Google Calendar, or
- * calling back into Apple) get a valid, non-expired access token without
- * reimplementing OAuth refresh themselves.
+ * a provider's API on the user's behalf (e.g. reading a Google Calendar) get
+ * a valid, non-expired access token without reimplementing OAuth refresh
+ * themselves.
  *
  * better-auth already persists the `refreshToken` it receives on sign-in
  * (see `account.refreshToken` in the injected schema) and knows how to
@@ -20,7 +20,7 @@ import { noopLogger, type Logger } from './logger'
 
 export interface GetAccessTokenParams {
   userId: string
-  /** Provider id as configured, e.g. "google" or "apple". */
+  /** Provider id as configured, e.g. "google" or "telegram-oidc". */
   providerId: string
 }
 

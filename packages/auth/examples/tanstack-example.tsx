@@ -72,9 +72,11 @@ export function LoginButtons() {
         Continue with Google
       </button>
       <button
-        onClick={() => authClient.signIn.social({ provider: 'apple', callbackURL: '/dashboard' })}
+        onClick={() =>
+          authClient.signIn.social({ provider: 'telegram-oidc', callbackURL: '/dashboard' })
+        }
       >
-        Continue with Apple
+        Continue with Telegram
       </button>
     </div>
   )

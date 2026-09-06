@@ -16,7 +16,8 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { randomUUID } from 'node:crypto'
 import type { AuthConfig, AuthDatabaseSchema } from './types'
 import { validateAuthConfig, withDefaults } from '../config'
-import { appleProvider, googleProvider } from '../providers'
+import { googleProvider } from '../providers'
+import { buildTelegramPlugins } from '../providers/telegram'
 import { ProviderRegistry } from '../providers/base'
 import { resolveSession, revokeSession, refreshSession } from './session'
 import { getValidAccessToken } from './token-refresh'
@@ -56,7 +57,6 @@ export interface AuthInstance {
 
 export function buildProviderRegistry(config: AuthConfig): ProviderRegistry {
   const registry = new ProviderRegistry()
-  registry.register(appleProvider)
   registry.register(googleProvider)
 
   for (const [id, entry] of Object.entries(config.providers.custom ?? {})) {
@@ -72,9 +72,6 @@ export function buildSocialProviders(
 ): Record<string, unknown> {
   const social: Record<string, unknown> = {}
 
-  if (config.providers.apple) {
-    social.apple = registry.get('apple')!.toBetterAuthConfig(config.providers.apple)
-  }
   if (config.providers.google) {
     social.google = registry.get('google')!.toBetterAuthConfig(config.providers.google)
   }
@@ -95,7 +92,7 @@ export function buildSessionOptions(config: AuthConfig) {
     // better-auth's own recommended default; call `refreshSession()`
     // instead of `getSession()` wherever staleness of this magnitude is a
     // problem (e.g. immediately after a permission change).
-    cookieCache: { enabled: true, maxAge: 60 },
+    cookieCache: { enabled: true, maxAge: 60, strategy: 'jwe' as const },
   }
 }
 
@@ -120,14 +117,20 @@ export function buildAdvancedOptions(config: AuthConfig) {
   }
 }
 
-export function buildRateLimitOptions(
-  config: AuthConfig,
-): { enabled: true; window: number; max: number } | undefined {
+export function buildRateLimitOptions(config: AuthConfig):
+  | {
+      enabled: true
+      window: number
+      max: number
+      customRules?: Record<string, { window: number; max: number } | false>
+    }
+  | undefined {
   if (!config.rateLimit) return undefined
   return {
     enabled: true,
     window: config.rateLimit.windowSeconds,
     max: config.rateLimit.max,
+    ...(config.rateLimit.customRules ? { customRules: config.rateLimit.customRules } : {}),
   }
 }
 
@@ -145,7 +148,7 @@ export function buildRateLimitOptions(
  *   database: { db, schema, provider: "pg" },
  *   providers: {
  *     google: { clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET! },
- *     apple: { clientId: ..., teamId: ..., keyId: ..., privateKey: ... },
+ *     telegram: { clientId: process.env.TELEGRAM_OIDC_CLIENT_ID!, clientSecret: process.env.TELEGRAM_OIDC_CLIENT_SECRET! },
  *   },
  * });
  * ```
@@ -181,11 +184,14 @@ export function createAuth<TSchema extends AuthDatabaseSchema>(
     socialProviders,
     session: buildSessionOptions(config),
     advanced: buildAdvancedOptions(config),
+    // OAuth credentials are bearer credentials. Encrypt them before they are
+    // persisted so a database read does not expose usable provider tokens.
+    account: { encryptOAuthTokens: true },
     trustedOrigins: config.cors?.origins,
     rateLimit: buildRateLimitOptions(config),
-    // Opt-in JWT issuance (PowerSync et al). Spread before betterAuthOverrides
-    // so consumer overrides always win.
-    plugins: buildTokenPlugins(config),
+    // Telegram (better-auth-telegram) and opt-in JWT issuance (PowerSync et
+    // al). Spread before betterAuthOverrides so consumer overrides always win.
+    plugins: [...buildTelegramPlugins(config), ...buildTokenPlugins(config)],
     // better-auth issues + validates its own CSRF (state/PKCE) tokens for the
     // OAuth redirect flow automatically; `trustedOrigins` above is what scopes
     // which origins are allowed to complete a flow at all. See core/csrf.ts

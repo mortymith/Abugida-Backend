@@ -26,11 +26,11 @@ export const auth = createAuth({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     },
-    apple: {
-      clientId: process.env.APPLE_CLIENT_ID!,
-      teamId: process.env.APPLE_TEAM_ID!,
-      keyId: process.env.APPLE_KEY_ID!,
-      privateKey: process.env.APPLE_PRIVATE_KEY!, // full .p8 file contents
+    telegram: {
+      // Telegram OIDC (oauth.telegram.org) — BotFather > Bot Settings >
+      // Web Login. The client secret is NOT the bot token.
+      clientId: process.env.TELEGRAM_OIDC_CLIENT_ID!,
+      clientSecret: process.env.TELEGRAM_OIDC_CLIENT_SECRET!,
     },
   },
   cors: { origins: [process.env.WEB_APP_URL ?? 'http://localhost:5173'], credentials: true },

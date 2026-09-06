@@ -1,9 +1,11 @@
 # @abugida/auth
 
 Shared authentication layer for Hono API and TanStack Start apps, built on
-top of [better-auth](https://www.better-auth.com) `v1.6.26`. Ships pluggable
-**Apple ID** and **Google OAuth** providers, with a documented interface for
-adding your own.
+top of [better-auth](https://www.better-auth.com) `v1.6.26`. Ships a
+pluggable **Google OAuth** provider and **Telegram sign-in via Telegram
+OpenID Connect** (through the
+[`better-auth-telegram`](https://www.npmjs.com/package/better-auth-telegram)
+plugin), with a documented interface for adding your own providers.
 
 - Runtime: Bun `>=1.3.14`, TypeScript, ESM-only
 - Database: PostgreSQL via Drizzle ORM — you inject the schema, this package
@@ -51,11 +53,10 @@ export const auth = createAuth({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     },
-    apple: {
-      clientId: process.env.APPLE_CLIENT_ID!, // Services ID
-      teamId: process.env.APPLE_TEAM_ID!,
-      keyId: process.env.APPLE_KEY_ID!,
-      privateKey: process.env.APPLE_PRIVATE_KEY!, // full .p8 contents
+    telegram: {
+      clientId: process.env.TELEGRAM_OIDC_CLIENT_ID!, // BotFather > Web Login
+      clientSecret: process.env.TELEGRAM_OIDC_CLIENT_SECRET!, // NOT the bot token
+      requestPhone: true,
     },
   },
   cors: { origins: [process.env.WEB_APP_URL!], credentials: true },
@@ -65,12 +66,61 @@ export const auth = createAuth({
 
 Required env vars, at minimum:
 
-| Var                                                                        | Notes                                                  |
-| -------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `AUTH_SECRET`                                                              | ≥32 chars, `openssl rand -hex 32`                      |
-| `AUTH_BASE_URL`                                                            | Public URL of the service serving `/auth/*`            |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`                                | Google Cloud Console → OAuth client                    |
-| `APPLE_CLIENT_ID` / `APPLE_TEAM_ID` / `APPLE_KEY_ID` / `APPLE_PRIVATE_KEY` | Apple Developer → Services ID + Sign in with Apple key |
+| Var                                         | Notes                                                                                 |
+| ------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `AUTH_SECRET`                               | ≥32 chars, `openssl rand -hex 32`                                                     |
+| `AUTH_BASE_URL`                             | Public URL of the service serving `/auth/*`                                           |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google Cloud Console → OAuth client                                                   |
+| `TELEGRAM_OIDC_CLIENT_ID` / `_SECRET`       | [@BotFather](https://t.me/botfather) → Bot Settings > Web Login (OpenID Connect) pair |
+
+### Telegram sign-in (Telegram OIDC only, via better-auth-telegram)
+
+Telegram is wired through the [`better-auth-telegram`](https://www.npmjs.com/package/better-auth-telegram)
+plugin — this package never implements Telegram verification itself. Telegram
+sign-in is supported **exclusively through Telegram OpenID Connect**
+(oauth.telegram.org): a standard OAuth 2.0 + PKCE redirect flow that the
+plugin registers as a real social provider (`provider: "telegram-oidc"`) via
+better-auth's own `POST /sign-in/social` and `GET /callback/telegram-oidc`
+routes. Sessions, accounts, and provider-token storage behave exactly as they
+do for Google. The plugin's legacy Login Widget and Mini App flows are
+disabled (`loginWidget: false`, no `miniApp` config), so no bot token is
+involved and none of the `/telegram/signin|link|unlink` endpoints are
+registered.
+
+```ts
+createAuth({
+  // ...
+  providers: {
+    telegram: {
+      // BotFather > Bot Settings > Web Login (OpenID Connect) credentials:
+      clientId: process.env.TELEGRAM_OIDC_CLIENT_ID!,
+      clientSecret: process.env.TELEGRAM_OIDC_CLIENT_SECRET!, // NOT the bot token
+    },
+  },
+})
+```
+
+Client sign-in (TanStack/vanilla better-auth client):
+
+```ts
+authClient.signIn.social({ provider: 'telegram-oidc', callbackURL: '/dashboard' })
+```
+
+Setup checklist:
+
+1. Create a bot with [@BotFather](https://t.me/botfather) (the bot ID doubles
+   as the default OIDC client id).
+2. Configure **Bot Settings > Web Login** in BotFather, register your
+   redirect URL, and copy the issued Client ID + Client Secret into
+   `TELEGRAM_OIDC_CLIENT_ID`/`TELEGRAM_OIDC_CLIENT_SECRET`. The Web Login
+   secret is a dedicated credential — it is **not** the bot token. 3. This integration requests `requestPhone: true` by default, which adds
+   the `phone` scope. Telegram only returns `phone_number` after the user
+   explicitly grants permission. Additional OIDC scopes can be configured
+   with `scopes: [...]`.
+
+Schema note: the OIDC flow stores provider accounts in the standard
+`account` table with `providerId = "telegram-oidc"`. No Telegram-specific
+columns are required in the injected schema.
 
 ### 3a. Hono
 
@@ -113,7 +163,7 @@ function DashboardPage() {
 ```
 
 See `examples/tanstack-example.tsx` for the full setup, including the sign-in
-buttons (`authClient.signIn.social({ provider: "google" | "apple" })`).
+buttons (`authClient.signIn.social({ provider: "google" | "telegram-oidc" })`).
 
 ## Logging
 
@@ -135,8 +185,8 @@ createAuth({
 ## Token refresh (calling a provider's API on the user's behalf)
 
 `getAccessToken` returns a valid, auto-refreshed OAuth access token for a
-linked provider account — useful when your app needs to call back into
-Google/Apple/GitHub APIs after sign-in, not just authenticate the user.
+linked provider account — useful when your app needs to call provider APIs
+after sign-in, not just authenticate the user.
 
 ```ts
 const token = await auth.getAccessToken({ userId, providerId: 'google' })
@@ -235,7 +285,7 @@ src/
     logger.ts            pluggable Logger interface, noop + console adapters
     environment.ts       isProduction/isDevelopment/isTest helpers
     types.ts             shared config/error/result types
-  providers/    apple.ts, google.ts, base.ts (extension contract)
+  providers/    google.ts, telegram.ts, base.ts (extension contract)
   middleware/
     hono/       mountAuthRoutes, withSession, requireSession, csrfProtection
     tanstack/   server functions, route guard, React client
@@ -265,12 +315,12 @@ better-auth's public API shifts between minor versions faster than most
 libraries. Before shipping, diff the following against the installed
 `better-auth@1.6.26` types, since they're the surface this package assumes:
 
-- `socialProviders.apple` accepting a `clientSecret` function (vs. requiring
-  a pre-computed string) and the `appBundleIdentifier` option for native flows
 - `socialProviders.google` field name for accepting multiple client IDs
 - `betterAuth({ rateLimit })` option shape
 - `better-auth/adapters/drizzle` adapter signature
 - `better-auth/react` client export path
+- `better-auth-telegram` plugin option shape (pinned `^2.0.1`, which
+  supports `better-auth >=1.6.22 <1.7.0`)
 
 None of these are exotic, but pinning to `1.6.26` and running `bun run
 typecheck` in CI is the actual guarantee — this README is a map, not the
