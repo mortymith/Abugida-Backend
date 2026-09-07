@@ -105,26 +105,6 @@ const validators: Record<JobType, ValidatorFn> = {
     ]
   },
 
-  LESSON_COMPLETION_UPDATE: (data) => {
-    const d = data as import('../core/types.js').LessonCompletionUpdateJobData
-    return [
-      ...requiredString(d?.enrollmentId, 'enrollmentId'),
-      ...requiredString(d?.lessonId, 'lessonId'),
-      ...requiredString(d?.idempotencyKey, 'idempotencyKey'),
-    ]
-  },
-
-  QUIZ_GRADE: (data) => {
-    const d = data as import('../core/types.js').QuizGradeJobData
-    return [
-      ...requiredString(d?.enrollmentId, 'enrollmentId'),
-      ...requiredString(d?.quizId, 'quizId'),
-      ...requiredString(d?.submissionId, 'submissionId'),
-      ...requiredObject(d?.answers, 'answers'),
-      ...requiredString(d?.idempotencyKey, 'idempotencyKey'),
-    ]
-  },
-
   DATA_EXPORT: (data) => {
     const d = data as import('../core/types.js').DataExportJobData
     return [

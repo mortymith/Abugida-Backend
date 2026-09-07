@@ -20,10 +20,6 @@ export interface TypedProcessors {
   [JobType.ENROLLMENT_PROGRESS_UPDATE]: JobProcessor<
     import('../core/types.js').EnrollmentProgressUpdateJobData
   >
-  [JobType.LESSON_COMPLETION_UPDATE]: JobProcessor<
-    import('../core/types.js').LessonCompletionUpdateJobData
-  >
-  [JobType.QUIZ_GRADE]: JobProcessor<import('../core/types.js').QuizGradeJobData>
   [JobType.DATA_EXPORT]: JobProcessor<import('../core/types.js').DataExportJobData>
   [JobType.WEBHOOK_PROCESS]: JobProcessor<import('../core/types.js').WebhookProcessJobData>
   [JobType.SMS_NOTIFICATION]: JobProcessor<import('../core/types.js').SmsNotificationJobData>

@@ -8,7 +8,6 @@
 import type { AnyProcessorEntry } from '../core/types.js'
 import { purchaseProcessors } from './purchase.js'
 import { enrollmentProcessors } from './enrollment.js'
-import { lessonProcessors } from './lesson.js'
 import { exportProcessors } from './export.js'
 import { webhookProcessors } from './webhook.js'
 import { notificationProcessors } from './notification.js'
@@ -28,7 +27,6 @@ import { maintenanceProcessors } from './maintenance.js'
 export const allProcessors: AnyProcessorEntry[] = [
   ...purchaseProcessors,
   ...enrollmentProcessors,
-  ...lessonProcessors,
   ...exportProcessors,
   ...webhookProcessors,
   ...notificationProcessors,

@@ -63,10 +63,6 @@ src/
 
 Configuration modules consume `appConfig` and never read `process.env` directly.
 
-## API Reference
-
-See [API Specification](../../docs/api-spec.yaml) for the full OpenAPI documentation.
-
 ## Testing Social Sign-In
 
 The social sign-in endpoint only requires the public provider name. Callback
