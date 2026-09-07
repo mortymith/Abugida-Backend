@@ -16,8 +16,6 @@ export const QUEUE_NAMES = {
   /** High-priority: purchases, quiz grading */
   PURCHASES: 'abugida.purchases',
   ENROLLMENTS: 'abugida.enrollments',
-  LESSONS: 'abugida.lessons',
-  QUIZZES: 'abugida.quizzes',
   /** Medium-priority: notifications, exports, webhooks */
   NOTIFICATIONS: 'abugida.notifications',
   EXPORTS: 'abugida.exports',
@@ -41,8 +39,7 @@ export const JOB_QUEUE_MAP: Record<JobType, string> = {
   [JobType.PURCHASE_COMPLETE]: QUEUE_NAMES.PURCHASES,
   [JobType.BUNDLE_ENROLLMENT_CREATE]: QUEUE_NAMES.ENROLLMENTS,
   [JobType.ENROLLMENT_PROGRESS_UPDATE]: QUEUE_NAMES.ENROLLMENTS,
-  [JobType.LESSON_COMPLETION_UPDATE]: QUEUE_NAMES.LESSONS,
-  [JobType.QUIZ_GRADE]: QUEUE_NAMES.QUIZZES,
+
   [JobType.DATA_EXPORT]: QUEUE_NAMES.EXPORTS,
   [JobType.WEBHOOK_PROCESS]: QUEUE_NAMES.WEBHOOKS,
   [JobType.SMS_NOTIFICATION]: QUEUE_NAMES.NOTIFICATIONS,
@@ -79,24 +76,6 @@ export const DEFAULT_QUEUE_OPTIONS: Record<string, QueueConfig['queues'][string]
       attempts: 3,
       backoff: { type: 'exponential', delay: 1000 },
       removeOnComplete: 1000,
-      removeOnFail: 200,
-    },
-  },
-  [QUEUE_NAMES.LESSONS]: {
-    concurrency: 5,
-    defaultJobOptions: {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 1000 },
-      removeOnComplete: 2000,
-      removeOnFail: 200,
-    },
-  },
-  [QUEUE_NAMES.QUIZZES]: {
-    concurrency: 10,
-    defaultJobOptions: {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 1000 },
-      removeOnComplete: 2000,
       removeOnFail: 200,
     },
   },
@@ -185,7 +164,6 @@ export const PRIORITY = {
  * Maps job types to their default priority.
  */
 export const JOB_PRIORITY_MAP: Partial<Record<JobType, number>> = {
-  [JobType.QUIZ_GRADE]: PRIORITY.HIGH,
   [JobType.PURCHASE_INITIATE]: PRIORITY.HIGH,
   [JobType.PURCHASE_COMPLETE]: PRIORITY.HIGH,
   [JobType.SMS_NOTIFICATION]: PRIORITY.MEDIUM,

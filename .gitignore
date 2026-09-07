@@ -11,6 +11,10 @@
 *.tsbuildinfo
 .opencode/
 
+# ─── Graphify ────────────────────────────────────────────────────────────────
+graphify-out/
+.graphifyignore
+
 # ─── Data volumes (never commit runtime state) ──────────────────────────────
 data/
 

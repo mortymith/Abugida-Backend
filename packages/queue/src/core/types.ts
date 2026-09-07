@@ -24,10 +24,6 @@ export enum JobType {
   BUNDLE_ENROLLMENT_CREATE = 'BUNDLE_ENROLLMENT_CREATE',
   ENROLLMENT_PROGRESS_UPDATE = 'ENROLLMENT_PROGRESS_UPDATE',
 
-  // Lesson & Quiz (FR-500)
-  LESSON_COMPLETION_UPDATE = 'LESSON_COMPLETION_UPDATE',
-  QUIZ_GRADE = 'QUIZ_GRADE',
-
   // Export (FR-904)
   DATA_EXPORT = 'DATA_EXPORT',
 
@@ -88,23 +84,6 @@ export interface EnrollmentProgressUpdateJobData {
   lessonId?: string
   completedLessons: number
   totalLessons: number
-  idempotencyKey: string
-}
-
-/** Payload for LESSON_COMPLETION_UPDATE jobs */
-export interface LessonCompletionUpdateJobData {
-  enrollmentId: string
-  lessonId: string
-  completed: boolean
-  idempotencyKey: string
-}
-
-/** Payload for QUIZ_GRADE jobs */
-export interface QuizGradeJobData {
-  enrollmentId: string
-  quizId: string
-  submissionId: string
-  answers: Record<string, string | number | boolean>
   idempotencyKey: string
 }
 
@@ -197,8 +176,6 @@ export type JobDataMap = {
   [JobType.PURCHASE_COMPLETE]: PurchaseCompleteJobData
   [JobType.BUNDLE_ENROLLMENT_CREATE]: BundleEnrollmentCreateJobData
   [JobType.ENROLLMENT_PROGRESS_UPDATE]: EnrollmentProgressUpdateJobData
-  [JobType.LESSON_COMPLETION_UPDATE]: LessonCompletionUpdateJobData
-  [JobType.QUIZ_GRADE]: QuizGradeJobData
   [JobType.DATA_EXPORT]: DataExportJobData
   [JobType.WEBHOOK_PROCESS]: WebhookProcessJobData
   [JobType.SMS_NOTIFICATION]: SmsNotificationJobData

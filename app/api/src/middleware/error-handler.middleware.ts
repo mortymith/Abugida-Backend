@@ -16,7 +16,7 @@
  *     routes: maps Zod failures to the spec's 422 shape with an `errors[]`
  *     array of field-level issues.
  *
- * The response shape follows `docs/api-spec.yaml` (`ProblemDetail`):
+ * The response shape follows the `ProblemDetail` standard:
  *   { type, title, status, detail, instance, correlationId?, errors? }
  */
 

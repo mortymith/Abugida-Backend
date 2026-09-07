@@ -1,7 +1,7 @@
 /**
  * @module cors
  *
- * CORS configuration per the API spec (`docs/api-spec.yaml`). Origins come
+ * CORS configuration. Origins come
  * from validated application config (`appConfig.corsOrigins`), never hardcoded
  * production origins. The remaining header/method/expose lists mirror the spec
  * exactly so browsers and mobile WebViews can call the API with bearer tokens.

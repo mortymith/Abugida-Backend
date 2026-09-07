@@ -32,8 +32,6 @@ export {
   type PurchaseCompleteJobData,
   type BundleEnrollmentCreateJobData,
   type EnrollmentProgressUpdateJobData,
-  type LessonCompletionUpdateJobData,
-  type QuizGradeJobData,
   type DataExportJobData,
   type WebhookProcessJobData,
   type SmsNotificationJobData,
@@ -86,7 +84,6 @@ export { allProcessors, getProcessorsForQueue, getProcessorForJobType } from './
 // Re-export individual processor modules for selective imports
 export { purchaseProcessors } from './processors/purchase.js'
 export { enrollmentProcessors } from './processors/enrollment.js'
-export { lessonProcessors } from './processors/lesson.js'
 export { exportProcessors } from './processors/export.js'
 export { webhookProcessors } from './processors/webhook.js'
 export { notificationProcessors } from './processors/notification.js'

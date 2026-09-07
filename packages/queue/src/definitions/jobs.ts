@@ -11,8 +11,6 @@ export {
   type PurchaseCompleteJobData,
   type BundleEnrollmentCreateJobData,
   type EnrollmentProgressUpdateJobData,
-  type LessonCompletionUpdateJobData,
-  type QuizGradeJobData,
   type DataExportJobData,
   type WebhookProcessJobData,
   type SmsNotificationJobData,
