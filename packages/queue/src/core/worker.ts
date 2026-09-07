@@ -10,7 +10,7 @@ import type { QueueConfig } from '../config/schema.js'
 import type { AnyProcessorEntry, QueueWorker } from './types.js'
 import { createBullMQConnection, closeConnection } from './connection.js'
 import { DEFAULT_QUEUE_OPTIONS } from '../definitions/queues.js'
-import { getLogger } from '../monitoring/logger.js'
+import { getLogger } from '../utils/logger.js'
 import { getWorkerId } from '../config/env.js'
 
 // ---------------------------------------------------------------------------
