@@ -23,9 +23,6 @@ export {
   type AnyProcessorEntry,
   type EnqueueOptions,
   type JobProcessor,
-  type QueueHealthReport,
-  type QueueHealthStatus,
-  type MetricsSnapshot,
   type IdempotencyRecord,
   // Job data interfaces
   type PurchaseInitiateJobData,
@@ -56,8 +53,6 @@ export {
   createBullMQConnection,
   closeConnection,
   closeAllConnections,
-  checkConnectionHealth,
-  deriveHealthStatus,
 } from './core/connection.js'
 
 // ---------------------------------------------------------------------------
@@ -100,14 +95,12 @@ export type {
   QueueConfig,
   RedisConfig,
   QueueSpecificConfig,
-  MonitoringConfig,
   LoggingConfig,
 } from './config/schema.js'
 export {
   getDefaultConfig,
   mergeWithDefaults,
   REDIS_DEFAULTS,
-  MONITORING_DEFAULTS,
   LOGGING_DEFAULTS,
 } from './config/defaults.js'
 export {
@@ -120,15 +113,6 @@ export {
   envWithDefault,
   envNumber,
 } from './config/env.js'
-
-// ---------------------------------------------------------------------------
-// Monitoring
-// ---------------------------------------------------------------------------
-
-export { getLogger, type Logger } from './monitoring/logger.js'
-export { runHealthCheck, aggregateHealthStatus } from './monitoring/health.js'
-export { captureMetrics, incrementCounter, recordTiming } from './monitoring/metrics.js'
-export { generateDashboardHtml } from './monitoring/dashboard.js'
 
 // ---------------------------------------------------------------------------
 // Utilities
@@ -153,6 +137,66 @@ export {
 export { validateJobData, assertJobData, type ValidationResult } from './utils/validators.js'
 
 export { classifyError, safeErrorMessage } from './utils/errors.js'
+
+export { getLogger, type Logger } from './utils/logger.js'
+
+// ---------------------------------------------------------------------------
+// Integrations (Telebirr / SMSEthiopia)
+// ---------------------------------------------------------------------------
+
+export {
+  IntegrationError,
+  describeError,
+  toJobError,
+  HttpError,
+  HttpNetworkError,
+  isRetryableHttpError,
+} from './integrations/index.js'
+
+export {
+  SIGN_TYPE,
+  TELEBIRR_PRODUCTION_BASE_URL,
+  TELEBIRR_TESTBED_BASE_URL,
+  TelebirrClient,
+  TelebirrError,
+  buildStringToSign,
+  createTelebirrClient,
+  getTelebirrClient,
+  getTelebirrConfigFromEnv,
+  getTelebirrSignaturePadding,
+  getTelebirrVerificationKey,
+  signPayload,
+  verifyPayload,
+  type TelebirrApiResponse,
+  type TelebirrConfig,
+  type TelebirrErrorCode,
+  type TelebirrOrderResponseBiz,
+  type TelebirrOrderStatus,
+  type TelebirrQueryResponseBiz,
+  type TelebirrSignaturePadding,
+  type TelebirrTradeType,
+  type CreateOrderParams,
+  type CreateOrderResult,
+} from './integrations/telebirr.js'
+
+export {
+  SMSETHIOPIA_DEFAULTS,
+  SMSEthiopiaClient,
+  SMSEthiopiaError,
+  createSMSEthiopiaClient,
+  getSMSEthiopiaClient,
+  getSMSEthiopiaConfigFromEnv,
+  isValidMsisdn,
+  normalizeMsisdn,
+  normalizeSmsStatus,
+  type SmsApiVersion,
+  type SmsDeliveryStatus,
+  type SmsMessageStatus,
+  type SMSEthiopiaConfig,
+  type SmsSendParams,
+  type SmsSendResult,
+  type SMSEthiopiaErrorCode,
+} from './integrations/smsethiopia.js'
 
 // ---------------------------------------------------------------------------
 // Framework Middleware
@@ -186,12 +230,10 @@ import type { QueueConfig } from './config/schema.js'
 import { createQueueClient } from './core/client.js'
 import { createQueueWorker } from './core/worker.js'
 import type { AnyProcessorEntry } from './core/types.js'
-import { runHealthCheck } from './monitoring/health.js'
-import { captureMetrics } from './monitoring/metrics.js'
 import { closeAllConnections } from './core/connection.js'
 
 /**
- * Main factory: create the complete queue system (client + worker + monitoring).
+ * Main factory: create the complete queue system (client + worker).
  *
  * @param config - Validated queue configuration.
  * @returns A {@link QueueFactory} with all operations.
@@ -214,9 +256,6 @@ import { closeAllConnections } from './core/connection.js'
  * const worker = queueSystem.createWorker(allProcessors);
  * await worker.start();
  *
- * // Health check
- * const health = await queueSystem.healthCheck();
- *
  * // Shutdown
  * await queueSystem.shutdown();
  * ```
@@ -226,10 +265,6 @@ export function createQueueSystem(config: QueueConfig): import('./core/types.js'
     createClient: () => createQueueClient(config),
 
     createWorker: (processors?: AnyProcessorEntry[]) => createQueueWorker(config, processors),
-
-    healthCheck: () => runHealthCheck(config),
-
-    getMetrics: () => captureMetrics(config),
 
     shutdown: async () => {
       await closeAllConnections()

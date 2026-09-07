@@ -12,7 +12,6 @@
 import { RedisClient, type RedisOptions } from 'bun'
 import { createBunRedisClient, type IRedisClient } from 'bullmq'
 import type { QueueConfig, RedisConfig } from '../config/schema.js'
-import type { QueueHealthStatus } from './types.js'
 
 // ---------------------------------------------------------------------------
 // Connection Cache
@@ -185,17 +184,4 @@ export async function closeAllConnections(): Promise<void> {
   )
   await Promise.allSettled(promises)
   connectionCache.clear()
-}
-
-/**
- * Derive a simple health status string from connection state and queue depth.
- */
-export function deriveHealthStatus(
-  connected: boolean,
-  failedCount: number,
-  delayedCount: number,
-): QueueHealthStatus {
-  if (!connected) return 'unhealthy'
-  if (failedCount > 100 || delayedCount > 500) return 'degraded'
-  return 'healthy'
 }

@@ -1,8 +1,10 @@
 /**
  * @module processors/notification
- * @description Processors for SMS and email notification jobs.
+ * @description Processors for SMS and email notification jobs. SMS messages
+ * are delivered through the SMSEthiopia API (see `integrations/smsethiopia`).
  */
 
+import { UnrecoverableError } from 'bullmq'
 import type {
   AnyProcessorEntry,
   JobProcessor,
@@ -11,50 +13,72 @@ import type {
 } from '../core/types.js'
 import { JobType } from '../core/types.js'
 import { QUEUE_NAMES } from '../definitions/queues.js'
+import { getSMSEthiopiaClient, normalizeMsisdn } from '../integrations/index.js'
+import { toJobError } from '../integrations/job-error.js'
+import { getLogger } from '../utils/logger.js'
 
 // ---------------------------------------------------------------------------
 // SMS Notification Processor
 // ---------------------------------------------------------------------------
 
 /**
- * Send SMS notifications via SMSEthiopia API.
+ * Send SMS notifications via the SMSEthiopia API.
+ *
+ * The recipient is normalized to international digits (Ethiopian local
+ * formats accepted) before sending; permanently invalid recipients and
+ * provider rejections abort the job without consuming further retries.
+ * Transient failures (network, 5xx) remain retryable and are handled by
+ * the queue's exponential backoff.
  *
  * Expected side effects:
- * - Validate recipient phone number format
- * - Call SMSEthiopia API to send the message
- * - Record the notification in the database
- * - Handle delivery status callbacks
+ * - Validate and normalize the recipient phone number
+ * - Call the SMSEthiopia API to send the message
+ * - Record the notification in the database (pending DB integration)
  */
 export const processSmsNotification: JobProcessor<SmsNotificationJobData> = async (data, job) => {
-  const { recipientPhone, templateId, idempotencyKey } = data
+  const { recipientPhone, message, templateId, idempotencyKey } = data
+  const logger = getLogger().child({ processor: 'notification:sms', jobId: job.id })
 
-  console.debug(`[notification:sms] Sending SMS to ${maskPhone(recipientPhone)}`, {
-    jobId: job.id,
+  const msisdn = normalizeMsisdn(recipientPhone)
+  if (!msisdn) {
+    // Invalid input will never succeed on retry – fail permanently.
+    throw new UnrecoverableError(
+      `SMS_NOTIFICATION rejected an invalid recipient phone: ${maskPhone(recipientPhone)}`,
+    )
+  }
+
+  logger.info(`Sending SMS to ${maskPhone(recipientPhone)}`, {
     idempotencyKey,
     templateId,
+    length: message.length,
   })
 
-  // TODO: Replace with actual SMSEthiopia API integration:
-  // const smsClient = getSMSEthiopiaClient();
-  // const result = await smsClient.send({
-  //   to: recipientPhone,
-  //   message: templateId ? applyTemplate(templateId, message) : message,
-  // });
-  //
-  // Record notification
-  // await db.insert(notifications).values({
-  //   type: 'sms',
-  //   recipient: recipientPhone,
-  //   status: result.success ? 'sent' : 'failed',
-  //   externalId: result.messageId,
-  //   idempotencyKey,
-  // });
+  try {
+    const sms = getSMSEthiopiaClient()
+    // NOTE: templateId rendering requires the notifications DB schema; the
+    // message body is sent as provided until template storage is wired up.
+    const result = await sms.send({ msisdn, text: message })
 
-  return {
-    recipientPhone: maskPhone(recipientPhone),
-    status: 'sent',
-    messageId: `sms_${job.id}`,
-    processedAt: new Date().toISOString(),
+    // TODO: record the notification in the database:
+    // await db.insert(notifications).values({
+    //   type: 'sms',
+    //   recipient: recipientPhone,
+    //   status: 'sent',
+    //   externalId: result.id,
+    //   idempotencyKey,
+    // });
+
+    logger.debug('SMS accepted by SMSEthiopia', { messageId: result.id })
+
+    return {
+      recipientPhone: maskPhone(recipientPhone),
+      status: 'sent',
+      messageId: result.id,
+      ...(result.segments === null ? {} : { segments: result.segments }),
+      processedAt: new Date().toISOString(),
+    }
+  } catch (error) {
+    throw toJobError(error)
   }
 }
 
@@ -77,14 +101,13 @@ export const processEmailNotification: JobProcessor<EmailNotificationJobData> = 
 ) => {
   const { recipientEmail, subject, templateId, idempotencyKey } = data
 
-  console.debug(
-    `[notification:email] Sending email to ${maskEmail(recipientEmail)} subject="${subject}"`,
-    {
+  getLogger()
+    .child({ processor: 'notification:email' })
+    .debug(`Sending email to ${maskEmail(recipientEmail)} subject="${subject}"`, {
       jobId: job.id,
       idempotencyKey,
       templateId,
-    },
-  )
+    })
 
   // TODO: Replace with actual email service integration:
   // const emailClient = getEmailClient();

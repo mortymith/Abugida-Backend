@@ -18,16 +18,6 @@ export const REDIS_DEFAULTS = {
 } as const
 
 // ---------------------------------------------------------------------------
-// Monitoring Defaults
-// ---------------------------------------------------------------------------
-
-export const MONITORING_DEFAULTS = {
-  enabled: true,
-  metricsPrefix: 'abugida:queue:metrics',
-  healthCheckEndpoint: '/health/queue',
-} as const
-
-// ---------------------------------------------------------------------------
 // Logging Defaults
 // ---------------------------------------------------------------------------
 
@@ -64,7 +54,6 @@ export function getDefaultConfig(
       tls: env === 'production',
     },
     queues: {},
-    monitoring: { ...MONITORING_DEFAULTS },
     logging: { ...LOGGING_DEFAULTS[env] },
   }
 }
@@ -93,10 +82,6 @@ export function mergeWithDefaults(
     queues: {
       ...base.queues,
       ...overrides.queues,
-    },
-    monitoring: {
-      ...base.monitoring,
-      ...overrides.monitoring,
     },
     logging: {
       ...base.logging,

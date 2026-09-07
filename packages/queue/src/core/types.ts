@@ -58,6 +58,8 @@ export interface PurchaseInitiateJobData {
   amount: number
   currency: string
   paymentMethod: string
+  /** Optional display title for the payment order (e.g. course name). */
+  title?: string
   idempotencyKey: string
 }
 
@@ -366,51 +368,6 @@ export interface IdempotencyRecord {
 }
 
 // ---------------------------------------------------------------------------
-// Health & Monitoring
-// ---------------------------------------------------------------------------
-
-export type QueueHealthStatus = 'healthy' | 'degraded' | 'unhealthy'
-
-export interface QueueHealthReport {
-  queueName: string
-  status: QueueHealthStatus
-  redis: { connected: boolean; latencyMs: number | null }
-  waiting: number
-  active: number
-  completed: number
-  failed: number
-  delayed: number
-  timestamp: string
-}
-
-export interface WorkerHealthReport {
-  workerId: string
-  status: 'running' | 'stopped' | 'error'
-  queues: string[]
-  uptime: number
-  processedJobs: number
-  failedJobs: number
-  timestamp: string
-}
-
-export interface MetricsSnapshot {
-  totalEnqueued: number
-  totalCompleted: number
-  totalFailed: number
-  avgProcessingTimeMs: number
-  queues: Record<
-    string,
-    {
-      enqueued: number
-      completed: number
-      failed: number
-      avgTimeMs: number
-    }
-  >
-  timestamp: string
-}
-
-// ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
 
@@ -423,10 +380,6 @@ export interface QueueFactory {
   createClient(): QueueClient
   /** Create a consumer worker. */
   createWorker(processors?: AnyProcessorEntry[]): QueueWorker
-  /** Run an ad-hoc health check. */
-  healthCheck(): Promise<QueueHealthReport[]>
-  /** Capture a metrics snapshot. */
-  getMetrics(): Promise<MetricsSnapshot>
   /** Gracefully tear down everything. */
   shutdown(): Promise<void>
 }

@@ -64,18 +64,6 @@ export interface QueueSpecificConfig {
 }
 
 /**
- * Monitoring configuration.
- */
-export interface MonitoringConfig {
-  /** Enable health checks and metrics collection. Default: `true`. */
-  enabled: boolean
-  /** Prefix for metrics keys in Redis. Default: `"abugida:queue:metrics"`. */
-  metricsPrefix?: string
-  /** HTTP path for health check endpoint. Default: `"/health/queue"`. */
-  healthCheckEndpoint?: string
-}
-
-/**
  * Logging configuration.
  */
 export interface LoggingConfig {
@@ -96,8 +84,6 @@ export interface QueueConfig {
   redis: RedisConfig
   /** Per-queue overrides keyed by queue name. */
   queues: Record<string, QueueSpecificConfig>
-  /** Monitoring settings. */
-  monitoring: MonitoringConfig
   /** Logging settings. */
   logging: LoggingConfig
 }
