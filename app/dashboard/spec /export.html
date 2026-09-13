@@ -1,0 +1,1190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Explore Home — S-1.1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              sand: {
+                50: '#faf8f6',
+                100: '#efeae5',
+                200: '#E3DDD7',
+                300: '#d1c8c0',
+                400: '#b8aca2',
+                500: '#9f9185',
+                600: '#867669',
+                700: '#6d5f54',
+                800: '#574c43',
+                900: '#433a33',
+              },
+              brand: { DEFAULT: '#111827', light: '#1f2937', dark: '#030712' },
+            },
+            fontFamily: { sans: ['Manrope', 'sans-serif'] },
+          },
+        },
+      }
+    </script>
+    <style>
+      * {
+        -webkit-tap-highlight-color: transparent;
+      }
+      body {
+        font-family: 'Manrope', sans-serif;
+        background: #e3ddd7;
+        overscroll-behavior-y: contain;
+      }
+
+      .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+
+      @keyframes shimmer {
+        0% {
+          background-position: -400px 0;
+        }
+        100% {
+          background-position: 400px 0;
+        }
+      }
+      .skeleton {
+        background: linear-gradient(90deg, #e8e3de 25%, #f2eeea 50%, #e8e3de 75%);
+        background-size: 800px 100%;
+        animation: shimmer 1.6s ease-in-out infinite;
+        border-radius: 0.75rem;
+      }
+      .skeleton-circle {
+        border-radius: 50%;
+      }
+
+      @keyframes slideUpBlur {
+        0% {
+          opacity: 0;
+          transform: translateY(24px);
+          filter: blur(8px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+          filter: blur(0);
+        }
+      }
+      .anim-up {
+        animation: slideUpBlur 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      .d1 {
+        animation-delay: 80ms;
+      }
+      .d2 {
+        animation-delay: 160ms;
+      }
+      .d3 {
+        animation-delay: 240ms;
+      }
+      .d4 {
+        animation-delay: 320ms;
+      }
+      .d5 {
+        animation-delay: 400ms;
+      }
+
+      .card {
+        transition:
+          transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+          box-shadow 0.35s ease;
+        will-change: transform;
+      }
+      .card:active {
+        transform: scale(0.97);
+        transition-duration: 0.1s;
+      }
+
+      .chip {
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        white-space: nowrap;
+        position: relative;
+        overflow: hidden;
+      }
+      .chip::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: currentColor;
+        opacity: 0;
+        transition: opacity 0.2s;
+        border-radius: inherit;
+      }
+      .chip:active::after {
+        opacity: 0.08;
+      }
+      .chip:active {
+        transform: scale(0.95);
+      }
+      .chip.active {
+        background: #111827;
+        color: #fff;
+        border-color: #111827;
+        box-shadow: 0 2px 8px rgba(17, 24, 39, 0.2);
+      }
+
+      .bnav {
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .bnav.active {
+        color: #111827;
+      }
+      .bnav.active .bnav-dot {
+        transform: scaleX(1);
+        opacity: 1;
+      }
+      .bnav-dot {
+        transform: scaleX(0);
+        opacity: 0;
+        transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .scroll-fade-both {
+        mask-image: linear-gradient(
+          to right,
+          transparent 0,
+          black 16px,
+          black calc(100% - 16px),
+          transparent 100%
+        );
+        -webkit-mask-image: linear-gradient(
+          to right,
+          transparent 0,
+          black 16px,
+          black calc(100% - 16px),
+          transparent 100%
+        );
+      }
+
+      .banner-bg {
+        background: linear-gradient(135deg, #1a1f2e 0%, #111827 50%, #1e2536 100%);
+      }
+
+      .offline-bar {
+        transition:
+          transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+          opacity 0.4s ease;
+      }
+      .prog-fill {
+        transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .spinning {
+        animation: spin 0.7s linear infinite;
+      }
+
+      @keyframes toastUp {
+        0% {
+          opacity: 0;
+          transform: translateY(16px) scale(0.96);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+      @keyframes toastDown {
+        0% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(16px) scale(0.96);
+        }
+      }
+      .toast-in {
+        animation: toastUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      .toast-out {
+        animation: toastDown 0.25s ease both;
+      }
+
+      .snap-x {
+        scroll-snap-type: x mandatory;
+      }
+      .snap-s {
+        scroll-snap-align: start;
+      }
+
+      .free-badge {
+        background: linear-gradient(135deg, #10b981, #059669);
+        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+      }
+
+      .bottom-safe {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      .star-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 1px;
+      }
+    </style>
+  </head>
+  <body class="bg-sand-200 text-gray-900 min-h-screen select-none">
+    <div class="min-h-screen flex items-center justify-center p-4 lg:p-8">
+      <div
+        class="w-full max-w-[430px] h-[932px] bg-sand-50 rounded-[2.5rem] overflow-hidden relative flex flex-col"
+        style="
+          box-shadow:
+            0 25px 80px -12px rgba(17, 24, 39, 0.22),
+            0 0 0 1px rgba(0, 0, 0, 0.04);
+        "
+      >
+        <div class="flex items-center justify-between px-8 pt-3 pb-1 flex-shrink-0">
+          <span class="text-[11px] font-semibold tracking-wide">9:41</span>
+          <div class="w-[126px] h-[34px] bg-black rounded-full mx-auto"></div>
+          <div class="flex items-center gap-1.5">
+            <iconify-icon
+              icon="solar:wifi-router-bold"
+              width="13"
+              class="text-gray-900"
+            ></iconify-icon>
+            <iconify-icon
+              icon="solar:battery-full-bold"
+              width="17"
+              class="text-gray-900"
+            ></iconify-icon>
+          </div>
+        </div>
+
+        <header
+          class="flex items-center justify-between px-6 pt-2 pb-3 flex-shrink-0 bg-sand-50/90 backdrop-blur-xl z-30 border-b border-gray-900/[0.03]"
+        >
+          <div>
+            <p class="text-[10px] font-medium text-sand-500 uppercase tracking-widest">Discover</p>
+            <h1 class="text-[22px] font-extrabold tracking-tight leading-tight -mt-0.5">Explore</h1>
+          </div>
+          <button
+            id="searchBtn"
+            class="w-10 h-10 rounded-2xl bg-white border border-gray-900/[0.06] flex items-center justify-center hover:border-gray-900/10 transition-all duration-300 active:scale-90 shadow-sm"
+            aria-label="Search"
+          >
+            <iconify-icon
+              icon="solar:magnifer-linear"
+              width="18"
+              class="text-gray-600"
+            ></iconify-icon>
+          </button>
+        </header>
+
+        <div
+          id="offlineBar"
+          class="offline-bar -translate-y-full opacity-0 absolute top-[100px] left-4 right-4 z-40 bg-amber-50 border border-amber-200/80 rounded-2xl px-4 py-2.5 flex items-center gap-2.5 shadow-sm"
+        >
+          <div
+            class="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0"
+          >
+            <iconify-icon
+              icon="solar:wifi-router-minimalistic-bold"
+              width="11"
+              class="text-amber-600"
+            ></iconify-icon>
+          </div>
+          <span class="text-[11px] font-semibold text-amber-700"
+            >You're offline — showing cached content</span
+          >
+        </div>
+
+        <main id="mainScroll" class="flex-1 overflow-y-auto hide-scrollbar relative">
+          <div
+            id="pullIndicator"
+            class="absolute top-0 left-0 right-0 flex items-center justify-center h-0 overflow-hidden z-20 transition-all duration-300"
+          >
+            <div class="flex items-center gap-2 text-gray-400">
+              <iconify-icon
+                id="pullIcon"
+                icon="solar:refresh-linear"
+                width="16"
+                class="transition-transform duration-300"
+              ></iconify-icon>
+              <span class="text-[11px] font-medium" id="pullText">Pull to refresh</span>
+            </div>
+          </div>
+
+          <div id="contentArea" class="pb-4">
+            <div id="loadingState" class="px-5 space-y-6 pt-5">
+              <div class="skeleton h-[108px] w-full rounded-2xl"></div>
+              <div>
+                <div class="skeleton h-4 w-28 mb-3 rounded-lg"></div>
+                <div class="flex gap-3 overflow-hidden">
+                  <div class="skeleton h-[152px] w-[210px] flex-shrink-0 rounded-2xl"></div>
+                  <div class="skeleton h-[152px] w-[210px] flex-shrink-0 rounded-2xl"></div>
+                </div>
+              </div>
+              <div>
+                <div class="skeleton h-4 w-32 mb-3 rounded-lg"></div>
+                <div class="flex gap-2 overflow-hidden">
+                  <div class="skeleton h-9 w-16 flex-shrink-0 rounded-full"></div>
+                  <div class="skeleton h-9 w-20 flex-shrink-0 rounded-full"></div>
+                  <div class="skeleton h-9 w-24 flex-shrink-0 rounded-full"></div>
+                  <div class="skeleton h-9 w-18 flex-shrink-0 rounded-full"></div>
+                </div>
+              </div>
+              <div>
+                <div class="skeleton h-4 w-36 mb-3 rounded-lg"></div>
+                <div class="space-y-2.5">
+                  <div class="skeleton h-[92px] w-full rounded-2xl"></div>
+                  <div class="skeleton h-[92px] w-full rounded-2xl"></div>
+                  <div class="skeleton h-[92px] w-full rounded-2xl"></div>
+                </div>
+              </div>
+              <div>
+                <div class="skeleton h-4 w-28 mb-3 rounded-lg"></div>
+                <div class="flex gap-3 overflow-hidden">
+                  <div class="skeleton h-[172px] w-[148px] flex-shrink-0 rounded-2xl"></div>
+                  <div class="skeleton h-[172px] w-[148px] flex-shrink-0 rounded-2xl"></div>
+                  <div class="skeleton h-[172px] w-[148px] flex-shrink-0 rounded-2xl"></div>
+                </div>
+              </div>
+            </div>
+
+            <div id="loadedState" class="hidden">
+              <div id="guestBanner" class="mx-5 mt-5 anim-up">
+                <div class="banner-bg rounded-2xl p-5 relative overflow-hidden">
+                  <div
+                    class="absolute -top-6 -right-6 w-28 h-28 rounded-full border border-white/[0.06]"
+                  ></div>
+                  <div
+                    class="absolute -bottom-4 -right-2 w-20 h-20 rounded-full border border-white/[0.04]"
+                  ></div>
+                  <div class="absolute top-4 right-6 w-2 h-2 rounded-full bg-white/10"></div>
+                  <div
+                    class="absolute bottom-8 right-12 w-1.5 h-1.5 rounded-full bg-white/[0.06]"
+                  ></div>
+
+                  <div class="relative z-10 flex items-start gap-3.5">
+                    <div
+                      class="w-11 h-11 rounded-xl bg-white/[0.08] backdrop-blur-sm flex items-center justify-center flex-shrink-0 border border-white/[0.06]"
+                    >
+                      <iconify-icon
+                        icon="solar:lock-keyhole-unlocked-linear"
+                        width="20"
+                        class="text-white/90"
+                      ></iconify-icon>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <h3 class="text-white font-bold text-[13px] leading-snug">
+                        Unlock personalized learning
+                      </h3>
+                      <p class="text-white/45 text-[11px] mt-1.5 leading-relaxed">
+                        Track progress, save favorites, and get smart recommendations.
+                      </p>
+                      <div class="flex gap-2 mt-3.5">
+                        <button
+                          onclick="showToast('→ Sign in with Telegram')"
+                          class="h-9 px-4 bg-[#2AABEE] hover:bg-[#229ED9] text-white rounded-xl text-[11px] font-bold transition-all duration-300 active:scale-95 flex items-center gap-2 shadow-sm shadow-[#2AABEE]/20"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                              d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"
+                            />
+                          </svg>
+                          Telegram
+                        </button>
+                        <button
+                          onclick="showToast('→ Sign in with Google')"
+                          class="h-9 px-4 bg-white hover:bg-gray-50 text-gray-700 rounded-xl text-[11px] font-bold transition-all duration-300 active:scale-95 flex items-center gap-2 shadow-sm"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24">
+                            <path
+                              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                              fill="#4285F4"
+                            />
+                            <path
+                              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                              fill="#34A853"
+                            />
+                            <path
+                              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                              fill="#FBBC05"
+                            />
+                            <path
+                              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                              fill="#EA4335"
+                            />
+                          </svg>
+                          Google
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="jumpBackSection" class="hidden mt-7 anim-up d1">
+                <div class="flex items-center justify-between px-5 mb-3">
+                  <div class="flex items-center gap-2">
+                    <div class="w-1 h-4 rounded-full bg-gray-900"></div>
+                    <h2 class="text-[13px] font-bold tracking-tight">Jump Back In</h2>
+                  </div>
+                  <span class="text-[10px] font-semibold text-sand-500 uppercase tracking-wider"
+                    >Resume</span
+                  >
+                </div>
+                <div
+                  id="jumpBackCarousel"
+                  class="flex gap-3 overflow-x-auto hide-scrollbar snap-x scroll-fade-both px-5"
+                ></div>
+              </div>
+
+              <div class="mt-7 anim-up d2">
+                <div class="flex items-center gap-2 px-5 mb-3">
+                  <div class="w-1 h-4 rounded-full bg-gray-900"></div>
+                  <h2 class="text-[13px] font-bold tracking-tight">Browse by Exam</h2>
+                </div>
+                <div class="flex gap-2 overflow-x-auto hide-scrollbar scroll-fade-both px-5 pb-0.5">
+                  <button
+                    class="chip px-4 py-[7px] bg-white rounded-full text-[11px] font-semibold text-gray-600 border border-gray-900/[0.06] flex-shrink-0 shadow-sm"
+                    onclick="selectExam(this, 'TOEFL')"
+                  >
+                    TOEFL
+                  </button>
+                  <button
+                    class="chip px-4 py-[7px] bg-white rounded-full text-[11px] font-semibold text-gray-600 border border-gray-900/[0.06] flex-shrink-0 shadow-sm"
+                    onclick="selectExam(this, 'IGCSE')"
+                  >
+                    IGCSE
+                  </button>
+                  <button
+                    class="chip px-4 py-[7px] bg-white rounded-full text-[11px] font-semibold text-gray-600 border border-gray-900/[0.06] flex-shrink-0 shadow-sm"
+                    onclick="selectExam(this, 'High School')"
+                  >
+                    High School
+                  </button>
+                  <button
+                    class="chip px-4 py-[7px] bg-white rounded-full text-[11px] font-semibold text-gray-600 border border-gray-900/[0.06] flex-shrink-0 shadow-sm"
+                    onclick="selectExam(this, 'College Prep')"
+                  >
+                    College Prep
+                  </button>
+                  <button
+                    class="chip px-4 py-[7px] bg-white rounded-full text-[11px] font-semibold text-gray-600 border border-gray-900/[0.06] flex-shrink-0 shadow-sm"
+                    onclick="selectExam(this, 'SAT')"
+                  >
+                    SAT
+                  </button>
+                  <button
+                    class="chip px-4 py-[7px] bg-white rounded-full text-[11px] font-semibold text-gray-600 border border-gray-900/[0.06] flex-shrink-0 shadow-sm"
+                    onclick="selectExam(this, 'AP')"
+                  >
+                    AP
+                  </button>
+                  <button
+                    class="chip px-4 py-[7px] bg-white rounded-full text-[11px] font-semibold text-gray-600 border border-gray-900/[0.06] flex-shrink-0 shadow-sm"
+                    onclick="selectExam(this, 'IB')"
+                  >
+                    IB
+                  </button>
+                  <button
+                    class="chip px-4 py-[7px] bg-white rounded-full text-[11px] font-semibold text-gray-600 border border-gray-900/[0.06] flex-shrink-0 shadow-sm"
+                    onclick="selectExam(this, 'IELTS')"
+                  >
+                    IELTS
+                  </button>
+                  <button
+                    class="chip px-4 py-[7px] bg-white rounded-full text-[11px] font-semibold text-gray-600 border border-gray-900/[0.06] flex-shrink-0 shadow-sm"
+                    onclick="selectExam(this, 'GRE')"
+                  >
+                    GRE
+                  </button>
+                </div>
+              </div>
+
+              <div class="mt-7 anim-up d3">
+                <div class="flex items-center justify-between px-5 mb-3">
+                  <div class="flex items-center gap-2">
+                    <div class="w-1 h-4 rounded-full bg-gray-900"></div>
+                    <h2 class="text-[13px] font-bold tracking-tight">Most Popular</h2>
+                    <span
+                      class="text-[10px] font-medium text-sand-400 bg-sand-100 px-1.5 py-0.5 rounded-md"
+                      >10</span
+                    >
+                  </div>
+                  <button
+                    onclick="showToast('→ S-1.2 All Courses')"
+                    class="text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-0.5 active:scale-95"
+                  >
+                    See All
+                    <iconify-icon
+                      icon="solar:arrow-right-linear"
+                      width="12"
+                      class="mt-px"
+                    ></iconify-icon>
+                  </button>
+                </div>
+                <div id="popularList" class="px-5 space-y-2.5"></div>
+              </div>
+
+              <div class="mt-7 anim-up d4">
+                <div class="flex items-center justify-between px-5 mb-3">
+                  <div class="flex items-center gap-2">
+                    <div class="w-1 h-4 rounded-full bg-emerald-500"></div>
+                    <h2 class="text-[13px] font-bold tracking-tight">Free Courses</h2>
+                    <span
+                      class="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md"
+                      >5</span
+                    >
+                  </div>
+                  <button
+                    onclick="showToast('→ S-1.2 Free Only')"
+                    class="text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-0.5 active:scale-95"
+                  >
+                    See All
+                    <iconify-icon
+                      icon="solar:arrow-right-linear"
+                      width="12"
+                      class="mt-px"
+                    ></iconify-icon>
+                  </button>
+                </div>
+                <div
+                  id="freeCoursesList"
+                  class="flex gap-3 overflow-x-auto hide-scrollbar snap-x scroll-fade-both px-5 pb-2"
+                ></div>
+              </div>
+
+              <div class="h-6"></div>
+            </div>
+
+            <div
+              id="emptyAuthState"
+              class="hidden flex flex-col items-center justify-center py-24 px-8 text-center"
+            >
+              <div class="w-20 h-20 rounded-3xl bg-sand-100 flex items-center justify-center mb-5">
+                <iconify-icon
+                  icon="solar:book-bookmark-linear"
+                  width="32"
+                  class="text-sand-400"
+                ></iconify-icon>
+              </div>
+              <h3 class="text-[15px] font-bold text-gray-900">No courses available yet</h3>
+              <p class="text-[12px] text-gray-400 mt-2 leading-relaxed max-w-[220px]">
+                New courses are being added regularly. Check back soon!
+              </p>
+            </div>
+
+            <div
+              id="emptyGuestState"
+              class="hidden flex flex-col items-center justify-center py-24 px-8 text-center"
+            >
+              <div class="w-20 h-20 rounded-3xl bg-sand-100 flex items-center justify-center mb-5">
+                <iconify-icon
+                  icon="solar:book-bookmark-linear"
+                  width="32"
+                  class="text-sand-400"
+                ></iconify-icon>
+              </div>
+              <h3 class="text-[15px] font-bold text-gray-900">No courses available yet</h3>
+              <p class="text-[12px] text-gray-400 mt-2 leading-relaxed max-w-[220px]">
+                New courses are being added regularly. Check back soon!
+              </p>
+              <button
+                onclick="showToast('→ Sign in with Google')"
+                class="mt-5 h-9 px-6 bg-white text-gray-700 rounded-xl text-[11px] font-bold hover:bg-gray-50 transition-all active:scale-95 shadow-sm flex items-center gap-2"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24">
+                  <path
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    fill="#EA4335"
+                  />
+                </svg>
+                Sign in with Google
+              </button>
+            </div>
+
+            <div
+              id="errorState"
+              class="hidden flex flex-col items-center justify-center py-24 px-8 text-center"
+            >
+              <div class="w-20 h-20 rounded-3xl bg-red-50 flex items-center justify-center mb-5">
+                <iconify-icon
+                  icon="solar:danger-triangle-linear"
+                  width="32"
+                  class="text-red-300"
+                ></iconify-icon>
+              </div>
+              <h3 class="text-[15px] font-bold text-gray-900">Something went wrong</h3>
+              <p class="text-[12px] text-gray-400 mt-2 leading-relaxed max-w-[220px]">
+                We couldn't load courses. Please check your connection.
+              </p>
+              <button
+                onclick="retryLoad()"
+                class="mt-5 h-9 px-6 bg-gray-900 text-white rounded-xl text-[11px] font-bold hover:bg-gray-800 transition-all active:scale-95 shadow-sm flex items-center gap-2"
+              >
+                <iconify-icon icon="solar:refresh-linear" width="13"></iconify-icon> Try Again
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <nav
+          class="flex-shrink-0 bg-sand-50/90 backdrop-blur-xl border-t border-gray-900/[0.04] bottom-safe z-30"
+        >
+          <div class="flex items-center justify-around pt-2 pb-2">
+            <button
+              class="bnav active flex flex-col items-center gap-[3px] px-5 py-1"
+              data-tab="explore"
+            >
+              <iconify-icon icon="solar:compass-bold" width="21"></iconify-icon>
+              <span class="text-[9px] font-bold tracking-wide">Explore</span>
+              <div class="bnav-dot w-1 h-1 rounded-full bg-gray-900"></div>
+            </button>
+            <button
+              class="bnav flex flex-col items-center gap-[3px] px-5 py-1 text-sand-400"
+              data-tab="learn"
+              onclick="showToast('→ Learn Tab')"
+            >
+              <iconify-icon icon="solar:book-2-linear" width="21"></iconify-icon>
+              <span class="text-[9px] font-semibold tracking-wide">Learn</span>
+              <div class="bnav-dot w-1 h-1 rounded-full bg-gray-900"></div>
+            </button>
+            <button
+              class="bnav flex flex-col items-center gap-[3px] px-5 py-1 text-sand-400"
+              data-tab="progress"
+              onclick="showToast('→ Progress Tab')"
+            >
+              <iconify-icon icon="solar:chart-2-linear" width="21"></iconify-icon>
+              <span class="text-[9px] font-semibold tracking-wide">Progress</span>
+              <div class="bnav-dot w-1 h-1 rounded-full bg-gray-900"></div>
+            </button>
+            <button
+              class="bnav flex flex-col items-center gap-[3px] px-5 py-1 text-sand-400"
+              data-tab="profile"
+              onclick="showToast('→ Profile Tab')"
+            >
+              <iconify-icon icon="solar:user-circle-linear" width="21"></iconify-icon>
+              <span class="text-[9px] font-semibold tracking-wide">Profile</span>
+              <div class="bnav-dot w-1 h-1 rounded-full bg-gray-900"></div>
+            </button>
+          </div>
+        </nav>
+
+        <div class="absolute top-[102px] right-3 z-50 flex flex-col gap-1.5">
+          <button
+            onclick="toggleAuth()"
+            id="authToggle"
+            class="w-8 h-8 rounded-xl bg-white/90 backdrop-blur-md shadow-sm flex items-center justify-center hover:shadow transition-all active:scale-90 border border-gray-900/[0.04]"
+            title="Toggle Guest/Auth"
+          >
+            <iconify-icon
+              icon="solar:user-circle-linear"
+              width="15"
+              class="text-sand-500"
+            ></iconify-icon>
+          </button>
+          <button
+            onclick="toggleOffline()"
+            id="offlineToggle"
+            class="w-8 h-8 rounded-xl bg-white/90 backdrop-blur-md shadow-sm flex items-center justify-center hover:shadow transition-all active:scale-90 border border-gray-900/[0.04]"
+            title="Toggle Offline"
+          >
+            <iconify-icon
+              icon="solar:wifi-router-linear"
+              width="15"
+              class="text-sand-500"
+            ></iconify-icon>
+          </button>
+          <button
+            onclick="showErrorState()"
+            class="w-8 h-8 rounded-xl bg-white/90 backdrop-blur-md shadow-sm flex items-center justify-center hover:shadow transition-all active:scale-90 border border-gray-900/[0.04]"
+            title="Error State"
+          >
+            <iconify-icon
+              icon="solar:danger-triangle-linear"
+              width="15"
+              class="text-sand-500"
+            ></iconify-icon>
+          </button>
+          <button
+            onclick="showEmptyState()"
+            class="w-8 h-8 rounded-xl bg-white/90 backdrop-blur-md shadow-sm flex items-center justify-center hover:shadow transition-all active:scale-90 border border-gray-900/[0.04]"
+            title="Empty State"
+          >
+            <iconify-icon icon="solar:inbox-linear" width="15" class="text-sand-500"></iconify-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="toastContainer"
+      class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[999] flex flex-col items-center gap-2 pointer-events-none"
+    ></div>
+
+    <script>
+      const popularCourses = [
+        {
+          id: 1,
+          title: 'TOEFL iBT Complete Preparation',
+          provider: 'Magoosh',
+          rating: 4.8,
+          reviews: '2.1k',
+          price: 49,
+          img: 'toefl-complete',
+          tag: 'Bestseller',
+        },
+        {
+          id: 2,
+          title: 'IGCSE Biology — Extended Curriculum',
+          provider: 'Cambridge Press',
+          rating: 4.7,
+          reviews: '1.8k',
+          price: 39,
+          img: 'igcse-bio',
+          tag: null,
+        },
+        {
+          id: 3,
+          title: 'SAT Math — 800 Score Strategy',
+          provider: 'Khan Academy',
+          rating: 4.9,
+          reviews: '3.4k',
+          price: 0,
+          img: 'sat-math',
+          tag: 'Free',
+        },
+        {
+          id: 4,
+          title: 'AP Chemistry Full Review 2024',
+          provider: 'Princeton Review',
+          rating: 4.6,
+          reviews: '980',
+          price: 59,
+          img: 'ap-chem',
+          tag: 'New',
+        },
+        {
+          id: 5,
+          title: 'IELTS Academic Masterclass',
+          provider: 'British Council',
+          rating: 4.8,
+          reviews: '2.7k',
+          price: 44,
+          img: 'ielts-academic',
+          tag: null,
+        },
+        {
+          id: 6,
+          title: 'High School Physics — Mechanics',
+          provider: 'Walter Lewin MIT',
+          rating: 4.9,
+          reviews: '5.1k',
+          price: 0,
+          img: 'hs-physics',
+          tag: 'Free',
+        },
+        {
+          id: 7,
+          title: 'IB Economics HL Complete Course',
+          provider: 'EconPlusDal',
+          rating: 4.5,
+          reviews: '740',
+          price: 35,
+          img: 'ib-econ',
+          tag: null,
+        },
+        {
+          id: 8,
+          title: 'GRE Verbal Reasoning Pro',
+          provider: 'Manhattan Prep',
+          rating: 4.7,
+          reviews: '1.2k',
+          price: 55,
+          img: 'gre-verbal',
+          tag: null,
+        },
+        {
+          id: 9,
+          title: 'College Essay Writing Workshop',
+          provider: 'CollegeVine',
+          rating: 4.6,
+          reviews: '890',
+          price: 29,
+          img: 'college-essay',
+          tag: 'New',
+        },
+        {
+          id: 10,
+          title: 'AP Calculus AB — Full Course',
+          provider: '3Blue1Brown',
+          rating: 4.9,
+          reviews: '4.2k',
+          price: 0,
+          img: 'ap-calc',
+          tag: 'Free',
+        },
+      ]
+
+      const freeCourses = [
+        {
+          id: 101,
+          title: 'SAT Math Fundamentals',
+          provider: 'Khan Academy',
+          rating: 4.9,
+          reviews: '3.4k',
+          img: 'free-sat-math',
+        },
+        {
+          id: 102,
+          title: 'Intro to Physics',
+          provider: 'MIT OpenCourseWare',
+          rating: 4.9,
+          reviews: '5.1k',
+          img: 'free-intro-phys',
+        },
+        {
+          id: 103,
+          title: 'AP Calc AB Essentials',
+          provider: '3Blue1Brown',
+          rating: 4.9,
+          reviews: '4.2k',
+          img: 'free-ap-calc',
+        },
+        {
+          id: 104,
+          title: 'Grammar for IELTS',
+          provider: 'British Council',
+          rating: 4.7,
+          reviews: '1.6k',
+          img: 'free-ielts-gram',
+        },
+        {
+          id: 105,
+          title: 'Study Skills Masterclass',
+          provider: 'Coursera',
+          rating: 4.5,
+          reviews: '2.3k',
+          img: 'free-study-skill',
+        },
+      ]
+
+      const jumpBackData = [
+        { title: 'TOEFL iBT Complete Prep', progress: 68, img: 'toefl-prep-jb' },
+        { title: 'IGCSE Mathematics Extended', progress: 35, img: 'igcse-math-jb' },
+        { title: 'SAT Reading & Writing', progress: 12, img: 'sat-write-jb' },
+      ]
+
+      let isAuth = false
+      let isOffline = false
+      let currentState = 'loaded'
+
+      document.addEventListener('DOMContentLoaded', () => {
+        renderJumpBack()
+        renderPopularCourses()
+        renderFreeCourses()
+        simulateLoad()
+        setupPullToRefresh()
+      })
+
+      function simulateLoad() {
+        showState('loading')
+        setTimeout(() => {
+          showState(currentState)
+          if (isAuth && currentState === 'loaded') setTimeout(animateProgress, 200)
+        }, 1600)
+      }
+
+      function renderJumpBack() {
+        const c = document.getElementById('jumpBackCarousel')
+        c.innerHTML = jumpBackData
+          .map(
+            (item, i) => `
+    <button onclick="showToast('→ S-2.2: ${item.title}')" class="flex-shrink-0 w-[195px] snap-s bg-white rounded-2xl overflow-hidden card text-left shadow-sm border border-gray-900/[0.04]">
+      <div class="relative h-[96px] overflow-hidden">
+        <img src="https://picsum.photos/seed/${item.img}/400/200" alt="" class="w-full h-full object-cover">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent"></div>
+        <div class="absolute bottom-0 left-0 right-0 h-1 bg-white/15">
+          <div class="prog-fill bg-white/90 h-full rounded-r-full" style="width:0%" data-target="${item.progress}"></div>
+        </div>
+        <div class="absolute top-2.5 right-2.5 bg-black/40 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-lg">${item.progress}%</div>
+      </div>
+      <div class="p-3">
+        <h3 class="text-[12px] font-bold leading-snug line-clamp-1">${item.title}</h3>
+        <p class="text-[10px] text-sand-500 mt-1 font-medium">Continue learning</p>
+      </div>
+    </button>
+  `,
+          )
+          .join('')
+      }
+
+      function renderPopularCourses() {
+        const c = document.getElementById('popularList')
+        c.innerHTML = popularCourses
+          .map((item, i) => {
+            let tagHTML = ''
+            if (item.tag === 'Free')
+              tagHTML = `<span class="px-1.5 py-[2px] bg-emerald-50 text-emerald-600 text-[9px] font-bold rounded-md uppercase tracking-wider">Free</span>`
+            else if (item.tag === 'New')
+              tagHTML = `<span class="px-1.5 py-[2px] bg-blue-50 text-blue-600 text-[9px] font-bold rounded-md uppercase tracking-wider">New</span>`
+            else if (item.tag === 'Bestseller')
+              tagHTML = `<span class="px-1.5 py-[2px] bg-amber-50 text-amber-600 text-[9px] font-bold rounded-md uppercase tracking-wider">Bestseller</span>`
+
+            return `
+    <button onclick="showToast('→ S-1.4: ${item.title.replace(/'/g, "\\'")}')" class="card w-full bg-white rounded-2xl p-3 flex gap-3 items-center shadow-sm text-left border border-gray-900/[0.04]" style="animation:slideUpBlur 0.5s cubic-bezier(0.16,1,0.3,1) ${300 + i * 50}ms both;">
+      <div class="w-[68px] h-[68px] rounded-xl overflow-hidden flex-shrink-0 bg-sand-100 relative">
+        <img src="https://picsum.photos/seed/${item.img}/140/140" alt="" class="w-full h-full object-cover" loading="lazy">
+      </div>
+      <div class="flex-1 min-w-0 flex flex-col justify-center">
+        <div class="flex items-start gap-1.5">
+          <h3 class="text-[12px] font-bold leading-snug line-clamp-2 flex-1">${item.title}</h3>
+          ${tagHTML}
+        </div>
+        <p class="text-[10px] text-sand-500 mt-1 font-medium">${item.provider}</p>
+        <div class="flex items-center gap-1.5 mt-1.5">
+          <div class="star-row">
+            ${Array.from({ length: 5 }, (_, j) => `<iconify-icon icon="solar:star-bold" width="10" class="${j < Math.floor(item.rating) ? 'text-amber-400' : 'text-gray-200'}"></iconify-icon>`).join('')}
+          </div>
+          <span class="text-[10px] font-bold text-gray-700">${item.rating}</span>
+          <span class="text-[10px] text-sand-400">(${item.reviews})</span>
+          <span class="ml-auto text-[11px] font-extrabold ${item.price === 0 ? 'text-emerald-500' : 'text-gray-900'}">${item.price === 0 ? 'Free' : '$' + item.price}</span>
+        </div>
+      </div>
+      <div class="flex-shrink-0 w-6 h-6 rounded-full bg-sand-100 flex items-center justify-center">
+        <iconify-icon icon="solar:arrow-right-linear" width="12" class="text-sand-400"></iconify-icon>
+      </div>
+    </button>`
+          })
+          .join('')
+      }
+
+      function renderFreeCourses() {
+        const c = document.getElementById('freeCoursesList')
+        c.innerHTML = freeCourses
+          .map(
+            (item, i) => `
+    <button onclick="showToast('→ S-1.4: ${item.title.replace(/'/g, "\\'")}')" class="flex-shrink-0 w-[144px] snap-s bg-white rounded-2xl overflow-hidden card text-left shadow-sm border border-gray-900/[0.04]" style="animation:slideUpBlur 0.5s cubic-bezier(0.16,1,0.3,1) ${450 + i * 70}ms both;">
+      <div class="h-[88px] overflow-hidden relative">
+        <img src="https://picsum.photos/seed/${item.img}/290/180" alt="" class="w-full h-full object-cover" loading="lazy">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+        <div class="absolute top-2 left-2 free-badge px-2 py-[3px] rounded-lg text-[9px] font-extrabold text-white uppercase tracking-wider">Free</div>
+      </div>
+      <div class="p-3">
+        <h3 class="text-[11px] font-bold leading-snug line-clamp-2 min-h-[30px]">${item.title}</h3>
+        <p class="text-[10px] text-sand-500 mt-1.5 font-medium">${item.provider}</p>
+        <div class="flex items-center gap-1 mt-1.5">
+          <iconify-icon icon="solar:star-bold" width="10" class="text-amber-400"></iconify-icon>
+          <span class="text-[10px] font-bold text-gray-700">${item.rating}</span>
+          <span class="text-[10px] text-sand-400">(${item.reviews})</span>
+        </div>
+      </div>
+    </button>
+  `,
+          )
+          .join('')
+      }
+
+      function showState(state) {
+        ;['loadingState', 'loadedState', 'emptyAuthState', 'emptyGuestState', 'errorState'].forEach(
+          (id) => document.getElementById(id).classList.add('hidden'),
+        )
+        switch (state) {
+          case 'loading':
+            document.getElementById('loadingState').classList.remove('hidden')
+            break
+          case 'loaded':
+            document.getElementById('loadedState').classList.remove('hidden')
+            applyAuthState()
+            break
+          case 'empty':
+            document
+              .getElementById(isAuth ? 'emptyAuthState' : 'emptyGuestState')
+              .classList.remove('hidden')
+            break
+          case 'error':
+            document.getElementById('errorState').classList.remove('hidden')
+            break
+        }
+      }
+
+      function applyAuthState() {
+        document.getElementById('guestBanner').classList.toggle('hidden', isAuth)
+        document.getElementById('jumpBackSection').classList.toggle('hidden', !isAuth)
+        if (isAuth) setTimeout(animateProgress, 100)
+      }
+
+      function selectExam(el, name) {
+        document.querySelectorAll('.chip').forEach((c) => c.classList.remove('active'))
+        el.classList.add('active')
+        showToast(`→ S-1.2: ${name}`)
+        setTimeout(() => el.classList.remove('active'), 1500)
+      }
+
+      function toggleAuth() {
+        isAuth = !isAuth
+        const btn = document.getElementById('authToggle')
+        btn.innerHTML = isAuth
+          ? '<iconify-icon icon="solar:user-circle-bold" width="15" class="text-gray-900"></iconify-icon>'
+          : '<iconify-icon icon="solar:user-circle-linear" width="15" class="text-sand-500"></iconify-icon>'
+        btn.classList.toggle('ring-2', isAuth)
+        btn.classList.toggle('ring-gray-900/20', isAuth)
+        showToast(isAuth ? 'Authenticated view' : 'Guest view')
+        if (currentState === 'loaded') applyAuthState()
+        else if (currentState === 'empty') showState('empty')
+      }
+
+      function toggleOffline() {
+        isOffline = !isOffline
+        const bar = document.getElementById('offlineBar')
+        const btn = document.getElementById('offlineToggle')
+        bar.classList.toggle('-translate-y-full', !isOffline)
+        bar.classList.toggle('opacity-0', !isOffline)
+        btn.innerHTML = isOffline
+          ? '<iconify-icon icon="solar:wifi-router-minimalistic-bold" width="15" class="text-amber-500"></iconify-icon>'
+          : '<iconify-icon icon="solar:wifi-router-linear" width="15" class="text-sand-500"></iconify-icon>'
+        showToast(isOffline ? 'Offline — cached content' : 'Back online')
+      }
+
+      function showErrorState() {
+        currentState = 'error'
+        showState('error')
+      }
+      function showEmptyState() {
+        currentState = 'empty'
+        showState('empty')
+      }
+      function retryLoad() {
+        currentState = 'loaded'
+        simulateLoad()
+      }
+
+      document
+        .getElementById('searchBtn')
+        .addEventListener('click', () => showToast('→ S-1.3 Search'))
+
+      function setupPullToRefresh() {
+        const el = document.getElementById('mainScroll')
+        const ind = document.getElementById('pullIndicator')
+        const ico = document.getElementById('pullIcon')
+        const txt = document.getElementById('pullText')
+        let y0 = 0,
+          pulling = false,
+          ready = false
+
+        el.addEventListener(
+          'touchstart',
+          (e) => {
+            if (el.scrollTop === 0) {
+              y0 = e.touches[0].clientY
+              pulling = true
+              ready = false
+            }
+          },
+          { passive: true },
+        )
+
+        el.addEventListener(
+          'touchmove',
+          (e) => {
+            if (!pulling) return
+            const d = e.touches[0].clientY - y0
+            if (d > 0 && d < 120) {
+              ind.style.height = Math.min(d * 0.5, 48) + 'px'
+              if (d > 55 && !ready) {
+                ready = true
+                ico.style.transform = 'rotate(180deg)'
+                txt.textContent = 'Release to refresh'
+              } else if (d <= 55 && ready) {
+                ready = false
+                ico.style.transform = 'rotate(0deg)'
+                txt.textContent = 'Pull to refresh'
+              }
+            }
+          },
+          { passive: true },
+        )
+
+        el.addEventListener(
+          'touchend',
+          () => {
+            if (!pulling) return
+            pulling = false
+            if (ready) {
+              ico.classList.add('spinning')
+              txt.textContent = 'Refreshing…'
+              ind.style.height = '48px'
+              setTimeout(() => {
+                ico.classList.remove('spinning')
+                ico.style.transform = 'rotate(0deg)'
+                ind.style.height = '0px'
+                txt.textContent = 'Pull to refresh'
+                if (currentState === 'loaded') {
+                  renderPopularCourses()
+                  renderFreeCourses()
+                  applyAuthState()
+                }
+                showToast('Refreshed')
+              }, 1000)
+            } else {
+              ind.style.height = '0px'
+            }
+            ready = false
+          },
+          { passive: true },
+        )
+      }
+
+      function animateProgress() {
+        document.querySelectorAll('.prog-fill').forEach((b) => {
+          const t = b.dataset.target
+          if (t)
+            requestAnimationFrame(() => {
+              b.style.width = t + '%'
+            })
+        })
+      }
+
+      function showToast(msg) {
+        const box = document.getElementById('toastContainer')
+        const t = document.createElement('div')
+        t.className =
+          'toast-in pointer-events-auto bg-gray-900/95 backdrop-blur-md text-white text-[11px] font-semibold px-4 py-2.5 rounded-2xl shadow-xl max-w-[260px] text-center leading-snug border border-white/[0.06]'
+        t.textContent = msg
+        box.appendChild(t)
+        setTimeout(() => {
+          t.classList.replace('toast-in', 'toast-out')
+          t.addEventListener('animationend', () => t.remove())
+        }, 1800)
+      }
+    </script>
+  </body>
+</html>
