@@ -190,8 +190,13 @@ export function createAuth<TSchema extends AuthDatabaseSchema>(
     trustedOrigins: config.cors?.origins,
     rateLimit: buildRateLimitOptions(config),
     // Telegram (better-auth-telegram) and opt-in JWT issuance (PowerSync et
-    // al). Spread before betterAuthOverrides so consumer overrides always win.
-    plugins: [...buildTelegramPlugins(config), ...buildTokenPlugins(config)],
+    // al). Additional consumer plugins come next, then betterAuthOverrides so
+    // consumer overrides always win.
+    plugins: [
+      ...buildTelegramPlugins(config),
+      ...buildTokenPlugins(config),
+      ...(config.additionalPlugins ?? []),
+    ],
     // better-auth issues + validates its own CSRF (state/PKCE) tokens for the
     // OAuth redirect flow automatically; `trustedOrigins` above is what scopes
     // which origins are allowed to complete a flow at all. See core/csrf.ts

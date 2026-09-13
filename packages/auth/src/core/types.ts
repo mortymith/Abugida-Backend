@@ -6,7 +6,7 @@
  * plugged in without touching core logic.
  */
 
-import type { BetterAuthOptions } from 'better-auth'
+import type { BetterAuthOptions, BetterAuthPlugin } from 'better-auth'
 import type { Logger } from './logger'
 
 // ---------------------------------------------------------------------------
@@ -202,6 +202,23 @@ export interface AuthConfig<TSchema extends AuthDatabaseSchema = AuthDatabaseSch
    * before any log call.
    */
   logger?: Logger
+  /**
+   * Additional better-auth plugins to register alongside the built-in
+   * Telegram and JWT/bearer plugins. Merged in before `betterAuthOverrides`
+   * so consumer overrides always win.
+   *
+   * @example
+   * ```ts
+   * import { twoFactor } from "better-auth/plugins/two-factor"
+   * import { organization } from "better-auth/plugins/organization"
+   *
+   * createAuth({
+   *   additionalPlugins: [twoFactor(), organization()],
+   *   ...
+   * })
+   * ```
+   */
+  additionalPlugins?: BetterAuthPlugin[]
   /**
    * Escape hatch for advanced consumers who need to pass raw better-auth
    * options through. Merged in last, after our derived config, so it can

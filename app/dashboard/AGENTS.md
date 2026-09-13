@@ -2,6 +2,769 @@
 
 # TanStack Intent - before editing files, run the matching guidance command.
 
+# Course Builder Architecture Instructions
+
+You are working on a **TanStack Start course builder web application**.
+
+Follow these architectural and naming conventions whenever creating, modifying, or moving files.
+
+## 1. Architecture Principles
+
+- Use **TanStack Start** as the application framework.
+- Use **TanStack Router file-based routing**.
+- Keep route files focused on routing, route configuration, data loading, and page composition.
+- Keep course-builder business logic inside `features/`.
+- Keep globally reusable UI components inside `components/`.
+- Keep generic application utilities and infrastructure inside `lib/`.
+- Keep server-only application code inside `server/`.
+- Keep external integrations inside `integrations/`.
+- Avoid placing substantial business logic directly inside route files.
+
+The architecture should prioritize:
+
+- Clear feature ownership
+- Small and focused modules
+- Predictable file locations
+- Strong separation between routing and business logic
+- Reusability without unnecessary abstraction
+
+---
+
+# 2. Directory Structure
+
+Use the following structure as the default:
+
+```text
+src/
+├── routes/
+│   ├── __root.tsx
+│   ├── index.tsx
+│   │
+│   ├── _auth/
+│   │   ├── route.tsx
+│   │   ├── login.tsx
+│   │   └── register.tsx
+│   │
+│   └── _app/
+│       ├── route.tsx
+│       ├── index.tsx
+│       │
+│       ├── courses/
+│       │   ├── index.tsx
+│       │   ├── new.tsx
+│       │   └── $courseId/
+│       │       ├── index.tsx
+│       │       ├── edit.tsx
+│       │       ├── settings.tsx
+│       │       └── preview.tsx
+│       │
+│       └── ...
+│
+├── features/
+│   ├── courses/
+│   ├── lessons/
+│   ├── sections/
+│   ├── assessments/
+│   ├── media/
+│   ├── publishing/
+│   └── ...
+│
+├── components/
+│   ├── ui/
+│   ├── layout/
+│   └── common/
+│
+├── lib/
+│   ├── auth.ts
+│   ├── env.ts
+│   ├── http.ts
+│   └── utils.ts
+│
+├── server/
+│   ├── functions/
+│   ├── middleware/
+│   └── utils/
+│
+├── integrations/
+│   └── ...
+│
+├── styles/
+│   └── globals.css
+│
+└── router.tsx
+```
+
+Only create directories that are actually required. Do not create empty folders merely to match this template.
+
+---
+
+# 3. Route Organization
+
+All application routes must live under:
+
+```text
+src/routes/
+```
+
+Use TanStack Router's file-based routing conventions.
+
+Route files should contain:
+
+- Route definitions
+- Route parameters
+- Search parameters
+- Loaders
+- Route-level data requirements
+- Page composition
+- Route-level metadata
+- Route-specific error handling
+
+Keep business logic outside the route whenever possible.
+
+### Preferred
+
+```text
+routes/
+└── _app/
+    └── courses/
+        └── $courseId/
+            └── edit.tsx
+
+features/
+└── courses/
+    ├── components/
+    ├── hooks/
+    ├── schemas/
+    └── server/
+```
+
+The route should compose the course-builder feature rather than implement the entire feature.
+
+---
+
+# 4. Course Builder Features
+
+Organize business functionality by **course-builder domain**.
+
+Examples:
+
+```text
+features/
+├── courses/
+├── lessons/
+├── sections/
+├── assessments/
+├── media/
+├── publishing/
+└── ...
+```
+
+Do not organize the application primarily around technical categories such as:
+
+```text
+components/
+services/
+controllers/
+repositories/
+```
+
+Business domains should be the primary organizational boundary.
+
+---
+
+# 5. Feature Structure
+
+A feature may use the following structure:
+
+```text
+features/courses/
+├── components/
+├── hooks/
+├── schemas/
+├── server/
+└── index.ts
+```
+
+Only create the directories needed by the feature.
+
+For example:
+
+```text
+features/courses/
+├── components/
+│   ├── course.card.tsx
+│   ├── course.editor.tsx
+│   ├── course.form.tsx
+│   └── course.list.tsx
+│
+├── hooks/
+│   ├── course.query.ts
+│   └── course.mutation.ts
+│
+├── schemas/
+│   └── course.schema.ts
+│
+├── server/
+│   ├── course.create.ts
+│   ├── course.update.ts
+│   ├── course.delete.ts
+│   └── course.publish.ts
+│
+└── index.ts
+```
+
+---
+
+# 6. Dot-Based Naming Convention
+
+Use **dot-separated semantic names** for application files.
+
+The preferred pattern is:
+
+```text
+<domain>.<purpose>.<extension>
+```
+
+Examples:
+
+```text
+course.editor.tsx
+course.card.tsx
+course.form.tsx
+course.schema.ts
+course.types.ts
+course.validation.ts
+course.create.ts
+course.update.ts
+course.delete.ts
+```
+
+For more specific modules:
+
+```text
+course.editor.header.tsx
+course.editor.sidebar.tsx
+course.editor.toolbar.tsx
+course.editor.settings.tsx
+```
+
+Avoid kebab-case names such as:
+
+```text
+course-editor.tsx
+course-card.tsx
+course-schema.ts
+```
+
+Prefer:
+
+```text
+course.editor.tsx
+course.card.tsx
+course.schema.ts
+```
+
+---
+
+# 7. React Component Naming
+
+Use PascalCase for React component names while keeping filenames dot-based.
+
+For example:
+
+```text
+course.editor.tsx
+```
+
+```tsx
+export function CourseEditor() {
+  // ...
+}
+```
+
+Additional examples:
+
+```text
+lesson.editor.tsx
+section.editor.tsx
+assessment.builder.tsx
+course.card.tsx
+course.sidebar.tsx
+```
+
+---
+
+# 8. Course Editor Organization
+
+The course editor is a major part of the application and should be organized clearly.
+
+Prefer:
+
+```text
+features/courses/
+├── components/
+│   ├── course.editor.tsx
+│   ├── course.editor.header.tsx
+│   ├── course.editor.sidebar.tsx
+│   ├── course.editor.toolbar.tsx
+│   └── course.editor.settings.tsx
+│
+├── hooks/
+│   ├── course.editor.ts
+│   └── course.editor.state.ts
+│
+└── ...
+```
+
+Do not put the entire course editor into one large component.
+
+Break the editor into logical components when complexity warrants it.
+
+---
+
+# 9. Lesson Builder
+
+Lesson-specific functionality belongs under:
+
+```text
+features/lessons/
+```
+
+Example:
+
+```text
+features/lessons/
+├── components/
+│   ├── lesson.editor.tsx
+│   ├── lesson.form.tsx
+│   ├── lesson.content.tsx
+│   └── lesson.preview.tsx
+│
+├── hooks/
+│   └── lesson.editor.ts
+│
+├── schemas/
+│   └── lesson.schema.ts
+│
+└── server/
+    ├── lesson.create.ts
+    ├── lesson.update.ts
+    └── lesson.delete.ts
+```
+
+---
+
+# 10. Section Management
+
+Section-specific functionality belongs under:
+
+```text
+features/sections/
+```
+
+Examples:
+
+```text
+section.editor.tsx
+section.card.tsx
+section.form.tsx
+section.schema.ts
+section.create.ts
+section.update.ts
+```
+
+Sections should not contain course-wide functionality that belongs in `features/courses/`.
+
+---
+
+# 11. Assessment Builder
+
+Assessment functionality belongs under:
+
+```text
+features/assessments/
+```
+
+Example:
+
+```text
+features/assessments/
+├── components/
+│   ├── assessment.builder.tsx
+│   ├── assessment.form.tsx
+│   ├── question.editor.tsx
+│   └── question.list.tsx
+│
+├── hooks/
+├── schemas/
+└── server/
+```
+
+Keep assessment-specific logic within this feature.
+
+---
+
+# 12. Media Management
+
+Media-related course-builder functionality belongs under:
+
+```text
+features/media/
+```
+
+Examples:
+
+```text
+media.uploader.tsx
+media.library.tsx
+media.preview.tsx
+media.schema.ts
+media.upload.ts
+media.delete.ts
+```
+
+Do not place media-specific business logic in generic components.
+
+---
+
+# 13. Publishing
+
+Publishing functionality belongs under:
+
+```text
+features/publishing/
+```
+
+Examples:
+
+```text
+publishing.panel.tsx
+publishing.status.tsx
+publishing.validation.ts
+publishing.publish.ts
+publishing.unpublish.ts
+```
+
+Publishing logic should remain separate from the course editor UI where practical.
+
+---
+
+# 14. Global Components
+
+Use:
+
+```text
+src/components/
+```
+
+for components shared across multiple course-builder features.
+
+Structure:
+
+```text
+components/
+├── ui/
+├── layout/
+└── common/
+```
+
+### UI
+
+Generic design-system components:
+
+```text
+button.tsx
+dialog.tsx
+input.tsx
+dropdown.menu.tsx
+tabs.tsx
+```
+
+These must not contain course-specific business logic.
+
+### Layout
+
+Application layout components:
+
+```text
+app.header.tsx
+app.sidebar.tsx
+app.layout.tsx
+dashboard.layout.tsx
+```
+
+### Common
+
+Reusable application-level components:
+
+```text
+empty.state.tsx
+loading.state.tsx
+error.state.tsx
+confirmation.dialog.tsx
+```
+
+---
+
+# 15. Generic Utilities
+
+Use:
+
+```text
+src/lib/
+```
+
+for generic application-level utilities.
+
+Examples:
+
+```text
+lib/
+├── auth.ts
+├── env.ts
+├── http.ts
+└── utils.ts
+```
+
+Do not use `lib/` as a dumping ground.
+
+If functionality clearly belongs to a course-builder feature, put it under that feature.
+
+Avoid vague files such as:
+
+```text
+helpers.ts
+misc.ts
+stuff.ts
+common.ts
+```
+
+Prefer domain-specific names:
+
+```text
+course.permissions.ts
+course.formatter.ts
+course.validation.ts
+```
+
+---
+
+# 16. Server Code
+
+Application-wide server-only functionality belongs under:
+
+```text
+src/server/
+```
+
+Example:
+
+```text
+server/
+├── functions/
+├── middleware/
+└── utils/
+```
+
+Feature-specific server functionality should remain within its feature:
+
+```text
+features/courses/server/
+features/lessons/server/
+features/assessments/server/
+features/publishing/server/
+```
+
+Never expose server-only modules to client-side code.
+
+---
+
+# 17. Schemas and Validation
+
+Use explicit domain names.
+
+Preferred:
+
+```text
+course.schema.ts
+lesson.schema.ts
+section.schema.ts
+assessment.schema.ts
+publishing.schema.ts
+```
+
+For validation-specific functionality:
+
+```text
+course.validation.ts
+lesson.validation.ts
+publishing.validation.ts
+```
+
+Avoid unnecessarily generic names such as:
+
+```text
+schema.ts
+validation.ts
+types.ts
+```
+
+when the domain is not obvious from the surrounding context.
+
+---
+
+# 18. Tests
+
+Follow the same dot-based naming convention.
+
+Examples:
+
+```text
+course.editor.test.tsx
+course.schema.test.ts
+course.create.test.ts
+lesson.editor.test.tsx
+assessment.builder.test.tsx
+```
+
+Integration tests:
+
+```text
+course.create.integration.test.ts
+course.publish.integration.test.ts
+```
+
+End-to-end tests:
+
+```text
+course.creation.e2e.ts
+course.publishing.e2e.ts
+```
+
+---
+
+# 19. Dependency Rules
+
+Maintain a clear dependency direction:
+
+```text
+routes
+   ↓
+features
+   ↓
+lib / integrations
+```
+
+Routes should depend on features.
+
+Features may use shared application infrastructure.
+
+Avoid circular dependencies.
+
+Avoid making one feature depend directly on another feature's internal implementation unless there is a strong architectural reason.
+
+Prefer public feature exports:
+
+```text
+features/courses/index.ts
+```
+
+instead of importing internal implementation files directly.
+
+---
+
+# 20. Avoid Over-Engineering
+
+Do not automatically introduce:
+
+```text
+repositories/
+services/
+controllers/
+managers/
+factories/
+adapters/
+```
+
+for every feature.
+
+Create an abstraction only when it provides a real benefit.
+
+Prefer simple, explicit code over unnecessary architectural layers.
+
+---
+
+# 21. Before Creating a File
+
+Before creating a new file:
+
+1. Search for existing functionality that solves the same problem.
+2. Determine which course-builder feature owns the functionality.
+3. Check whether an existing component/module can be extended.
+4. Follow the dot-based naming convention.
+5. Avoid duplicating business logic.
+6. Keep route files thin.
+7. Do not reorganize unrelated code unnecessarily.
+
+---
+
+# 22. File Placement Rules
+
+Use the following decision process.
+
+### Is it a route concern?
+
+```text
+routes/
+```
+
+### Is it course-builder business functionality?
+
+```text
+features/<domain>/
+```
+
+### Is it a globally reusable UI component?
+
+```text
+components/
+```
+
+### Is it generic application infrastructure?
+
+```text
+lib/
+```
+
+### Is it server-only application infrastructure?
+
+```text
+server/
+```
+
+### Is it an external integration?
+
+```text
+integrations/
+```
+
+---
+
+# 23. Final Rules
+
+Always prioritize:
+
+1. **Feature ownership**
+2. **Clear separation of routing and business logic**
+3. **Dot-based semantic filenames**
+4. **Small, focused modules**
+5. **Reusable components where reuse is real**
+6. **Minimal unnecessary abstraction**
+7. **Consistent naming and structure**
+
+Use TanStack Router's required file naming conventions for route discovery even though the rest of the application uses dot-based naming.
+
+When uncertain where code belongs, first determine **which course-builder domain owns the behavior**, then place the implementation inside that feature.
 tanstackIntent:
 
 - id: "@tanstack/ai#ai-core"
