@@ -164,6 +164,10 @@ setup-dev: env-setup-dev
     {{DEV_COMPOSE}} up -d
     @echo "==> Waiting for core services to be healthy..."
     bash docker/init/wait-for-services.sh dev
+    @echo "==> Generating database schema..."
+    pnpm --filter @abugida/database db:generate
+    @echo "==> Running database migrations..."
+    pnpm --filter @abugida/database db:push
     @echo "==> Initializing MinIO buckets (idempotent, best-effort)..."
     {{DEV_COMPOSE}} run --rm init-minio || true
     @echo "==> Dev environment ready. Next: just health"
@@ -176,6 +180,10 @@ setup-staging:
     {{STAGING_COMPOSE}} up -d
     @echo "==> Waiting for core services to be healthy..."
     bash docker/init/wait-for-services.sh staging
+    @echo "==> Generating database schema..."
+    pnpm --filter @abugida/database db:generate
+    @echo "==> Running database migrations..."
+    @export DATABASE_URL=$(grep -E '^DATABASE_URL=' .env | cut -d'=' -f2-) && pnpm --filter @abugida/database db:push
     @echo "==> Initializing MinIO buckets (idempotent, best-effort)..."
     {{STAGING_COMPOSE}} run --rm init-minio || true
     @echo "==> Initializing Vault (if first run)..."
@@ -190,6 +198,10 @@ setup-prod:
     {{PROD_COMPOSE}} up -d
     @echo "==> Waiting for core services to be healthy..."
     bash docker/init/wait-for-services.sh prod
+    @echo "==> Generating database schema..."
+    pnpm --filter @abugida/database db:generate
+    @echo "==> Running database migrations..."
+    @export DATABASE_URL=$(grep -E '^DATABASE_URL=' .env | cut -d'=' -f2-) && pnpm --filter @abugida/database db:push
     @echo "==> Initializing MinIO buckets (with backup endpoint, idempotent)..."
     {{PROD_COMPOSE}} run --rm init-minio || true
     @echo "==> Initializing Redis cluster (best-effort)..."
