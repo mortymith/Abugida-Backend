@@ -163,7 +163,9 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   enrollments: many(enrollments, {
     relationName: 'student_enrollments',
   }),
-  courseRoles: many(courseRoles),
+  courseRoles: many(courseRoles, {
+    relationName: 'course_role_user',
+  }),
   auditLogs: many(auditLogs),
   securityEvents: many(securityEvents),
 }))

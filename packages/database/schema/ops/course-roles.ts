@@ -46,6 +46,7 @@ export const courseRolesRelations = relations(courseRoles, ({ one }) => ({
   user: one(users, {
     fields: [courseRoles.userId],
     references: [users.id],
+    relationName: 'course_role_user',
   }),
   course: one(courses, {
     fields: [courseRoles.courseId],
