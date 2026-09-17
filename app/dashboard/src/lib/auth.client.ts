@@ -1,5 +1,6 @@
 import { createAuthClient } from '@abugida/auth/tanstack'
+import { env } from '#/config/app.config'
 
 export const authClient = createAuthClient({
-  baseUrl: import.meta.env.VITE_AUTH_BASE_URL ?? 'http://localhost:3000/api/auth',
+  baseUrl: env.VITE_AUTH_BASE_URL,
 })

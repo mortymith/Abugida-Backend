@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import type { Provider } from '#/features/auth/hooks/auth.provider-memory'
-import { authClient } from '#/lib/auth-client'
+import { authClient } from '#/lib/auth.client'
 import { useLastProvider } from '#/features/auth/hooks/auth.provider-memory'
 import { ProviderButton } from '#/features/auth/components/auth.provider-button'
 import { RedirectingOverlay } from '#/features/auth/components/auth.redirecting-overlay'
@@ -32,7 +32,10 @@ const CALLBACK_ERROR_MESSAGES: Record<string, string> = {
 
 const FALLBACK_CALLBACK_ERROR = 'Sign-in failed. Please try again.'
 
-function LoginForm({ redirectTo = '/dashboard', callbackError }: LoginFormProps) {
+function LoginForm({
+  redirectTo = import.meta.env.VITE_DEFAULT_LOGIN_REDIRECT,
+  callbackError,
+}: LoginFormProps) {
   const { lastProvider, setLastProvider } = useLastProvider()
   const [loading, setLoading] = useState<Provider | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -73,7 +76,9 @@ function LoginForm({ redirectTo = '/dashboard', callbackError }: LoginFormProps)
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="text-lg font-semibold">Sign in to your workspace</CardTitle>
-          <CardDescription>Choose a provider to continue to Abugida Academy.</CardDescription>
+          <CardDescription>
+            Choose a provider to continue to {import.meta.env.VITE_APP_NAME}.
+          </CardDescription>
         </CardHeader>
 
         <CardContent className="flex flex-col gap-3">

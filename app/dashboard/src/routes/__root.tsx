@@ -23,7 +23,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'Abugida Academy',
+        title: import.meta.env.VITE_APP_NAME,
       },
     ],
     links: [

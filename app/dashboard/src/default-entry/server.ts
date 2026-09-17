@@ -1,8 +1,7 @@
 import { createStartHandler, defaultStreamHandler } from '@tanstack/react-start/server'
 import type { Register } from '@tanstack/react-router'
 import type { RequestHandler } from '@tanstack/react-start/server'
-
-const AUTH_BASE_PATH = '/api/auth'
+import { env } from '../config/app.config'
 
 const startHandler = createStartHandler(defaultStreamHandler)
 
@@ -10,8 +9,8 @@ const fetch: RequestHandler<Register> = async (...args) => {
   const request = args[0]
   const url = new URL(request.url)
 
-  if (url.pathname.startsWith(AUTH_BASE_PATH)) {
-    const { auth } = await import('../lib/auth.server')
+  if (url.pathname.startsWith(env.AUTH_BASE_PATH)) {
+    const { auth } = await import('../config/auth.config')
     return auth.raw.handler(request)
   }
 
