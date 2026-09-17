@@ -9,22 +9,33 @@
 
 Turborepo over pnpm workspaces (`app/*`, `packages/*`). Root `pnpm <script>` fans out to every workspace via turbo.
 
-| Path                | Package              | What it is                                     |
-| ------------------- | -------------------- | ---------------------------------------------- |
-| `app/api`           | `@abugida/api`       | Hono REST API (port 3000)                      |
-| `app/dashboard`     | `@abugida/dashboard` | TanStack Start dashboard (port 3000)           |
-| `app/marketing`     | `@abugida/marketing` | Astro landing page (port 4321)                 |
-| `packages/auth`     | `@abugida/auth`      | Shared Better Auth layer (compiled to `dist/`) |
-| `packages/database` | `@abugida/database`  | Shared Drizzle schema                          |
+### Apps
 
-- To scope to one workspace, run from that directory (`app/api/` scripts: `bun --watch src/index.ts`) or `pnpm --filter <name> <script>`.
-- The shared packages are not yet imported by the apps; the app packages still have their own local deps (`app/dashboard` has `src/db/schema.ts` + `drizzle.config.ts`).
+| Path            | Package              | What it is                           |
+| --------------- | -------------------- | ------------------------------------ |
+| `app/api`       | `@abugida/api`       | Hono REST API (port 3001)            |
+| `app/dashboard` | `@abugida/dashboard` | TanStack Start dashboard (port 3000) |
+| `app/marketing` | `@abugida/marketing` | Astro landing page (port 4321)       |
+
+### Shared packages
+
+| Path                     | Package                  | What it is                                                                                            |
+| ------------------------ | ------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `packages/auth`          | `@abugida/auth`          | Better Auth layer — exports core + `/hono`, `/tanstack`, `/providers` subpaths                        |
+| `packages/database`      | `@abugida/database`      | Drizzle schema by domain (`auth`, `catalog`, `finance`, `learning`, `ops`, `shared`) + `createClient` |
+| `packages/observability` | `@abugida/observability` | Pino logging + OpenTelemetry tracing/metrics — exports `/hono`, `/tanstack`, `/astro` subpaths        |
+| `packages/queue`         | `@abugida/queue`         | BullMQ queue management — exports `/tanstack` subpath                                                 |
+| `packages/storage`       | `@abugida/storage`       | S3-compatible object storage — exports `/tanstack` subpath                                            |
+
+- All apps import from the shared packages via `workspace:*`. Do not reimplement auth, database, queue, storage, or observability logic locally.
+- To scope to one workspace, run from that directory or `pnpm --filter <name> <script>`.
+- Shared packages must be built (`tsc` → `dist/`) before consuming apps can import them. Turbo handles this via `^build` dependencies.
 
 ## Commands
 
 - `pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm typecheck` / `pnpm test` — all via turbo.
 - Tests use **bun** as the runner (`bun test`), not vitest/jest. `app/api` uses `bun test --pass-with-no-tests`.
-- `app/dashboard` has Drizzle scripts: `pnpm --filter @abugida/dashboard db:generate|db:migrate|db:push|db:pull|db:studio`. `drizzle.config.ts` requires `DATABASE_URL` in `app/dashboard/.env.local` or `.env`.
+- Database scripts live in `packages/database`: `pnpm --filter @abugida/database db:generate|db:migrate|db:push|db:pull|db:studio`.
 - Env is per-app and git-ignored; examples live at `app/*/.env.example`.
 - The root `format` script also runs `shfmt` on shell scripts.
 
@@ -58,27 +69,15 @@ just validate-compose   # Validate all three compose tiers
 ## Conventions
 
 - Code style is prettier + eslint: no semicolons, single quotes, trailing commas, printWidth 100.
-- Root tsconfig is strict with `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitReturns`, `isolatedModules`. Match these in new code (no `a.b` without undefined handling).
-- `app/dashboard`: routes are file-based; after adding/renaming routes run `pnpm --filter @abugida/dashboard generate-routes` to regenerate `src/routeTree.gen.ts`. `*.gen.ts` files are eslint-ignored.
-- `packages/auth`: exports `@abugida/auth` (core) plus subpaths `/hono`, `/tanstack`, `/providers` — framework middleware is intentionally kept out of the main entry so consumers don't pull Hono/TanStack. Build with `tsc` to `dist/` before consuming.
-- `packages/database`: schema is organized by domain under `schema/` (`auth`, `catalog`, `finance`, `learning`, `ops`, `shared`); `index.ts` is currently empty.
+- Root tsconfig is strict with `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitReturns`, `isolatedModules`. Match these in new code.
+- `packages/auth`: Build with `tsc` to `dist/` before consuming. Framework middleware is intentionally kept in subpaths (`/hono`, `/tanstack`) so consumers don't pull unnecessary deps.
+- `packages/database`: Schema is organized by domain under `schema/` (`auth`, `catalog`, `finance`, `learning`, `ops`, `shared`). The barrel `index.ts` re-exports everything.
+- `app/dashboard`: File-based routing via TanStack Router. After adding/renaming routes run `pnpm --filter @abugida/dashboard generate-routes`. `*.gen.ts` files are eslint-ignored. See `app/dashboard/AGENTS.md` for dashboard-specific conventions.
+- `app/api`: Hono REST API with Zod OpenAPI. See `app/api/` for module structure.
+- `app/marketing`: Astro site. Use `astro dev --background` for dev server. See `app/marketing/AGENTS.md`.
 
 ## Repo-local instruction files
 
-- `app/marketing/AGENTS.md` — dev-server workflow (use `astro dev --background`).
-- `app/dashboard/AGENTS.md` — auto-generated TanStack Intent skill guide; don't hand-edit.
-- `.agents/skills/` — better-auth, hono, and tanstack-* skills available to agents.
-
-## graphify
-
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
-
-When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
-
-Rules:
-
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- `app/dashboard/AGENTS.md` — Dashboard app architecture, naming conventions, and agent instructions.
+- `app/marketing/AGENTS.md` — Dev-server workflow (use `astro dev --background`).
+- `.agents/skills/` — 17 installable skills: better-auth, hono, shadcn, tanstack-* (ai, cli, config, db, devtools, query, router, start, virtual), design-doc-mermaid, commit-master, create-auth, organization-best-practices.
