@@ -86,7 +86,7 @@ function SignupStep2({ onComplete, loading, serverError, slugError }: SignupStep
           <FieldLabel htmlFor="workspace-name">Workspace name</FieldLabel>
           <Input
             id="workspace-name"
-            placeholder="Abugida Academy"
+            placeholder={import.meta.env.VITE_APP_NAME}
             autoComplete="organization"
             {...register('name')}
             onChange={handleNameChange}
@@ -107,7 +107,9 @@ function SignupStep2({ onComplete, loading, serverError, slugError }: SignupStep
               aria-invalid={errors.slug ? true : undefined}
             />
             <InputGroupAddon align="inline-end">
-              <InputGroupText className="font-mono text-xs">.abugida.app</InputGroupText>
+              <InputGroupText className="font-mono text-xs">
+                .{import.meta.env.VITE_WORKSPACE_DOMAIN}
+              </InputGroupText>
             </InputGroupAddon>
           </InputGroup>
           {errors.slug ? (
@@ -119,7 +121,7 @@ function SignupStep2({ onComplete, loading, serverError, slugError }: SignupStep
               <FieldDescription>
                 Your workspace will live at{' '}
                 <span className="font-medium text-foreground">
-                  {generateSlug(workspaceName)}.abugida.app
+                  {generateSlug(workspaceName)}.{import.meta.env.VITE_WORKSPACE_DOMAIN}
                 </span>
               </FieldDescription>
             )

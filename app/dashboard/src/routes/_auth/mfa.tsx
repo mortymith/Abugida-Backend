@@ -19,7 +19,7 @@ export const Route = createFileRoute('/_auth/mfa')({
   component: MfaPage,
 })
 
-const MAX_ATTEMPTS = 5
+const MAX_ATTEMPTS = Number(import.meta.env.VITE_MFA_MAX_ATTEMPTS)
 
 function MfaPage() {
   const navigate = useNavigate()

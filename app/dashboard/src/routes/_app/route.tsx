@@ -1,9 +1,11 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router'
 import { requireAuthBeforeLoad } from '@abugida/auth/tanstack'
-import { authServerFns } from '#/lib/auth.config'
+import { authServerFns } from '#/config/auth.config'
 
 export const Route = createFileRoute('/_app')({
-  beforeLoad: requireAuthBeforeLoad(authServerFns, { loginPath: '/login' }),
+  beforeLoad: requireAuthBeforeLoad(authServerFns, {
+    loginPath: import.meta.env.VITE_LOGIN_PATH,
+  }),
   component: AppLayout,
 })
 
@@ -12,7 +14,7 @@ function AppLayout() {
     <div className="flex min-h-screen">
       <aside className="w-64 border-r bg-card p-4">
         <div className="mb-6">
-          <span className="text-lg font-semibold">Abugida Academy</span>
+          <span className="text-lg font-semibold">{import.meta.env.VITE_APP_NAME}</span>
         </div>
         <nav className="space-y-1">
           <a

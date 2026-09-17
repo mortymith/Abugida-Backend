@@ -12,6 +12,26 @@ export default [
       '@typescript-eslint/array-type': 'off',
       '@typescript-eslint/require-await': 'off',
       'pnpm/json-enforce-catalog': 'off',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'MemberExpression[object.name="process"][property.name="env"]',
+          message:
+            'Use the centralized env config from #/config/app.config.ts instead of process.env directly.',
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/config/app.config.ts'],
+    rules: {
+      'no-restricted-syntax': 'off',
+    },
+  },
+  {
+    files: ['server.mjs'],
+    rules: {
+      'no-restricted-syntax': 'off',
     },
   },
   {

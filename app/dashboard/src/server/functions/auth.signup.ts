@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
-import { auth } from '#/lib/auth.server'
+import { auth } from '#/config/auth.config'
 
 export interface SignupInput {
   name: string
