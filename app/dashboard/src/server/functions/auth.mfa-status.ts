@@ -4,15 +4,18 @@ import { auth } from '#/config/auth.config'
 
 export const getMfaStatus = createServerFn({ method: 'GET' }).handler(async () => {
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
 
-  if (!session.ok) {
+  const session = await auth.raw.api.getSession({
+    headers: request.headers,
+  })
+
+  if (!session?.user) {
     return { enabled: false }
   }
 
-  // Check if the user has two-factor authentication enabled
+  const user = session.user as typeof session.user & { twoFactorEnabled?: boolean }
 
   return {
-    enabled: true,
+    enabled: user.twoFactorEnabled === true,
   }
 })

@@ -11,6 +11,7 @@ import { env } from './app.config'
 const db = createClient(env.DATABASE_URL)
 
 export const auth = createAuth({
+  cors: { origins: [env.WEB_APP_URL ?? env.AUTH_BASE_URL, env.AUTH_BASE_URL] },
   environment: env.ENVIRONMENT,
   baseUrl: env.AUTH_BASE_URL,
   basePath: env.AUTH_BASE_PATH,

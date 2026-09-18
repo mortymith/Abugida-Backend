@@ -6,12 +6,21 @@ import { env } from '../config/app.config'
 const startHandler = createStartHandler(defaultStreamHandler)
 
 const fetch: RequestHandler<Register> = async (...args) => {
+  console.log('Incoming request URL:', args[0].url)
   const request = args[0]
   const url = new URL(request.url)
 
   if (url.pathname.startsWith(env.AUTH_BASE_PATH)) {
+    console.log('Auth route triggered:', url.pathname, 'method:', request.method)
     const { auth } = await import('../config/auth.config')
-    return auth.raw.handler(request)
+    try {
+      const authResponse = await auth.raw.handler(request)
+      console.log('Auth handler response status:', authResponse.status)
+      return authResponse
+    } catch (err) {
+      console.error('Auth handler error:', err)
+      return new Response('Internal Server Error', { status: 500 })
+    }
   }
 
   return startHandler(...args)
