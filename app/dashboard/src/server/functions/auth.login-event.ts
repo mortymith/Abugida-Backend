@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 import { auth } from '#/config/auth.config'
+import { logger } from '#/config/observability.config'
 
 export const writeLoginEvent = createServerFn({ method: 'POST' })
   .validator(
@@ -14,15 +15,20 @@ export const writeLoginEvent = createServerFn({ method: 'POST' })
     const request = getRequest()
     const session = await auth.getSession(request.headers)
 
-    // Log the event for audit purposes
-    // In production, this would write to a login_events table
-    console.log('Login event:', {
-      ...data,
+    const context = {
+      event: data.event,
+      provider: data.provider,
       userId: session.ok ? session.value.user.id : null,
-      timestamp: new Date().toISOString(),
-      userAgent: request.headers.get('user-agent'),
-      ip: request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip'),
-    })
+      userAgent: request.headers.get('user-agent') ?? undefined,
+      ip: request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? undefined,
+      ...data.metadata,
+    }
+
+    if (data.event.includes('failed')) {
+      logger.warn(context, 'auth event')
+    } else {
+      logger.info(context, 'auth event')
+    }
 
     return { recorded: true }
   })
