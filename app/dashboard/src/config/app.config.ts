@@ -11,8 +11,8 @@ const envSchema = z
     BETTER_AUTH_SECRET: z.string().min(32),
     BETTER_AUTH_URL: z.url(),
     AUTH_BASE_URL: z.url(),
-    AUTH_BASE_PATH: z.string().default('/api/auth'),
-    VITE_AUTH_BASE_URL: z.url().default('http://localhost:3000/api/auth'),
+    AUTH_BASE_PATH: z.string().default('/auth'),
+    VITE_AUTH_BASE_URL: z.url().default('http://localhost:3000/auth'),
     LOGIN_PATH: z.string().default('/login'),
     DEFAULT_LOGIN_REDIRECT: z.string().default('/dashboard'),
     TOTP_ISSUER: z.string().default('Abugida Academy'),
@@ -36,6 +36,17 @@ const envSchema = z
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     TELEGRAM_OIDC_CLIENT_ID: z.string().optional(),
     TELEGRAM_OIDC_CLIENT_SECRET: z.string().optional(),
+
+    // ── Observability ──────────────────────────────────────────────────
+    OTEL_SERVICE_NAME: z.string().default('dashboard'),
+    OTEL_SERVICE_VERSION: z.string().default('0.0.1'),
+    OTEL_DEPLOYMENT_ENVIRONMENT: z.string().optional(),
+    OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().default('http://localhost:4318'),
+    OTEL_TRACES_EXPORTER: z.enum(['otlp', 'jaeger', 'zipkin', 'console', 'none']).default('otlp'),
+    OTEL_METRICS_EXPORTER: z.enum(['otlp', 'console', 'none']).default('otlp'),
+    OTEL_TRACES_SAMPLER: z.string().default('parentbased_always_on'),
+    OTEL_TRACES_SAMPLER_ARG: z.coerce.number().default(1),
+    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   })
   .refine(
     (data) => {
