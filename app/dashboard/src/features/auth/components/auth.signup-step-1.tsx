@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import type { Provider } from '#/features/auth/hooks/auth.provider-memory'
-import { authClient } from '#/lib/auth.client'
+import { authClient } from '#/lib/auth-client'
 import { useLastProvider } from '#/features/auth/hooks/auth.provider-memory'
 import { ProviderButton } from '#/features/auth/components/auth.provider-button'
 import { RedirectingOverlay } from '#/features/auth/components/auth.redirecting-overlay'
