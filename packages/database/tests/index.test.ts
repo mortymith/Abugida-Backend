@@ -8,7 +8,6 @@ describe('package barrel exports', () => {
       expect(db.userProfiles).toBeDefined()
       expect(db.devices).toBeDefined()
       expect(db.userConsents).toBeDefined()
-      expect(db.loginAttempts).toBeDefined()
     })
 
     it('exports catalog tables', () => {

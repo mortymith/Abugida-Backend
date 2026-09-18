@@ -4,7 +4,6 @@ import {
   educationSegmentEnum,
   devicePlatformEnum,
   consentTypeEnum,
-  loginAttemptTypeEnum,
   courseStatusEnum,
   bundleStatusEnum,
   contentTypeEnum,
@@ -55,10 +54,6 @@ describe('pgEnum definitions', () => {
         'marketing',
         'third_party_sharing',
       ])
-    })
-
-    it('loginAttemptTypeEnum has correct values', () => {
-      expect(loginAttemptTypeEnum.options).toEqual(['oauth_login', 'token_refresh'])
     })
   })
 
@@ -227,12 +222,6 @@ describe('pgEnum definitions', () => {
       { name: 'educationSegmentEnum', enum: educationSegmentEnum, valid: 'toefl', invalid: 'sat' },
       { name: 'devicePlatformEnum', enum: devicePlatformEnum, valid: 'ios', invalid: 'windows' },
       { name: 'consentTypeEnum', enum: consentTypeEnum, valid: 'essential', invalid: 'unknown' },
-      {
-        name: 'loginAttemptTypeEnum',
-        enum: loginAttemptTypeEnum,
-        valid: 'oauth_login',
-        invalid: 'password_login',
-      },
     ]
 
     for (const { name, enum: e, valid, invalid } of enums) {
