@@ -10,11 +10,6 @@ export {
   type DevicePlatform,
 } from '../schema/auth/devices'
 export { consentTypeEnum, consentTypePgEnum, type ConsentType } from '../schema/auth/user-consents'
-export {
-  loginAttemptTypeEnum,
-  loginAttemptTypePgEnum,
-  type LoginAttemptType,
-} from '../schema/auth/login-attempts'
 
 export { courseStatusEnum, courseStatusPgEnum, type CourseStatus } from '../schema/catalog/courses'
 export {

@@ -8,8 +8,6 @@ export type {
 } from '../schema/auth/user-profiles'
 export type { SelectDevice, InsertDevice, UpdateDevice } from '../schema/auth/devices'
 export type { SelectUserConsent, InsertUserConsent } from '../schema/auth/user-consents'
-export type { SelectLoginAttempt, InsertLoginAttempt } from '../schema/auth/login-attempts'
-
 export type { SelectCourse, InsertCourse, UpdateCourse } from '../schema/catalog/courses'
 export type { SelectModule, InsertModule, UpdateModule } from '../schema/catalog/modules'
 export type { SelectLesson, InsertLesson, UpdateLesson } from '../schema/catalog/lessons'

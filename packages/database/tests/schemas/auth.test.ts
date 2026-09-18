@@ -12,9 +12,6 @@ import {
   insertUserConsentSchema,
   selectUserConsentSchema,
   consentTypeEnum,
-  insertLoginAttemptSchema,
-  selectLoginAttemptSchema,
-  loginAttemptTypeEnum,
   insertSessionSchema,
   selectSessionSchema,
   insertAccountSchema,
@@ -296,67 +293,6 @@ describe('auth schemas', () => {
           consentType: type,
           consentVersion: '1.0',
           isGranted: true,
-        })
-        expect(result.success).toBe(true)
-      }
-    })
-  })
-
-  describe('login attempts', () => {
-    const validAttempt = {
-      phoneNumberLast4: '5678',
-      ipAddress: '192.168.1.1',
-      attemptType: 'oauth_login' as const,
-      isSuccessful: true,
-      retentionExpiresAt: new Date('2026-12-31'),
-    }
-
-    it('accepts valid login attempt insert', () => {
-      const result = insertLoginAttemptSchema.safeParse(validAttempt)
-      expect(result.success).toBe(true)
-    })
-
-    it('requires phoneNumberLast4', () => {
-      const result = insertLoginAttemptSchema.safeParse({
-        ipAddress: '192.168.1.1',
-        attemptType: 'oauth_login',
-        isSuccessful: true,
-        retentionExpiresAt: new Date(),
-      })
-      expect(result.success).toBe(false)
-    })
-
-    it('validates phoneNumberLast4 length', () => {
-      const result = insertLoginAttemptSchema.safeParse({
-        ...validAttempt,
-        phoneNumberLast4: '12',
-      })
-      expect(result.success).toBe(false)
-    })
-
-    it('requires ipAddress', () => {
-      const result = insertLoginAttemptSchema.safeParse({
-        phoneNumberLast4: '1234',
-        attemptType: 'oauth_login',
-        isSuccessful: true,
-        retentionExpiresAt: new Date(),
-      })
-      expect(result.success).toBe(false)
-    })
-
-    it('validates userAgent max length', () => {
-      const result = insertLoginAttemptSchema.safeParse({
-        ...validAttempt,
-        userAgent: 'x'.repeat(501),
-      })
-      expect(result.success).toBe(false)
-    })
-
-    it('accepts all login attempt types', () => {
-      for (const type of loginAttemptTypeEnum.options) {
-        const result = insertLoginAttemptSchema.safeParse({
-          ...validAttempt,
-          attemptType: type,
         })
         expect(result.success).toBe(true)
       }
