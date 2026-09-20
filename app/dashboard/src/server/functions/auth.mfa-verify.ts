@@ -1,10 +1,10 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
-import { auth } from '#/config/auth.config'
 
 export const verifyMfa = createServerFn({ method: 'POST' })
   .validator((input: { code: string }) => input)
   .handler(async ({ data }) => {
+    const { getRequest } = await import('@tanstack/react-start/server')
+    const { auth } = await import('#/config/auth.server')
     const request = getRequest()
 
     // Use better-auth's two-factor plugin to verify the TOTP code
