@@ -1,0 +1,22 @@
+diff --git a/dist/esm/ssr/renderRouterToStream.js b/dist/esm/ssr/renderRouterToStream.js
+index ed6527857971b81f809921b1e255cf924cf19072..08abd95402f693a0ee10477587a81d631503ec67 100644
+--- a/dist/esm/ssr/renderRouterToStream.js
++++ b/dist/esm/ssr/renderRouterToStream.js
+@@ -1,5 +1,5 @@
+ import { createSsrStreamResponse, getSsrStatus, transformReadableStreamWithRouter, waitForRequest } from "@tanstack/router-core/ssr/server";
+-import ReactDOMServer from "react-dom/server";
++import * as ReactDOMServer from "react-dom/server";
+ import { PassThrough, Readable } from "node:stream";
+ import { isbot } from "isbot";
+ //#region src/ssr/renderRouterToStream.tsx
+diff --git a/dist/esm/ssr/renderRouterToString.js b/dist/esm/ssr/renderRouterToString.js
+index 8fe74ff216dabb5e3863509f419f9d1f39577f49..88db9146a856047ec90f170fa3b3abed02b2dc9b 100644
+--- a/dist/esm/ssr/renderRouterToString.js
++++ b/dist/esm/ssr/renderRouterToString.js
+@@ -1,5 +1,5 @@
+ import { renderSsrHtmlResponse } from "@tanstack/router-core/ssr/server";
+-import ReactDOMServer from "react-dom/server";
++import * as ReactDOMServer from "react-dom/server";
+ //#region src/ssr/renderRouterToString.tsx
+ var renderRouterToString = async ({ router, responseHeaders, children }) => {
+ 	return renderSsrHtmlResponse({

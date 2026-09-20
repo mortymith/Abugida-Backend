@@ -21,6 +21,14 @@
       "types": "./dist/middleware/tanstack/index.d.ts",
       "import": "./dist/middleware/tanstack/index.js"
     },
+    "./tanstack/server": {
+      "types": "./dist/middleware/tanstack/server.d.ts",
+      "import": "./dist/middleware/tanstack/server.js"
+    },
+    "./tanstack/client": {
+      "types": "./dist/middleware/tanstack/client.d.ts",
+      "import": "./dist/middleware/tanstack/client.js"
+    },
     "./providers": {
       "types": "./dist/providers/index.d.ts",
       "import": "./dist/providers/index.js"

@@ -1,8 +1,8 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { authServerFns } from '#/config/auth.config'
 
 export const Route = createFileRoute('/')({
   beforeLoad: async () => {
+    const { authServerFns } = await import('#/config/auth.config')
     const session = await authServerFns.getServerSession()
     if (session) {
       throw redirect({ to: '/dashboard' })
