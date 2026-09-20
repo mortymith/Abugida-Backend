@@ -1,6 +1,4 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
-import { auth } from '#/config/auth.config'
 import { logger } from '#/config/observability.config'
 
 export const writeLoginEvent = createServerFn({ method: 'POST' })
@@ -12,6 +10,8 @@ export const writeLoginEvent = createServerFn({ method: 'POST' })
     }) => input,
   )
   .handler(async ({ data }) => {
+    const { getRequest } = await import('@tanstack/react-start/server')
+    const { auth } = await import('#/config/auth.server')
     const request = getRequest()
     const session = await auth.getSession(request.headers)
 
