@@ -2,7 +2,7 @@
   "name": "abugida-backend",
   "version": "1.0.0",
   "private": true,
-  "packageManager": "pnpm@11.21.0",
+  "packageManager": "pnpm@12.5.1",
   "engines": {
     "bun": ">=1.3.14"
   },

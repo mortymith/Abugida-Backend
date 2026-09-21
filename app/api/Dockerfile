@@ -4,7 +4,7 @@
 # Abugida API Service — Multi-Stage Dockerfile
 #
 # Stage 0 (`base`) inlines the shared Abugida base toolchain:
-# Bun 1.3.14 + pnpm 11.21.0, the runtime tooling (bash, curl, jq,
+# Bun 1.3.14 + pnpm 12.5.1, the runtime tooling (bash, curl, jq,
 # postgresql17-client) used by the healthcheck and ops tasks, and the
 # non-root `appuser` (uid/gid 1000, WORKDIR /app).
 #
@@ -27,7 +27,7 @@ ARG BUILD_VERSION=0.0.1
 FROM oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0 AS base
 
 # Version pins (single source of truth for this inline copy).
-ARG PNPM_VERSION=11.21.0
+ARG PNPM_VERSION=12.5.1
 ARG APK_NODEJS=22.23.2-r0
 ARG APK_NPM=11.6.4-r0
 ARG APK_BASH=5.2.37-r0
