@@ -12,14 +12,21 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as AuthRouteRouteImport } from './routes/_auth/route'
+import { Route as AppCoursesRouteRouteImport } from './routes/_app/courses/route'
 import { Route as AppDashboardRouteRouteImport } from './routes/_app/dashboard/route'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthMfaRouteImport } from './routes/_auth/mfa'
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
+import { Route as AppCoursesIndexRouteImport } from './routes/_app/courses/index'
+import { Route as AppCoursesCourseIdRouteImport } from './routes/_app/courses/$courseId'
+import { Route as AppCoursesNewRouteImport } from './routes/_app/courses/new'
+import { Route as AppCoursesReviewsRouteImport } from './routes/_app/courses/reviews'
+import { Route as AppCoursesTemplatesRouteImport } from './routes/_app/courses/templates'
 import { Route as AppDashboardIndexRouteImport } from './routes/_app/dashboard/index'
 import { Route as AppDashboardRevenueRouteImport } from './routes/_app/dashboard/revenue'
+import { Route as AppCoursesCourseIdLessonsLessonIdRouteImport } from './routes/_app/courses/$courseId/lessons/$lessonId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -33,6 +40,11 @@ const AppRouteRoute = AppRouteRouteImport.update({
 const AuthRouteRoute = AuthRouteRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppCoursesRouteRoute = AppCoursesRouteRouteImport.update({
+  id: '/courses',
+  path: '/courses',
+  getParentRoute: () => AppRouteRoute,
 } as any)
 const AppDashboardRouteRoute = AppDashboardRouteRouteImport.update({
   id: '/dashboard',
@@ -64,6 +76,31 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => AuthRouteRoute,
 } as any)
+const AppCoursesIndexRoute = AppCoursesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppCoursesRouteRoute,
+} as any)
+const AppCoursesCourseIdRoute = AppCoursesCourseIdRouteImport.update({
+  id: '/$courseId',
+  path: '/$courseId',
+  getParentRoute: () => AppCoursesRouteRoute,
+} as any)
+const AppCoursesNewRoute = AppCoursesNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppCoursesRouteRoute,
+} as any)
+const AppCoursesReviewsRoute = AppCoursesReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => AppCoursesRouteRoute,
+} as any)
+const AppCoursesTemplatesRoute = AppCoursesTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => AppCoursesRouteRoute,
+} as any)
 const AppDashboardIndexRoute = AppDashboardIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -74,17 +111,30 @@ const AppDashboardRevenueRoute = AppDashboardRevenueRouteImport.update({
   path: '/revenue',
   getParentRoute: () => AppDashboardRouteRoute,
 } as any)
+const AppCoursesCourseIdLessonsLessonIdRoute =
+  AppCoursesCourseIdLessonsLessonIdRouteImport.update({
+    id: '/lessons/$lessonId',
+    path: '/lessons/$lessonId',
+    getParentRoute: () => AppCoursesCourseIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/courses': typeof AppCoursesRouteRouteWithChildren
   '/dashboard': typeof AppDashboardRouteRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
   '/search': typeof AppSearchRoute
   '/login': typeof AuthLoginRoute
   '/mfa': typeof AuthMfaRoute
   '/signup': typeof AuthSignupRoute
+  '/courses/$courseId': typeof AppCoursesCourseIdRouteWithChildren
+  '/courses/new': typeof AppCoursesNewRoute
+  '/courses/reviews': typeof AppCoursesReviewsRoute
+  '/courses/templates': typeof AppCoursesTemplatesRoute
   '/dashboard/revenue': typeof AppDashboardRevenueRoute
+  '/courses/': typeof AppCoursesIndexRoute
   '/dashboard/': typeof AppDashboardIndexRoute
+  '/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -93,35 +143,55 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/mfa': typeof AuthMfaRoute
   '/signup': typeof AuthSignupRoute
+  '/courses/$courseId': typeof AppCoursesCourseIdRouteWithChildren
+  '/courses/new': typeof AppCoursesNewRoute
+  '/courses/reviews': typeof AppCoursesReviewsRoute
+  '/courses/templates': typeof AppCoursesTemplatesRoute
   '/dashboard/revenue': typeof AppDashboardRevenueRoute
+  '/courses': typeof AppCoursesIndexRoute
   '/dashboard': typeof AppDashboardIndexRoute
+  '/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteRouteWithChildren
   '/_auth': typeof AuthRouteRouteWithChildren
+  '/_app/courses': typeof AppCoursesRouteRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRouteRouteWithChildren
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/search': typeof AppSearchRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/mfa': typeof AuthMfaRoute
   '/_auth/signup': typeof AuthSignupRoute
+  '/_app/courses/$courseId': typeof AppCoursesCourseIdRouteWithChildren
+  '/_app/courses/new': typeof AppCoursesNewRoute
+  '/_app/courses/reviews': typeof AppCoursesReviewsRoute
+  '/_app/courses/templates': typeof AppCoursesTemplatesRoute
   '/_app/dashboard/revenue': typeof AppDashboardRevenueRoute
+  '/_app/courses/': typeof AppCoursesIndexRoute
   '/_app/dashboard/': typeof AppDashboardIndexRoute
+  '/_app/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/courses'
     | '/dashboard'
     | '/notifications'
     | '/search'
     | '/login'
     | '/mfa'
     | '/signup'
+    | '/courses/$courseId'
+    | '/courses/new'
+    | '/courses/reviews'
+    | '/courses/templates'
     | '/dashboard/revenue'
+    | '/courses/'
     | '/dashboard/'
+    | '/courses/$courseId/lessons/$lessonId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -130,21 +200,34 @@ export interface FileRouteTypes {
     | '/login'
     | '/mfa'
     | '/signup'
+    | '/courses/$courseId'
+    | '/courses/new'
+    | '/courses/reviews'
+    | '/courses/templates'
     | '/dashboard/revenue'
+    | '/courses'
     | '/dashboard'
+    | '/courses/$courseId/lessons/$lessonId'
   id:
     | '__root__'
     | '/'
     | '/_app'
     | '/_auth'
+    | '/_app/courses'
     | '/_app/dashboard'
     | '/_app/notifications'
     | '/_app/search'
     | '/_auth/login'
     | '/_auth/mfa'
     | '/_auth/signup'
+    | '/_app/courses/$courseId'
+    | '/_app/courses/new'
+    | '/_app/courses/reviews'
+    | '/_app/courses/templates'
     | '/_app/dashboard/revenue'
+    | '/_app/courses/'
     | '/_app/dashboard/'
+    | '/_app/courses/$courseId/lessons/$lessonId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -175,6 +258,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthRouteRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/courses': {
+      id: '/_app/courses'
+      path: '/courses'
+      fullPath: '/courses'
+      preLoaderRoute: typeof AppCoursesRouteRouteImport
+      parentRoute: typeof AppRouteRoute
     }
     '/_app/dashboard': {
       id: '/_app/dashboard'
@@ -218,6 +308,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof AuthRouteRoute
     }
+    '/_app/courses/': {
+      id: '/_app/courses/'
+      path: '/'
+      fullPath: '/courses/'
+      preLoaderRoute: typeof AppCoursesIndexRouteImport
+      parentRoute: typeof AppCoursesRouteRoute
+    }
+    '/_app/courses/$courseId': {
+      id: '/_app/courses/$courseId'
+      path: '/$courseId'
+      fullPath: '/courses/$courseId'
+      preLoaderRoute: typeof AppCoursesCourseIdRouteImport
+      parentRoute: typeof AppCoursesRouteRoute
+    }
+    '/_app/courses/new': {
+      id: '/_app/courses/new'
+      path: '/new'
+      fullPath: '/courses/new'
+      preLoaderRoute: typeof AppCoursesNewRouteImport
+      parentRoute: typeof AppCoursesRouteRoute
+    }
+    '/_app/courses/reviews': {
+      id: '/_app/courses/reviews'
+      path: '/reviews'
+      fullPath: '/courses/reviews'
+      preLoaderRoute: typeof AppCoursesReviewsRouteImport
+      parentRoute: typeof AppCoursesRouteRoute
+    }
+    '/_app/courses/templates': {
+      id: '/_app/courses/templates'
+      path: '/templates'
+      fullPath: '/courses/templates'
+      preLoaderRoute: typeof AppCoursesTemplatesRouteImport
+      parentRoute: typeof AppCoursesRouteRoute
+    }
     '/_app/dashboard/': {
       id: '/_app/dashboard/'
       path: '/'
@@ -232,8 +357,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRevenueRouteImport
       parentRoute: typeof AppDashboardRouteRoute
     }
+    '/_app/courses/$courseId/lessons/$lessonId': {
+      id: '/_app/courses/$courseId/lessons/$lessonId'
+      path: '/lessons/$lessonId'
+      fullPath: '/courses/$courseId/lessons/$lessonId'
+      preLoaderRoute: typeof AppCoursesCourseIdLessonsLessonIdRouteImport
+      parentRoute: typeof AppCoursesCourseIdRoute
+    }
   }
 }
+
+interface AppCoursesCourseIdRouteChildren {
+  AppCoursesCourseIdLessonsLessonIdRoute: typeof AppCoursesCourseIdLessonsLessonIdRoute
+}
+
+const AppCoursesCourseIdRouteChildren: AppCoursesCourseIdRouteChildren = {
+  AppCoursesCourseIdLessonsLessonIdRoute:
+    AppCoursesCourseIdLessonsLessonIdRoute,
+}
+
+const AppCoursesCourseIdRouteWithChildren =
+  AppCoursesCourseIdRoute._addFileChildren(AppCoursesCourseIdRouteChildren)
+
+interface AppCoursesRouteRouteChildren {
+  AppCoursesCourseIdRoute: typeof AppCoursesCourseIdRouteWithChildren
+  AppCoursesNewRoute: typeof AppCoursesNewRoute
+  AppCoursesReviewsRoute: typeof AppCoursesReviewsRoute
+  AppCoursesTemplatesRoute: typeof AppCoursesTemplatesRoute
+  AppCoursesIndexRoute: typeof AppCoursesIndexRoute
+}
+
+const AppCoursesRouteRouteChildren: AppCoursesRouteRouteChildren = {
+  AppCoursesCourseIdRoute: AppCoursesCourseIdRouteWithChildren,
+  AppCoursesNewRoute: AppCoursesNewRoute,
+  AppCoursesReviewsRoute: AppCoursesReviewsRoute,
+  AppCoursesTemplatesRoute: AppCoursesTemplatesRoute,
+  AppCoursesIndexRoute: AppCoursesIndexRoute,
+}
+
+const AppCoursesRouteRouteWithChildren = AppCoursesRouteRoute._addFileChildren(
+  AppCoursesRouteRouteChildren,
+)
 
 interface AppDashboardRouteRouteChildren {
   AppDashboardRevenueRoute: typeof AppDashboardRevenueRoute
@@ -249,12 +413,14 @@ const AppDashboardRouteRouteWithChildren =
   AppDashboardRouteRoute._addFileChildren(AppDashboardRouteRouteChildren)
 
 interface AppRouteRouteChildren {
+  AppCoursesRouteRoute: typeof AppCoursesRouteRouteWithChildren
   AppDashboardRouteRoute: typeof AppDashboardRouteRouteWithChildren
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppSearchRoute: typeof AppSearchRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppCoursesRouteRoute: AppCoursesRouteRouteWithChildren,
   AppDashboardRouteRoute: AppDashboardRouteRouteWithChildren,
   AppNotificationsRoute: AppNotificationsRoute,
   AppSearchRoute: AppSearchRoute,
