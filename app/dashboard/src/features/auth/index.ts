@@ -9,7 +9,7 @@ export {
   mapBetterAuthRoleToPlatformRole,
   type PlatformRole,
 } from './auth.roles'
-export { getServerRole, requireRolesBeforeLoad } from './server/auth.roles.server'
+export { getServerRole, requireRolesBeforeLoad } from './server/auth.roles'
 export { useLastProvider, type Provider } from './hooks/auth.provider-memory'
 export { ProviderButton } from './components/auth.provider-button'
 export { RedirectingOverlay } from './components/auth.redirecting-overlay'
