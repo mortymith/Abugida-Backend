@@ -26,6 +26,7 @@ import { quizQuestions } from '../learning/quiz-questions'
 import { quizAttempts } from '../learning/quiz-attempts'
 import { contentLicenses } from '../finance/content-licenses'
 import { auditLogs } from '../ops/audit-logs'
+import { assetLibrary } from './asset-library'
 import { tsvector } from '../shared/custom-types'
 export const contentTypeEnum = z.enum(['pdf', 'video', 'quiz', 'exercise', 'link'])
 export type ContentType = z.infer<typeof contentTypeEnum>
@@ -67,6 +68,11 @@ export const lessons = pgTable(
         onUpdate: 'cascade',
       }),
     instructorId: text('instructor_id').references(() => users.id, {
+      onDelete: 'set null',
+      onUpdate: 'cascade',
+    }),
+    /** Content Library provenance (spec 05): asset backing this lesson's media. */
+    assetId: bigint('asset_id', { mode: 'number' }).references(() => assetLibrary.id, {
       onDelete: 'set null',
       onUpdate: 'cascade',
     }),
