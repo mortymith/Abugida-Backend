@@ -115,13 +115,6 @@ export const assetVersionCompleteSchema = z.object({
 })
 export type AssetVersionCompleteInput = z.infer<typeof assetVersionCompleteSchema>
 
-export const readUrlSchema = z.object({
-  objectKey: z.string().trim().min(1).max(500),
-  /** 'inline' for previews, 'attachment' for downloads. */
-  disposition: z.enum(['inline', 'attachment']).default('inline'),
-  downloadName: z.string().trim().max(300).optional(),
-})
-
 export const transcriptSegmentInputSchema = z.object({
   segmentIndex: z.number().int().min(0),
   startMs: z.number().int().min(0).max(86_400_000),
@@ -180,4 +173,13 @@ export type TranscriptTranslateInput = z.infer<typeof transcriptTranslateSchema>
 export const transcriptDeleteSchema = z.object({
   assetPublicId: z.string().uuid(),
   language: z.string().trim().min(2).max(10),
+})
+export type TranscriptDeleteInput = z.infer<typeof transcriptDeleteSchema>
+
+export const readUrlSchema = z.object({
+  assetPublicId: z.string().uuid(),
+  /** 'inline' for previews, 'attachment' for downloads. */
+  disposition: z.enum(['inline', 'attachment']).default('inline'),
+  downloadName: z.string().trim().max(300).optional(),
+  versionNumber: z.number().int().positive().optional(),
 })

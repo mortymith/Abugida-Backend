@@ -54,34 +54,31 @@ export function snapToFreeGap(
   startMs: number,
   endMs: number,
 ): { startMs: number; endMs: number } | null {
-  const ordered = [...segments].sort((a, b) => a.startMs - b.startMs)
-  let previousEnd = 0
-  for (const segment of ordered) {
-    if (segment.segmentIndex === index) continue
-    if (segment.startMs >= endMs) break
-    previousEnd = Math.max(previousEnd, segment.endMs)
-  }
-  // Free gap = (previousEnd, nextStart).
-  const nextStart = ordered.find(
-    (segment) => segment.segmentIndex !== index && segment.startMs >= endMs,
-  )?.startMs
-
+  const others = segments.filter((segment) => segment.segmentIndex !== index)
   const width = Math.max(1, endMs - startMs)
-  let snappedStart = Math.max(startMs, previousEnd)
-  let snappedEnd = Math.max(snappedStart + width, endMs)
-  if (nextStart != null && snappedEnd > nextStart) {
-    // Prefer keeping the start; shrink into the gap when there is room.
-    if (nextStart - snappedStart >= 200) {
-      snappedEnd = nextStart
-    } else if (nextStart - previousEnd >= 200) {
-      snappedStart = Math.max(previousEnd, nextStart - width)
-      snappedEnd = nextStart
-    } else {
-      return null
-    }
+  const MIN_SLICE = 200
+
+  // Gap boundaries from the neighbours that would surround the edit.
+  let leftBound = 0
+  for (const other of others) {
+    if (other.startMs < startMs) leftBound = Math.max(leftBound, other.endMs)
   }
-  if (snappedEnd <= snappedStart) return null
-  return { startMs: snappedStart, endMs: snappedEnd }
+  let rightBound = Number.POSITIVE_INFINITY
+  for (const other of others) {
+    if (other.startMs >= startMs) rightBound = Math.min(rightBound, other.startMs)
+  }
+
+  const snappedStart = Math.max(startMs, leftBound)
+  const snappedEnd = Math.min(Math.max(endMs, snappedStart + 1), rightBound)
+  if (snappedEnd - snappedStart >= MIN_SLICE) {
+    return { startMs: snappedStart, endMs: snappedEnd }
+  }
+  // No room keeping the start — place the whole span before the right bound.
+  if (rightBound - leftBound >= MIN_SLICE) {
+    const placedStart = Math.max(leftBound, Math.min(snappedStart, rightBound - width))
+    return { startMs: placedStart, endMs: Math.max(placedStart + 1, rightBound) }
+  }
+  return null
 }
 
 export interface LineWarning {
