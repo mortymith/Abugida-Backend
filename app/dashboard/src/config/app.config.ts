@@ -44,6 +44,14 @@ const envSchema = z
     GEMINI_API_KEY: z.string().optional(),
     AI_MODEL: z.string().optional(),
 
+    // ── Transcription (spec 05 S-3.6) ───────────────────────────────────
+    // Optional: enables Auto-Transcribe against an OpenAI-compatible
+    // /audio/transcriptions endpoint. Unset → the UI degrades honestly and
+    // segments can still be authored manually or imported from .srt/.vtt.
+    TRANSCRIPTION_API_KEY: z.string().optional(),
+    TRANSCRIPTION_BASE_URL: z.string().optional(),
+    TRANSCRIPTION_MODEL: z.string().optional(),
+
     // ── Observability ──────────────────────────────────────────────────
     OTEL_SERVICE_NAME: z.string().default('dashboard'),
     OTEL_SERVICE_VERSION: z.string().default('0.0.1'),
