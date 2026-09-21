@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, createFileRoute } from '@tanstack/react-router'
-import { z } from 'zod'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { Button } from '#/components/ui/button'
@@ -19,6 +18,7 @@ import {
   libraryStatsQueryOptions,
   libraryTrailQueryOptions,
 } from '#/features/library/hooks/library.queries'
+import { parseLibrarySearch } from '#/features/library/schemas/library.schema'
 import { LibraryStatCards } from '#/features/library/components/library.stat-cards'
 import { LibraryFoldersBar } from '#/features/library/components/library.folders-bar'
 import { LibraryAssetCard } from '#/features/library/components/library.asset-card'
@@ -30,18 +30,23 @@ import {
   useDuplicateAsset,
   useMoveAssets,
 } from '#/features/library/hooks/library.mutations'
+import type { LibrarySearch } from '#/features/library/schemas/library.schema'
 import type { LibraryAssetCard as AssetCardDTO } from '#/features/library/library.types'
 
-const librarySearchSchema = z.object({
-  q: z.string().optional(),
-  folder: z.string().optional(),
-  type: z.enum(['video', 'image', 'audio', 'document']).optional(),
-  sort: z.enum(['newest', 'oldest', 'name', 'size', 'uses']).optional(),
-  page: z.coerce.number().int().min(1).optional(),
-})
+/** Filter chips for the type nav. `all` clears `type` rather than setting it. */
+const TYPE_FILTERS = [
+  { value: 'all', label: 'All' },
+  { value: 'video', label: 'Video' },
+  { value: 'document', label: 'PDFs' },
+  { value: 'image', label: 'Image' },
+  { value: 'audio', label: 'Audio' },
+] as const
 
 export const Route = createFileRoute('/_app/content-library/')({
-  validateSearch: librarySearchSchema,
+  // Narrowing parser (see features/library/schemas/library.schema.ts): an
+  // unrecognised ?type=/?sort=/?page= is dropped, never thrown, so a stale or
+  // hand-edited URL can't take the page down.
+  validateSearch: parseLibrarySearch,
   loaderDeps: ({ search }) => ({
     q: search.q,
     folder: search.folder,
@@ -68,14 +73,6 @@ export const Route = createFileRoute('/_app/content-library/')({
   },
   component: ContentLibraryPage,
 })
-
-type SearchShape = {
-  q?: string
-  folder?: string
-  type?: 'video' | 'image' | 'audio' | 'document'
-  sort?: 'newest' | 'oldest' | 'name' | 'size' | 'uses'
-  page?: number
-}
 
 function ContentLibraryPage() {
   const search = Route.useSearch()
@@ -114,18 +111,32 @@ function ContentLibraryPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const [draggingAsset, setDraggingAsset] = useState<AssetCardDTO | null>(null)
 
-  function patchSearch(patch: Partial<SearchShape>) {
+  /**
+   * Merges `patch` into the current search.
+   *
+   * A key present in `patch` with an `undefined` value *clears* that param —
+   * which is how the "All" chips opt out of a filter. Spreading `patch` over
+   * the current search is what makes that work: the earlier
+   * `patch.x !== undefined ? patch.x : current.x` treated `undefined` as
+   * "leave unchanged", so "All", "All folders" and "Newest" could never reset
+   * their filter. Any filter change also drops `page`, otherwise the user
+   * lands on a page that no longer exists for the new filter.
+   */
+  function patchSearch(patch: LibrarySearch) {
+    // Key *presence* (not value) signals a filter change: clearing a filter
+    // passes `undefined`, which is exactly the case that must reset paging.
+    const filters = ['q', 'folder', 'type', 'sort'] as const
+    const resetsPage = filters.some((key) => key in patch)
     void navigate({
       to: '/content-library',
       search: (prev) => {
-        const current = prev as Partial<SearchShape>
-        return {
-          q: patch.q !== undefined ? patch.q : current.q,
-          folder: patch.folder !== undefined ? patch.folder : current.folder,
-          type: patch.type !== undefined ? patch.type : current.type,
-          sort: patch.sort !== undefined ? patch.sort : current.sort,
-          page: patch.page !== undefined ? patch.page : current.page,
-        }
+        // At runtime `prev` is this route's already-validated search object.
+        // The router types it loosely because `validateSearch` is a plain
+        // function rather than a schema, so narrow it back here.
+        const current = prev as LibrarySearch
+        const next: LibrarySearch = { ...current, ...patch }
+        if (resetsPage) next.page = undefined
+        return next
       },
     })
   }
@@ -239,23 +250,25 @@ function ContentLibraryPage() {
           onChange={(event) => patchSearch({ q: event.target.value || undefined, page: undefined })}
         />
         <nav aria-label="Type filter" className="flex flex-wrap gap-1">
-          {(['all', 'video', 'document', 'image', 'audio'] as const).map((type) => (
-            <Button
-              key={type}
-              variant={(search.type ?? 'all') === type ? 'default' : 'outline'}
-              size="xs"
-              aria-pressed={(search.type ?? 'all') === type}
-              onClick={() =>
-                patchSearch({ type: type === 'all' ? undefined : type, page: undefined })
-              }
-            >
-              {type === 'all'
-                ? 'All'
-                : type === 'document'
-                  ? 'PDFs'
-                  : type[0].toUpperCase() + type.slice(1)}
-            </Button>
-          ))}
+          {TYPE_FILTERS.map((filter) => {
+            const active = (search.type ?? 'all') === filter.value
+            return (
+              <Button
+                key={filter.value}
+                variant={active ? 'default' : 'outline'}
+                size="xs"
+                aria-pressed={active}
+                onClick={() =>
+                  patchSearch({
+                    type: filter.value === 'all' ? undefined : filter.value,
+                    page: undefined,
+                  })
+                }
+              >
+                {filter.label}
+              </Button>
+            )
+          })}
         </nav>
         <label className="ml-auto flex items-center gap-1 text-sm text-muted-foreground">
           Sort
@@ -263,15 +276,13 @@ function ContentLibraryPage() {
             value={search.sort ?? 'newest'}
             aria-label="Sort assets"
             className="h-8 rounded-lg border bg-input/30 px-2 text-sm"
-            onChange={(event) =>
+            onChange={(event) => {
+              const next = event.target.value
               patchSearch({
-                sort:
-                  event.target.value === 'newest'
-                    ? undefined
-                    : (event.target.value as Exclude<SearchShape['sort'], undefined>),
+                sort: next === 'newest' ? undefined : (next as LibrarySearch['sort']),
                 page: undefined,
               })
-            }
+            }}
           >
             <option value="newest">Newest</option>
             <option value="oldest">Oldest</option>

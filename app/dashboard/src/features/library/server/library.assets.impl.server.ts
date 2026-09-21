@@ -15,6 +15,7 @@ import {
 } from '@abugida/database/catalog'
 import { users } from '@abugida/database/auth'
 import { db } from '#/config/db.config'
+import { storageEnv } from '#/config/app.config'
 import {
   ASSET_MAX_SIZE_BYTES,
   categoryForMime,
@@ -124,8 +125,8 @@ export async function getLibraryAssetsImpl(query: LibraryListQuery): Promise<Lib
   // Signing is local HMAC work (no storage round-trip), so it is done inline.
   const { hasEnvConfig, configFromEnv, createStorage } = await import('@abugida/storage')
   const imagePreviewUrls = new Map<string, string>()
-  if (hasEnvConfig()) {
-    const storage = createStorage(configFromEnv())
+  if (hasEnvConfig(storageEnv)) {
+    const storage = createStorage(configFromEnv(storageEnv))
     await Promise.all(
       rows
         .filter(

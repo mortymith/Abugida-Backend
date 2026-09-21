@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
-import { requireRolesBeforeLoad } from '#/features/auth'
+import { requireRolesBeforeLoad } from '#/features/auth/server'
 
 /**
  * Content Library section (spec 05). Spec 11 matrix: Admin/Editor full,

@@ -1,15 +1,16 @@
-import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Add01Icon, ArrowDown01Icon, Search01Icon } from '@hugeicons/core-free-icons'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
+import { Spinner } from '#/components/ui/spinner'
 import { ConfirmDialog } from '#/components/common/confirm-dialog'
 import { EmptyState } from '#/components/common/empty-state'
 import { RetryErrorState } from '#/components/common/retry-error-state'
-import { catalogQueryOptions } from '../hooks/courses.queries'
+import { catalogInfiniteQueryOptions } from '../hooks/courses.queries'
 import {
   catalogStatusSchema,
   catalogTypeSchema,
@@ -46,17 +47,21 @@ export function CoursesCatalog() {
   const isSort = (value: string | undefined): value is CatalogQuery['sort'] =>
     (catalogSortSchema.options as readonly string[]).includes(value ?? '')
 
-  const query: CatalogQuery = {
+  const query: Omit<CatalogQuery, 'page'> = {
     search: search.search,
     status: isStatus(search.status) ? search.status : 'all',
     type: isType(search.type) ? search.type : 'all',
     sort: isSort(search.sort) ? search.sort : 'recent',
-    page: 0,
   }
-  const catalog = useQuery(catalogQueryOptions(query))
+  const catalog = useInfiniteQuery(catalogInfiniteQueryOptions(query))
   const isAuthoring = role === 'admin' || role === 'editor'
 
   const [searchDraft, setSearchDraft] = useState(search.search ?? '')
+  // Keep the input in step with the URL so back/forward and "Clear filters"
+  // don't leave a stale term in the box.
+  useEffect(() => {
+    setSearchDraft(search.search ?? '')
+  }, [search.search])
   const [selectionMode, setSelectionMode] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [confirm, setConfirm] = useState<{
@@ -119,8 +124,10 @@ export function CoursesCatalog() {
     },
   })
 
-  const items = catalog.data?.items ?? []
-  const totalCount = catalog.data?.totalCount ?? 0
+  // "Load more" appends pages under one cache entry, so the grid shows every
+  // loaded page — previously `items` was only ever the first page.
+  const items = catalog.data?.pages.flatMap((page) => page.items) ?? []
+  const totalCount = catalog.data?.pages[0]?.totalCount ?? 0
 
   return (
     <div className="flex flex-col gap-5">
@@ -320,16 +327,14 @@ export function CoursesCatalog() {
         </div>
       )}
 
-      {items.length < totalCount ? (
+      {catalog.hasNextPage ? (
         <div className="flex justify-center">
           <Button
             variant="outline"
-            onClick={() => {
-              const nextPage = query.page + 1
-              void queryClient.prefetchQuery(catalogQueryOptions({ ...query, page: nextPage }))
-              toast.message('Loading more courses…')
-            }}
+            disabled={catalog.isFetchingNextPage}
+            onClick={() => void catalog.fetchNextPage()}
           >
+            {catalog.isFetchingNextPage ? <Spinner className="size-4" /> : null}
             Load More
           </Button>
         </div>

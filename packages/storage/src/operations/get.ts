@@ -69,15 +69,34 @@ export async function getAsBuffer(
   options?: GetOptions,
 ): Promise<Uint8Array> {
   const { body } = await get(client, bucket, key, options)
-  const reader = body.getReader()
+  const source = body as unknown as {
+    transformToByteArray?: () => Promise<Uint8Array>
+    getReader?: () => ReadableStreamDefaultReader<Uint8Array>
+    [Symbol.asyncIterator]?: () => AsyncIterator<Uint8Array | string>
+  }
+
+  if (source.transformToByteArray) return source.transformToByteArray()
+
   const chunks: Uint8Array[] = []
   let totalLength = 0
+  const appendChunk = (chunk: Uint8Array | string) => {
+    const bytes = typeof chunk === 'string' ? new TextEncoder().encode(chunk) : chunk
+    chunks.push(bytes)
+    totalLength += bytes.byteLength
+  }
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    chunks.push(value)
-    totalLength += value.byteLength
+  if (source.getReader) {
+    const reader = source.getReader()
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      appendChunk(value)
+    }
+  } else if (source[Symbol.asyncIterator]) {
+    const iterable = source as unknown as AsyncIterable<Uint8Array | string>
+    for await (const chunk of iterable) appendChunk(chunk)
+  } else {
+    throw new StorageDownloadError(`Unsupported response body for object: ${key}`)
   }
 
   const buffer = new Uint8Array(totalLength)

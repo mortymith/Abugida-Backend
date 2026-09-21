@@ -1,4 +1,4 @@
-import { queryOptions } from '@tanstack/react-query'
+import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import {
   getCourseCatalog,
   getCourseDetails,
@@ -33,6 +33,7 @@ import type {
   CompletionSettingsDTO,
 } from '../courses.types'
 import type { CatalogQuery } from '../schemas/courses.catalog.schema'
+import { nextCatalogPage } from '../courses.catalog-pagination'
 import type { ReviewQueueQuery, TemplateQuery } from '../schemas/courses.workflow.schema'
 
 export const courseQueryKeys = {
@@ -60,6 +61,28 @@ export function catalogQueryOptions(query: CatalogQuery) {
   return queryOptions({
     queryKey: courseQueryKeys.catalog(query),
     queryFn: (): Promise<CourseCatalogResult> => getCourseCatalog({ data: query }),
+    staleTime: STALE.list,
+  })
+}
+
+/**
+ * Paginated catalog for the S-2.1 grid.
+ *
+ * The key deliberately omits `page` so that "Load more" accumulates pages under
+ * one cache entry, while changing any filter (status/type/sort/search) produces
+ * a *new* key and therefore restarts from the first page. Previously `page` was
+ * hard-coded to 0, so sorting only ever applied to the first page and
+ * "Load more" prefetched a page it could never render.
+ */
+export function catalogInfiniteQueryOptions(query: Omit<CatalogQuery, 'page'>) {
+  return infiniteQueryOptions({
+    // Built inline from the page-less filters so `page` never enters the key.
+    queryKey: ['courses', 'catalog', query, 'infinite'] as const,
+    queryFn: ({ pageParam }): Promise<CourseCatalogResult> =>
+      getCourseCatalog({ data: { ...query, page: pageParam } }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) =>
+      nextCatalogPage(lastPage.page, lastPage.items.length, lastPage.totalCount),
     staleTime: STALE.list,
   })
 }
