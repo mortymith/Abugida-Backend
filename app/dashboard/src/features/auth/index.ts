@@ -2,7 +2,9 @@ export { useSession } from './hooks/auth.session'
 export { useRole } from './hooks/auth.role'
 export {
   PLATFORM_ROLES,
+  COURSE_AUTHORING_ROLES,
   REVENUE_ROLES,
+  REVIEW_DECISION_ROLES,
   ROLE_PRIORITY,
   hasAtLeastRole,
   isPlatformRole,
