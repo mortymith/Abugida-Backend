@@ -16,6 +16,8 @@ export interface LibraryAssetCard {
   createdAt: string
   /** Lessons linking this asset (asset_usage) — drives "N uses" on cards. */
   usageCount: number
+  /** Short-lived inline URL for image cards (grid thumbnails, S-3.1). */
+  previewUrl: string | null
 }
 
 export interface LibraryAssetPage {

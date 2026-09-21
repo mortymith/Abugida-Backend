@@ -373,6 +373,7 @@ function AssetDetailPage() {
                 currentVersion: asset.currentVersion,
                 createdAt: asset.createdAt,
                 usageCount: asset.usageCount,
+                previewUrl: null,
               }
             : null
         }

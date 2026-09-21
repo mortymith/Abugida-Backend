@@ -168,10 +168,18 @@ export function LibraryUploadModal({
         })
       }
     }
+    const failed = queue.filter((item) => item.status === 'error').length
     if (pending.length > 0) {
-      toast.success(
-        `${pending.length} asset${pending.length === 1 ? '' : 's'} uploaded successfully.`,
-      )
+      if (failed === 0) {
+        toast.success(
+          `${pending.length} asset${pending.length === 1 ? '' : 's'} uploaded successfully.`,
+        )
+        onOpenChange(false)
+      } else {
+        toast.warning(
+          `${pending.length - failed} uploaded, ${failed} failed — retry from the list.`,
+        )
+      }
       void queryClient.invalidateQueries({ queryKey: libraryQueryKeys.stats() })
       void queryClient.invalidateQueries({ queryKey: libraryQueryKeys.folders() })
     }
