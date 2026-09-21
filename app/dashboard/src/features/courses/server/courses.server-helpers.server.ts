@@ -122,7 +122,7 @@ export async function createNotifications(
     type: 'system' | 'publish' | 'review' | 'team_invite' | 'mention'
     title: string
     body?: string | null
-    linkEntityType?: 'course' | 'lesson' | 'revenue' | 'notification'
+    linkEntityType?: 'course' | 'lesson' | 'review_queue' | 'revenue' | 'notification'
     linkEntityPublicId?: string | null
   },
 ): Promise<void> {

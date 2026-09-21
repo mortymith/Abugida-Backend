@@ -160,8 +160,8 @@ export async function submitForReviewImpl(input: {
       type: 'review',
       title: `Review requested: ${lesson.title}`,
       body: `${course.title} — submitted for approval.`,
-      linkEntityType: 'lesson',
-      linkEntityPublicId: lesson.publicId,
+      linkEntityType: 'review_queue',
+      linkEntityPublicId: course.publicId,
     },
   )
   return { ok: true }
@@ -222,8 +222,8 @@ export async function decideReviewImpl(input: ReviewDecisionInput): Promise<{ ok
           ? `Changes requested: ${lesson.title}`
           : `Rejected: ${lesson.title}`,
     body: input.comment?.trim() || null,
-    linkEntityType: 'lesson',
-    linkEntityPublicId: lesson.publicId,
+    linkEntityType: 'course',
+    linkEntityPublicId: (await resolveCourseById(request.courseId)).publicId,
   })
   return { ok: true }
 }
