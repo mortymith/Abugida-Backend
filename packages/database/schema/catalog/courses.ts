@@ -35,6 +35,12 @@ import { auditLogs } from '../ops/audit-logs'
 export const courseStatusEnum = z.enum(['draft', 'published', 'archived'])
 export type CourseStatus = z.infer<typeof courseStatusEnum>
 export const courseStatusPgEnum = pgEnum('course_status', ['draft', 'published', 'archived'])
+export const courseTypeEnum = z.enum(['self_paced', 'instructor_led', 'hybrid'])
+export type CourseType = z.infer<typeof courseTypeEnum>
+export const courseTypePgEnum = pgEnum('course_type', ['self_paced', 'instructor_led', 'hybrid'])
+export const courseLevelEnum = z.enum(['beginner', 'intermediate', 'advanced'])
+export type CourseLevel = z.infer<typeof courseLevelEnum>
+export const courseLevelPgEnum = pgEnum('course_level', ['beginner', 'intermediate', 'advanced'])
 export const courses = pgTable(
   'courses',
   {
@@ -59,6 +65,11 @@ export const courses = pgTable(
     isFree: boolean('is_free').notNull().default(false),
     status: courseStatusPgEnum().default('draft'),
     publishedAt: timestamp('published_at', { withTimezone: true }),
+    courseType: courseTypePgEnum().default('self_paced'),
+    level: courseLevelPgEnum(),
+    enrollmentStartAt: timestamp('enrollment_start_at', { withTimezone: true }),
+    enrollmentEndAt: timestamp('enrollment_end_at', { withTimezone: true }),
+    requiresApproval: boolean('requires_approval').notNull().default(false),
     version: integer('version').notNull().default(1),
     rowVersion: integer('row_version').notNull().default(1),
     sortOrder: smallint('sort_order').notNull().default(0),
@@ -138,6 +149,11 @@ export const insertCourseSchema = createInsertSchema(courses, {
   isFree: z.boolean().default(false),
   status: courseStatusEnum.default('draft'),
   publishedAt: z.date().nullable().optional(),
+  courseType: courseTypeEnum.default('self_paced'),
+  level: courseLevelEnum.nullable().optional(),
+  enrollmentStartAt: z.date().nullable().optional(),
+  enrollmentEndAt: z.date().nullable().optional(),
+  requiresApproval: z.boolean().default(false),
   version: z.number().int().min(1).default(1),
   rowVersion: z.number().int().min(1).default(1),
   sortOrder: z.number().int().min(0).default(0),
