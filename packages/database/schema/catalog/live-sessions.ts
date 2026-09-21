@@ -72,6 +72,7 @@ export const liveSessions = pgTable(
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (table) => [
     uniqueIndex('idx_live_sessions_public').on(table.publicId),
