@@ -65,6 +65,11 @@ export interface CurriculumModuleDTO {
   lessons: CurriculumLessonDTO[]
 }
 
+export interface CurriculumDTO {
+  coursePublicId: string
+  modules: CurriculumModuleDTO[]
+}
+
 export interface CourseDetailsDTO {
   publicId: string
   title: string

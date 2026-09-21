@@ -37,6 +37,13 @@ const envSchema = z
     TELEGRAM_OIDC_CLIENT_ID: z.string().optional(),
     TELEGRAM_OIDC_CLIENT_SECRET: z.string().optional(),
 
+    // ── AI generation (spec 04 S-2.11 / S-2.16) ─────────────────────────
+    // Optional: with none set, the deterministic local generator is used.
+    OPENAI_API_KEY: z.string().optional(),
+    ANTHROPIC_API_KEY: z.string().optional(),
+    GEMINI_API_KEY: z.string().optional(),
+    AI_MODEL: z.string().optional(),
+
     // ── Observability ──────────────────────────────────────────────────
     OTEL_SERVICE_NAME: z.string().default('dashboard'),
     OTEL_SERVICE_VERSION: z.string().default('0.0.1'),

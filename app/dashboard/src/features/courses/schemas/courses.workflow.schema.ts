@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { questionTypeSchema } from './courses.learning.schema'
 
 /** S-2.14 review & approval queue. */
 export const reviewStateSchema = z.enum(['pending', 'changes_requested', 'approved', 'rejected'])
@@ -19,6 +20,8 @@ export const reviewDecisionInputSchema = z.object({
   decision: reviewDecisionSchema,
   comment: z.string().trim().max(2000).optional(),
 })
+
+export type ReviewDecisionInput = z.infer<typeof reviewDecisionInputSchema>
 
 export const submitForReviewSchema = z.object({
   lessonPublicId: z.string().uuid(),
@@ -47,6 +50,8 @@ export const templateQuerySchema = z.object({
   search: z.string().trim().max(200).optional(),
   category: templateCategorySchema.default('all'),
 })
+
+export type TemplateQuery = z.infer<typeof templateQuerySchema>
 
 export const useTemplateSchema = z.object({
   templatePublicId: z.string().uuid(),

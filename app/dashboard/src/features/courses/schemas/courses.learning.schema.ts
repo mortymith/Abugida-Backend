@@ -11,6 +11,7 @@ export const quizOptionInputSchema = z.object({
 
 export const quizQuestionInputSchema = z
   .object({
+    publicId: z.string().uuid().nullable().optional(),
     questionType: questionTypeSchema,
     questionText: z.string().trim().min(3, 'Question is required'),
     points: z.number().int().min(1).max(100).default(10),
