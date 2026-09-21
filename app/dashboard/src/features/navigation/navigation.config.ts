@@ -40,7 +40,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Content Library',
     icon: Folder02Icon,
     to: '/content-library',
-    roles: ['admin', 'editor'],
+    // Spec 11: Admin/Editor full; Reviewer/Viewer view-only → nav visible.
+    roles: ['admin', 'editor', 'reviewer', 'viewer'],
   },
   {
     id: 'students',

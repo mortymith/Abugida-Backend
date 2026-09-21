@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Book01Icon, FileEditIcon, StudentsIcon } from '@hugeicons/core-free-icons'
+import { Book01Icon, FileEditIcon, Folder02Icon, StudentsIcon } from '@hugeicons/core-free-icons'
 import { Skeleton } from '#/components/ui/skeleton'
 import { cn } from 'cn'
 import type { SearchGroupType, SearchResultsItem } from '../search.types'
@@ -7,6 +7,7 @@ import type { SearchGroupType, SearchResultsItem } from '../search.types'
 const GROUP_ICONS: Record<SearchGroupType, typeof Book01Icon> = {
   course: Book01Icon,
   lesson: FileEditIcon,
+  asset: Folder02Icon,
   student: StudentsIcon,
 }
 

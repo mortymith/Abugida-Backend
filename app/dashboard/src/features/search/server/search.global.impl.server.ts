@@ -4,7 +4,15 @@
  * server instance, and drizzle operators.
  */
 import { and, asc, eq, ilike, isNull, or, sql } from '@abugida/database'
-import { courses, courseStats, lessons, modules } from '@abugida/database/catalog'
+import {
+  assetLibrary,
+  courses,
+  courseStats,
+  lessons,
+  modules,
+  transcripts,
+  transcriptSegments,
+} from '@abugida/database/catalog'
 import { users } from '@abugida/database/auth'
 import { db } from '#/config/db.config'
 import { resolveEntityLink } from '#/lib/entity-links'
@@ -57,6 +65,39 @@ export async function loadGlobalSearch(data: { query: string }): Promise<GlobalS
     .orderBy(asc(lessons.title))
     .limit(PER_GROUP_MAX)
 
+  // ── Assets (role-gated; includes published transcript text — spec 05) ──
+  const canSeeAssets = role !== 'support'
+  const assetRows = canSeeAssets
+    ? await db
+        .selectDistinct({
+          id: sql<string>`(${assetLibrary.publicId})::text`,
+          name: assetLibrary.name,
+          category: sql<string>`${assetLibrary.category}::text`,
+        })
+        .from(assetLibrary)
+        .leftJoin(transcripts, eq(transcripts.assetId, assetLibrary.id))
+        .leftJoin(
+          transcriptSegments,
+          and(
+            eq(transcriptSegments.transcriptId, transcripts.id),
+            eq(transcripts.status, 'published'),
+          ),
+        )
+        .where(
+          and(
+            isNull(assetLibrary.deletedAt),
+            or(
+              ilike(assetLibrary.name, term),
+              ilike(assetLibrary.description, term),
+              sql`${assetLibrary.tags}::text ILIKE ${term}`,
+              ilike(transcriptSegments.text, term),
+            ),
+          ),
+        )
+        .orderBy(asc(assetLibrary.name))
+        .limit(PER_GROUP_MAX)
+    : []
+
   // ── Students (role-gated) ─────────────────────────────────────────────
   const canSeeStudents = role !== 'viewer'
   const studentRows = canSeeStudents
@@ -108,13 +149,29 @@ export async function loadGlobalSearch(data: { query: string }): Promise<GlobalS
     }
   })
 
+  const assetItems: SearchResultsItem[] = assetRows.map((row) => {
+    const link = resolveEntityLink('asset', row.id)
+    return {
+      kind: 'asset',
+      id: row.id,
+      title: row.name,
+      subtitle: row.category,
+      url: link.path,
+      exists: link.exists,
+    }
+  })
+
   const groups: SearchGroup[] = [
     { kind: 'course', label: 'Courses', total: courseItems.length, items: courseItems },
     { kind: 'lesson', label: 'Lessons', total: lessonItems.length, items: lessonItems },
+    { kind: 'asset', label: 'Assets', total: assetItems.length, items: assetItems },
     { kind: 'student', label: 'Students', total: studentItems.length, items: studentItems },
   ].filter((group): group is SearchGroup => group.items.length > 0)
 
   const omittedGroups: GlobalSearchPayload['omittedGroups'] = []
+  if (!canSeeAssets) {
+    omittedGroups.push({ kind: 'asset', reason: 'Not available for your role.' })
+  }
   if (!canSeeStudents) {
     omittedGroups.push({ kind: 'student', reason: 'Not available for your role.' })
   }

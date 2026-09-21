@@ -21,7 +21,7 @@ const REGISTRY: Record<LinkableEntityType, EntityLink> = {
   lesson: { path: '/courses/{id}', exists: false }, // S-2.7 editor needs course+lesson ids; flip when notifications carry both
   review_queue: { path: '/courses/reviews', exists: true }, // S-2.14 Approval Queue — live
   student: { path: '/students/{id}', exists: false }, // S-4.2 Student Profile (spec part 06)
-  asset: { path: '/content-library/{id}', exists: false }, // S-3.3 Asset Detail (spec part 05)
+  asset: { path: '/content-library/{id}', exists: true }, // S-3.3 Asset Detail (spec part 05) — live
   revenue: { path: '/dashboard/revenue', exists: true },
   team: { path: '/settings', exists: false }, // S-6.2 Team Management (spec part 08)
   notification: { path: '/notifications', exists: true },
