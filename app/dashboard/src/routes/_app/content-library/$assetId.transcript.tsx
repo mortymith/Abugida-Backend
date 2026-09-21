@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { useNavigate, createFileRoute } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { ArrowLeft01Icon, SparklesIcon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -42,6 +42,7 @@ const AUTOSAVE_INTERVAL_MS = 30_000
 function TranscriptEditorPage() {
   const { assetId } = Route.useParams()
   const search = Route.useSearch()
+  const navigate = useNavigate()
 
   const transcript = useQuery(transcriptQueryOptions(assetId, 'en'))
   const [language, setLanguage] = useState('en')
@@ -136,8 +137,16 @@ function TranscriptEditorPage() {
         await saveTranscript({ data: buildSaveInput(status) })
         setDirty(false)
         setLastSavedAt(new Date())
-        if (status === 'published') toast.success('Captions applied to lesson.')
-        else toast.success('Draft saved.')
+        if (status === 'published') {
+          toast.success('Captions applied to lesson.')
+          // Spec S-3.6: "Save & Apply" returns to the calling screen.
+          if (search.returnTo) {
+            void navigate({ to: search.returnTo })
+            return
+          }
+        } else {
+          toast.success('Draft saved.')
+        }
         void transcript.refetch()
         void languageQuery.refetch()
       } catch (cause) {
