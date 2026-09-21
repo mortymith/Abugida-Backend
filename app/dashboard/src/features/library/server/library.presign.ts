@@ -5,6 +5,10 @@ import { assetUploadInitSchema, readUrlSchema } from '../schemas/library.schema'
  * Presigned upload/read URLs for Content Library assets (S-3.2/S-3.3/S-3.5).
  * Mirrors the established courses storage bridge: the browser PUTs directly
  * to object storage; the server persists only metadata + object keys.
+ *
+ * Read URLs are keyed by ASSET public id (optionally + version number) —
+ * the server resolves the object key itself so callers can never presign
+ * arbitrary bucket keys.
  */
 export const getAssetUploadUrl = createServerFn({ method: 'POST' })
   .validator((input: unknown) => assetUploadInitSchema.parse(input))

@@ -91,6 +91,9 @@ export function parseSubtitleFile(content: string, format: 'srt' | 'vtt'): Parse
       if (block.lines.length === 1) return
     }
 
+    // VTT metadata blocks (NOTE/STYLE/REGION) are not cues.
+    if (format === 'vtt' && /^(NOTE|STYLE|REGION)\b/.test(first)) return
+
     // Optional cue identifier line before the timestamp line.
     const timestampLineIndex = block.lines.findIndex((line) => line.includes('-->'))
     if (timestampLineIndex < 0) {
