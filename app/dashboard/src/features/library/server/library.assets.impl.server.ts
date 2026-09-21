@@ -105,6 +105,7 @@ export async function getLibraryAssetsImpl(query: LibraryListQuery): Promise<Lib
       currentVersion: assetLibrary.currentVersion,
       createdAt: assetLibrary.createdAt,
       usageCount: usageCountSql,
+      objectKey: assetLibrary.objectKey,
     })
     .from(assetLibrary)
     .leftJoin(assetFolders, eq(assetFolders.id, assetLibrary.folderId))
@@ -119,11 +120,35 @@ export async function getLibraryAssetsImpl(query: LibraryListQuery): Promise<Lib
     .where(and(...filters))
   const totalRows = countRows.at(0)?.count ?? 0
 
+  // Image cards get a real thumbnail via a short-lived presigned GET.
+  // Signing is local HMAC work (no storage round-trip), so it is done inline.
+  const { hasEnvConfig, configFromEnv, createStorage } = await import('@abugida/storage')
+  const imagePreviewUrls = new Map<string, string>()
+  if (hasEnvConfig()) {
+    const storage = createStorage(configFromEnv())
+    await Promise.all(
+      rows
+        .filter(
+          (row) =>
+            row.category === ('image' as AssetCategory) && row.mimeType?.startsWith('image/'),
+        )
+        .map(async (row) => {
+          try {
+            const presigned = await storage.presignedDownload(row.objectKey, { expiresIn: 3600 })
+            imagePreviewUrls.set(row.publicId, presigned.url)
+          } catch {
+            // Thumbnail is decorative; a missing URL degrades to the icon.
+          }
+        }),
+    )
+  }
+
   return {
     rows: rows.slice(0, LIBRARY_PAGE_SIZE).map((row) => ({
       ...row,
       tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
       createdAt: row.createdAt.toISOString(),
+      previewUrl: imagePreviewUrls.get(row.publicId) ?? null,
     })),
     page,
     pageSize: LIBRARY_PAGE_SIZE,

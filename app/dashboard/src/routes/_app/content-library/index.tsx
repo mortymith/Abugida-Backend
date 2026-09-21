@@ -24,6 +24,7 @@ import { LibraryFoldersBar } from '#/features/library/components/library.folders
 import { LibraryAssetCard } from '#/features/library/components/library.asset-card'
 import { LibraryPreviewModal } from '#/features/library/components/library.preview-modal'
 import { LibraryUploadModal } from '#/features/library/components/library.upload-modal'
+import { LibraryMoveDialog } from '#/features/library/components/library.move-dialog'
 import {
   useDeleteAsset,
   useDuplicateAsset,
@@ -103,6 +104,8 @@ function ContentLibraryPage() {
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [deleteTarget, setDeleteTarget] = useState<AssetCardDTO | null>(null)
+  const [moveOpen, setMoveOpen] = useState(false)
+  const [moveAssetsIds, setMoveAssetsIds] = useState<string[]>([])
   const moveAssets = useMoveAssets()
   const duplicateAsset = useDuplicateAsset()
   const deleteAsset = useDeleteAsset()
@@ -203,15 +206,13 @@ function ContentLibraryPage() {
           <Button
             size="sm"
             variant="outline"
-            disabled={selectedIds.size === 0 || moveAssets.isPending}
+            disabled={selectedIds.size === 0}
             onClick={() => {
-              // Bulk move targets "Uncategorized" from the selection bar;
-              // per-folder moves use drag or the card menu.
-              moveAssets.mutate({ assetPublicIds: [...selectedIds], folderId: null })
-              setSelectedIds(new Set())
+              setMoveAssetsIds([...selectedIds])
+              setMoveOpen(true)
             }}
           >
-            Move to Uncategorized
+            Move to folder…
           </Button>
         </div>
       ) : null}
@@ -298,7 +299,7 @@ function ContentLibraryPage() {
           isRetrying={assets.isRefetching}
         />
       ) : rows.length === 0 ? (
-        search.q || search.type || search.folder ? (
+        search.q || search.type ? (
           <EmptyState
             variant="compact"
             title="No matches — adjust filters"
@@ -311,6 +312,14 @@ function ContentLibraryPage() {
               >
                 Clear filters
               </Button>
+            }
+          />
+        ) : search.folder && search.folder !== 'root' ? (
+          <EmptyState
+            icon={<HugeiconsIcon icon={Folder02Icon} aria-hidden="true" />}
+            title="This folder is empty. Drag assets here."
+            description={
+              canEdit ? 'Drop assets onto the folder above, or use Move to folder…' : undefined
             }
           />
         ) : (
@@ -346,12 +355,10 @@ function ContentLibraryPage() {
                   })
                 }
                 onDelete={() => setDeleteTarget(asset)}
-                onMove={() =>
-                  void navigate({
-                    to: '/content-library/$assetId',
-                    params: { assetId: asset.publicId },
-                  })
-                }
+                onMove={() => {
+                  setMoveAssetsIds([asset.publicId])
+                  setMoveOpen(true)
+                }}
                 onDuplicate={() =>
                   duplicateAsset.mutate({ assetPublicId: asset.publicId, folderId: null })
                 }
@@ -411,6 +418,26 @@ function ContentLibraryPage() {
         onOpenChange={setUploadOpen}
         folderId={search.folder ?? null}
         canEdit={canEdit}
+      />
+
+      <LibraryMoveDialog
+        open={moveOpen}
+        onOpenChange={setMoveOpen}
+        folders={folders.data ?? []}
+        assetCount={moveAssetsIds.length}
+        currentFolderId={search.folder ?? 'root'}
+        pending={moveAssets.isPending}
+        onMove={(folderId) => {
+          moveAssets.mutate(
+            { assetPublicIds: moveAssetsIds, folderId },
+            {
+              onSuccess: () => {
+                setMoveOpen(false)
+                setSelectedIds(new Set())
+              },
+            },
+          )
+        }}
       />
 
       <ConfirmDialog
