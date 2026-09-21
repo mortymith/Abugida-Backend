@@ -1,8 +1,13 @@
 import type { LinkableEntityType } from '#/lib/entity-links'
 
-export type SearchGroupType = Extract<LinkableEntityType, 'course' | 'lesson' | 'student'>
+export type SearchGroupType = Extract<LinkableEntityType, 'course' | 'lesson' | 'student' | 'asset'>
 
-export const SEARCH_GROUP_TYPES: readonly SearchGroupType[] = ['course', 'lesson', 'student']
+export const SEARCH_GROUP_TYPES: readonly SearchGroupType[] = [
+  'course',
+  'lesson',
+  'asset',
+  'student',
+]
 
 export interface SearchResultsItem {
   kind: SearchGroupType
