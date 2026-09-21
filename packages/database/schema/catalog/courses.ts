@@ -41,6 +41,13 @@ export const courseTypePgEnum = pgEnum('course_type', ['self_paced', 'instructor
 export const courseLevelEnum = z.enum(['beginner', 'intermediate', 'advanced'])
 export type CourseLevel = z.infer<typeof courseLevelEnum>
 export const courseLevelPgEnum = pgEnum('course_level', ['beginner', 'intermediate', 'advanced'])
+export const coursePricingModelEnum = z.enum(['free', 'one_time', 'subscription'])
+export type CoursePricingModel = z.infer<typeof coursePricingModelEnum>
+export const coursePricingModelPgEnum = pgEnum('course_pricing_model', [
+  'free',
+  'one_time',
+  'subscription',
+])
 export const courses = pgTable(
   'courses',
   {
@@ -63,6 +70,7 @@ export const courses = pgTable(
     priceAmount: numeric('price_amount', { precision: 19, scale: 4 }),
     priceCurrency: char('price_currency', { length: 3 }).notNull().default('ETB'),
     isFree: boolean('is_free').notNull().default(false),
+    pricingModel: coursePricingModelPgEnum(),
     status: courseStatusPgEnum().default('draft'),
     publishedAt: timestamp('published_at', { withTimezone: true }),
     courseType: courseTypePgEnum().default('self_paced'),
@@ -148,6 +156,7 @@ export const insertCourseSchema = createInsertSchema(courses, {
     .regex(/^[A-Z]{3}$/)
     .default('ETB'),
   isFree: z.boolean().default(false),
+  pricingModel: coursePricingModelEnum.nullable().optional(),
   status: courseStatusEnum.default('draft'),
   publishedAt: z.date().nullable().optional(),
   courseType: courseTypeEnum.default('self_paced'),
