@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
-import { getDashboardOverview } from './server/dashboard.overview.server'
-import { getRevenueAnalytics } from './server/dashboard.revenue.server'
-import { getCoursePerformance } from './server/dashboard.course-performance.server'
+import { getDashboardOverview } from './server/dashboard.overview'
+import { getRevenueAnalytics } from './server/dashboard.revenue'
+import { getCoursePerformance } from './server/dashboard.course-performance'
 import type { DateRangeInput } from './schemas/dashboard.date-range.schema'
 
 export const dashboardQueryKeys = {
