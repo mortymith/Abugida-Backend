@@ -16,7 +16,7 @@ import {
   coursePerformanceQueryOptions,
 } from '#/features/dashboard/dashboard.queries'
 import { downloadCsv, buildCsv } from '#/features/dashboard/dashboard.export-csv'
-import { toast } from 'sonner'
+import { toast } from '#/components/common/toast'
 
 const overviewSearchSchema = z.object({
   preset: z.enum(['7d', '30d', '90d', '12mo']).optional(),

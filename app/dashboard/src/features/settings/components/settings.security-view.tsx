@@ -21,7 +21,7 @@ import { useSaveSecurityPolicies } from '../hooks/settings.mutations'
 import { exportAuditLogCsv } from '../server/all'
 import { CheckboxRow, SaveBar } from './settings.setting-controls'
 import type { AuditLogQuery } from '../schemas/settings.schema'
-import { toast } from 'sonner'
+import { toast } from '#/components/common/toast'
 
 /**
  * S-6.8 Security & Audit Log — workspace security policies (Policies tab)
