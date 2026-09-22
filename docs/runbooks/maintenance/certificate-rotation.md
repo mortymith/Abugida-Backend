@@ -36,6 +36,7 @@ Force-renew TLS certificates and reissue via Vault PKI. Caddy auto-obtains certs
    Both Caddy replicas fetch the renewed cert from Vault on startup.
 
 4. **Verify new certificate is served**
+
    ```bash
    just cert-status
    echo | openssl s_client -connect $DOMAIN_API:443 -servername $DOMAIN_API 2>/dev/null | openssl x509 -noout -dates

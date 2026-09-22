@@ -1,0 +1,16 @@
+{
+  "//": [
+    "Shared markdownlint configuration for the Abugida monorepo.",
+    "Consumed from root scripts: markdownlint -c tooling/markdownlint-config/.markdownlint.json <files>",
+    "Prose documents (ADRs, runbooks, specs) use long descriptive lines and",
+    "manual formatting; content rules are relaxed while structural rules",
+    "(headings, lists, code fences) stay enabled."
+  ],
+  "default": true,
+  "MD013": false,
+  "MD033": false,
+  "MD041": false,
+  "MD036": false,
+  "MD024": { "siblings_only": true },
+  "MD040": false
+}

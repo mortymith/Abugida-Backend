@@ -10,11 +10,10 @@
  * Notes:
  * - ESLint runs from the repo root against the root flat config, which
  *   consumes @abugida/eslint-config (base recommended rules).
- * - `shfmt` is a system binary (`go install`/package manager); it formats
+ * - `shfmt` is a system binary (package manager / `go install`); it formats
  *   staged shell scripts in place, matching the repository's 2-space bash
  *   style.
- *
- * @type {Record<string, string[] | import('lint-staged').Configuration>}
+ * @type {import('lint-staged').Configuration}
  */
 const config = {
   '*.{js,mjs,cjs,ts,tsx,jsx}': ['eslint --fix --no-warn-ignored', 'prettier --write'],

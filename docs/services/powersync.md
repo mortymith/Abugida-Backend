@@ -85,7 +85,7 @@ Rules of thumb:
 
 - Parameterise per-user data with `auth.user_id()` (cast when comparing to bigint PKs)
 - Respect soft deletes (`deleted_at IS NULL`)
-- Follow https://docs.powersync.com/maintenance-ops/deploying-schema-changes for rule rollouts
+- Follow <https://docs.powersync.com/maintenance-ops/deploying-schema-changes> for rule rollouts
 
 ---
 

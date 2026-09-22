@@ -98,14 +98,14 @@ path "pki/cert/ca_chain" {
 }
 ```
 
-2. **Load the policy via `vault-secrets.sh`** or manually:
+1. **Load the policy via `vault-secrets.sh`** or manually:
 
 ```bash
 # After Vault is unsealed and authenticated
 vault policy write worker docker/config/vault/policies/worker-policy.hcl
 ```
 
-3. **Assign the policy to an AppRole or identity**:
+1. **Assign the policy to an AppRole or identity**:
 
 ```bash
 vault write auth/approle/role/worker \
@@ -114,7 +114,7 @@ vault write auth/approle/role/worker \
   token_max_ttl=4h
 ```
 
-4. **Verify the policy**:
+1. **Verify the policy**:
 
 ```bash
 vault policy read worker

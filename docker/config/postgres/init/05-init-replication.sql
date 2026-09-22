@@ -28,7 +28,7 @@ END
 $$;
 
 -- ============================================================================
--- Physical replication slots (one per replica, up to 2) 
+-- Physical replication slots (one per replica, up to 2)
 -- ============================================================================
 -- Slot names match the compose service names: postgres-replica-1, postgres-replica-2
 SELECT pg_create_physical_replication_slot('replica_slot_1', false, false)

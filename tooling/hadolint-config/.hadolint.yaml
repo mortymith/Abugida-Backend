@@ -1,0 +1,15 @@
+# Shared hadolint configuration for the Abugida monorepo.
+# Consumed from root scripts: hadolint -c tooling/hadolint-config/.hadolint.yaml <Dockerfile...>
+#
+# Repository policy:
+# - Base images are pinned by digest (DL3007 would fire on tagged pins we
+#   intentionally use as aliases next to digests).
+# - Alpine apk version pins are enforced via build ARGs where the image
+#   provides them; DL3018 stays enabled.
+ignored:
+  # `FROM x:tag` is used together with `@sha256:` digests on multi-arch bases;
+  # the floating tag is kept as a human-readable alias of the digest pin.
+  - DL3007
+  # Ops images install small tool bundles (bash, curl, jq) without version
+  # pins; pinning is applied on the application base images where it matters.
+  - DL3018

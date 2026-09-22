@@ -16,13 +16,13 @@ user <name> on ><password-placeholder> ~<key-pattern> &<pubsub-channel> <permiss
 
 ## Current Users
 
-| User       | Password Source                                                      | Key Access      | Permissions                | Purpose                                                                    |
-| ---------- | -------------------------------------------------------------------- | --------------- | -------------------------- | -------------------------------------------------------------------------- |
-| `default`  | disabled                                                             | N/A             | `off`                      | Anonymous connections rejected entirely                                    |
-| `admin`    | `{{REDIS_ADMIN_PASSWORD}}` → `.env` (dev) / Vault (staging, prod)    | `~*` (all keys) | `+@all`                    | Operational tooling, Sentinel, administrative tasks                        |
-| `app`      | `{{REDIS_PASSWORD}}` → `.env` (dev) / Vault (staging, prod)          | `~*` (all keys) | `+@all -@dangerous`        | API and Dashboard service account — read/write but no destructive commands |
-| `readonly` | `{{REDIS_READONLY_PASSWORD}}` → `.env` (dev) / Vault (staging, prod) | `~*` (all keys) | `+@read`                   | Monitoring dashboards and health checks — read-only                        |
-| `sentinel` | `{{REDIS_SENTINEL_PASSWORD}}` → `.env` (dev) / Vault (staging, prod) | `~*` (all keys) | `+@all -@dangerous +config | rewrite +config                                                            | get +ping +info ...` | Sentinel instances for cluster management |
+| User       | Password Source                                                      | Key Access      | Permissions                                                           | Purpose                                                                    |
+| ---------- | -------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `default`  | disabled                                                             | N/A             | `off`                                                                 | Anonymous connections rejected entirely                                    |
+| `admin`    | `{{REDIS_ADMIN_PASSWORD}}` → `.env` (dev) / Vault (staging, prod)    | `~*` (all keys) | `+@all`                                                               | Operational tooling, Sentinel, administrative tasks                        |
+| `app`      | `{{REDIS_PASSWORD}}` → `.env` (dev) / Vault (staging, prod)          | `~*` (all keys) | `+@all -@dangerous`                                                   | API and Dashboard service account — read/write but no destructive commands |
+| `readonly` | `{{REDIS_READONLY_PASSWORD}}` → `.env` (dev) / Vault (staging, prod) | `~*` (all keys) | `+@read`                                                              | Monitoring dashboards and health checks — read-only                        |
+| `sentinel` | `{{REDIS_SENTINEL_PASSWORD}}` → `.env` (dev) / Vault (staging, prod) | `~*` (all keys) | `+@all -@dangerous +config \| rewrite +config \| get +ping +info ...` | Sentinel instances for cluster management                                  |
 
 ## Adding a New User
 
@@ -35,18 +35,18 @@ REDIS_WORKER_PASSWORD=$(openssl rand -hex 32)
 
 For staging/prod, configure Vault to provide the secret via the `redis/` secret engine.
 
-2. **Add the environment variable** to the Redis service in `docker/compose/base.yml` or the appropriate override file.
+1. **Add the environment variable** to the Redis service in `docker/compose/base.yml` or the appropriate override file.
 
-3. **Add the user to `docker/config/redis/users.acl`**:
+2. **Add the user to `docker/config/redis/users.acl`**:
 
 ```
 # Worker — background job processor, read/write on app:* keys only
 user worker on >{{REDIS_WORKER_PASSWORD}} ~app:* &* +@all -@dangerous
 ```
 
-4. **Make the variable available** to the Redis container by adding it to the service environment or Vault configuration.
+1. **Make the variable available** to the Redis container by adding it to the service environment or Vault configuration.
 
-5. **Restart Redis** to apply:
+2. **Restart Redis** to apply:
 
 ```bash
 just restart redis-primary

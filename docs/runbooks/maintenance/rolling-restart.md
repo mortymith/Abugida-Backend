@@ -56,12 +56,14 @@ Restart all 16 services across 3 hosts without downtime. Follow layer order: inf
    Caddy continues routing traffic to healthy replicas during restart.
 
 5. **Restart edge layer — Caddy (2 replicas) and Keepalived**
+
    ```bash
    just restart caddy
    just health caddy
    just restart keepalived
    just health keepalived
    ```
+
    Only one Caddy restarts at a time; the other serves via VIP. Keepalived fails over gracefully.
 
 ## Verification

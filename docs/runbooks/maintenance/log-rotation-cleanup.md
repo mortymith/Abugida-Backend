@@ -46,10 +46,12 @@ Prevent disk exhaustion from Docker logs, Caddy access logs, and OTEL pipeline o
    Confirm no send queue buildup. OTEL ships logs to SigNoz; if backlogged, reduce log verbosity temporarily.
 
 5. **Set Docker log rotation globally** (if not already configured)
+
    ```bash
    cat /etc/docker/daemon.json
    # Ensure: {"log-driver":"json-file","log-opts":{"max-size":"50m","max-file":"3"}}
    ```
+
    Apply with `sudo systemctl restart docker` during a maintenance window.
 
 ## Verification

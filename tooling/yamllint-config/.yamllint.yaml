@@ -1,0 +1,20 @@
+# Shared yamllint configuration for the Abugida monorepo.
+# Consumed from root scripts: yamllint -c tooling/yamllint-config/.yamllint.yaml <files...>
+#
+# Repository policy:
+# - 2-space indent (matches .editorconfig).
+# - Compose files use YAML merge keys (<<) with yamllint-safe formatting.
+# - pnpm-lock.yaml is generated and excluded via the root script file list.
+extends: default
+
+rules:
+  line-length:
+    max: 120
+    level: warning
+  comments-indentation: disable
+  truthy:
+    # GitHub Actions/compose style `on:` keys are not used here, but compose
+    # profiles use `yes/no`-adjacent values that trip the default check.
+    check-keys: false
+  document-start:
+    present: false
