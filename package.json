@@ -33,23 +33,7 @@
     "lint-staged": "^17.2.0",
     "prettier": "^3.9.6",
     "prettier-plugin-astro": "^0.14.1",
-    "turbo": "^2.5.0",
+    "turbo": "^2.11.2",
     "typescript": "^6.0.3"
-  },
-  "lint-staged": {
-    "*.{js,mjs,cjs,ts,tsx,jsx}": [
-      "eslint --fix --no-warn-ignored",
-      "prettier --write"
-    ],
-    "*.astro": [
-      "eslint --fix --no-warn-ignored",
-      "prettier --write"
-    ],
-    "*.{sh,bash,ksh,zsh}": [
-      "shfmt -w -i 2 -sr -ln bash"
-    ],
-    "*.{json,jsonc,md,mdx,yaml,yml,css,scss,html,graphql}": [
-      "prettier --write"
-    ]
   }
 }
