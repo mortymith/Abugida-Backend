@@ -77,9 +77,11 @@
     "pg": "^8.23.0"
   },
   "devDependencies": {
+    "@abugida/bun-test-config": "workspace:*",
+    "@abugida/eslint-config": "workspace:*",
+    "@abugida/typescript-config": "workspace:*",
     "@types/node": "^22.10.2",
     "@types/pg": "^8.21.0",
-    "drizzle-kit": "^0.31.10",
-    "typescript-eslint": "^8.66.0"
+    "drizzle-kit": "^0.31.10"
   }
 }

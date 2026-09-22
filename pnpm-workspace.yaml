@@ -1,9 +1,11 @@
 packages:
   - 'app/*'
   - 'packages/*'
+  - 'tooling/*'
 
 allowBuilds:
   '@google/genai': true
+  bun: set this to true or false
   esbuild: true
   msgpackr-extract: true
   protobufjs: true

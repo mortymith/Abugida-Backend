@@ -1,24 +1,14 @@
 {
+  "extends": "@abugida/typescript-config/library.json",
   "compilerOptions": {
     "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
     "lib": ["ESNext", "DOM"],
     "types": ["bun"],
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
     "paths": {
       "@abugida/db-schemas/*": ["../../packages/db-schemas/src/*"]
-    }
+    },
+    "outDir": "./dist",
+    "rootDir": "./src"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "tests", "examples"]

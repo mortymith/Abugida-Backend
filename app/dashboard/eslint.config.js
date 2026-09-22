@@ -1,9 +1,11 @@
 //  @ts-check
 
+import { globalIgnores } from '@abugida/eslint-config'
 import { tanstackConfig } from '@tanstack/eslint-config'
 
 export default [
   ...tanstackConfig,
+  { ignores: globalIgnores },
   {
     rules: {
       'import/no-cycle': 'off',

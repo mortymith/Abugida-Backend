@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "//": [
+    "Shared TypeScript base for the Abugida monorepo (tooling/typescript-config).",
+    "Options are extracted verbatim from the historical root tsconfig.json so",
+    "consumers inherit the exact policy the repository already enforces.",
+    "Do not relax these options; workspaces extend this file and override only",
+    "runtime-specific settings (lib, types, jsx, emit targets)."
+  ],
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  }
+}

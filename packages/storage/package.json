@@ -1,7 +1,7 @@
 {
   "name": "@abugida/storage",
   "version": "0.0.1",
-  "description": "Shared object storage layer for the Abugida Application monorepo — S3-compatible operations, presigned URLs, multipart uploads, and key management",
+  "description": "Shared object storage layer for the Abugida Application monorepo \u2014 S3-compatible operations, presigned URLs, multipart uploads, and key management",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -49,12 +49,12 @@
     "@smithy/node-http-handler": "^3.1.0"
   },
   "devDependencies": {
+    "@abugida/bun-test-config": "workspace:*",
+    "@abugida/eslint-config": "workspace:*",
+    "@abugida/typescript-config": "workspace:*",
     "@types/bun": "^1.1.0",
-    "eslint": "^9.0.0",
     "hono": "^4.6.0",
-    "prettier": "^3.4.0",
-    "typescript": "^5.7.0",
-    "typescript-eslint": "^8.0.0"
+    "typescript": "^5.7.0"
   },
   "peerDependencies": {
     "hono": "^4.0.0"

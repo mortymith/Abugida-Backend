@@ -3,3 +3,10 @@
 # never create its own lockfile. Fail loudly instead of silently diverging.
 [install]
 frozenLockfile = true
+
+# Shared test preload (env safety defaults + custom matchers), provided by
+# tooling/bun-test-config. bun only reads bunfig.toml from the CWD, so
+# workspaces that run `bun test` carry their own thin bunfig.toml pointing at
+# the same preload via the @abugida/bun-test-config package.
+[test]
+preload = ["./tooling/bun-test-config/preload"]

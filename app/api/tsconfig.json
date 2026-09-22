@@ -1,13 +1,11 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "@abugida/typescript-config/node.json",
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
     "paths": { "@/*": ["./src/*"] },
-    "types": ["bun"],
     "outDir": "./dist",
-    "rootDir": "./src",
-    "noEmit": true
+    "rootDir": "./src"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]

@@ -83,20 +83,19 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@abugida/bun-test-config": "workspace:*",
+    "@abugida/eslint-config": "workspace:*",
+    "@abugida/typescript-config": "workspace:*",
     "@tanstack/react-router": "^1.87.0",
     "@tanstack/react-start": "^1.87.0",
     "@types/bun": "^1.4.2",
     "@types/react": "^19.2.18",
-    "@typescript-eslint/parser": "^8.67.0",
     "better-auth": "1.6.26",
     "drizzle-orm": "^0.36.4",
-    "eslint": "^10.8.1",
     "hono": "^4.6.14",
-    "prettier": "^3.9.6",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "typescript": "^5.7.2",
-    "typescript-eslint": "^8.67.0"
+    "typescript": "^5.7.2"
   },
   "engines": {
     "bun": ">=1.4.2"

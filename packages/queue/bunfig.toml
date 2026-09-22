@@ -1,0 +1,5 @@
+# Thin bun test wiring: the shared preload (env safety defaults + custom
+# matchers) lives in tooling/bun-test-config. bun only reads bunfig.toml from
+# the CWD, so each workspace that runs `bun test` carries this file.
+[test]
+preload = ["@abugida/bun-test-config/preload"]

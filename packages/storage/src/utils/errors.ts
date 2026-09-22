@@ -9,7 +9,7 @@
 /** Base error for all storage operations. */
 export class StorageError extends Error {
   /** Original cause (if any). */
-  public readonly cause?: unknown
+  public override readonly cause?: unknown
   /** Storage key involved in the error (if applicable). */
   public readonly key?: string
 
