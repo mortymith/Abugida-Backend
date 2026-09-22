@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as AuthRouteRouteImport } from './routes/_auth/route'
+import { Route as AppAnalyticsRouteRouteImport } from './routes/_app/analytics/route'
 import { Route as AppContentLibraryRouteRouteImport } from './routes/_app/content-library/route'
 import { Route as AppCoursesRouteRouteImport } from './routes/_app/courses/route'
 import { Route as AppDashboardRouteRouteImport } from './routes/_app/dashboard/route'
@@ -21,6 +22,8 @@ import { Route as AppStudentsRouteRouteImport } from './routes/_app/students/rou
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthMfaRouteImport } from './routes/_auth/mfa'
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
+import { Route as AppAnalyticsIndexRouteImport } from './routes/_app/analytics/index'
+import { Route as AppAnalyticsCohortsRouteImport } from './routes/_app/analytics/cohorts'
 import { Route as AppContentLibraryIndexRouteImport } from './routes/_app/content-library/index'
 import { Route as AppCoursesIndexRouteImport } from './routes/_app/courses/index'
 import { Route as AppCoursesCourseIdRouteImport } from './routes/_app/courses/$courseId'
@@ -35,11 +38,14 @@ import { Route as AppStudentsCohortsRouteImport } from './routes/_app/students/c
 import { Route as AppStudentsMessagingRouteImport } from './routes/_app/students/messaging'
 import { Route as AppStudentsRequestsRouteImport } from './routes/_app/students/requests'
 import { Route as AppStudentsRulesRouteImport } from './routes/_app/students/rules'
+import { Route as AppAnalyticsCoursesCourseIdRouteImport } from './routes/_app/analytics/courses/$courseId'
 import { Route as AppContentLibraryAssetIdIndexRouteImport } from './routes/_app/content-library/$assetId.index'
 import { Route as AppContentLibraryAssetIdTranscriptRouteImport } from './routes/_app/content-library/$assetId.transcript'
 import { Route as AppStudentsStudentIdIndexRouteImport } from './routes/_app/students/$studentId.index'
 import { Route as AppStudentsStudentIdProgressRouteImport } from './routes/_app/students/$studentId.progress'
+import { Route as AppAnalyticsCoursesCourseIdDropOffRouteImport } from './routes/_app/analytics/courses/$courseId.drop-off'
 import { Route as AppCoursesCourseIdLessonsLessonIdRouteImport } from './routes/_app/courses/$courseId/lessons/$lessonId'
+import { Route as AppAnalyticsCoursesCourseIdQuizzesLessonIdRouteImport } from './routes/_app/analytics/courses/$courseId.quizzes.$lessonId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -53,6 +59,11 @@ const AppRouteRoute = AppRouteRouteImport.update({
 const AuthRouteRoute = AuthRouteRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppAnalyticsRouteRoute = AppAnalyticsRouteRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AppRouteRoute,
 } as any)
 const AppContentLibraryRouteRoute = AppContentLibraryRouteRouteImport.update({
   id: '/content-library',
@@ -98,6 +109,16 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
   id: '/signup',
   path: '/signup',
   getParentRoute: () => AuthRouteRoute,
+} as any)
+const AppAnalyticsIndexRoute = AppAnalyticsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAnalyticsRouteRoute,
+} as any)
+const AppAnalyticsCohortsRoute = AppAnalyticsCohortsRouteImport.update({
+  id: '/cohorts',
+  path: '/cohorts',
+  getParentRoute: () => AppAnalyticsRouteRoute,
 } as any)
 const AppContentLibraryIndexRoute = AppContentLibraryIndexRouteImport.update({
   id: '/',
@@ -169,6 +190,12 @@ const AppStudentsRulesRoute = AppStudentsRulesRouteImport.update({
   path: '/rules',
   getParentRoute: () => AppStudentsRouteRoute,
 } as any)
+const AppAnalyticsCoursesCourseIdRoute =
+  AppAnalyticsCoursesCourseIdRouteImport.update({
+    id: '/courses/$courseId',
+    path: '/courses/$courseId',
+    getParentRoute: () => AppAnalyticsRouteRoute,
+  } as any)
 const AppContentLibraryAssetIdIndexRoute =
   AppContentLibraryAssetIdIndexRouteImport.update({
     id: '/$assetId/',
@@ -193,15 +220,28 @@ const AppStudentsStudentIdProgressRoute =
     path: '/$studentId/progress',
     getParentRoute: () => AppStudentsRouteRoute,
   } as any)
+const AppAnalyticsCoursesCourseIdDropOffRoute =
+  AppAnalyticsCoursesCourseIdDropOffRouteImport.update({
+    id: '/drop-off',
+    path: '/drop-off',
+    getParentRoute: () => AppAnalyticsCoursesCourseIdRoute,
+  } as any)
 const AppCoursesCourseIdLessonsLessonIdRoute =
   AppCoursesCourseIdLessonsLessonIdRouteImport.update({
     id: '/lessons/$lessonId',
     path: '/lessons/$lessonId',
     getParentRoute: () => AppCoursesCourseIdRoute,
   } as any)
+const AppAnalyticsCoursesCourseIdQuizzesLessonIdRoute =
+  AppAnalyticsCoursesCourseIdQuizzesLessonIdRouteImport.update({
+    id: '/quizzes/$lessonId',
+    path: '/quizzes/$lessonId',
+    getParentRoute: () => AppAnalyticsCoursesCourseIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/analytics': typeof AppAnalyticsRouteRouteWithChildren
   '/content-library': typeof AppContentLibraryRouteRouteWithChildren
   '/courses': typeof AppCoursesRouteRouteWithChildren
   '/dashboard': typeof AppDashboardRouteRouteWithChildren
@@ -211,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof AuthLoginRoute
   '/mfa': typeof AuthMfaRoute
   '/signup': typeof AuthSignupRoute
+  '/analytics/cohorts': typeof AppAnalyticsCohortsRoute
   '/courses/$courseId': typeof AppCoursesCourseIdRouteWithChildren
   '/courses/new': typeof AppCoursesNewRoute
   '/courses/reviews': typeof AppCoursesReviewsRoute
@@ -221,15 +262,19 @@ export interface FileRoutesByFullPath {
   '/students/messaging': typeof AppStudentsMessagingRoute
   '/students/requests': typeof AppStudentsRequestsRoute
   '/students/rules': typeof AppStudentsRulesRoute
+  '/analytics/': typeof AppAnalyticsIndexRoute
   '/content-library/': typeof AppContentLibraryIndexRoute
   '/courses/': typeof AppCoursesIndexRoute
   '/dashboard/': typeof AppDashboardIndexRoute
   '/students/': typeof AppStudentsIndexRoute
+  '/analytics/courses/$courseId': typeof AppAnalyticsCoursesCourseIdRouteWithChildren
   '/content-library/$assetId/transcript': typeof AppContentLibraryAssetIdTranscriptRoute
   '/students/$studentId/progress': typeof AppStudentsStudentIdProgressRoute
   '/content-library/$assetId/': typeof AppContentLibraryAssetIdIndexRoute
   '/students/$studentId/': typeof AppStudentsStudentIdIndexRoute
+  '/analytics/courses/$courseId/drop-off': typeof AppAnalyticsCoursesCourseIdDropOffRoute
   '/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
+  '/analytics/courses/$courseId/quizzes/$lessonId': typeof AppAnalyticsCoursesCourseIdQuizzesLessonIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -238,6 +283,7 @@ export interface FileRoutesByTo {
   '/login': typeof AuthLoginRoute
   '/mfa': typeof AuthMfaRoute
   '/signup': typeof AuthSignupRoute
+  '/analytics/cohorts': typeof AppAnalyticsCohortsRoute
   '/courses/$courseId': typeof AppCoursesCourseIdRouteWithChildren
   '/courses/new': typeof AppCoursesNewRoute
   '/courses/reviews': typeof AppCoursesReviewsRoute
@@ -248,21 +294,26 @@ export interface FileRoutesByTo {
   '/students/messaging': typeof AppStudentsMessagingRoute
   '/students/requests': typeof AppStudentsRequestsRoute
   '/students/rules': typeof AppStudentsRulesRoute
+  '/analytics': typeof AppAnalyticsIndexRoute
   '/content-library': typeof AppContentLibraryIndexRoute
   '/courses': typeof AppCoursesIndexRoute
   '/dashboard': typeof AppDashboardIndexRoute
   '/students': typeof AppStudentsIndexRoute
+  '/analytics/courses/$courseId': typeof AppAnalyticsCoursesCourseIdRouteWithChildren
   '/content-library/$assetId/transcript': typeof AppContentLibraryAssetIdTranscriptRoute
   '/students/$studentId/progress': typeof AppStudentsStudentIdProgressRoute
   '/content-library/$assetId': typeof AppContentLibraryAssetIdIndexRoute
   '/students/$studentId': typeof AppStudentsStudentIdIndexRoute
+  '/analytics/courses/$courseId/drop-off': typeof AppAnalyticsCoursesCourseIdDropOffRoute
   '/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
+  '/analytics/courses/$courseId/quizzes/$lessonId': typeof AppAnalyticsCoursesCourseIdQuizzesLessonIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteRouteWithChildren
   '/_auth': typeof AuthRouteRouteWithChildren
+  '/_app/analytics': typeof AppAnalyticsRouteRouteWithChildren
   '/_app/content-library': typeof AppContentLibraryRouteRouteWithChildren
   '/_app/courses': typeof AppCoursesRouteRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRouteRouteWithChildren
@@ -272,6 +323,7 @@ export interface FileRoutesById {
   '/_auth/login': typeof AuthLoginRoute
   '/_auth/mfa': typeof AuthMfaRoute
   '/_auth/signup': typeof AuthSignupRoute
+  '/_app/analytics/cohorts': typeof AppAnalyticsCohortsRoute
   '/_app/courses/$courseId': typeof AppCoursesCourseIdRouteWithChildren
   '/_app/courses/new': typeof AppCoursesNewRoute
   '/_app/courses/reviews': typeof AppCoursesReviewsRoute
@@ -282,20 +334,25 @@ export interface FileRoutesById {
   '/_app/students/messaging': typeof AppStudentsMessagingRoute
   '/_app/students/requests': typeof AppStudentsRequestsRoute
   '/_app/students/rules': typeof AppStudentsRulesRoute
+  '/_app/analytics/': typeof AppAnalyticsIndexRoute
   '/_app/content-library/': typeof AppContentLibraryIndexRoute
   '/_app/courses/': typeof AppCoursesIndexRoute
   '/_app/dashboard/': typeof AppDashboardIndexRoute
   '/_app/students/': typeof AppStudentsIndexRoute
+  '/_app/analytics/courses/$courseId': typeof AppAnalyticsCoursesCourseIdRouteWithChildren
   '/_app/content-library/$assetId/transcript': typeof AppContentLibraryAssetIdTranscriptRoute
   '/_app/students/$studentId/progress': typeof AppStudentsStudentIdProgressRoute
   '/_app/content-library/$assetId/': typeof AppContentLibraryAssetIdIndexRoute
   '/_app/students/$studentId/': typeof AppStudentsStudentIdIndexRoute
+  '/_app/analytics/courses/$courseId/drop-off': typeof AppAnalyticsCoursesCourseIdDropOffRoute
   '/_app/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
+  '/_app/analytics/courses/$courseId/quizzes/$lessonId': typeof AppAnalyticsCoursesCourseIdQuizzesLessonIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/analytics'
     | '/content-library'
     | '/courses'
     | '/dashboard'
@@ -305,6 +362,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mfa'
     | '/signup'
+    | '/analytics/cohorts'
     | '/courses/$courseId'
     | '/courses/new'
     | '/courses/reviews'
@@ -315,15 +373,19 @@ export interface FileRouteTypes {
     | '/students/messaging'
     | '/students/requests'
     | '/students/rules'
+    | '/analytics/'
     | '/content-library/'
     | '/courses/'
     | '/dashboard/'
     | '/students/'
+    | '/analytics/courses/$courseId'
     | '/content-library/$assetId/transcript'
     | '/students/$studentId/progress'
     | '/content-library/$assetId/'
     | '/students/$studentId/'
+    | '/analytics/courses/$courseId/drop-off'
     | '/courses/$courseId/lessons/$lessonId'
+    | '/analytics/courses/$courseId/quizzes/$lessonId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -332,6 +394,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mfa'
     | '/signup'
+    | '/analytics/cohorts'
     | '/courses/$courseId'
     | '/courses/new'
     | '/courses/reviews'
@@ -342,20 +405,25 @@ export interface FileRouteTypes {
     | '/students/messaging'
     | '/students/requests'
     | '/students/rules'
+    | '/analytics'
     | '/content-library'
     | '/courses'
     | '/dashboard'
     | '/students'
+    | '/analytics/courses/$courseId'
     | '/content-library/$assetId/transcript'
     | '/students/$studentId/progress'
     | '/content-library/$assetId'
     | '/students/$studentId'
+    | '/analytics/courses/$courseId/drop-off'
     | '/courses/$courseId/lessons/$lessonId'
+    | '/analytics/courses/$courseId/quizzes/$lessonId'
   id:
     | '__root__'
     | '/'
     | '/_app'
     | '/_auth'
+    | '/_app/analytics'
     | '/_app/content-library'
     | '/_app/courses'
     | '/_app/dashboard'
@@ -365,6 +433,7 @@ export interface FileRouteTypes {
     | '/_auth/login'
     | '/_auth/mfa'
     | '/_auth/signup'
+    | '/_app/analytics/cohorts'
     | '/_app/courses/$courseId'
     | '/_app/courses/new'
     | '/_app/courses/reviews'
@@ -375,15 +444,19 @@ export interface FileRouteTypes {
     | '/_app/students/messaging'
     | '/_app/students/requests'
     | '/_app/students/rules'
+    | '/_app/analytics/'
     | '/_app/content-library/'
     | '/_app/courses/'
     | '/_app/dashboard/'
     | '/_app/students/'
+    | '/_app/analytics/courses/$courseId'
     | '/_app/content-library/$assetId/transcript'
     | '/_app/students/$studentId/progress'
     | '/_app/content-library/$assetId/'
     | '/_app/students/$studentId/'
+    | '/_app/analytics/courses/$courseId/drop-off'
     | '/_app/courses/$courseId/lessons/$lessonId'
+    | '/_app/analytics/courses/$courseId/quizzes/$lessonId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -414,6 +487,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthRouteRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/analytics': {
+      id: '/_app/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AppAnalyticsRouteRouteImport
+      parentRoute: typeof AppRouteRoute
     }
     '/_app/content-library': {
       id: '/_app/content-library'
@@ -477,6 +557,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/signup'
       preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof AuthRouteRoute
+    }
+    '/_app/analytics/': {
+      id: '/_app/analytics/'
+      path: '/'
+      fullPath: '/analytics/'
+      preLoaderRoute: typeof AppAnalyticsIndexRouteImport
+      parentRoute: typeof AppAnalyticsRouteRoute
+    }
+    '/_app/analytics/cohorts': {
+      id: '/_app/analytics/cohorts'
+      path: '/cohorts'
+      fullPath: '/analytics/cohorts'
+      preLoaderRoute: typeof AppAnalyticsCohortsRouteImport
+      parentRoute: typeof AppAnalyticsRouteRoute
     }
     '/_app/content-library/': {
       id: '/_app/content-library/'
@@ -576,6 +670,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStudentsRulesRouteImport
       parentRoute: typeof AppStudentsRouteRoute
     }
+    '/_app/analytics/courses/$courseId': {
+      id: '/_app/analytics/courses/$courseId'
+      path: '/courses/$courseId'
+      fullPath: '/analytics/courses/$courseId'
+      preLoaderRoute: typeof AppAnalyticsCoursesCourseIdRouteImport
+      parentRoute: typeof AppAnalyticsRouteRoute
+    }
     '/_app/content-library/$assetId/': {
       id: '/_app/content-library/$assetId/'
       path: '/$assetId'
@@ -604,6 +705,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppStudentsStudentIdProgressRouteImport
       parentRoute: typeof AppStudentsRouteRoute
     }
+    '/_app/analytics/courses/$courseId/drop-off': {
+      id: '/_app/analytics/courses/$courseId/drop-off'
+      path: '/drop-off'
+      fullPath: '/analytics/courses/$courseId/drop-off'
+      preLoaderRoute: typeof AppAnalyticsCoursesCourseIdDropOffRouteImport
+      parentRoute: typeof AppAnalyticsCoursesCourseIdRoute
+    }
     '/_app/courses/$courseId/lessons/$lessonId': {
       id: '/_app/courses/$courseId/lessons/$lessonId'
       path: '/lessons/$lessonId'
@@ -611,8 +719,49 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCoursesCourseIdLessonsLessonIdRouteImport
       parentRoute: typeof AppCoursesCourseIdRoute
     }
+    '/_app/analytics/courses/$courseId/quizzes/$lessonId': {
+      id: '/_app/analytics/courses/$courseId/quizzes/$lessonId'
+      path: '/quizzes/$lessonId'
+      fullPath: '/analytics/courses/$courseId/quizzes/$lessonId'
+      preLoaderRoute: typeof AppAnalyticsCoursesCourseIdQuizzesLessonIdRouteImport
+      parentRoute: typeof AppAnalyticsCoursesCourseIdRoute
+    }
   }
 }
+
+interface AppAnalyticsCoursesCourseIdRouteChildren {
+  AppAnalyticsCoursesCourseIdDropOffRoute: typeof AppAnalyticsCoursesCourseIdDropOffRoute
+  AppAnalyticsCoursesCourseIdQuizzesLessonIdRoute: typeof AppAnalyticsCoursesCourseIdQuizzesLessonIdRoute
+}
+
+const AppAnalyticsCoursesCourseIdRouteChildren: AppAnalyticsCoursesCourseIdRouteChildren =
+  {
+    AppAnalyticsCoursesCourseIdDropOffRoute:
+      AppAnalyticsCoursesCourseIdDropOffRoute,
+    AppAnalyticsCoursesCourseIdQuizzesLessonIdRoute:
+      AppAnalyticsCoursesCourseIdQuizzesLessonIdRoute,
+  }
+
+const AppAnalyticsCoursesCourseIdRouteWithChildren =
+  AppAnalyticsCoursesCourseIdRoute._addFileChildren(
+    AppAnalyticsCoursesCourseIdRouteChildren,
+  )
+
+interface AppAnalyticsRouteRouteChildren {
+  AppAnalyticsCohortsRoute: typeof AppAnalyticsCohortsRoute
+  AppAnalyticsIndexRoute: typeof AppAnalyticsIndexRoute
+  AppAnalyticsCoursesCourseIdRoute: typeof AppAnalyticsCoursesCourseIdRouteWithChildren
+}
+
+const AppAnalyticsRouteRouteChildren: AppAnalyticsRouteRouteChildren = {
+  AppAnalyticsCohortsRoute: AppAnalyticsCohortsRoute,
+  AppAnalyticsIndexRoute: AppAnalyticsIndexRoute,
+  AppAnalyticsCoursesCourseIdRoute:
+    AppAnalyticsCoursesCourseIdRouteWithChildren,
+}
+
+const AppAnalyticsRouteRouteWithChildren =
+  AppAnalyticsRouteRoute._addFileChildren(AppAnalyticsRouteRouteChildren)
 
 interface AppContentLibraryRouteRouteChildren {
   AppContentLibraryIndexRoute: typeof AppContentLibraryIndexRoute
@@ -704,6 +853,7 @@ const AppStudentsRouteRouteWithChildren =
   AppStudentsRouteRoute._addFileChildren(AppStudentsRouteRouteChildren)
 
 interface AppRouteRouteChildren {
+  AppAnalyticsRouteRoute: typeof AppAnalyticsRouteRouteWithChildren
   AppContentLibraryRouteRoute: typeof AppContentLibraryRouteRouteWithChildren
   AppCoursesRouteRoute: typeof AppCoursesRouteRouteWithChildren
   AppDashboardRouteRoute: typeof AppDashboardRouteRouteWithChildren
@@ -713,6 +863,7 @@ interface AppRouteRouteChildren {
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppAnalyticsRouteRoute: AppAnalyticsRouteRouteWithChildren,
   AppContentLibraryRouteRoute: AppContentLibraryRouteRouteWithChildren,
   AppCoursesRouteRoute: AppCoursesRouteRouteWithChildren,
   AppDashboardRouteRoute: AppDashboardRouteRouteWithChildren,
