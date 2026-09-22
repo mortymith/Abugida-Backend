@@ -7,7 +7,6 @@ import {
   integer,
   smallint,
   boolean,
-  jsonb,
   timestamp,
   uniqueIndex,
   index,
@@ -26,7 +25,6 @@ import { quizQuestions } from '../learning/quiz-questions'
 import { quizAttempts } from '../learning/quiz-attempts'
 import { contentLicenses } from '../finance/content-licenses'
 import { auditLogs } from '../ops/audit-logs'
-import { assetLibrary } from './asset-library'
 import { tsvector } from '../shared/custom-types'
 export const contentTypeEnum = z.enum(['pdf', 'video', 'quiz', 'exercise', 'link'])
 export type ContentType = z.infer<typeof contentTypeEnum>
@@ -36,19 +34,6 @@ export const contentTypePgEnum = pgEnum('content_type', [
   'quiz',
   'exercise',
   'link',
-])
-export const lessonReviewStatusEnum = z.enum([
-  'draft',
-  'in_review',
-  'changes_requested',
-  'approved',
-])
-export type LessonReviewStatus = z.infer<typeof lessonReviewStatusEnum>
-export const lessonReviewStatusPgEnum = pgEnum('lesson_review_status', [
-  'draft',
-  'in_review',
-  'changes_requested',
-  'approved',
 ])
 export const lessons = pgTable(
   'lessons',
@@ -71,19 +56,9 @@ export const lessons = pgTable(
       onDelete: 'set null',
       onUpdate: 'cascade',
     }),
-    /** Content Library provenance (spec 05): asset backing this lesson's media. */
-    assetId: bigint('asset_id', { mode: 'number' }).references(() => assetLibrary.id, {
-      onDelete: 'set null',
-      onUpdate: 'cascade',
-    }),
     title: varchar('title', { length: 300 }).notNull(),
     description: text('description'),
     contentType: contentTypePgEnum(),
-    body: text('body'),
-    tags: jsonb('tags').notNull().default([]),
-    videoUrl: varchar('video_url', { length: 500 }),
-    sortOrder: smallint('sort_order').notNull().default(0),
-    reviewStatus: lessonReviewStatusPgEnum().default('draft'),
     fileObjectKey: varchar('file_object_key', { length: 500 }),
     fileSizeBytes: bigint('file_size_bytes', { mode: 'number' }),
     mimeType: varchar('mime_type', { length: 100 }),
@@ -112,8 +87,6 @@ export const lessons = pgTable(
     index('idx_lessons_instructor').on(table.instructorId),
     index('idx_lessons_search').using('gin', table.searchVector),
     index('idx_lessons_course_type').on(table.courseId, table.contentType),
-    index('idx_lessons_review_status').on(table.courseId, table.reviewStatus),
-    uniqueIndex('idx_lessons_module_order').on(table.moduleId, table.sortOrder),
     index('idx_lessons_module_active')
       .on(table.moduleId)
       .where(sql`${table.deletedAt} IS NULL`),
@@ -153,11 +126,6 @@ export const insertLessonSchema = createInsertSchema(lessons, {
   courseId: z.number().positive(),
   instructorId: z.number().positive().nullable().optional(),
   contentType: contentTypeEnum,
-  body: z.string().nullable().optional(),
-  tags: z.array(z.string()).default([]),
-  videoUrl: z.string().max(500).nullable().optional(),
-  sortOrder: z.number().int().min(0).default(0),
-  reviewStatus: lessonReviewStatusEnum.default('draft'),
   fileObjectKey: z.string().max(500).nullable().optional(),
   fileSizeBytes: z.number().int().min(0).nullable().optional(),
   mimeType: z.string().max(100).nullable().optional(),

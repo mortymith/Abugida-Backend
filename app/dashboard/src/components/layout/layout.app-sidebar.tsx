@@ -1,5 +1,4 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
 import { HugeiconsIcon } from '@hugeicons/react'
 import type { NavItem } from '#/features/navigation'
 import {
@@ -19,15 +18,12 @@ import {
 import { Logo } from '#/components/common/logo'
 import { SidebarUserSection } from './layout.sidebar-user-section'
 import { getVisibleNavItems } from '#/features/navigation'
-import { useRole } from '#/features/auth'
-import { pendingReviewCountQueryOptions } from '#/features/courses'
+import { useSession } from '#/features/auth'
 
 export function AppSidebar() {
-  const role = useRole()
-  const navItems = getVisibleNavItems(role)
-  const pendingReviews = useQuery(
-    pendingReviewCountQueryOptions(role === 'admin' || role === 'reviewer'),
-  )
+  const { data: session } = useSession()
+  const userRole = (session?.user as Record<string, unknown> | undefined)?.role ?? 'viewer'
+  const navItems = getVisibleNavItems(userRole as string)
 
   return (
     <Sidebar collapsible="icon" side="left" variant="sidebar">
@@ -47,20 +43,14 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => {
-                const badge =
-                  item.badgeFor?.includes(role) && item.id === 'courses'
-                    ? (pendingReviews.data ?? 0)
-                    : item.badge
-                return (
-                  <SidebarMenuItem key={item.id}>
-                    <NavMenuButton item={item} />
-                    {badge != null && badge > 0 ? (
-                      <SidebarMenuBadge>{badge}</SidebarMenuBadge>
-                    ) : null}
-                  </SidebarMenuItem>
-                )
-              })}
+              {navItems.map((item) => (
+                <SidebarMenuItem key={item.id}>
+                  <NavMenuButton item={item} />
+                  {item.badge != null && item.badge > 0 && (
+                    <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
+                  )}
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
