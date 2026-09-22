@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, createFileRoute } from '@tanstack/react-router'
-import { toast } from 'sonner'
+import { toast } from '#/components/common/toast'
 import { ArrowLeft01Icon, SparklesIcon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Button } from '#/components/ui/button'
