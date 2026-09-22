@@ -43,7 +43,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "bullmq": "^5.34.0"
+    "bullmq": "^6.3.8"
   },
   "peerDependencies": {
     "hono": "^4.6.0",
