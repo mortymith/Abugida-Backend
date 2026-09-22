@@ -13,7 +13,6 @@
 
 import { betterAuth, type Auth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { randomUUID } from 'node:crypto'
 import type { AuthConfig, AuthDatabaseSchema } from './types'
 import { validateAuthConfig, withDefaults } from '../config'
 import { googleProvider } from '../providers'
@@ -111,8 +110,10 @@ export function buildAdvancedOptions(config: AuthConfig) {
     // The app `users` table's PK (text) is fully better-auth-owned; mint the
     // ids as UUIDs server-side so every environment generates the same
     // format regardless of DB driver. See packages/database schema auth.
+    // Uses "uuid" to delegate to global crypto.randomUUID() (Web Crypto API),
+    // available in Node ≥14.17, Bun, Deno, and all modern browsers.
     database: {
-      generateId: () => randomUUID(),
+      generateId: 'uuid' as const,
     },
   }
 }
