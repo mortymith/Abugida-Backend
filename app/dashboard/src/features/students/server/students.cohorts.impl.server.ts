@@ -249,6 +249,7 @@ export async function listCohortCandidateStudentsImpl(
 
 /** Cohort ids a student belongs to (profile context + rule triggers). */
 export async function cohortIdsForStudentImpl(studentId: string): Promise<string[]> {
+  await requireStudentReadRole()
   await resolveStudent(studentId)
   const rows = await db
     .select({ publicId: cohorts.publicId })

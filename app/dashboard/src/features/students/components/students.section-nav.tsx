@@ -26,7 +26,7 @@ export function StudentsSectionNav() {
       {tabs.map((tab) => {
         const active =
           tab.to === '/students'
-            ? pathname === '/students' || pathname.startsWith('/students/')
+            ? pathname === '/students' || /^\/students\/[^/]+/.test(pathname)
             : pathname.startsWith(tab.to)
         return (
           <Link

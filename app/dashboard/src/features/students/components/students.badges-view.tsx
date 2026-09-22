@@ -57,6 +57,7 @@ export function StudentsBadgesView() {
   const [editTarget, setEditTarget] = useState<BadgeCard | null>(null)
   const [awardTarget, setAwardTarget] = useState<BadgeCard | null>(null)
   const [pauseTarget, setPauseTarget] = useState<BadgeCard | null>(null)
+  const [archiveTarget, setArchiveTarget] = useState<BadgeCard | null>(null)
 
   const items = badgesQuery.data?.items ?? []
 
@@ -177,30 +178,39 @@ export function StudentsBadgesView() {
                       : '🗄 Archived'}
                 </Badge>
                 {canWrite && badge.status !== 'archived' && (
-                  <div className="flex w-full gap-1.5">
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        setEditTarget(badge)
-                        setEditorOpen(true)
-                      }}
+                  <>
+                    <div className="flex w-full gap-1.5">
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          setEditTarget(badge)
+                          setEditorOpen(true)
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setAwardTarget(badge)}
+                      >
+                        Award
+                      </Button>
+                      <Button size="xs" variant="ghost" onClick={() => setPauseTarget(badge)}>
+                        {badge.status === 'active' ? 'Pause' : 'Resume'}
+                      </Button>
+                    </div>
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground underline-offset-2 hover:text-destructive hover:underline"
+                      onClick={() => setArchiveTarget(badge)}
                     >
-                      Edit
-                    </Button>
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setAwardTarget(badge)}
-                    >
-                      Award
-                    </Button>
-                    <Button size="xs" variant="ghost" onClick={() => setPauseTarget(badge)}>
-                      {badge.status === 'active' ? 'Pause' : 'Resume'}
-                    </Button>
-                  </div>
+                      Archive
+                    </button>
+                  </>
                 )}
               </CardFooter>
             </Card>
@@ -283,6 +293,21 @@ export function StudentsBadgesView() {
       {awardTarget && (
         <StudentsAwardDialog badge={awardTarget} onClose={() => setAwardTarget(null)} />
       )}
+
+      {/* Archive confirmation: keeps historical awards visible (spec). */}
+      <ConfirmDialog
+        open={archiveTarget != null}
+        onOpenChange={(open) => !open && setArchiveTarget(null)}
+        title={`Archive ${archiveTarget?.name ?? 'this badge'}?`}
+        body="Archiving stops all new awards. Existing awards stay visible on student profiles, and the badge name becomes reusable."
+        confirmLabel="Archive Badge"
+        destructive
+        onConfirm={() => {
+          if (archiveTarget == null) return
+          setBadgeStatus.mutate({ badgePublicId: archiveTarget.publicId, status: 'archived' })
+          setArchiveTarget(null)
+        }}
+      />
 
       {/* Pause/resume confirmation */}
       <ConfirmDialog
