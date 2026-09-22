@@ -12,5 +12,9 @@ export { StudentsRequestsView } from './components/students.requests-view'
 export { StudentsBadgesView } from './components/students.badges-view'
 export { StudentsRulesView } from './components/students.rules-view'
 export { studentsQueryKeys } from './hooks/students.queries'
-export { directoryQueryOptions, directoryStatsQueryOptions } from './hooks/students.queries'
+export {
+  directoryQueryOptions,
+  directoryStatsQueryOptions,
+  cohortsQueryOptions,
+} from './hooks/students.queries'
 export type { StudentDirectoryItem, StudentDirectoryStats } from './students.types'

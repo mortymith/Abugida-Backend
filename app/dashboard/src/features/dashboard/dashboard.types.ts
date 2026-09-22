@@ -12,12 +12,14 @@ export interface KpiMetric {
     | 'courses'
     | 'students'
     | 'avgRating'
+    | 'completion'
+    | 'avgTime'
     | 'total'
     | 'oneTime'
     | 'subscription'
     | 'refund'
   label: string
-  format: 'currency' | 'integer' | 'rating'
+  format: 'currency' | 'integer' | 'rating' | 'percent' | 'hours'
   value: number | null
   /** % change vs the previous equal-length period. */
   deltaPct: number | null
