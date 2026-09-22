@@ -23,7 +23,7 @@ const REGISTRY: Record<LinkableEntityType, EntityLink> = {
   student: { path: '/students/{id}', exists: true }, // S-4.2 Student Profile (spec part 06) — live
   asset: { path: '/content-library/{id}', exists: true }, // S-3.3 Asset Detail (spec part 05) — live
   revenue: { path: '/dashboard/revenue', exists: true },
-  team: { path: '/settings', exists: false }, // S-6.2 Team Management (spec part 08)
+  team: { path: '/settings/team', exists: true }, // S-6.2 Team Management (spec part 08) — live
   notification: { path: '/notifications', exists: true },
 }
 
