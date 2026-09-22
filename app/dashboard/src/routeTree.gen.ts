@@ -18,6 +18,7 @@ import { Route as AppCoursesRouteRouteImport } from './routes/_app/courses/route
 import { Route as AppDashboardRouteRouteImport } from './routes/_app/dashboard/route'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
+import { Route as AppSettingsRouteRouteImport } from './routes/_app/settings/route'
 import { Route as AppStudentsRouteRouteImport } from './routes/_app/students/route'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthMfaRouteImport } from './routes/_auth/mfa'
@@ -32,6 +33,16 @@ import { Route as AppCoursesReviewsRouteImport } from './routes/_app/courses/rev
 import { Route as AppCoursesTemplatesRouteImport } from './routes/_app/courses/templates'
 import { Route as AppDashboardIndexRouteImport } from './routes/_app/dashboard/index'
 import { Route as AppDashboardRevenueRouteImport } from './routes/_app/dashboard/revenue'
+import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
+import { Route as AppSettingsApiRouteImport } from './routes/_app/settings/api'
+import { Route as AppSettingsBillingRouteImport } from './routes/_app/settings/billing'
+import { Route as AppSettingsBrandingRouteImport } from './routes/_app/settings/branding'
+import { Route as AppSettingsIntegrationsRouteImport } from './routes/_app/settings/integrations'
+import { Route as AppSettingsPrivacyRouteImport } from './routes/_app/settings/privacy'
+import { Route as AppSettingsProfileRouteImport } from './routes/_app/settings/profile'
+import { Route as AppSettingsRolesRouteImport } from './routes/_app/settings/roles'
+import { Route as AppSettingsSecurityRouteImport } from './routes/_app/settings/security'
+import { Route as AppSettingsTeamRouteImport } from './routes/_app/settings/team'
 import { Route as AppStudentsIndexRouteImport } from './routes/_app/students/index'
 import { Route as AppStudentsBadgesRouteImport } from './routes/_app/students/badges'
 import { Route as AppStudentsCohortsRouteImport } from './routes/_app/students/cohorts'
@@ -88,6 +99,11 @@ const AppNotificationsRoute = AppNotificationsRouteImport.update({
 const AppSearchRoute = AppSearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppSettingsRouteRoute = AppSettingsRouteRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppStudentsRouteRoute = AppStudentsRouteRouteImport.update({
@@ -159,6 +175,56 @@ const AppDashboardRevenueRoute = AppDashboardRevenueRouteImport.update({
   id: '/revenue',
   path: '/revenue',
   getParentRoute: () => AppDashboardRouteRoute,
+} as any)
+const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsApiRoute = AppSettingsApiRouteImport.update({
+  id: '/api',
+  path: '/api',
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsBillingRoute = AppSettingsBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsBrandingRoute = AppSettingsBrandingRouteImport.update({
+  id: '/branding',
+  path: '/branding',
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsIntegrationsRoute = AppSettingsIntegrationsRouteImport.update({
+  id: '/integrations',
+  path: '/integrations',
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsPrivacyRoute = AppSettingsPrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsProfileRoute = AppSettingsProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsRolesRoute = AppSettingsRolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsSecurityRoute = AppSettingsSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsTeamRoute = AppSettingsTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AppSettingsRouteRoute,
 } as any)
 const AppStudentsIndexRoute = AppStudentsIndexRouteImport.update({
   id: '/',
@@ -245,6 +311,7 @@ export interface FileRoutesByFullPath {
   '/content-library': typeof AppContentLibraryRouteRouteWithChildren
   '/courses': typeof AppCoursesRouteRouteWithChildren
   '/dashboard': typeof AppDashboardRouteRouteWithChildren
+  '/settings': typeof AppSettingsRouteRouteWithChildren
   '/students': typeof AppStudentsRouteRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
   '/search': typeof AppSearchRoute
@@ -257,6 +324,15 @@ export interface FileRoutesByFullPath {
   '/courses/reviews': typeof AppCoursesReviewsRoute
   '/courses/templates': typeof AppCoursesTemplatesRoute
   '/dashboard/revenue': typeof AppDashboardRevenueRoute
+  '/settings/api': typeof AppSettingsApiRoute
+  '/settings/billing': typeof AppSettingsBillingRoute
+  '/settings/branding': typeof AppSettingsBrandingRoute
+  '/settings/integrations': typeof AppSettingsIntegrationsRoute
+  '/settings/privacy': typeof AppSettingsPrivacyRoute
+  '/settings/profile': typeof AppSettingsProfileRoute
+  '/settings/roles': typeof AppSettingsRolesRoute
+  '/settings/security': typeof AppSettingsSecurityRoute
+  '/settings/team': typeof AppSettingsTeamRoute
   '/students/badges': typeof AppStudentsBadgesRoute
   '/students/cohorts': typeof AppStudentsCohortsRoute
   '/students/messaging': typeof AppStudentsMessagingRoute
@@ -266,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/content-library/': typeof AppContentLibraryIndexRoute
   '/courses/': typeof AppCoursesIndexRoute
   '/dashboard/': typeof AppDashboardIndexRoute
+  '/settings/': typeof AppSettingsIndexRoute
   '/students/': typeof AppStudentsIndexRoute
   '/analytics/courses/$courseId': typeof AppAnalyticsCoursesCourseIdRouteWithChildren
   '/content-library/$assetId/transcript': typeof AppContentLibraryAssetIdTranscriptRoute
@@ -289,6 +366,15 @@ export interface FileRoutesByTo {
   '/courses/reviews': typeof AppCoursesReviewsRoute
   '/courses/templates': typeof AppCoursesTemplatesRoute
   '/dashboard/revenue': typeof AppDashboardRevenueRoute
+  '/settings/api': typeof AppSettingsApiRoute
+  '/settings/billing': typeof AppSettingsBillingRoute
+  '/settings/branding': typeof AppSettingsBrandingRoute
+  '/settings/integrations': typeof AppSettingsIntegrationsRoute
+  '/settings/privacy': typeof AppSettingsPrivacyRoute
+  '/settings/profile': typeof AppSettingsProfileRoute
+  '/settings/roles': typeof AppSettingsRolesRoute
+  '/settings/security': typeof AppSettingsSecurityRoute
+  '/settings/team': typeof AppSettingsTeamRoute
   '/students/badges': typeof AppStudentsBadgesRoute
   '/students/cohorts': typeof AppStudentsCohortsRoute
   '/students/messaging': typeof AppStudentsMessagingRoute
@@ -298,6 +384,7 @@ export interface FileRoutesByTo {
   '/content-library': typeof AppContentLibraryIndexRoute
   '/courses': typeof AppCoursesIndexRoute
   '/dashboard': typeof AppDashboardIndexRoute
+  '/settings': typeof AppSettingsIndexRoute
   '/students': typeof AppStudentsIndexRoute
   '/analytics/courses/$courseId': typeof AppAnalyticsCoursesCourseIdRouteWithChildren
   '/content-library/$assetId/transcript': typeof AppContentLibraryAssetIdTranscriptRoute
@@ -317,6 +404,7 @@ export interface FileRoutesById {
   '/_app/content-library': typeof AppContentLibraryRouteRouteWithChildren
   '/_app/courses': typeof AppCoursesRouteRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRouteRouteWithChildren
+  '/_app/settings': typeof AppSettingsRouteRouteWithChildren
   '/_app/students': typeof AppStudentsRouteRouteWithChildren
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/search': typeof AppSearchRoute
@@ -329,6 +417,15 @@ export interface FileRoutesById {
   '/_app/courses/reviews': typeof AppCoursesReviewsRoute
   '/_app/courses/templates': typeof AppCoursesTemplatesRoute
   '/_app/dashboard/revenue': typeof AppDashboardRevenueRoute
+  '/_app/settings/api': typeof AppSettingsApiRoute
+  '/_app/settings/billing': typeof AppSettingsBillingRoute
+  '/_app/settings/branding': typeof AppSettingsBrandingRoute
+  '/_app/settings/integrations': typeof AppSettingsIntegrationsRoute
+  '/_app/settings/privacy': typeof AppSettingsPrivacyRoute
+  '/_app/settings/profile': typeof AppSettingsProfileRoute
+  '/_app/settings/roles': typeof AppSettingsRolesRoute
+  '/_app/settings/security': typeof AppSettingsSecurityRoute
+  '/_app/settings/team': typeof AppSettingsTeamRoute
   '/_app/students/badges': typeof AppStudentsBadgesRoute
   '/_app/students/cohorts': typeof AppStudentsCohortsRoute
   '/_app/students/messaging': typeof AppStudentsMessagingRoute
@@ -338,6 +435,7 @@ export interface FileRoutesById {
   '/_app/content-library/': typeof AppContentLibraryIndexRoute
   '/_app/courses/': typeof AppCoursesIndexRoute
   '/_app/dashboard/': typeof AppDashboardIndexRoute
+  '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/students/': typeof AppStudentsIndexRoute
   '/_app/analytics/courses/$courseId': typeof AppAnalyticsCoursesCourseIdRouteWithChildren
   '/_app/content-library/$assetId/transcript': typeof AppContentLibraryAssetIdTranscriptRoute
@@ -356,6 +454,7 @@ export interface FileRouteTypes {
     | '/content-library'
     | '/courses'
     | '/dashboard'
+    | '/settings'
     | '/students'
     | '/notifications'
     | '/search'
@@ -368,6 +467,15 @@ export interface FileRouteTypes {
     | '/courses/reviews'
     | '/courses/templates'
     | '/dashboard/revenue'
+    | '/settings/api'
+    | '/settings/billing'
+    | '/settings/branding'
+    | '/settings/integrations'
+    | '/settings/privacy'
+    | '/settings/profile'
+    | '/settings/roles'
+    | '/settings/security'
+    | '/settings/team'
     | '/students/badges'
     | '/students/cohorts'
     | '/students/messaging'
@@ -377,6 +485,7 @@ export interface FileRouteTypes {
     | '/content-library/'
     | '/courses/'
     | '/dashboard/'
+    | '/settings/'
     | '/students/'
     | '/analytics/courses/$courseId'
     | '/content-library/$assetId/transcript'
@@ -400,6 +509,15 @@ export interface FileRouteTypes {
     | '/courses/reviews'
     | '/courses/templates'
     | '/dashboard/revenue'
+    | '/settings/api'
+    | '/settings/billing'
+    | '/settings/branding'
+    | '/settings/integrations'
+    | '/settings/privacy'
+    | '/settings/profile'
+    | '/settings/roles'
+    | '/settings/security'
+    | '/settings/team'
     | '/students/badges'
     | '/students/cohorts'
     | '/students/messaging'
@@ -409,6 +527,7 @@ export interface FileRouteTypes {
     | '/content-library'
     | '/courses'
     | '/dashboard'
+    | '/settings'
     | '/students'
     | '/analytics/courses/$courseId'
     | '/content-library/$assetId/transcript'
@@ -427,6 +546,7 @@ export interface FileRouteTypes {
     | '/_app/content-library'
     | '/_app/courses'
     | '/_app/dashboard'
+    | '/_app/settings'
     | '/_app/students'
     | '/_app/notifications'
     | '/_app/search'
@@ -439,6 +559,15 @@ export interface FileRouteTypes {
     | '/_app/courses/reviews'
     | '/_app/courses/templates'
     | '/_app/dashboard/revenue'
+    | '/_app/settings/api'
+    | '/_app/settings/billing'
+    | '/_app/settings/branding'
+    | '/_app/settings/integrations'
+    | '/_app/settings/privacy'
+    | '/_app/settings/profile'
+    | '/_app/settings/roles'
+    | '/_app/settings/security'
+    | '/_app/settings/team'
     | '/_app/students/badges'
     | '/_app/students/cohorts'
     | '/_app/students/messaging'
@@ -448,6 +577,7 @@ export interface FileRouteTypes {
     | '/_app/content-library/'
     | '/_app/courses/'
     | '/_app/dashboard/'
+    | '/_app/settings/'
     | '/_app/students/'
     | '/_app/analytics/courses/$courseId'
     | '/_app/content-library/$assetId/transcript'
@@ -528,6 +658,13 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof AppSearchRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/_app/students': {
@@ -627,6 +764,76 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/revenue'
       preLoaderRoute: typeof AppDashboardRevenueRouteImport
       parentRoute: typeof AppDashboardRouteRoute
+    }
+    '/_app/settings/': {
+      id: '/_app/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AppSettingsIndexRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    '/_app/settings/api': {
+      id: '/_app/settings/api'
+      path: '/api'
+      fullPath: '/settings/api'
+      preLoaderRoute: typeof AppSettingsApiRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    '/_app/settings/billing': {
+      id: '/_app/settings/billing'
+      path: '/billing'
+      fullPath: '/settings/billing'
+      preLoaderRoute: typeof AppSettingsBillingRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    '/_app/settings/branding': {
+      id: '/_app/settings/branding'
+      path: '/branding'
+      fullPath: '/settings/branding'
+      preLoaderRoute: typeof AppSettingsBrandingRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    '/_app/settings/integrations': {
+      id: '/_app/settings/integrations'
+      path: '/integrations'
+      fullPath: '/settings/integrations'
+      preLoaderRoute: typeof AppSettingsIntegrationsRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    '/_app/settings/privacy': {
+      id: '/_app/settings/privacy'
+      path: '/privacy'
+      fullPath: '/settings/privacy'
+      preLoaderRoute: typeof AppSettingsPrivacyRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    '/_app/settings/profile': {
+      id: '/_app/settings/profile'
+      path: '/profile'
+      fullPath: '/settings/profile'
+      preLoaderRoute: typeof AppSettingsProfileRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    '/_app/settings/roles': {
+      id: '/_app/settings/roles'
+      path: '/roles'
+      fullPath: '/settings/roles'
+      preLoaderRoute: typeof AppSettingsRolesRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    '/_app/settings/security': {
+      id: '/_app/settings/security'
+      path: '/security'
+      fullPath: '/settings/security'
+      preLoaderRoute: typeof AppSettingsSecurityRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    '/_app/settings/team': {
+      id: '/_app/settings/team'
+      path: '/team'
+      fullPath: '/settings/team'
+      preLoaderRoute: typeof AppSettingsTeamRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
     }
     '/_app/students/': {
       id: '/_app/students/'
@@ -827,6 +1034,35 @@ const AppDashboardRouteRouteChildren: AppDashboardRouteRouteChildren = {
 const AppDashboardRouteRouteWithChildren =
   AppDashboardRouteRoute._addFileChildren(AppDashboardRouteRouteChildren)
 
+interface AppSettingsRouteRouteChildren {
+  AppSettingsApiRoute: typeof AppSettingsApiRoute
+  AppSettingsBillingRoute: typeof AppSettingsBillingRoute
+  AppSettingsBrandingRoute: typeof AppSettingsBrandingRoute
+  AppSettingsIntegrationsRoute: typeof AppSettingsIntegrationsRoute
+  AppSettingsPrivacyRoute: typeof AppSettingsPrivacyRoute
+  AppSettingsProfileRoute: typeof AppSettingsProfileRoute
+  AppSettingsRolesRoute: typeof AppSettingsRolesRoute
+  AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
+  AppSettingsTeamRoute: typeof AppSettingsTeamRoute
+  AppSettingsIndexRoute: typeof AppSettingsIndexRoute
+}
+
+const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
+  AppSettingsApiRoute: AppSettingsApiRoute,
+  AppSettingsBillingRoute: AppSettingsBillingRoute,
+  AppSettingsBrandingRoute: AppSettingsBrandingRoute,
+  AppSettingsIntegrationsRoute: AppSettingsIntegrationsRoute,
+  AppSettingsPrivacyRoute: AppSettingsPrivacyRoute,
+  AppSettingsProfileRoute: AppSettingsProfileRoute,
+  AppSettingsRolesRoute: AppSettingsRolesRoute,
+  AppSettingsSecurityRoute: AppSettingsSecurityRoute,
+  AppSettingsTeamRoute: AppSettingsTeamRoute,
+  AppSettingsIndexRoute: AppSettingsIndexRoute,
+}
+
+const AppSettingsRouteRouteWithChildren =
+  AppSettingsRouteRoute._addFileChildren(AppSettingsRouteRouteChildren)
+
 interface AppStudentsRouteRouteChildren {
   AppStudentsBadgesRoute: typeof AppStudentsBadgesRoute
   AppStudentsCohortsRoute: typeof AppStudentsCohortsRoute
@@ -857,6 +1093,7 @@ interface AppRouteRouteChildren {
   AppContentLibraryRouteRoute: typeof AppContentLibraryRouteRouteWithChildren
   AppCoursesRouteRoute: typeof AppCoursesRouteRouteWithChildren
   AppDashboardRouteRoute: typeof AppDashboardRouteRouteWithChildren
+  AppSettingsRouteRoute: typeof AppSettingsRouteRouteWithChildren
   AppStudentsRouteRoute: typeof AppStudentsRouteRouteWithChildren
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppSearchRoute: typeof AppSearchRoute
@@ -867,6 +1104,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppContentLibraryRouteRoute: AppContentLibraryRouteRouteWithChildren,
   AppCoursesRouteRoute: AppCoursesRouteRouteWithChildren,
   AppDashboardRouteRoute: AppDashboardRouteRouteWithChildren,
+  AppSettingsRouteRoute: AppSettingsRouteRouteWithChildren,
   AppStudentsRouteRoute: AppStudentsRouteRouteWithChildren,
   AppNotificationsRoute: AppNotificationsRoute,
   AppSearchRoute: AppSearchRoute,
