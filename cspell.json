@@ -1,0 +1,4 @@
+{
+  "//": "Root spelling config is a thin consumer of the shared tooling layer. Dictionaries and ignore policy live in tooling/cspell-config.",
+  "import": ["@abugida/cspell-config/cspell.json"]
+}
