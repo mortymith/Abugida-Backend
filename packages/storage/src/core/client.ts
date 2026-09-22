@@ -8,8 +8,8 @@
 
 import { S3Client } from '@aws-sdk/client-s3'
 import { NodeHttpHandler } from '@smithy/node-http-handler'
-import type { StorageConfig } from './types.ts'
-import { validateConfig, PROVIDER_DEFAULTS } from '../config/schema.ts'
+import type { StorageConfig } from './types.js'
+import { validateConfig, PROVIDER_DEFAULTS } from '../config/schema.js'
 
 // ---------------------------------------------------------------------------
 // Client factory

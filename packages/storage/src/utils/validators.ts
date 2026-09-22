@@ -2,7 +2,7 @@
  * Validation utility helpers — composable predicates for file validation.
  */
 
-import { StorageValidationError } from './errors.ts'
+import { StorageValidationError } from './errors.js'
 
 /**
  * Validate that a file size is within the allowed limit.

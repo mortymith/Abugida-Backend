@@ -4,7 +4,7 @@
 
 import { CopyObjectCommand, type CopyObjectCommandInput } from '@aws-sdk/client-s3'
 import type { S3Client } from '@aws-sdk/client-s3'
-import type { CopyOptions, CopyResult } from '../core/types.ts'
+import type { CopyOptions, CopyResult } from '../core/types.js'
 
 /**
  * Copy an object to a new key within the same bucket.

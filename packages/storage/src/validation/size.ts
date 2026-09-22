@@ -2,7 +2,7 @@
  * File size validation.
  */
 
-import { StorageQuotaError } from '../utils/errors.ts'
+import { StorageQuotaError } from '../utils/errors.js'
 
 /** Common file size limits in bytes. */
 export const SIZE_LIMITS = {

@@ -5,7 +5,7 @@
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import type { S3Client } from '@aws-sdk/client-s3'
-import type { PresignedUrlOptions, PresignedUrlResult } from './types.ts'
+import type { PresignedUrlOptions, PresignedUrlResult } from './types.js'
 
 const DEFAULT_EXPIRY = 3600
 

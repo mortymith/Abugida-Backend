@@ -2,7 +2,7 @@
  * Configuration schema and validation for @abugida/storage.
  */
 
-import type { StorageConfig, StorageProvider, BackoffStrategy } from '../core/types.ts'
+import type { StorageConfig, StorageProvider, BackoffStrategy } from '../core/types.js'
 
 // ---------------------------------------------------------------------------
 // Provider defaults

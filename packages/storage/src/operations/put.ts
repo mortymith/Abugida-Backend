@@ -11,8 +11,8 @@ import type {
   PutManyItem,
   PutManyOptions,
   PutManyResult,
-} from '../core/types.ts'
-import { StorageUploadError } from '../utils/errors.ts'
+} from '../core/types.js'
+import { StorageUploadError } from '../utils/errors.js'
 
 /**
  * Upload an object to storage.

@@ -4,8 +4,8 @@
 
 import { HeadObjectCommand, type HeadObjectCommandInput } from '@aws-sdk/client-s3'
 import type { S3Client } from '@aws-sdk/client-s3'
-import type { HeadOptions, ObjectMetadata, ExistsResult } from '../core/types.ts'
-import { StorageNotFoundError } from '../utils/errors.ts'
+import type { HeadOptions, ObjectMetadata, ExistsResult } from '../core/types.js'
+import { StorageNotFoundError } from '../utils/errors.js'
 
 /**
  * Get object metadata without downloading the body.

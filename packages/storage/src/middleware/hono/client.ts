@@ -2,7 +2,7 @@
  * Hono API storage client — convenience wrapper for use in Hono routes.
  */
 
-import type { Storage } from '../../core/storage.ts'
+import type { Storage } from '../../core/storage.js'
 
 /**
  * Create a Hono-compatible storage client.
