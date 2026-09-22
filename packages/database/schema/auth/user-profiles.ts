@@ -48,6 +48,8 @@ export const userProfiles = pgTable(
     examPreferences: jsonb('exam_preferences').notNull().default([]),
     isOnboardingCompleted: boolean('is_onboarding_completed').notNull().default(false),
     onboardingStep: smallint('onboarding_step').notNull().default(0),
+    /** Product tour (spec 09 S-7.6): set when the user completes or skips. */
+    tourCompletedAt: timestamp('tour_completed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()

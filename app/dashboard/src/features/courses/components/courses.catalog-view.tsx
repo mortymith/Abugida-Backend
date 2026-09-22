@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { toast } from '#/components/common/toast'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Add01Icon, ArrowDown01Icon, Search01Icon } from '@hugeicons/core-free-icons'
@@ -327,7 +327,7 @@ export function CoursesCatalog() {
             onClick={() => {
               const nextPage = query.page + 1
               void queryClient.prefetchQuery(catalogQueryOptions({ ...query, page: nextPage }))
-              toast.message('Loading more courses…')
+              toast.info('Loading more courses…')
             }}
           >
             Load More

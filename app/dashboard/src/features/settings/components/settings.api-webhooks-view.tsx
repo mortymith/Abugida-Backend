@@ -37,7 +37,7 @@ import {
 } from '../hooks/settings.mutations'
 import { WEBHOOK_EVENT_TYPES } from '../settings.constants'
 import type { WebhookEndpointItem } from '../settings.types'
-import { toast } from 'sonner'
+import { toast } from '#/components/common/toast'
 
 /**
  * S-6.7 API & Webhooks — API keys (one-time reveal) and outbound webhook

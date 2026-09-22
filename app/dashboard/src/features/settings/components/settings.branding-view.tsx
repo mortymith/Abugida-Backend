@@ -11,7 +11,7 @@ import { ConfirmDialog } from '#/components/common/confirm-dialog'
 import { brandingQueryOptions } from '../hooks/settings.queries'
 import { useResetBranding, useSaveBranding } from '../hooks/settings.mutations'
 import { getBrandingUploadUrl } from '../server/all'
-import { toast } from 'sonner'
+import { toast } from '#/components/common/toast'
 
 /**
  * S-6.4 Branding — logo/favicon upload, brand colors, custom CSS, live

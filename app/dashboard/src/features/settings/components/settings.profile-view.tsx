@@ -45,7 +45,7 @@ import {
 import { getAvatarUploadUrl } from '../server/all'
 import { SaveBar } from './settings.setting-controls'
 import { LANGUAGE_OPTIONS } from '../settings.constants'
-import { toast } from 'sonner'
+import { toast } from '#/components/common/toast'
 
 /**
  * S-6.5 My Profile & Account — the signed-in user's own record: identity,

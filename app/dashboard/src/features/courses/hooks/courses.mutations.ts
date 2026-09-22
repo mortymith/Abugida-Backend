@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { toast } from '#/components/common/toast'
 import { courseQueryKeys } from './courses.queries'
 import * as serverFns from '../server/all'
 import type { QueryKey } from '@tanstack/react-query'

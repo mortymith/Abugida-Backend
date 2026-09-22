@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarInset } from '#/components/ui/sidebar'
 import { TooltipProvider } from '#/components/ui/tooltip'
 import { AppSidebar } from '#/components/layout/layout.app-sidebar'
 import { Header } from '#/components/layout/layout.header'
+import { OnboardingTour } from '#/features/onboarding'
 
 export const Route = createFileRoute('/_app')({
   beforeLoad: async (args) => {
@@ -32,6 +33,8 @@ function AppLayout() {
             <Outlet />
           </main>
         </SidebarInset>
+        {/* S-7.6: first-login product tour; replayable from Help & Support. */}
+        <OnboardingTour />
       </SidebarProvider>
     </TooltipProvider>
   )

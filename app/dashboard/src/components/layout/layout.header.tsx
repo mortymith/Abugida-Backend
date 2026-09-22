@@ -9,14 +9,23 @@ import {
   DropdownMenuTrigger,
 } from '#/components/ui/dropdown-menu'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { UserIcon, Settings02Icon, Logout02Icon } from '@hugeicons/core-free-icons'
+import {
+  UserIcon,
+  Settings02Icon,
+  Logout02Icon,
+  CircleQuestionMarkIcon,
+} from '@hugeicons/core-free-icons'
+import { Button } from '#/components/ui/button'
 import { AppBreadcrumbs } from './layout.breadcrumbs'
 import { SearchTrigger, CreateCourseButton } from '#/features/navigation'
+import { HelpPanel } from '#/features/support'
 import { useSession } from '#/features/auth'
+import { useState } from 'react'
 
 export function Header() {
   const { data: session } = useSession()
   const user = session?.user
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const initials = user?.name
     ? user.name
@@ -41,6 +50,17 @@ export function Header() {
       <AppBreadcrumbs />
 
       <div className="flex-1" />
+
+      {/* S-7.4: help entry point available on every screen (S-A.1). */}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={() => setHelpOpen(true)}
+        aria-label="Open Help and Support"
+      >
+        <HugeiconsIcon icon={CircleQuestionMarkIcon} strokeWidth={2} />
+      </Button>
+      <HelpPanel open={helpOpen} onOpenChange={setHelpOpen} />
 
       <SearchTrigger />
       <CreateCourseButton />
