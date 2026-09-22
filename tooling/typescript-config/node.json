@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./base.json",
+  "//": [
+    "Preset for typechecked-but-not-emitted server surfaces: Hono API apps,",
+    "test projects, and scripts that Bun executes from TypeScript source.",
+    "Bun runs .ts natively, so `noEmit` is the honest setting; `types: [\"bun\"]`",
+    "exposes Bun's globals without pulling Node's type surface into client code.",
+    "noImplicitReturns lives here (not in base) because it matches the",
+    "historical policy of app/api and the root config, while the shared",
+    "libraries never enabled it. Consumers keep app-specific options (jsx,",
+    "paths, include) local."
+  ],
+  "compilerOptions": {
+    "noEmit": true,
+    "noImplicitReturns": true,
+    "types": ["bun"]
+  }
+}

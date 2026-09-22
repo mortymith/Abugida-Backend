@@ -44,10 +44,13 @@ Adjust replica counts for stateless services. Production defaults: 3 API, 3 dash
    This ensures future `just setup-prod` deploys use the correct count.
 
 4. **Verify resource headroom**
+
    ```bash
    just container-stats
    ```
+
    Confirm each container is within prod limits (4 CPU / 8 GB). Check host-level resources:
+
    ```bash
    docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
    ```

@@ -43,10 +43,13 @@ Reclaim disk space across Docker layers, backups, ClickHouse data, and MinIO obj
    ClickHouse TTL policies automatically expire old trace data; `OPTIMIZE` forces immediate cleanup.
 
 5. **Review and apply MinIO lifecycle rules**
+
    ```bash
    just s3-lifecycle
    ```
+
    Confirm lifecycle rules expire multipart uploads and versioned objects per policy. Manually clean if needed:
+
    ```bash
    docker exec minio-1 mc rm --recursive --older-than 30d myminio/mybucket/prefix/
    ```

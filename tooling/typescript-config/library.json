@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./base.json",
+  "//": [
+    "Preset for tsc-built shared libraries (packages/*). Libraries emit JS plus",
+    "declarations into dist/ in a single tsc pass, which is why this preset",
+    "intentionally does NOT set emitDeclarationOnly or noEmit.",
+    "",
+    "Declaration-build rule (previously-identified conflict):",
+    "allowImportingTsExtensions is legal only with noEmit or emitDeclarationOnly.",
+    "Because libraries emit JS via tsc, this preset must never enable",
+    "allowImportingTsExtensions. A future declaration-only consumer (whose JS",
+    "is emitted by a bundler) must set emitDeclarationOnly explicitly.",
+    "",
+    "Path-based options (outDir, rootDir, include) intentionally live in each",
+    "package: relative paths inside a shared preset resolve against the preset",
+    "file, not the consuming tsconfig.",
+    "",
+    "Known safe relaxations vs base reflect current package usage:",
+    "exactOptionalPropertyTypes=false (all five libraries),",
+    "noImplicitOverride=true (auth/database), moduleDetection=force.",
+    "Per-package deltas (target, lib, types, jsx, verbatimModuleSyntax,",
+    "include/exclude) stay in each package tsconfig.json."
+  ],
+  "compilerOptions": {
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": true,
+    "moduleDetection": "force"
+  }
+}

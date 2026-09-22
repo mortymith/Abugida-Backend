@@ -60,6 +60,15 @@ just validate-compose   # Validate all three compose tiers
 - Secrets: dev uses `.env`, staging/prod use HashiCorp Vault.
 - Dev environment infra: PostgreSQL, PgBouncer, Redis (Sentinel), MinIO, PowerSync.
 
+## Tooling layer (`tooling/`)
+
+Shared per-tool configuration packages (`@abugida/*-config`, part of the pnpm workspace) — one source of truth per tool. Root configs (`eslint.config.js`, `prettier.config.js`, `tsconfig.json`, `commitlint.config.js`, `lint-staged.config.js`, `knip.config.js`, `cspell.json`) are thin consumers; workspaces extend/depend on the packages. See `tooling/README.md` for the package table, commands, system-binary list, and exceptions. Highlights:
+
+- TypeScript presets: `@abugida/typescript-config/{base,node,library}.json`. Path options (`outDir`/`rootDir`/`include`) stay in each consuming tsconfig (relative paths in shared presets resolve against the preset file).
+- ESLint: shared base via `@abugida/eslint-config` (typescript-eslint pinned 8.69.0). Framework plugins stay in the owning workspace (Astro in `app/marketing`, `@tanstack/eslint-config` in `app/dashboard`).
+- `bun test` preload: root + workspace `bunfig.toml` wire `@abugida/bun-test-config/preload` (safe env defaults — `pnpm test` needs no exported secrets).
+- Repo-wide quality scripts: `lint:spelling`, `lint:docker`, `lint:yaml`, `lint:markdown`, `lint:editorconfig`, `lint:env`, `lint:secrets` (blocking) and `lint:shell`, `lint:deps`, `knip` (advisory). Some require system binaries (shellcheck, hadolint, yamllint, gitleaks, dotenv-linter, editorconfig-checker, shfmt) — see `tooling/README.md`.
+
 ## Git workflow (enforced by husky hooks — don't bypass)
 
 - `commit-msg`: Conventional Commits via commitlint (e.g. `feat(scope): ...`). `body-max-line-length`/`footer-max-line-length` are disabled.

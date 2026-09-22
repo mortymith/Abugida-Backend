@@ -109,8 +109,8 @@ sleep 15
 
 # ── Check recovery status ────────────────────────────────────────
 echo "==> Checking recovery status..."
-docker exec "${TARGET_CONTAINER}" psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "\n    SELECT pg_is_in_recovery(), 
-           current_timestamp, 
+docker exec "${TARGET_CONTAINER}" psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "\n    SELECT pg_is_in_recovery(),
+           current_timestamp,
            pg_last_xact_replay_timestamp() AS recovered_to;\n" 2> /dev/null || true
 
 SIZE=$(docker exec "${TARGET_CONTAINER}" psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -tAc "SELECT pg_size_pretty(pg_database_size('${POSTGRES_DB}'));" 2> /dev/null || echo 'unknown')

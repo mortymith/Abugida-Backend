@@ -68,7 +68,7 @@ export const purchaseOptions = pgTable(
     check('price_check', sql`${table.priceAmount} >= 0`),
     check(
       'xor_constraint',
-      sql`(${table.courseId} IS NOT NULL AND ${table.bundleId} IS NULL) OR 
+      sql`(${table.courseId} IS NOT NULL AND ${table.bundleId} IS NULL) OR
         (${table.courseId} IS NULL AND ${table.bundleId} IS NOT NULL)`,
     ),
   ],

@@ -13,7 +13,7 @@ const MAX_ERROR_BODY_LENGTH = 500
 export class HttpNetworkError extends Error {
   constructor(
     message: string,
-    public readonly cause: unknown,
+    public override readonly cause: unknown,
   ) {
     super(message)
     this.name = 'HttpNetworkError'

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "//": [
+    "Shared spelling configuration for the Abugida monorepo.",
+    "Project dictionaries live next to this file in dictionaries/ and cover",
+    "legitimate project terminology only (product names, Ethiopian education",
+    "terms, package and infrastructure names). Do not grow them to silence",
+    "one-off typos \u2014 fix the typo instead.",
+    "Consumed by the root cspell.json via the import mechanism."
+  ],
+  "version": "0.2",
+  "language": "en",
+  "dictionaries": ["abugida-project", "abugida-infra", "en-gb"],
+  "dictionaryDefinitions": [
+    {
+      "name": "abugida-project",
+      "path": "./dictionaries/project.txt",
+      "addWords": true
+    },
+    {
+      "name": "abugida-infra",
+      "path": "./dictionaries/infra.txt",
+      "addWords": true
+    }
+  ],
+  "ignorePaths": [
+    "node_modules/**",
+    "**/node_modules/**",
+    "dist/**",
+    "**/dist/**",
+    ".turbo/**",
+    "**/.turbo/**",
+    ".astro/**",
+    "**/.astro/**",
+    "coverage/**",
+    "pnpm-lock.yaml",
+    "bun.lockb",
+    "**/*.gen.ts",
+    "**/*.tsbuildinfo",
+    ".agents/**",
+    ".vscode/**",
+    ".git/**",
+    "patches/**",
+    "**/.env",
+    "**/.env.*",
+    "**/spec /**"
+  ]
+}

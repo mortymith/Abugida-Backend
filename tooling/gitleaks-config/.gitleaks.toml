@@ -1,0 +1,50 @@
+# Shared Gitleaks configuration for the Abugida monorepo.
+# Consumed from root scripts: gitleaks git --config tooling/gitleaks-config/.gitleaks.toml ...
+#
+# Allowlist policy: explicit, minimal, justified. Every entry documents WHY
+# the match is a false positive. Do not add entries to make the scan pass —
+# investigate each finding first.
+
+title = "Abugida-Backend gitleaks config"
+
+# Run the upstream default rule set on top of this config. A config without
+# `useDefault = true` would REPLACE the rule set entirely (silently scanning
+# nothing) — keep this directive.
+[extend]
+useDefault = true
+
+[allowlist]
+  description = "Verified false positives (placeholders, fixtures, lockfiles)"
+
+  paths = [
+    # Placeholder credentials in the committed infrastructure template.
+    # Every [secret] value is a documented dev-only default (ADR-006) that
+    # MUST be replaced before first boot. Real .env files are untracked and
+    # never scanned.
+    '''^\.env\.example$''',
+    '''^app/[^/]+/\.env\.example$''',
+    # Dependency lockfiles and vendored patches contain checksums that can
+    # resemble token patterns.
+    '''^pnpm-lock\.yaml$''',
+    '''^patches/''',
+    # Unit-test fixtures with fabricated credential-shaped strings. None of
+    # these are real credentials: they are random-looking constants used to
+    # exercise validation and signing code paths (e.g. the EC test keys in
+    # packages/auth sign throwaway JWTs inside the test run only).
+    '''^packages/auth/tests/.*\.test\.ts$''',
+    '''^packages/database/tests/.*\.test\.ts$''',
+    '''^packages/observability/tests/.*\.test\.ts$''',
+    '''^app/api/tests/.*\.test\.ts$''',
+    # Published API documentation example values (OpenAPI spec).
+    '''^docs/api-spec\.yaml$''',
+  ]
+
+  # Placeholder markers used across templates and docs:
+  stopwords = [
+    "changeme",
+    "CHANGE_ME",
+    "your-secret",
+    "example-key",
+    "12345",
+    "abc123",
+  ]

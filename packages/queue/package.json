@@ -1,7 +1,7 @@
 {
   "name": "@abugida/queue",
   "version": "0.0.1",
-  "description": "Shared message queue layer for the Abugida Application monorepo – BullMQ with Redis",
+  "description": "Shared message queue layer for the Abugida Application monorepo \u2013 BullMQ with Redis",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -58,12 +58,12 @@
     }
   },
   "devDependencies": {
+    "@abugida/bun-test-config": "workspace:*",
+    "@abugida/eslint-config": "workspace:*",
+    "@abugida/typescript-config": "workspace:*",
     "@types/bun": "^1.4.2",
     "@types/node": "^22.10.2",
-    "eslint": "^10.8.0",
-    "prettier": "^3.9.6",
-    "typescript": "^5.7.0",
-    "typescript-eslint": "^8.66.0"
+    "typescript": "^5.7.0"
   },
   "keywords": [
     "queue",

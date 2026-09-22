@@ -30,27 +30,27 @@ Staging adds 6 more: API, Dashboard, Marketing, and the observability stack (Cli
 
 ## Access Points (Dev)
 
-| URL                   | Description                     |
-| --------------------- | ------------------------------- |
-| http://localhost:5432 | PostgreSQL (pgbouncer on :6432) |
-| http://localhost:6379 | Redis                           |
-| http://localhost:9000 | MinIO S3 API                    |
-| http://localhost:9001 | MinIO Console                   |
-| http://localhost:8085 | PowerSync sync endpoint         |
+| URL                     | Description                     |
+| ----------------------- | ------------------------------- |
+| <http://localhost:5432> | PostgreSQL (pgbouncer on :6432) |
+| <http://localhost:6379> | Redis                           |
+| <http://localhost:9000> | MinIO S3 API                    |
+| <http://localhost:9001> | MinIO Console                   |
+| <http://localhost:8085> | PowerSync sync endpoint         |
 
 ## Access Points (Staging)
 
 All dev ports plus:
 
-| URL                   | Description                    |
-| --------------------- | ------------------------------ |
-| http://localhost:3001 | API server                     |
-| http://localhost:8081 | Dashboard app                  |
-| http://localhost:8082 | Marketing site                 |
-| http://localhost:8123 | ClickHouse HTTP                |
-| http://localhost:3002 | SigNoz observability dashboard |
-| http://localhost:4317 | OTEL gRPC endpoint             |
-| http://localhost:4318 | OTEL HTTP endpoint             |
+| URL                     | Description                    |
+| ----------------------- | ------------------------------ |
+| <http://localhost:3001> | API server                     |
+| <http://localhost:8081> | Dashboard app                  |
+| <http://localhost:8082> | Marketing site                 |
+| <http://localhost:8123> | ClickHouse HTTP                |
+| <http://localhost:3002> | SigNoz observability dashboard |
+| <http://localhost:4317> | OTEL gRPC endpoint             |
+| <http://localhost:4318> | OTEL HTTP endpoint             |
 
 ## Common Just Recipes
 

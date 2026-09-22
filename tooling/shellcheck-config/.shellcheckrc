@@ -1,0 +1,10 @@
+# Shared ShellCheck configuration for the Abugida monorepo.
+# Consumed from root scripts: shellcheck -x --rcfile tooling/shellcheck-config/.shellcheckrc
+
+# Ops scripts source shared libraries and rely on dynamic paths; follow
+# `source` directives when the file is resolvable.
+disable=SC1091
+
+# Scripts intentionally target bash on Linux (dev containers, CI, prod images).
+# EC2/ECS-style init snippets are not a concern here.
+disable=SC2034

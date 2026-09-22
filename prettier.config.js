@@ -1,26 +1,4 @@
+// Root Prettier configuration is a thin consumer of the shared tooling layer.
+// The formatting policy lives in tooling/prettier-config.
 // @ts-check
-
-/** @type {import('prettier').Config} */
-const config = {
-  printWidth: 100,
-  tabWidth: 2,
-  useTabs: false,
-  semi: false,
-  singleQuote: true,
-  jsxSingleQuote: false,
-  trailingComma: 'all',
-  bracketSpacing: true,
-  bracketSameLine: false,
-  arrowParens: 'always',
-  plugins: ['prettier-plugin-astro'],
-  overrides: [
-    {
-      files: '*.astro',
-      options: {
-        parser: 'astro',
-      },
-    },
-  ],
-}
-
-export default config
+export { default } from '@abugida/prettier-config'

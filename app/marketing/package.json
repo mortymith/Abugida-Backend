@@ -19,12 +19,11 @@
     "astro": "^7.1.4"
   },
   "devDependencies": {
+    "@abugida/eslint-config": "workspace:*",
     "@astrojs/check": "^0.9.10",
     "@typescript-eslint/parser": "^8.65.0",
     "astro-eslint-parser": "^1.2.2",
-    "eslint": "^10.8.0",
     "eslint-plugin-astro": "^3.0.1",
-    "prettier-plugin-astro": "^0.14.1",
     "typescript": "6.0.3"
   }
 }
