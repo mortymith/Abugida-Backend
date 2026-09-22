@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { QueryKey } from '@tanstack/react-query'
 import {
@@ -404,18 +404,5 @@ export function useRunRule() {
         `Run finished: ${output.enrolled} enrolled, ${output.skipped} skipped, ${output.failed} failed.`,
       )
     },
-  })
-}
-
-/** Live student search shared by pickers (badges manual award, cohorts). */
-export function useStudentSearch(q: string, enabled: boolean) {
-  return useQuery({
-    queryKey: ['students', 'search', q] as const,
-    queryFn: async () => {
-      const { listCohortCandidateStudents } = await import('../server/all')
-      return listCohortCandidateStudents({ data: q })
-    },
-    enabled,
-    staleTime: 30_000,
   })
 }

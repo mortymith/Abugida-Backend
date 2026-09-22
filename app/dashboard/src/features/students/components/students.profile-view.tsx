@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { CalendarIcon, MailIcon, MessageSquareIcon, PencilIcon, PhoneIcon } from 'lucide-react'
 import { useRole } from '#/features/auth'
+import { ConfirmDialog } from '#/components/common/confirm-dialog'
 import { Avatar, AvatarFallback } from '#/components/ui/avatar'
 import { Badge } from '#/components/ui/badge'
 import { Button, buttonVariants } from '#/components/ui/button'
@@ -14,7 +15,11 @@ import {
   studentProfileQueryOptions,
   studentThreadsQueryOptions,
 } from '../hooks/students.queries'
-import { useRemoveStudentTag } from '../hooks/students.mutations'
+import {
+  useAddStudentTag,
+  useRemoveStudentTag,
+  useUnenrollStudent,
+} from '../hooks/students.mutations'
 import { ACTIVITY_KIND_LABELS } from '../students.activity'
 import { formatPercent } from '#/lib/format'
 import { StudentsStatusBadge } from './students.status-badge'
@@ -36,6 +41,10 @@ export function StudentsProfileView({ studentId }: { studentId: string }) {
   const activityQuery = useQuery(studentActivityQueryOptions({ studentId }))
   const threadsQuery = useQuery(studentThreadsQueryOptions(studentId))
   const removeTag = useRemoveStudentTag()
+  const addTag = useAddStudentTag()
+  const unenroll = useUnenrollStudent()
+  const [tagDraft, setTagDraft] = useState('')
+  const [unenrollTarget, setUnenrollTarget] = useState<string | null>(null)
 
   const [editOpen, setEditOpen] = useState(false)
   const [enrollOpen, setEnrollOpen] = useState(false)
@@ -107,8 +116,8 @@ export function StudentsProfileView({ studentId }: { studentId: string }) {
                   {profile.lastActivityAt ? relativeDay(profile.lastActivityAt) : 'Never'}
                 </span>
               </div>
-              {profile.tags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5">
+              {(profile.tags.length > 0 || canWrite) && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   {profile.tags.map((tag) => (
                     <Badge key={tag} variant="secondary" className="gap-1">
                       {tag}
@@ -124,6 +133,33 @@ export function StudentsProfileView({ studentId }: { studentId: string }) {
                       )}
                     </Badge>
                   ))}
+                  {canWrite && (
+                    <form
+                      className="flex items-center gap-1"
+                      onSubmit={(event) => {
+                        event.preventDefault()
+                        const tag = tagDraft.trim()
+                        if (!tag) return
+                        addTag.mutate({ studentId, tag }, { onSuccess: () => setTagDraft('') })
+                      }}
+                    >
+                      <input
+                        value={tagDraft}
+                        onChange={(event) => setTagDraft(event.target.value)}
+                        placeholder="Add tag…"
+                        aria-label="Add tag"
+                        className="h-6 w-24 rounded-full border bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+                      {tagDraft.trim() && (
+                        <button
+                          type="submit"
+                          className="text-xs font-medium text-primary hover:underline"
+                        >
+                          Add
+                        </button>
+                      )}
+                    </form>
+                  )}
                 </div>
               )}
             </div>
@@ -216,6 +252,17 @@ export function StudentsProfileView({ studentId }: { studentId: string }) {
                           <Badge variant="secondary">Active</Badge>
                         )}
                       </td>
+                      {canWrite && (
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            type="button"
+                            className="text-xs text-muted-foreground underline-offset-2 hover:text-destructive hover:underline"
+                            onClick={() => setUnenrollTarget(row.courseTitle)}
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -322,6 +369,20 @@ export function StudentsProfileView({ studentId }: { studentId: string }) {
         open={editOpen}
         onOpenChange={setEditOpen}
         profile={{ id: profile.id, name: profile.name, email: profile.email }}
+      />
+      <ConfirmDialog
+        open={unenrollTarget != null}
+        onOpenChange={(open) => !open && setUnenrollTarget(null)}
+        title={`Remove enrollment in ${unenrollTarget ?? 'this course'}?`}
+        body="The student loses access to the course. Their progress history is retained."
+        confirmLabel="Remove Enrollment"
+        destructive
+        onConfirm={() => {
+          const target = (coursesQuery.data ?? []).find((row) => row.courseTitle === unenrollTarget)
+          if (target == null) return
+          unenroll.mutate({ studentId, coursePublicId: target.coursePublicId })
+          setUnenrollTarget(null)
+        }}
       />
       <StudentsEnrollDialog
         open={enrollOpen}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { MoreHorizontalIcon, PlusIcon, SearchIcon, UsersIcon } from 'lucide-react'
 import { useRole } from '#/features/auth'
 import { buildCsv, downloadCsv } from '#/features/dashboard/dashboard.export-csv'
@@ -27,16 +27,25 @@ import {
   TableRow,
 } from '#/components/ui/table'
 import {
+  cohortsQueryOptions,
   directoryQueryOptions,
   directoryStatsQueryOptions,
   enrollableCoursesQueryOptions,
 } from '../hooks/students.queries'
-import { useSetStudentStatus } from '../hooks/students.mutations'
+import { useSetStudentStatus, useUpdateCohortMembers } from '../hooks/students.mutations'
 import type { DirectoryQuery, StudentSortValue } from '../schemas/students.schema'
 import type { StudentDirectoryItem } from '../students.types'
 import { StudentsStatCards } from './students.stat-cards'
 import { StudentsStatusBadge } from './students.status-badge'
 import { StudentsAddStudentModal } from './students.add-student-modal'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '#/components/ui/dialog'
 import { StudentsEnrollDialog } from './students.enroll-dialog'
 
 /**
@@ -50,6 +59,7 @@ export function StudentsDirectoryView({ query }: { query: DirectoryQuery }) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [addOpen, setAddOpen] = useState(false)
   const [bulkEnrollOpen, setBulkEnrollOpen] = useState(false)
+  const [bulkCohortOpen, setBulkCohortOpen] = useState(false)
   const [statusTarget, setStatusTarget] = useState<StudentDirectoryItem | null>(null)
   const [statusNext, setStatusNext] = useState<'active' | 'suspended' | null>(null)
 
@@ -225,9 +235,14 @@ export function StudentsDirectoryView({ query }: { query: DirectoryQuery }) {
         >
           <span className="text-sm font-medium">{selected.size} selected</span>
           {canWrite && (
-            <Button size="sm" variant="outline" onClick={() => setBulkEnrollOpen(true)}>
-              Enroll in Course
-            </Button>
+            <>
+              <Button size="sm" variant="outline" onClick={() => setBulkEnrollOpen(true)}>
+                Enroll in Course
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setBulkCohortOpen(true)}>
+                Add to Cohort
+              </Button>
+            </>
           )}
           <Button size="sm" variant="outline" onClick={exportCsv}>
             Export Selection
@@ -420,6 +435,15 @@ export function StudentsDirectoryView({ query }: { query: DirectoryQuery }) {
         onDone={() => setSelected(new Set())}
       />
 
+      {canWrite && (
+        <StudentsBulkCohortDialog
+          open={bulkCohortOpen}
+          onOpenChange={setBulkCohortOpen}
+          studentIds={Array.from(selected)}
+          onDone={() => setSelected(new Set())}
+        />
+      )}
+
       {/* Suspend/reactivate confirmation */}
       <ConfirmDialog
         open={statusTarget != null && statusNext != null}
@@ -445,6 +469,73 @@ export function StudentsDirectoryView({ query }: { query: DirectoryQuery }) {
         }}
       />
     </div>
+  )
+}
+
+/** Bulk "Add to cohort": pick a cohort for the selected students (S-4.1). */
+function StudentsBulkCohortDialog({
+  open,
+  onOpenChange,
+  studentIds,
+  onDone,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  studentIds: string[]
+  onDone?: () => void
+}) {
+  const cohortsQuery = useQuery({ ...cohortsQueryOptions({}), enabled: open })
+  const addMutation = useUpdateCohortMembers()
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add {studentIds.length} students to cohort</DialogTitle>
+          <DialogDescription>Students keep all existing cohort memberships.</DialogDescription>
+        </DialogHeader>
+        <fieldset className="grid gap-2">
+          <legend className="sr-only">Cohort</legend>
+          {(cohortsQuery.data?.items ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No cohorts yet — create one on the Cohorts screen first.
+            </p>
+          ) : (
+            (cohortsQuery.data?.items ?? []).map((cohort) => (
+              <button
+                key={cohort.publicId}
+                type="button"
+                disabled={addMutation.isPending}
+                onClick={() =>
+                  addMutation.mutate(
+                    {
+                      cohortPublicId: cohort.publicId,
+                      addStudentIds: studentIds,
+                      removeStudentIds: [],
+                    },
+                    {
+                      onSuccess: () => {
+                        onOpenChange(false)
+                        onDone?.()
+                      },
+                    },
+                  )
+                }
+                className="flex items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span className="font-medium">{cohort.name}</span>
+                <span className="text-xs text-muted-foreground">{cohort.memberCount} students</span>
+              </button>
+            ))
+          )}
+        </fieldset>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
