@@ -53,7 +53,7 @@ export function AppSidebar() {
                     ? (pendingReviews.data ?? 0)
                     : item.badge
                 return (
-                  <SidebarMenuItem key={item.id}>
+                  <SidebarMenuItem key={item.id} data-tour-target={`nav-${item.id}`}>
                     <NavMenuButton item={item} />
                     {badge != null && badge > 0 ? (
                       <SidebarMenuBadge>{badge}</SidebarMenuBadge>
