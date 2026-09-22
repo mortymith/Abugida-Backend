@@ -2,7 +2,7 @@
  * File extension validation.
  */
 
-import { StorageValidationError } from '../utils/errors.ts'
+import { StorageValidationError } from '../utils/errors.js'
 
 /** Allowed extension sets for different asset categories. */
 export const EXTENSIONS = {

@@ -2,7 +2,7 @@
  * Default configuration values for @abugida/storage.
  */
 
-import type { StorageConfig } from '../core/types.ts'
+import type { StorageConfig } from '../core/types.js'
 
 /** Sensible defaults for local MinIO development. */
 export const DEFAULT_MINIO_CONFIG: Partial<StorageConfig> = {

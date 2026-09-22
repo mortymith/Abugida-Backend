@@ -4,7 +4,7 @@
 # Abugida API Service — Multi-Stage Dockerfile
 #
 # Stage 0 (`base`) inlines the shared Abugida base toolchain:
-# Bun 1.3.14 + pnpm 12.5.1, the runtime tooling (bash, curl, jq,
+# Bun 1.4.2 + pnpm 12.5.1, the runtime tooling (bash, curl, jq,
 # postgresql17-client) used by the healthcheck and ops tasks, and the
 # non-root `appuser` (uid/gid 1000, WORKDIR /app).
 #
@@ -24,7 +24,7 @@ ARG BUILD_VERSION=0.0.1
 # ── Stage 0: Shared base ────────────────────────────────────────────
 # oven/bun pinned by digest (multi-arch index) for reproducible,
 # supply-chain-safe builds. Bump the tag AND digest together.
-FROM oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0 AS base
+FROM oven/bun:1.4.2-alpine@sha256:d888c0ae6c86d7866ff10c5aafdd9077b36aee6455b33dd270fb93c0dd5cef6f AS base
 
 # Version pins (single source of truth for this inline copy).
 ARG PNPM_VERSION=12.5.1
@@ -128,7 +128,7 @@ ENV NODE_ENV=production \
 
 LABEL org.opencontainers.image.title="Abugida API"
 LABEL org.opencontainers.image.description="Hono REST API built on the shared Abugida Bun/pnpm base"
-LABEL org.opencontainers.image.base.name="oven/bun:1.3.14-alpine"
+LABEL org.opencontainers.image.base.name="oven/bun:1.4.2-alpine"
 LABEL org.opencontainers.image.version="${BUILD_VERSION}"
 LABEL org.opencontainers.image.vendor="Abugida"
 LABEL org.opencontainers.image.licenses="MIT"

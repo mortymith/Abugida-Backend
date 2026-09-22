@@ -2,5 +2,5 @@
  * Hono middleware barrel export.
  */
 
-export { HonoStorageClient, createHonoClient } from './client.ts'
-export { createStorageRoutes } from './routes.ts'
+export { HonoStorageClient, createHonoClient } from './client.js'
+export { createStorageRoutes } from './routes.js'

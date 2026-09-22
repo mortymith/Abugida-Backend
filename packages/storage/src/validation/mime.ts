@@ -2,7 +2,7 @@
  * MIME type validation.
  */
 
-import { StorageValidationError } from '../utils/errors.ts'
+import { StorageValidationError } from '../utils/errors.js'
 
 /** Allowed MIME type sets for different asset categories. */
 export const MIME_TYPES = {

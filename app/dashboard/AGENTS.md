@@ -7,7 +7,7 @@ You are working on the **Abugida Academy dashboard**, a TanStack Start applicati
 ## 1. Architecture Overview
 
 - **Framework:** TanStack Start (file-based routing via TanStack Router, SSR, server functions).
-- **Runtime:** Bun >= 1.3.14. Never use Node-specific APIs.
+- **Runtime:** Bun >= 1.4.2. Never use Node-specific APIs.
 - **Package manager:** pnpm >= 12 (workspace protocol). Never run `bun install` or `bun add`.
 - **Monorepo scope:** This app lives at `app/dashboard`. Shared packages: `@abugida/auth`, `@abugida/database`, `@abugida/queue`, `@abugida/storage`.
 

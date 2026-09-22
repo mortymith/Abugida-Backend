@@ -1,6 +1,6 @@
 ## Tooling
 
-- **Runtime:** bun (>= 1.3.14, pinned in `.bun-version`). Run scripts, dev servers, and tests with bun.
+- **Runtime:** bun (>= 1.4.2, pinned in `.bun-version`). Run scripts, dev servers, and tests with bun.
 - **Package manager:** pnpm (>= 12, pinned in `package.json` `packageManager`). Install deps with `pnpm install` only.
 - Never let bun touch the dependency graph: `bunfig.toml` sets `frozenLockfile = true` and there is intentionally no `bun.lockb`. Do not run `bun add`/`bun install` or introduce a bun lockfile — edit `package.json` + `pnpm-workspace.yaml` and reinstall with pnpm.
 - `pnpm-workspace.yaml` has explicit `allowBuilds` for native deps (`@google/genai`, `esbuild`, `sharp`, etc.). Don't add new native packages without checking this list.

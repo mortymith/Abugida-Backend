@@ -9,8 +9,8 @@ import {
   type DeleteObjectsCommandInput,
 } from '@aws-sdk/client-s3'
 import type { S3Client } from '@aws-sdk/client-s3'
-import type { DeleteOptions, DeleteResult, DeleteManyResult } from '../core/types.ts'
-import { StorageError } from '../utils/errors.ts'
+import type { DeleteOptions, DeleteResult, DeleteManyResult } from '../core/types.js'
+import { StorageError } from '../utils/errors.js'
 
 /**
  * Delete a single object from storage.

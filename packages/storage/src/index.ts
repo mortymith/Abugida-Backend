@@ -16,7 +16,7 @@
  */
 
 // Core
-export { Storage, createStorage, storageKeys } from './core/storage.ts'
+export { Storage, createStorage, storageKeys } from './core/storage.js'
 export type {
   StorageConfig,
   StorageProvider,
@@ -47,12 +47,12 @@ export type {
   MoveOptions,
   ListOptions,
   BodyInput,
-} from './core/types.ts'
+} from './core/types.js'
 
 // Client & Connection
-export { createClient, getOrCreateClient, destroyClient, destroyAllClients } from './core/client.ts'
-export { checkHealth, CircuitBreaker } from './core/connection.ts'
-export type { HealthCheckResult, CircuitState, CircuitBreakerConfig } from './core/connection.ts'
+export { createClient, getOrCreateClient, destroyClient, destroyAllClients } from './core/client.js'
+export { checkHealth, CircuitBreaker } from './core/connection.js'
+export type { HealthCheckResult, CircuitState, CircuitBreakerConfig } from './core/connection.js'
 
 // Errors
 export {
@@ -67,15 +67,15 @@ export {
   StorageQuotaError,
   StorageKeyError,
   classifyError,
-} from './utils/errors.ts'
+} from './utils/errors.js'
 
 // Config
-export { validateConfig, PROVIDER_DEFAULTS } from './config/schema.ts'
-export { DEFAULT_MINIO_CONFIG, DEFAULT_AWS_CONFIG, DEFAULT_R2_CONFIG } from './config/defaults.ts'
-export { configFromEnv, hasEnvConfig } from './config/env.ts'
+export { validateConfig, PROVIDER_DEFAULTS } from './config/schema.js'
+export { DEFAULT_MINIO_CONFIG, DEFAULT_AWS_CONFIG, DEFAULT_R2_CONFIG } from './config/defaults.js'
+export { configFromEnv, hasEnvConfig } from './config/env.js'
 
 // Presigned types
-export type { PresignedUrlOptions, PresignedUrlResult } from './presigned/types.ts'
+export type { PresignedUrlOptions, PresignedUrlResult } from './presigned/types.js'
 
 // Multipart types
 export type {
@@ -85,22 +85,22 @@ export type {
   CompletedPart,
   MultipartListedPart,
   MultipartUploadPartOptions,
-} from './multipart/types.ts'
-export { MIN_PART_SIZE, MAX_PARTS } from './multipart/types.ts'
+} from './multipart/types.js'
+export { MIN_PART_SIZE, MAX_PARTS } from './multipart/types.js'
 
 // Validation
-export { validateSize, validateQuota, SIZE_LIMITS } from './validation/size.ts'
-export { validateMimeType, detectMimeType, MIME_TYPES } from './validation/mime.ts'
-export { validateExtension, extractExtension, EXTENSIONS } from './validation/extension.ts'
+export { validateSize, validateQuota, SIZE_LIMITS } from './validation/size.js'
+export { validateMimeType, detectMimeType, MIME_TYPES } from './validation/mime.js'
+export { validateExtension, extractExtension, EXTENSIONS } from './validation/extension.js'
 export {
   calculateChecksum,
   calculateStreamChecksum,
   calculateChecksumHex,
-} from './validation/checksum.ts'
+} from './validation/checksum.js'
 
 // Utilities
-export { withRetry, calculateDelay, sleep } from './utils/retry.ts'
-export type { RetryOptions } from './utils/retry.ts'
+export { withRetry, calculateDelay, sleep } from './utils/retry.js'
+export type { RetryOptions } from './utils/retry.js'
 export {
   streamToBuffer,
   bufferToStream,
@@ -108,7 +108,7 @@ export {
   chunkStream,
   toReadableStream,
   getBodyLength,
-} from './utils/stream.ts'
+} from './utils/stream.js'
 export {
   formatFileSize,
   getExtension,
@@ -117,5 +117,5 @@ export {
   normaliseKey,
   joinKey,
   maskSensitive,
-} from './utils/format.ts'
-export { validateCustom } from './utils/validators.ts'
+} from './utils/format.js'
+export { validateCustom } from './utils/validators.js'
