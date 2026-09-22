@@ -1,38 +1,68 @@
 import { useNavigate } from '@tanstack/react-router'
 import { Button } from '#/components/ui/button'
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '#/components/ui/command'
+import { CommandPalette } from '#/components/common/command-palette'
+import type { CommandPaletteGroup } from '#/components/common/command-palette'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { AiSearch02Icon, ClockIcon } from '@hugeicons/core-free-icons'
-import { useSearch } from '../hooks/navigation.search'
-import { useState, useEffect } from 'react'
+import { useRole } from '#/features/auth'
+import type { GlobalSearchPayload } from '#/features/search'
+import { useCommandPalette } from '../hooks/navigation.command-palette'
+import {
+  buildNavigationGroup,
+  buildQuickActionGroup,
+  buildResultsGroup,
+  PALETTE_GROUP_IDS,
+} from '../navigation.palette'
 
+const EMPTY_PAYLOAD: GlobalSearchPayload = {
+  query: '',
+  groups: [],
+  totalMatches: 0,
+  omittedGroups: [],
+}
+
+/**
+ * S-7.5 Command Palette trigger (spec 09). Header search button + the
+ * ⌘K palette: quick actions, role-filtered screen navigation, recent
+ * searches, and live results from the S-1.3 global-search index.
+ */
 export function SearchTrigger() {
-  const [open, setOpen] = useState(false)
-  const { query, setQuery, results, isLoading, recentSearches } = useSearch()
   const navigate = useNavigate()
+  const role = useRole()
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        setOpen(true)
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  const palette = useCommandPalette()
 
-  function handleSelect(result: { url: string }) {
-    setOpen(false)
-    navigate({ to: result.url as '/' | '/dashboard' })
+  const onNavigate = (to: string, search?: Record<string, unknown>) => {
+    palette.closeAndReset()
+    void navigate({ to, search: search as never })
   }
+
+  const groups: CommandPaletteGroup[] = [
+    buildQuickActionGroup((to, search) => onNavigate(to, search)),
+    buildNavigationGroup(role, (to) => onNavigate(to)),
+  ]
+
+  if (!palette.query.trim() && palette.recentSearches.length > 0) {
+    groups.push({
+      id: PALETTE_GROUP_IDS.recent,
+      heading: 'Recent searches',
+      items: palette.recentSearches.map((term) => ({
+        id: `recent:${term}`,
+        label: term,
+        hint: 'Recent',
+        icon: <HugeiconsIcon icon={ClockIcon} strokeWidth={2} />,
+        onSelect: () => palette.selectRecent(term),
+      })),
+    })
+  }
+
+  const payload = palette.search.data ?? EMPTY_PAYLOAD
+  groups.push(
+    buildResultsGroup(payload, (url) => {
+      palette.recordSearchTerm(palette.query)
+      onNavigate(url)
+    }),
+  )
 
   return (
     <>
@@ -40,7 +70,9 @@ export function SearchTrigger() {
         variant="outline"
         size="sm"
         className="gap-2 text-muted-foreground"
-        onClick={() => setOpen(true)}
+        onClick={() => palette.setOpen(true)}
+        aria-label="Open command palette"
+        aria-keyshortcuts="Meta+K Control+K"
       >
         <HugeiconsIcon icon={AiSearch02Icon} strokeWidth={2} />
         <span className="hidden md:inline">Search...</span>
@@ -49,48 +81,13 @@ export function SearchTrigger() {
         </kbd>
       </Button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput
-          placeholder="Search courses, students, assets..."
-          value={query}
-          onValueChange={setQuery}
-        />
-        <CommandList>
-          <CommandEmpty>{isLoading ? 'Searching...' : 'No results found.'}</CommandEmpty>
-
-          {!query && recentSearches.length > 0 && (
-            <CommandGroup heading="Recent">
-              {recentSearches.map((term) => (
-                <CommandItem
-                  key={term}
-                  value={term}
-                  onSelect={() => {
-                    setQuery(term)
-                  }}
-                >
-                  <HugeiconsIcon icon={ClockIcon} strokeWidth={2} />
-                  <span>{term}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-
-          {results.length > 0 && (
-            <CommandGroup heading="Results">
-              {results.map((result) => (
-                <CommandItem
-                  key={result.id}
-                  value={result.title}
-                  onSelect={() => handleSelect(result)}
-                >
-                  <span>{result.title}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">{result.type}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-        </CommandList>
-      </CommandDialog>
+      <CommandPalette
+        open={palette.open}
+        onOpenChange={(next) => (next ? palette.setOpen(true) : palette.closeAndReset())}
+        placeholder="Type a command or search…"
+        groups={groups}
+        isLoading={palette.isSearching}
+      />
     </>
   )
 }
