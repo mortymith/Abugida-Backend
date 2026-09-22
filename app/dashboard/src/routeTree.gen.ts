@@ -16,6 +16,7 @@ import { Route as AppAnalyticsRouteRouteImport } from './routes/_app/analytics/r
 import { Route as AppContentLibraryRouteRouteImport } from './routes/_app/content-library/route'
 import { Route as AppCoursesRouteRouteImport } from './routes/_app/courses/route'
 import { Route as AppDashboardRouteRouteImport } from './routes/_app/dashboard/route'
+import { Route as AppMarketingRouteRouteImport } from './routes/_app/marketing/route'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as AppSettingsRouteRouteImport } from './routes/_app/settings/route'
@@ -33,6 +34,12 @@ import { Route as AppCoursesReviewsRouteImport } from './routes/_app/courses/rev
 import { Route as AppCoursesTemplatesRouteImport } from './routes/_app/courses/templates'
 import { Route as AppDashboardIndexRouteImport } from './routes/_app/dashboard/index'
 import { Route as AppDashboardRevenueRouteImport } from './routes/_app/dashboard/revenue'
+import { Route as AppMarketingIndexRouteImport } from './routes/_app/marketing/index'
+import { Route as AppMarketingAffiliatesRouteImport } from './routes/_app/marketing/affiliates'
+import { Route as AppMarketingCampaignsRouteImport } from './routes/_app/marketing/campaigns'
+import { Route as AppMarketingCouponsRouteImport } from './routes/_app/marketing/coupons'
+import { Route as AppMarketingTemplatesRouteImport } from './routes/_app/marketing/templates'
+import { Route as AppMarketingTestimonialsRouteImport } from './routes/_app/marketing/testimonials'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsApiRouteImport } from './routes/_app/settings/api'
 import { Route as AppSettingsBillingRouteImport } from './routes/_app/settings/billing'
@@ -52,6 +59,7 @@ import { Route as AppStudentsRulesRouteImport } from './routes/_app/students/rul
 import { Route as AppAnalyticsCoursesCourseIdRouteImport } from './routes/_app/analytics/courses/$courseId'
 import { Route as AppContentLibraryAssetIdIndexRouteImport } from './routes/_app/content-library/$assetId.index'
 import { Route as AppContentLibraryAssetIdTranscriptRouteImport } from './routes/_app/content-library/$assetId.transcript'
+import { Route as AppMarketingTemplatesTemplateIdRouteImport } from './routes/_app/marketing/templates/$templateId'
 import { Route as AppStudentsStudentIdIndexRouteImport } from './routes/_app/students/$studentId.index'
 import { Route as AppStudentsStudentIdProgressRouteImport } from './routes/_app/students/$studentId.progress'
 import { Route as AppAnalyticsCoursesCourseIdDropOffRouteImport } from './routes/_app/analytics/courses/$courseId.drop-off'
@@ -89,6 +97,11 @@ const AppCoursesRouteRoute = AppCoursesRouteRouteImport.update({
 const AppDashboardRouteRoute = AppDashboardRouteRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppMarketingRouteRoute = AppMarketingRouteRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppNotificationsRoute = AppNotificationsRouteImport.update({
@@ -176,6 +189,37 @@ const AppDashboardRevenueRoute = AppDashboardRevenueRouteImport.update({
   path: '/revenue',
   getParentRoute: () => AppDashboardRouteRoute,
 } as any)
+const AppMarketingIndexRoute = AppMarketingIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppMarketingRouteRoute,
+} as any)
+const AppMarketingAffiliatesRoute = AppMarketingAffiliatesRouteImport.update({
+  id: '/affiliates',
+  path: '/affiliates',
+  getParentRoute: () => AppMarketingRouteRoute,
+} as any)
+const AppMarketingCampaignsRoute = AppMarketingCampaignsRouteImport.update({
+  id: '/campaigns',
+  path: '/campaigns',
+  getParentRoute: () => AppMarketingRouteRoute,
+} as any)
+const AppMarketingCouponsRoute = AppMarketingCouponsRouteImport.update({
+  id: '/coupons',
+  path: '/coupons',
+  getParentRoute: () => AppMarketingRouteRoute,
+} as any)
+const AppMarketingTemplatesRoute = AppMarketingTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => AppMarketingRouteRoute,
+} as any)
+const AppMarketingTestimonialsRoute =
+  AppMarketingTestimonialsRouteImport.update({
+    id: '/testimonials',
+    path: '/testimonials',
+    getParentRoute: () => AppMarketingRouteRoute,
+  } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -274,6 +318,12 @@ const AppContentLibraryAssetIdTranscriptRoute =
     path: '/$assetId/transcript',
     getParentRoute: () => AppContentLibraryRouteRoute,
   } as any)
+const AppMarketingTemplatesTemplateIdRoute =
+  AppMarketingTemplatesTemplateIdRouteImport.update({
+    id: '/$templateId',
+    path: '/$templateId',
+    getParentRoute: () => AppMarketingTemplatesRoute,
+  } as any)
 const AppStudentsStudentIdIndexRoute =
   AppStudentsStudentIdIndexRouteImport.update({
     id: '/$studentId/',
@@ -311,6 +361,7 @@ export interface FileRoutesByFullPath {
   '/content-library': typeof AppContentLibraryRouteRouteWithChildren
   '/courses': typeof AppCoursesRouteRouteWithChildren
   '/dashboard': typeof AppDashboardRouteRouteWithChildren
+  '/marketing': typeof AppMarketingRouteRouteWithChildren
   '/settings': typeof AppSettingsRouteRouteWithChildren
   '/students': typeof AppStudentsRouteRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
@@ -324,6 +375,11 @@ export interface FileRoutesByFullPath {
   '/courses/reviews': typeof AppCoursesReviewsRoute
   '/courses/templates': typeof AppCoursesTemplatesRoute
   '/dashboard/revenue': typeof AppDashboardRevenueRoute
+  '/marketing/affiliates': typeof AppMarketingAffiliatesRoute
+  '/marketing/campaigns': typeof AppMarketingCampaignsRoute
+  '/marketing/coupons': typeof AppMarketingCouponsRoute
+  '/marketing/templates': typeof AppMarketingTemplatesRouteWithChildren
+  '/marketing/testimonials': typeof AppMarketingTestimonialsRoute
   '/settings/api': typeof AppSettingsApiRoute
   '/settings/billing': typeof AppSettingsBillingRoute
   '/settings/branding': typeof AppSettingsBrandingRoute
@@ -342,10 +398,12 @@ export interface FileRoutesByFullPath {
   '/content-library/': typeof AppContentLibraryIndexRoute
   '/courses/': typeof AppCoursesIndexRoute
   '/dashboard/': typeof AppDashboardIndexRoute
+  '/marketing/': typeof AppMarketingIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/students/': typeof AppStudentsIndexRoute
   '/analytics/courses/$courseId': typeof AppAnalyticsCoursesCourseIdRouteWithChildren
   '/content-library/$assetId/transcript': typeof AppContentLibraryAssetIdTranscriptRoute
+  '/marketing/templates/$templateId': typeof AppMarketingTemplatesTemplateIdRoute
   '/students/$studentId/progress': typeof AppStudentsStudentIdProgressRoute
   '/content-library/$assetId/': typeof AppContentLibraryAssetIdIndexRoute
   '/students/$studentId/': typeof AppStudentsStudentIdIndexRoute
@@ -366,6 +424,11 @@ export interface FileRoutesByTo {
   '/courses/reviews': typeof AppCoursesReviewsRoute
   '/courses/templates': typeof AppCoursesTemplatesRoute
   '/dashboard/revenue': typeof AppDashboardRevenueRoute
+  '/marketing/affiliates': typeof AppMarketingAffiliatesRoute
+  '/marketing/campaigns': typeof AppMarketingCampaignsRoute
+  '/marketing/coupons': typeof AppMarketingCouponsRoute
+  '/marketing/templates': typeof AppMarketingTemplatesRouteWithChildren
+  '/marketing/testimonials': typeof AppMarketingTestimonialsRoute
   '/settings/api': typeof AppSettingsApiRoute
   '/settings/billing': typeof AppSettingsBillingRoute
   '/settings/branding': typeof AppSettingsBrandingRoute
@@ -384,10 +447,12 @@ export interface FileRoutesByTo {
   '/content-library': typeof AppContentLibraryIndexRoute
   '/courses': typeof AppCoursesIndexRoute
   '/dashboard': typeof AppDashboardIndexRoute
+  '/marketing': typeof AppMarketingIndexRoute
   '/settings': typeof AppSettingsIndexRoute
   '/students': typeof AppStudentsIndexRoute
   '/analytics/courses/$courseId': typeof AppAnalyticsCoursesCourseIdRouteWithChildren
   '/content-library/$assetId/transcript': typeof AppContentLibraryAssetIdTranscriptRoute
+  '/marketing/templates/$templateId': typeof AppMarketingTemplatesTemplateIdRoute
   '/students/$studentId/progress': typeof AppStudentsStudentIdProgressRoute
   '/content-library/$assetId': typeof AppContentLibraryAssetIdIndexRoute
   '/students/$studentId': typeof AppStudentsStudentIdIndexRoute
@@ -404,6 +469,7 @@ export interface FileRoutesById {
   '/_app/content-library': typeof AppContentLibraryRouteRouteWithChildren
   '/_app/courses': typeof AppCoursesRouteRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRouteRouteWithChildren
+  '/_app/marketing': typeof AppMarketingRouteRouteWithChildren
   '/_app/settings': typeof AppSettingsRouteRouteWithChildren
   '/_app/students': typeof AppStudentsRouteRouteWithChildren
   '/_app/notifications': typeof AppNotificationsRoute
@@ -417,6 +483,11 @@ export interface FileRoutesById {
   '/_app/courses/reviews': typeof AppCoursesReviewsRoute
   '/_app/courses/templates': typeof AppCoursesTemplatesRoute
   '/_app/dashboard/revenue': typeof AppDashboardRevenueRoute
+  '/_app/marketing/affiliates': typeof AppMarketingAffiliatesRoute
+  '/_app/marketing/campaigns': typeof AppMarketingCampaignsRoute
+  '/_app/marketing/coupons': typeof AppMarketingCouponsRoute
+  '/_app/marketing/templates': typeof AppMarketingTemplatesRouteWithChildren
+  '/_app/marketing/testimonials': typeof AppMarketingTestimonialsRoute
   '/_app/settings/api': typeof AppSettingsApiRoute
   '/_app/settings/billing': typeof AppSettingsBillingRoute
   '/_app/settings/branding': typeof AppSettingsBrandingRoute
@@ -435,10 +506,12 @@ export interface FileRoutesById {
   '/_app/content-library/': typeof AppContentLibraryIndexRoute
   '/_app/courses/': typeof AppCoursesIndexRoute
   '/_app/dashboard/': typeof AppDashboardIndexRoute
+  '/_app/marketing/': typeof AppMarketingIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/_app/students/': typeof AppStudentsIndexRoute
   '/_app/analytics/courses/$courseId': typeof AppAnalyticsCoursesCourseIdRouteWithChildren
   '/_app/content-library/$assetId/transcript': typeof AppContentLibraryAssetIdTranscriptRoute
+  '/_app/marketing/templates/$templateId': typeof AppMarketingTemplatesTemplateIdRoute
   '/_app/students/$studentId/progress': typeof AppStudentsStudentIdProgressRoute
   '/_app/content-library/$assetId/': typeof AppContentLibraryAssetIdIndexRoute
   '/_app/students/$studentId/': typeof AppStudentsStudentIdIndexRoute
@@ -454,6 +527,7 @@ export interface FileRouteTypes {
     | '/content-library'
     | '/courses'
     | '/dashboard'
+    | '/marketing'
     | '/settings'
     | '/students'
     | '/notifications'
@@ -467,6 +541,11 @@ export interface FileRouteTypes {
     | '/courses/reviews'
     | '/courses/templates'
     | '/dashboard/revenue'
+    | '/marketing/affiliates'
+    | '/marketing/campaigns'
+    | '/marketing/coupons'
+    | '/marketing/templates'
+    | '/marketing/testimonials'
     | '/settings/api'
     | '/settings/billing'
     | '/settings/branding'
@@ -485,10 +564,12 @@ export interface FileRouteTypes {
     | '/content-library/'
     | '/courses/'
     | '/dashboard/'
+    | '/marketing/'
     | '/settings/'
     | '/students/'
     | '/analytics/courses/$courseId'
     | '/content-library/$assetId/transcript'
+    | '/marketing/templates/$templateId'
     | '/students/$studentId/progress'
     | '/content-library/$assetId/'
     | '/students/$studentId/'
@@ -509,6 +590,11 @@ export interface FileRouteTypes {
     | '/courses/reviews'
     | '/courses/templates'
     | '/dashboard/revenue'
+    | '/marketing/affiliates'
+    | '/marketing/campaigns'
+    | '/marketing/coupons'
+    | '/marketing/templates'
+    | '/marketing/testimonials'
     | '/settings/api'
     | '/settings/billing'
     | '/settings/branding'
@@ -527,10 +613,12 @@ export interface FileRouteTypes {
     | '/content-library'
     | '/courses'
     | '/dashboard'
+    | '/marketing'
     | '/settings'
     | '/students'
     | '/analytics/courses/$courseId'
     | '/content-library/$assetId/transcript'
+    | '/marketing/templates/$templateId'
     | '/students/$studentId/progress'
     | '/content-library/$assetId'
     | '/students/$studentId'
@@ -546,6 +634,7 @@ export interface FileRouteTypes {
     | '/_app/content-library'
     | '/_app/courses'
     | '/_app/dashboard'
+    | '/_app/marketing'
     | '/_app/settings'
     | '/_app/students'
     | '/_app/notifications'
@@ -559,6 +648,11 @@ export interface FileRouteTypes {
     | '/_app/courses/reviews'
     | '/_app/courses/templates'
     | '/_app/dashboard/revenue'
+    | '/_app/marketing/affiliates'
+    | '/_app/marketing/campaigns'
+    | '/_app/marketing/coupons'
+    | '/_app/marketing/templates'
+    | '/_app/marketing/testimonials'
     | '/_app/settings/api'
     | '/_app/settings/billing'
     | '/_app/settings/branding'
@@ -577,10 +671,12 @@ export interface FileRouteTypes {
     | '/_app/content-library/'
     | '/_app/courses/'
     | '/_app/dashboard/'
+    | '/_app/marketing/'
     | '/_app/settings/'
     | '/_app/students/'
     | '/_app/analytics/courses/$courseId'
     | '/_app/content-library/$assetId/transcript'
+    | '/_app/marketing/templates/$templateId'
     | '/_app/students/$studentId/progress'
     | '/_app/content-library/$assetId/'
     | '/_app/students/$studentId/'
@@ -644,6 +740,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AppDashboardRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/marketing': {
+      id: '/_app/marketing'
+      path: '/marketing'
+      fullPath: '/marketing'
+      preLoaderRoute: typeof AppMarketingRouteRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/_app/notifications': {
@@ -764,6 +867,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/revenue'
       preLoaderRoute: typeof AppDashboardRevenueRouteImport
       parentRoute: typeof AppDashboardRouteRoute
+    }
+    '/_app/marketing/': {
+      id: '/_app/marketing/'
+      path: '/'
+      fullPath: '/marketing/'
+      preLoaderRoute: typeof AppMarketingIndexRouteImport
+      parentRoute: typeof AppMarketingRouteRoute
+    }
+    '/_app/marketing/affiliates': {
+      id: '/_app/marketing/affiliates'
+      path: '/affiliates'
+      fullPath: '/marketing/affiliates'
+      preLoaderRoute: typeof AppMarketingAffiliatesRouteImport
+      parentRoute: typeof AppMarketingRouteRoute
+    }
+    '/_app/marketing/campaigns': {
+      id: '/_app/marketing/campaigns'
+      path: '/campaigns'
+      fullPath: '/marketing/campaigns'
+      preLoaderRoute: typeof AppMarketingCampaignsRouteImport
+      parentRoute: typeof AppMarketingRouteRoute
+    }
+    '/_app/marketing/coupons': {
+      id: '/_app/marketing/coupons'
+      path: '/coupons'
+      fullPath: '/marketing/coupons'
+      preLoaderRoute: typeof AppMarketingCouponsRouteImport
+      parentRoute: typeof AppMarketingRouteRoute
+    }
+    '/_app/marketing/templates': {
+      id: '/_app/marketing/templates'
+      path: '/templates'
+      fullPath: '/marketing/templates'
+      preLoaderRoute: typeof AppMarketingTemplatesRouteImport
+      parentRoute: typeof AppMarketingRouteRoute
+    }
+    '/_app/marketing/testimonials': {
+      id: '/_app/marketing/testimonials'
+      path: '/testimonials'
+      fullPath: '/marketing/testimonials'
+      preLoaderRoute: typeof AppMarketingTestimonialsRouteImport
+      parentRoute: typeof AppMarketingRouteRoute
     }
     '/_app/settings/': {
       id: '/_app/settings/'
@@ -897,6 +1042,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/content-library/$assetId/transcript'
       preLoaderRoute: typeof AppContentLibraryAssetIdTranscriptRouteImport
       parentRoute: typeof AppContentLibraryRouteRoute
+    }
+    '/_app/marketing/templates/$templateId': {
+      id: '/_app/marketing/templates/$templateId'
+      path: '/$templateId'
+      fullPath: '/marketing/templates/$templateId'
+      preLoaderRoute: typeof AppMarketingTemplatesTemplateIdRouteImport
+      parentRoute: typeof AppMarketingTemplatesRoute
     }
     '/_app/students/$studentId/': {
       id: '/_app/students/$studentId/'
@@ -1034,6 +1186,40 @@ const AppDashboardRouteRouteChildren: AppDashboardRouteRouteChildren = {
 const AppDashboardRouteRouteWithChildren =
   AppDashboardRouteRoute._addFileChildren(AppDashboardRouteRouteChildren)
 
+interface AppMarketingTemplatesRouteChildren {
+  AppMarketingTemplatesTemplateIdRoute: typeof AppMarketingTemplatesTemplateIdRoute
+}
+
+const AppMarketingTemplatesRouteChildren: AppMarketingTemplatesRouteChildren = {
+  AppMarketingTemplatesTemplateIdRoute: AppMarketingTemplatesTemplateIdRoute,
+}
+
+const AppMarketingTemplatesRouteWithChildren =
+  AppMarketingTemplatesRoute._addFileChildren(
+    AppMarketingTemplatesRouteChildren,
+  )
+
+interface AppMarketingRouteRouteChildren {
+  AppMarketingAffiliatesRoute: typeof AppMarketingAffiliatesRoute
+  AppMarketingCampaignsRoute: typeof AppMarketingCampaignsRoute
+  AppMarketingCouponsRoute: typeof AppMarketingCouponsRoute
+  AppMarketingTemplatesRoute: typeof AppMarketingTemplatesRouteWithChildren
+  AppMarketingTestimonialsRoute: typeof AppMarketingTestimonialsRoute
+  AppMarketingIndexRoute: typeof AppMarketingIndexRoute
+}
+
+const AppMarketingRouteRouteChildren: AppMarketingRouteRouteChildren = {
+  AppMarketingAffiliatesRoute: AppMarketingAffiliatesRoute,
+  AppMarketingCampaignsRoute: AppMarketingCampaignsRoute,
+  AppMarketingCouponsRoute: AppMarketingCouponsRoute,
+  AppMarketingTemplatesRoute: AppMarketingTemplatesRouteWithChildren,
+  AppMarketingTestimonialsRoute: AppMarketingTestimonialsRoute,
+  AppMarketingIndexRoute: AppMarketingIndexRoute,
+}
+
+const AppMarketingRouteRouteWithChildren =
+  AppMarketingRouteRoute._addFileChildren(AppMarketingRouteRouteChildren)
+
 interface AppSettingsRouteRouteChildren {
   AppSettingsApiRoute: typeof AppSettingsApiRoute
   AppSettingsBillingRoute: typeof AppSettingsBillingRoute
@@ -1093,6 +1279,7 @@ interface AppRouteRouteChildren {
   AppContentLibraryRouteRoute: typeof AppContentLibraryRouteRouteWithChildren
   AppCoursesRouteRoute: typeof AppCoursesRouteRouteWithChildren
   AppDashboardRouteRoute: typeof AppDashboardRouteRouteWithChildren
+  AppMarketingRouteRoute: typeof AppMarketingRouteRouteWithChildren
   AppSettingsRouteRoute: typeof AppSettingsRouteRouteWithChildren
   AppStudentsRouteRoute: typeof AppStudentsRouteRouteWithChildren
   AppNotificationsRoute: typeof AppNotificationsRoute
@@ -1104,6 +1291,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppContentLibraryRouteRoute: AppContentLibraryRouteRouteWithChildren,
   AppCoursesRouteRoute: AppCoursesRouteRouteWithChildren,
   AppDashboardRouteRoute: AppDashboardRouteRouteWithChildren,
+  AppMarketingRouteRoute: AppMarketingRouteRouteWithChildren,
   AppSettingsRouteRoute: AppSettingsRouteRouteWithChildren,
   AppStudentsRouteRoute: AppStudentsRouteRouteWithChildren,
   AppNotificationsRoute: AppNotificationsRoute,

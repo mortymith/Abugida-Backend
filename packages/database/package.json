@@ -27,6 +27,10 @@
       "types": "./dist/schema/learning/index.d.ts",
       "import": "./dist/schema/learning/index.js"
     },
+    "./marketing": {
+      "types": "./dist/schema/marketing/index.d.ts",
+      "import": "./dist/schema/marketing/index.js"
+    },
     "./ops": {
       "types": "./dist/schema/ops/index.d.ts",
       "import": "./dist/schema/ops/index.js"
