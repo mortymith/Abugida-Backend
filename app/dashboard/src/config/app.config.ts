@@ -32,6 +32,12 @@ const envSchema = z
     AUTH_NEW_USER_CALLBACK_URL: z.string().optional(),
     WEB_APP_URL: z.string().optional(),
     TOKEN_AUDIENCE: z.string().optional(),
+
+    // ── Queue transport (spec 10 marketing sends via EMAIL_NOTIFICATION) ─
+    REDIS_HOST: z.string().default('localhost'),
+    REDIS_PORT: z.coerce.number().int().positive().default(6379),
+    REDIS_PASSWORD: z.string().optional(),
+    REDIS_DB: z.coerce.number().int().min(0).max(15).optional(),
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     TELEGRAM_OIDC_CLIENT_ID: z.string().optional(),
