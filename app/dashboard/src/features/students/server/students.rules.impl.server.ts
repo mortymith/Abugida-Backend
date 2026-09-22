@@ -197,6 +197,7 @@ export async function getRulesImpl(): Promise<{ items: EnrollmentRuleRow[] }> {
       triggerKind: sql<string>`${enrollmentRules.triggerKind}::text`,
       triggerTag: enrollmentRules.triggerTag,
       triggerCourseId: enrollmentRules.triggerCourseId,
+      triggerCohortId: enrollmentRules.triggerCohortId,
       targetCourseId: enrollmentRules.targetCourseId,
       minQuizAvgPercent: enrollmentRules.minQuizAvgPercent,
       sendWelcomeEmail: enrollmentRules.sendWelcomeEmail,
@@ -223,6 +224,7 @@ export async function getRulesImpl(): Promise<{ items: EnrollmentRuleRow[] }> {
     .from(courses)
     .where(inArray(courses.id, courseIds))
   const courseById = new Map(courseRows.map((row) => [row.id, row]))
+  const publicIdByCourse = new Map(courseRows.map((row) => [row.id, row.publicId]))
 
   const runRows = await db
     .select({
@@ -246,6 +248,18 @@ export async function getRulesImpl(): Promise<{ items: EnrollmentRuleRow[] }> {
     if (!lastRunByRule.has(run.ruleId)) lastRunByRule.set(run.ruleId, run)
   }
 
+  const cohortIdRefs = ruleRows
+    .map((row) => row.triggerCohortId)
+    .filter((id): id is number => id != null)
+  const { cohorts } = await import('@abugida/database/learning')
+  const cohortRows = cohortIdRefs.length
+    ? await db
+        .select({ id: cohorts.id, publicId: cohorts.publicId })
+        .from(cohorts)
+        .where(inArray(cohorts.id, cohortIdRefs))
+    : []
+  const cohortPublicIdById = new Map(cohortRows.map((row) => [row.id, row.publicId]))
+
   return {
     items: ruleRows.map((row) => {
       const lastRun = lastRunByRule.get(row.id)
@@ -259,6 +273,13 @@ export async function getRulesImpl(): Promise<{ items: EnrollmentRuleRow[] }> {
           { triggerKind: row.triggerKind as RuleTrigger, triggerTag: row.triggerTag },
           trigger?.title ?? null,
         ),
+        triggerCoursePublicId:
+          row.triggerCourseId != null ? (publicIdByCourse.get(row.triggerCourseId) ?? null) : null,
+        triggerTag: row.triggerTag,
+        triggerCohortPublicId:
+          row.triggerCohortId != null
+            ? (cohortPublicIdById.get(row.triggerCohortId) ?? null)
+            : null,
         targetCoursePublicId: target?.publicId ?? '',
         targetCourseTitle: target?.title ?? 'Unknown course',
         minQuizAvgPercent: row.minQuizAvgPercent,
@@ -411,7 +432,6 @@ export async function dryRunRuleImpl(input: RuleDryRunInput): Promise<DryRunResu
     targetCourseId: number
     minQuizAvgPercent: number | null
   }
-  let targetCoursePublicId: string
 
   if (input.rulePublicId) {
     const rule = await resolveRule(input.rulePublicId)
@@ -423,14 +443,6 @@ export async function dryRunRuleImpl(input: RuleDryRunInput): Promise<DryRunResu
       targetCourseId: rule.targetCourseId,
       minQuizAvgPercent: rule.minQuizAvgPercent,
     }
-    targetCoursePublicId =
-      (
-        await db
-          .select({ publicId: courses.publicId })
-          .from(courses)
-          .where(eq(courses.id, rule.targetCourseId))
-          .limit(1)
-      ).at(0)?.publicId ?? ''
   } else if (input.draft) {
     const draft = input.draft
     const target = await db
@@ -468,11 +480,11 @@ export async function dryRunRuleImpl(input: RuleDryRunInput): Promise<DryRunResu
       targetCourseId: targetCourse.id,
       minQuizAvgPercent: draft.minQuizAvgPercent,
     }
-    targetCoursePublicId = draft.targetCoursePublicId
+    // Draft path: the trigger/target comparison is against public ids.
     validateRuleNotSelfLoop(
       draft.trigger.triggerKind,
       draft.trigger.triggerKind === 'course_completed' ? draft.trigger.coursePublicId : null,
-      targetCoursePublicId,
+      draft.targetCoursePublicId,
     )
   } else {
     throw new Error('VALIDATION_FAILED: a rule id or draft is required')
@@ -502,7 +514,6 @@ export async function dryRunRuleImpl(input: RuleDryRunInput): Promise<DryRunResu
     willEnroll: outcome.willEnroll.length,
     willSkip: outcome.willSkip.length,
     items: toDryRunItems(outcome),
-    ...{ targetCoursePublicId },
   }
 }
 

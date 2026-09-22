@@ -174,6 +174,9 @@ export function StudentsRulesView() {
                     >
                       Edit
                     </Button>
+                    <Button size="xs" variant="ghost" onClick={() => setRunsTarget(rule)}>
+                      Log
+                    </Button>
                     <Button
                       size="xs"
                       variant="ghost"
@@ -308,10 +311,10 @@ function StudentsRuleEditorModal({
   useEffect(() => {
     if (open) {
       setName(rule?.name ?? '')
-      setTriggerKind('course_completed')
-      setTriggerCourseId('')
-      setTriggerTag('')
-      setTriggerCohortId('')
+      setTriggerKind(rule?.triggerKind ?? 'course_completed')
+      setTriggerCourseId(rule?.triggerCoursePublicId ?? '')
+      setTriggerTag(rule?.triggerTag ?? '')
+      setTriggerCohortId(rule?.triggerCohortPublicId ?? '')
       setMinQuizAvg(rule?.minQuizAvgPercent != null ? String(rule.minQuizAvgPercent) : '')
       setTargetCoursePublicId(rule?.targetCoursePublicId ?? '')
       setSendWelcomeEmail(rule?.sendWelcomeEmail ?? false)

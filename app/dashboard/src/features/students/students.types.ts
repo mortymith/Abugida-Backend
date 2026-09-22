@@ -239,6 +239,10 @@ export interface EnrollmentRuleRow {
   triggerKind: 'course_completed' | 'tag_added' | 'cohort_assigned' | 'account_created'
   /** Human-readable trigger, e.g. "TOEFL Complete completed" or "Tag = acme-2026". */
   triggerLabel: string
+  /** Raw trigger references so the editor can hydrate an existing rule. */
+  triggerCoursePublicId: string | null
+  triggerTag: string | null
+  triggerCohortPublicId: string | null
   targetCoursePublicId: string
   targetCourseTitle: string
   minQuizAvgPercent: number | null

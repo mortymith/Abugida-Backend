@@ -4,7 +4,7 @@
  * profile edits, status management, and student tags. Never import from
  * client code.
  */
-import { and, asc, desc, eq, ilike, isNull, or, sql } from '@abugida/database'
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from '@abugida/database'
 import { courses } from '@abugida/database/catalog'
 import { enrollments, studentTags } from '@abugida/database/learning'
 import { users, verification } from '@abugida/database/auth'
@@ -435,12 +435,7 @@ export async function listEnrollableCoursesImpl(): Promise<
           count: sql<number>`COUNT(*)::int`,
         })
         .from(enrollments)
-        .where(
-          and(
-            sql`${enrollments.courseId} = ANY(${sql.raw(`ARRAY[${courseIds.join(',')}]::bigint[]`)})`,
-            isNull(enrollments.deletedAt),
-          ),
-        )
+        .where(and(inArray(enrollments.courseId, courseIds), isNull(enrollments.deletedAt)))
         .groupBy(enrollments.courseId)
     : []
   const countByCourse = new Map(counts.map((row) => [row.courseId, Number(row.count)]))
@@ -457,16 +452,6 @@ export async function listEnrollableCoursesImpl(): Promise<
     capacity: row.capacity,
     activeEnrollments: countByCourse.get(row.id) ?? 0,
   }))
-}
-
-export async function getStudentTagsImpl(studentId: string): Promise<string[]> {
-  await requireStudentReadRole()
-  const rows = await db
-    .select({ tag: studentTags.tag })
-    .from(studentTags)
-    .where(eq(studentTags.studentId, studentId))
-    .orderBy(asc(studentTags.tag))
-  return rows.map((row) => row.tag)
 }
 
 export async function getStudentsReferenceImpl(): Promise<{

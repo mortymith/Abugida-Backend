@@ -10,6 +10,8 @@ const messagingSearchSchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   /** Deep link from a profile: pre-open the student's latest thread. */
   student: z.string().uuid().optional(),
+  /** Deep link from a cohort: pre-select the broadcast audience. */
+  cohort: z.string().uuid().optional(),
 })
 
 export const Route = createFileRoute('/_app/students/messaging')({
@@ -43,6 +45,7 @@ function StudentsMessagingPage() {
     <StudentsMessagingView
       query={{ q: search.q, filter: search.filter, page: search.page }}
       initialStudentId={search.student}
+      initialCohortPublicId={search.cohort}
     />
   )
 }

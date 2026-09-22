@@ -58,14 +58,6 @@ export const studentStatusSchema = z.object({
 })
 export type StudentStatusInput = z.infer<typeof studentStatusSchema>
 
-export const enrollStudentSchema = z.object({
-  studentId: z.string().uuid(),
-  coursePublicId: z.string().uuid(),
-  /** Client-acknowledged "this grants paid access at no charge" confirmation. */
-  acknowledgedPaid: z.boolean().default(false),
-})
-export type EnrollStudentInput = z.infer<typeof enrollStudentSchema>
-
 export const unenrollSchema = z.object({
   studentId: z.string().uuid(),
   coursePublicId: z.string().uuid(),

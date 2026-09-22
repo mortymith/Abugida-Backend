@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   BookOpenIcon,
   Loader2Icon,
+  MailIcon,
   PlusIcon,
   SearchIcon,
   SettingsIcon,
@@ -12,7 +14,7 @@ import { useRole } from '#/features/auth'
 import { ConfirmDialog } from '#/components/common/confirm-dialog'
 import { EmptyState } from '#/components/common/empty-state'
 import { RetryErrorState } from '#/components/common/retry-error-state'
-import { Button } from '#/components/ui/button'
+import { Button, buttonVariants } from '#/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '#/components/ui/card'
 import {
   Dialog,
@@ -133,6 +135,23 @@ export function StudentsCohortsView({ query }: { query: CohortsQuery }) {
                 <Button size="sm" variant="outline" onClick={() => setManageTarget(cohort)}>
                   <SettingsIcon aria-hidden /> Manage
                 </Button>
+                {role === 'admin' || role === 'support' ? (
+                  <Link
+                    to="/students/messaging"
+                    search={{ cohort: cohort.publicId }}
+                    className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                    title="Broadcast to this cohort"
+                  >
+                    <MailIcon aria-hidden /> Email
+                  </Link>
+                ) : (
+                  <span
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                    title="Broadcasting requires the Admin or Support role"
+                  >
+                    <MailIcon aria-hidden className="size-3.5" /> Email
+                  </span>
+                )}
               </CardFooter>
             </Card>
           ))}

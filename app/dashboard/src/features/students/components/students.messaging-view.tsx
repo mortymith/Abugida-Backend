@@ -22,6 +22,7 @@ import { Textarea } from '#/components/ui/textarea'
 import { cn } from '#/lib/utils'
 import {
   cohortsQueryOptions,
+  studentProfileQueryOptions,
   threadMessagesQueryOptions,
   threadsQueryOptions,
 } from '../hooks/students.queries'
@@ -37,9 +38,11 @@ import type { MessageItem, MessageThreadItem } from '../students.types'
 export function StudentsMessagingView({
   query,
   initialStudentId,
+  initialCohortPublicId,
 }: {
   query: { q?: string; filter?: string; page?: number }
   initialStudentId?: string
+  initialCohortPublicId?: string
 }) {
   const role = useRole()
   const canMessage = role === 'admin' || role === 'support'
@@ -226,9 +229,29 @@ export function StudentsMessagingView({
         {/* Conversation pane */}
         <div className="flex min-h-[60vh] w-full flex-1 flex-col rounded-lg border">
           {thread == null ? (
-            <div className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
-              Select a thread to read the conversation.
-            </div>
+            initialStudentId != null ? (
+              <StartThreadPane
+                studentId={initialStudentId}
+                onStarted={(created) => {
+                  setThread({
+                    publicId: created,
+                    studentId: initialStudentId,
+                    studentName: '',
+                    studentEmail: '',
+                    kind: 'direct',
+                    subject: null,
+                    lastMessageAt: new Date().toISOString(),
+                    lastMessagePreview: null,
+                    unreadStaffCount: 0,
+                  })
+                  void navigate({ to: '/students/messaging', search: {} })
+                }}
+              />
+            ) : (
+              <div className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
+                Select a thread to read the conversation.
+              </div>
+            )
           ) : (
             <ThreadPane
               key={thread.publicId}
@@ -239,7 +262,11 @@ export function StudentsMessagingView({
         </div>
       </div>
 
-      <StudentsBroadcastDialog open={broadcastOpen} onOpenChange={setBroadcastOpen} />
+      <StudentsBroadcastDialog
+        open={broadcastOpen}
+        onOpenChange={setBroadcastOpen}
+        initialCohortPublicId={initialCohortPublicId}
+      />
     </div>
   )
 }
@@ -250,6 +277,65 @@ function relativeDay(iso: string): string {
   if (days === 1) return '1d'
   if (days < 7) return `${days}d`
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+/** Starts a first conversation with a student (profile deep link). */
+function StartThreadPane({
+  studentId,
+  onStarted,
+}: {
+  studentId: string
+  onStarted: (threadPublicId: string) => void
+}) {
+  const profileQuery = useQuery(studentProfileQueryOptions({ studentId }))
+  const sendMutation = useSendMessage()
+  const [subject, setSubject] = useState('')
+  const [body, setBody] = useState('')
+
+  const send = () => {
+    const message = body.trim()
+    if (!message) return
+    sendMutation.mutate(
+      { studentId, subject: subject.trim() || null, body: message, attachments: [] },
+      { onSuccess: (result) => onStarted(result.threadPublicId) },
+    )
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="border-b px-4 py-3">
+        <p className="font-semibold">{profileQuery.data?.name ?? 'New conversation'}</p>
+        <p className="text-xs text-muted-foreground">{profileQuery.data?.email ?? ''}</p>
+      </div>
+      <div className="flex flex-1 flex-col justify-center gap-3 p-4">
+        <p className="text-sm text-muted-foreground">
+          No conversation with this student yet — start one.
+        </p>
+        <Input
+          value={subject}
+          onChange={(event) => setSubject(event.target.value)}
+          placeholder="Subject (optional)"
+          aria-label="Subject"
+        />
+        <Textarea
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+              event.preventDefault()
+              send()
+            }
+          }}
+          placeholder="Write the first message… (⌘+Enter to send)"
+          aria-label="First message"
+          rows={5}
+        />
+        <Button className="w-fit" disabled={!body.trim() || sendMutation.isPending} onClick={send}>
+          <SendIcon aria-hidden /> Send
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 /** One conversation: messages + optimistic reply composer. */
@@ -424,11 +510,13 @@ function MessageBubble({ message }: { message: MessageItem }) {
 function StudentsBroadcastDialog({
   open,
   onOpenChange,
+  initialCohortPublicId,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialCohortPublicId?: string
 }) {
-  const [cohortPublicId, setCohortPublicId] = useState('')
+  const [cohortPublicId, setCohortPublicId] = useState(initialCohortPublicId ?? '')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [preview, setPreview] = useState<{ recipientCount: number; cohortName: string } | null>(
@@ -442,14 +530,15 @@ function StudentsBroadcastDialog({
   const broadcastMutation = useBroadcastMessage()
 
   useEffect(() => {
-    if (!open) {
-      setCohortPublicId('')
+    if (open) {
+      setCohortPublicId(initialCohortPublicId ?? '')
+    } else {
       setSubject('')
       setBody('')
       setPreview(null)
       setPreviewError(false)
     }
-  }, [open])
+  }, [open, initialCohortPublicId])
 
   const reviewRecipients = async () => {
     setPreviewLoading(true)
