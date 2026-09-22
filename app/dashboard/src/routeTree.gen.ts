@@ -17,6 +17,7 @@ import { Route as AppCoursesRouteRouteImport } from './routes/_app/courses/route
 import { Route as AppDashboardRouteRouteImport } from './routes/_app/dashboard/route'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
+import { Route as AppStudentsRouteRouteImport } from './routes/_app/students/route'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthMfaRouteImport } from './routes/_auth/mfa'
 import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
@@ -28,8 +29,16 @@ import { Route as AppCoursesReviewsRouteImport } from './routes/_app/courses/rev
 import { Route as AppCoursesTemplatesRouteImport } from './routes/_app/courses/templates'
 import { Route as AppDashboardIndexRouteImport } from './routes/_app/dashboard/index'
 import { Route as AppDashboardRevenueRouteImport } from './routes/_app/dashboard/revenue'
+import { Route as AppStudentsIndexRouteImport } from './routes/_app/students/index'
+import { Route as AppStudentsBadgesRouteImport } from './routes/_app/students/badges'
+import { Route as AppStudentsCohortsRouteImport } from './routes/_app/students/cohorts'
+import { Route as AppStudentsMessagingRouteImport } from './routes/_app/students/messaging'
+import { Route as AppStudentsRequestsRouteImport } from './routes/_app/students/requests'
+import { Route as AppStudentsRulesRouteImport } from './routes/_app/students/rules'
 import { Route as AppContentLibraryAssetIdIndexRouteImport } from './routes/_app/content-library/$assetId.index'
 import { Route as AppContentLibraryAssetIdTranscriptRouteImport } from './routes/_app/content-library/$assetId.transcript'
+import { Route as AppStudentsStudentIdIndexRouteImport } from './routes/_app/students/$studentId.index'
+import { Route as AppStudentsStudentIdProgressRouteImport } from './routes/_app/students/$studentId.progress'
 import { Route as AppCoursesCourseIdLessonsLessonIdRouteImport } from './routes/_app/courses/$courseId/lessons/$lessonId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -68,6 +77,11 @@ const AppNotificationsRoute = AppNotificationsRouteImport.update({
 const AppSearchRoute = AppSearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppStudentsRouteRoute = AppStudentsRouteRouteImport.update({
+  id: '/students',
+  path: '/students',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
@@ -125,6 +139,36 @@ const AppDashboardRevenueRoute = AppDashboardRevenueRouteImport.update({
   path: '/revenue',
   getParentRoute: () => AppDashboardRouteRoute,
 } as any)
+const AppStudentsIndexRoute = AppStudentsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppStudentsRouteRoute,
+} as any)
+const AppStudentsBadgesRoute = AppStudentsBadgesRouteImport.update({
+  id: '/badges',
+  path: '/badges',
+  getParentRoute: () => AppStudentsRouteRoute,
+} as any)
+const AppStudentsCohortsRoute = AppStudentsCohortsRouteImport.update({
+  id: '/cohorts',
+  path: '/cohorts',
+  getParentRoute: () => AppStudentsRouteRoute,
+} as any)
+const AppStudentsMessagingRoute = AppStudentsMessagingRouteImport.update({
+  id: '/messaging',
+  path: '/messaging',
+  getParentRoute: () => AppStudentsRouteRoute,
+} as any)
+const AppStudentsRequestsRoute = AppStudentsRequestsRouteImport.update({
+  id: '/requests',
+  path: '/requests',
+  getParentRoute: () => AppStudentsRouteRoute,
+} as any)
+const AppStudentsRulesRoute = AppStudentsRulesRouteImport.update({
+  id: '/rules',
+  path: '/rules',
+  getParentRoute: () => AppStudentsRouteRoute,
+} as any)
 const AppContentLibraryAssetIdIndexRoute =
   AppContentLibraryAssetIdIndexRouteImport.update({
     id: '/$assetId/',
@@ -136,6 +180,18 @@ const AppContentLibraryAssetIdTranscriptRoute =
     id: '/$assetId/transcript',
     path: '/$assetId/transcript',
     getParentRoute: () => AppContentLibraryRouteRoute,
+  } as any)
+const AppStudentsStudentIdIndexRoute =
+  AppStudentsStudentIdIndexRouteImport.update({
+    id: '/$studentId/',
+    path: '/$studentId/',
+    getParentRoute: () => AppStudentsRouteRoute,
+  } as any)
+const AppStudentsStudentIdProgressRoute =
+  AppStudentsStudentIdProgressRouteImport.update({
+    id: '/$studentId/progress',
+    path: '/$studentId/progress',
+    getParentRoute: () => AppStudentsRouteRoute,
   } as any)
 const AppCoursesCourseIdLessonsLessonIdRoute =
   AppCoursesCourseIdLessonsLessonIdRouteImport.update({
@@ -149,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/content-library': typeof AppContentLibraryRouteRouteWithChildren
   '/courses': typeof AppCoursesRouteRouteWithChildren
   '/dashboard': typeof AppDashboardRouteRouteWithChildren
+  '/students': typeof AppStudentsRouteRouteWithChildren
   '/notifications': typeof AppNotificationsRoute
   '/search': typeof AppSearchRoute
   '/login': typeof AuthLoginRoute
@@ -159,11 +216,19 @@ export interface FileRoutesByFullPath {
   '/courses/reviews': typeof AppCoursesReviewsRoute
   '/courses/templates': typeof AppCoursesTemplatesRoute
   '/dashboard/revenue': typeof AppDashboardRevenueRoute
+  '/students/badges': typeof AppStudentsBadgesRoute
+  '/students/cohorts': typeof AppStudentsCohortsRoute
+  '/students/messaging': typeof AppStudentsMessagingRoute
+  '/students/requests': typeof AppStudentsRequestsRoute
+  '/students/rules': typeof AppStudentsRulesRoute
   '/content-library/': typeof AppContentLibraryIndexRoute
   '/courses/': typeof AppCoursesIndexRoute
   '/dashboard/': typeof AppDashboardIndexRoute
+  '/students/': typeof AppStudentsIndexRoute
   '/content-library/$assetId/transcript': typeof AppContentLibraryAssetIdTranscriptRoute
+  '/students/$studentId/progress': typeof AppStudentsStudentIdProgressRoute
   '/content-library/$assetId/': typeof AppContentLibraryAssetIdIndexRoute
+  '/students/$studentId/': typeof AppStudentsStudentIdIndexRoute
   '/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
 }
 export interface FileRoutesByTo {
@@ -178,11 +243,19 @@ export interface FileRoutesByTo {
   '/courses/reviews': typeof AppCoursesReviewsRoute
   '/courses/templates': typeof AppCoursesTemplatesRoute
   '/dashboard/revenue': typeof AppDashboardRevenueRoute
+  '/students/badges': typeof AppStudentsBadgesRoute
+  '/students/cohorts': typeof AppStudentsCohortsRoute
+  '/students/messaging': typeof AppStudentsMessagingRoute
+  '/students/requests': typeof AppStudentsRequestsRoute
+  '/students/rules': typeof AppStudentsRulesRoute
   '/content-library': typeof AppContentLibraryIndexRoute
   '/courses': typeof AppCoursesIndexRoute
   '/dashboard': typeof AppDashboardIndexRoute
+  '/students': typeof AppStudentsIndexRoute
   '/content-library/$assetId/transcript': typeof AppContentLibraryAssetIdTranscriptRoute
+  '/students/$studentId/progress': typeof AppStudentsStudentIdProgressRoute
   '/content-library/$assetId': typeof AppContentLibraryAssetIdIndexRoute
+  '/students/$studentId': typeof AppStudentsStudentIdIndexRoute
   '/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
 }
 export interface FileRoutesById {
@@ -193,6 +266,7 @@ export interface FileRoutesById {
   '/_app/content-library': typeof AppContentLibraryRouteRouteWithChildren
   '/_app/courses': typeof AppCoursesRouteRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRouteRouteWithChildren
+  '/_app/students': typeof AppStudentsRouteRouteWithChildren
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/search': typeof AppSearchRoute
   '/_auth/login': typeof AuthLoginRoute
@@ -203,11 +277,19 @@ export interface FileRoutesById {
   '/_app/courses/reviews': typeof AppCoursesReviewsRoute
   '/_app/courses/templates': typeof AppCoursesTemplatesRoute
   '/_app/dashboard/revenue': typeof AppDashboardRevenueRoute
+  '/_app/students/badges': typeof AppStudentsBadgesRoute
+  '/_app/students/cohorts': typeof AppStudentsCohortsRoute
+  '/_app/students/messaging': typeof AppStudentsMessagingRoute
+  '/_app/students/requests': typeof AppStudentsRequestsRoute
+  '/_app/students/rules': typeof AppStudentsRulesRoute
   '/_app/content-library/': typeof AppContentLibraryIndexRoute
   '/_app/courses/': typeof AppCoursesIndexRoute
   '/_app/dashboard/': typeof AppDashboardIndexRoute
+  '/_app/students/': typeof AppStudentsIndexRoute
   '/_app/content-library/$assetId/transcript': typeof AppContentLibraryAssetIdTranscriptRoute
+  '/_app/students/$studentId/progress': typeof AppStudentsStudentIdProgressRoute
   '/_app/content-library/$assetId/': typeof AppContentLibraryAssetIdIndexRoute
+  '/_app/students/$studentId/': typeof AppStudentsStudentIdIndexRoute
   '/_app/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
 }
 export interface FileRouteTypes {
@@ -217,6 +299,7 @@ export interface FileRouteTypes {
     | '/content-library'
     | '/courses'
     | '/dashboard'
+    | '/students'
     | '/notifications'
     | '/search'
     | '/login'
@@ -227,11 +310,19 @@ export interface FileRouteTypes {
     | '/courses/reviews'
     | '/courses/templates'
     | '/dashboard/revenue'
+    | '/students/badges'
+    | '/students/cohorts'
+    | '/students/messaging'
+    | '/students/requests'
+    | '/students/rules'
     | '/content-library/'
     | '/courses/'
     | '/dashboard/'
+    | '/students/'
     | '/content-library/$assetId/transcript'
+    | '/students/$studentId/progress'
     | '/content-library/$assetId/'
+    | '/students/$studentId/'
     | '/courses/$courseId/lessons/$lessonId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -246,11 +337,19 @@ export interface FileRouteTypes {
     | '/courses/reviews'
     | '/courses/templates'
     | '/dashboard/revenue'
+    | '/students/badges'
+    | '/students/cohorts'
+    | '/students/messaging'
+    | '/students/requests'
+    | '/students/rules'
     | '/content-library'
     | '/courses'
     | '/dashboard'
+    | '/students'
     | '/content-library/$assetId/transcript'
+    | '/students/$studentId/progress'
     | '/content-library/$assetId'
+    | '/students/$studentId'
     | '/courses/$courseId/lessons/$lessonId'
   id:
     | '__root__'
@@ -260,6 +359,7 @@ export interface FileRouteTypes {
     | '/_app/content-library'
     | '/_app/courses'
     | '/_app/dashboard'
+    | '/_app/students'
     | '/_app/notifications'
     | '/_app/search'
     | '/_auth/login'
@@ -270,11 +370,19 @@ export interface FileRouteTypes {
     | '/_app/courses/reviews'
     | '/_app/courses/templates'
     | '/_app/dashboard/revenue'
+    | '/_app/students/badges'
+    | '/_app/students/cohorts'
+    | '/_app/students/messaging'
+    | '/_app/students/requests'
+    | '/_app/students/rules'
     | '/_app/content-library/'
     | '/_app/courses/'
     | '/_app/dashboard/'
+    | '/_app/students/'
     | '/_app/content-library/$assetId/transcript'
+    | '/_app/students/$studentId/progress'
     | '/_app/content-library/$assetId/'
+    | '/_app/students/$studentId/'
     | '/_app/courses/$courseId/lessons/$lessonId'
   fileRoutesById: FileRoutesById
 }
@@ -340,6 +448,13 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof AppSearchRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/students': {
+      id: '/_app/students'
+      path: '/students'
+      fullPath: '/students'
+      preLoaderRoute: typeof AppStudentsRouteRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/_auth/login': {
@@ -419,6 +534,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRevenueRouteImport
       parentRoute: typeof AppDashboardRouteRoute
     }
+    '/_app/students/': {
+      id: '/_app/students/'
+      path: '/'
+      fullPath: '/students/'
+      preLoaderRoute: typeof AppStudentsIndexRouteImport
+      parentRoute: typeof AppStudentsRouteRoute
+    }
+    '/_app/students/badges': {
+      id: '/_app/students/badges'
+      path: '/badges'
+      fullPath: '/students/badges'
+      preLoaderRoute: typeof AppStudentsBadgesRouteImport
+      parentRoute: typeof AppStudentsRouteRoute
+    }
+    '/_app/students/cohorts': {
+      id: '/_app/students/cohorts'
+      path: '/cohorts'
+      fullPath: '/students/cohorts'
+      preLoaderRoute: typeof AppStudentsCohortsRouteImport
+      parentRoute: typeof AppStudentsRouteRoute
+    }
+    '/_app/students/messaging': {
+      id: '/_app/students/messaging'
+      path: '/messaging'
+      fullPath: '/students/messaging'
+      preLoaderRoute: typeof AppStudentsMessagingRouteImport
+      parentRoute: typeof AppStudentsRouteRoute
+    }
+    '/_app/students/requests': {
+      id: '/_app/students/requests'
+      path: '/requests'
+      fullPath: '/students/requests'
+      preLoaderRoute: typeof AppStudentsRequestsRouteImport
+      parentRoute: typeof AppStudentsRouteRoute
+    }
+    '/_app/students/rules': {
+      id: '/_app/students/rules'
+      path: '/rules'
+      fullPath: '/students/rules'
+      preLoaderRoute: typeof AppStudentsRulesRouteImport
+      parentRoute: typeof AppStudentsRouteRoute
+    }
     '/_app/content-library/$assetId/': {
       id: '/_app/content-library/$assetId/'
       path: '/$assetId'
@@ -432,6 +589,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/content-library/$assetId/transcript'
       preLoaderRoute: typeof AppContentLibraryAssetIdTranscriptRouteImport
       parentRoute: typeof AppContentLibraryRouteRoute
+    }
+    '/_app/students/$studentId/': {
+      id: '/_app/students/$studentId/'
+      path: '/$studentId'
+      fullPath: '/students/$studentId/'
+      preLoaderRoute: typeof AppStudentsStudentIdIndexRouteImport
+      parentRoute: typeof AppStudentsRouteRoute
+    }
+    '/_app/students/$studentId/progress': {
+      id: '/_app/students/$studentId/progress'
+      path: '/$studentId/progress'
+      fullPath: '/students/$studentId/progress'
+      preLoaderRoute: typeof AppStudentsStudentIdProgressRouteImport
+      parentRoute: typeof AppStudentsRouteRoute
     }
     '/_app/courses/$courseId/lessons/$lessonId': {
       id: '/_app/courses/$courseId/lessons/$lessonId'
@@ -507,10 +678,36 @@ const AppDashboardRouteRouteChildren: AppDashboardRouteRouteChildren = {
 const AppDashboardRouteRouteWithChildren =
   AppDashboardRouteRoute._addFileChildren(AppDashboardRouteRouteChildren)
 
+interface AppStudentsRouteRouteChildren {
+  AppStudentsBadgesRoute: typeof AppStudentsBadgesRoute
+  AppStudentsCohortsRoute: typeof AppStudentsCohortsRoute
+  AppStudentsMessagingRoute: typeof AppStudentsMessagingRoute
+  AppStudentsRequestsRoute: typeof AppStudentsRequestsRoute
+  AppStudentsRulesRoute: typeof AppStudentsRulesRoute
+  AppStudentsIndexRoute: typeof AppStudentsIndexRoute
+  AppStudentsStudentIdProgressRoute: typeof AppStudentsStudentIdProgressRoute
+  AppStudentsStudentIdIndexRoute: typeof AppStudentsStudentIdIndexRoute
+}
+
+const AppStudentsRouteRouteChildren: AppStudentsRouteRouteChildren = {
+  AppStudentsBadgesRoute: AppStudentsBadgesRoute,
+  AppStudentsCohortsRoute: AppStudentsCohortsRoute,
+  AppStudentsMessagingRoute: AppStudentsMessagingRoute,
+  AppStudentsRequestsRoute: AppStudentsRequestsRoute,
+  AppStudentsRulesRoute: AppStudentsRulesRoute,
+  AppStudentsIndexRoute: AppStudentsIndexRoute,
+  AppStudentsStudentIdProgressRoute: AppStudentsStudentIdProgressRoute,
+  AppStudentsStudentIdIndexRoute: AppStudentsStudentIdIndexRoute,
+}
+
+const AppStudentsRouteRouteWithChildren =
+  AppStudentsRouteRoute._addFileChildren(AppStudentsRouteRouteChildren)
+
 interface AppRouteRouteChildren {
   AppContentLibraryRouteRoute: typeof AppContentLibraryRouteRouteWithChildren
   AppCoursesRouteRoute: typeof AppCoursesRouteRouteWithChildren
   AppDashboardRouteRoute: typeof AppDashboardRouteRouteWithChildren
+  AppStudentsRouteRoute: typeof AppStudentsRouteRouteWithChildren
   AppNotificationsRoute: typeof AppNotificationsRoute
   AppSearchRoute: typeof AppSearchRoute
 }
@@ -519,6 +716,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppContentLibraryRouteRoute: AppContentLibraryRouteRouteWithChildren,
   AppCoursesRouteRoute: AppCoursesRouteRouteWithChildren,
   AppDashboardRouteRoute: AppDashboardRouteRouteWithChildren,
+  AppStudentsRouteRoute: AppStudentsRouteRouteWithChildren,
   AppNotificationsRoute: AppNotificationsRoute,
   AppSearchRoute: AppSearchRoute,
 }
@@ -551,12 +749,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
