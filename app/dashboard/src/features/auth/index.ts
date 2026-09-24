@@ -1,5 +1,15 @@
 export { useSession } from './hooks/auth.session'
 export { useLogout } from './hooks/auth.logout'
+export { useRole } from './hooks/auth.role'
+export {
+  PLATFORM_ROLES,
+  REVENUE_ROLES,
+  ROLE_PRIORITY,
+  hasAtLeastRole,
+  isPlatformRole,
+  mapBetterAuthRoleToPlatformRole,
+  type PlatformRole,
+} from './auth.roles'
 export { useLastProvider, type Provider } from './hooks/auth.provider-memory'
 export { ProviderButton } from './components/auth.provider-button'
 export { RedirectingOverlay } from './components/auth.redirecting-overlay'

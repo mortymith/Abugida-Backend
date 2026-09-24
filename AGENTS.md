@@ -31,6 +31,15 @@ Turborepo over pnpm workspaces (`app/*`, `packages/*`). Root `pnpm <script>` fan
 - To scope to one workspace, run from that directory or `pnpm --filter <name> <script>`.
 - Shared packages must be built (`tsc` → `dist/`) before consuming apps can import them. Turbo handles this via `^build` dependencies.
 
+### Application boundaries and authentication
+
+- `app/api` and `app/dashboard` each implement and own their own authentication layer and runtime instance by composing the shared `@abugida/auth` package. The shared package provides the common auth foundation; it does not make either app a dependency of the other.
+- The API uses the shared Hono integration (`@abugida/auth/hono`), while the dashboard uses the shared TanStack integrations (`@abugida/auth/tanstack/*`). Keep auth configuration, route mounting, clients, middleware, and session guards inside their respective app.
+- `app/api` must not import, call, mount, proxy, or otherwise access code from `app/dashboard`.
+- `app/dashboard` must not import, call, mount, proxy, or otherwise access code from `app/api`.
+- Communication between the apps must happen only through explicitly supported boundaries such as public HTTP APIs, shared packages, or shared infrastructure. Never bypass these boundaries with cross-app imports.
+- When authentication is involved, each app must use its own locally configured auth entry point and integration. Do not reuse the other app's auth instance, client, middleware, route handlers, or server functions.
+
 ## Commands
 
 - `pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm typecheck` / `pnpm test` — all via turbo.
