@@ -10,7 +10,9 @@ export const WorkspaceSchema = z.object({
       /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/,
       'Subdomain can only contain lowercase letters, numbers, and hyphens',
     ),
-  useCase: z.enum(['language_courses', 'corporate_training', 'other']),
+  useCase: z.enum(['language_courses', 'corporate_training', 'other'], {
+    error: 'Select a primary use case to continue.',
+  }),
 })
 
 export type WorkspaceInput = z.infer<typeof WorkspaceSchema>
