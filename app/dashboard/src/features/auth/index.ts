@@ -1,4 +1,5 @@
 export { useSession } from './hooks/auth.session'
+export { useLogout } from './hooks/auth.logout'
 export { useLastProvider, type Provider } from './hooks/auth.provider-memory'
 export { ProviderButton } from './components/auth.provider-button'
 export { RedirectingOverlay } from './components/auth.redirecting-overlay'

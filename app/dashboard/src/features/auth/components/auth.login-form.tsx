@@ -41,17 +41,22 @@ function LoginForm({
   const [error, setError] = useState<string | null>(null)
 
   const handleProviderSignIn = async (provider: Provider) => {
-    console.log('Provider sign‑in clicked', provider)
     setLoading(provider)
     setError(null)
 
     try {
-      await authClient.signIn.social({
+      const result = await authClient.signIn.social({
         provider,
         callbackURL: redirectTo,
       })
+
+      if (result.error) {
+        throw new Error(result.error.message)
+      }
+
       setLastProvider(provider)
-    } catch {
+    } catch (caughtError) {
+      console.error('Social sign-in failed', caughtError)
       setLoading(null)
       setError(
         provider === 'google'

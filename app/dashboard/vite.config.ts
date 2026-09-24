@@ -19,11 +19,7 @@ const config = defineConfig({
   server: {
     allowedHosts: ['accuracy-flip-playing.ngrok-free.dev'],
   },
-  optimizeDeps: {
-    exclude: ['pg', '@abugida/database/client'],
-  },
   ssr: {
-    external: ['pg', '@abugida/database/client'],
     resolve: {
       conditions: ['node', 'import'],
     },

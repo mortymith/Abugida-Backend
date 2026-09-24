@@ -48,9 +48,12 @@ export function requireAuthBeforeLoad(
     const session = await serverFns.getServerSession()
 
     if (!session) {
+      const url = new URL(location.href, 'http://localhost')
+      const redirectTo = `${url.pathname}${url.search}${url.hash}`
+
       throw redirect({
         to: options.loginPath ?? '/login',
-        search: { redirectTo: location.href },
+        search: { redirectTo },
       })
     }
 
