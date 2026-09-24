@@ -63,6 +63,7 @@ function SignupStep2({ onComplete, loading, serverError, slugError }: SignupStep
   })
 
   const workspaceName = watch('name')
+  const workspaceSlug = watch('slug')
   const selectedUseCase = watch('useCase')
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,11 +118,12 @@ function SignupStep2({ onComplete, loading, serverError, slugError }: SignupStep
           ) : slugError ? (
             <FieldError>{slugError}</FieldError>
           ) : (
-            workspaceName && (
+            workspaceName &&
+            workspaceSlug && (
               <FieldDescription>
                 Your workspace will live at{' '}
                 <span className="font-medium text-foreground">
-                  {generateSlug(workspaceName)}.{import.meta.env.VITE_WORKSPACE_DOMAIN}
+                  {workspaceSlug}.{import.meta.env.VITE_WORKSPACE_DOMAIN}
                 </span>
               </FieldDescription>
             )
@@ -135,10 +137,9 @@ function SignupStep2({ onComplete, loading, serverError, slugError }: SignupStep
             variant="outline"
             value={[selectedUseCase]}
             onValueChange={(groupValue) => {
-              // Deselecting clears the choice; the resolver flags it on the next validation pass
               setValue('useCase', groupValue[0] as unknown as WorkspaceInput['useCase'], {
                 shouldDirty: true,
-                shouldValidate: groupValue.length > 0,
+                shouldValidate: true,
               })
             }}
             className="grid w-full grid-cols-3 gap-2"
@@ -167,7 +168,7 @@ function SignupStep2({ onComplete, loading, serverError, slugError }: SignupStep
         </Field>
       </FieldGroup>
 
-      <Button type="submit" size="lg" className="w-full" disabled={loading}>
+      <Button type="submit" size="lg" className="w-full" disabled={loading || !selectedUseCase}>
         {loading ? (
           <>
             <Spinner data-icon="inline-start" />

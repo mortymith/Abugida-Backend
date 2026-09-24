@@ -8,10 +8,10 @@ import { RedirectingOverlay } from '#/features/auth/components/auth.redirecting-
 import { ErrorMessage } from '#/components/common/error-message'
 
 interface SignupStep1Props {
-  onComplete: () => void
+  availableProviders: Provider[]
 }
 
-function SignupStep1({ onComplete }: SignupStep1Props) {
+function SignupStep1({ availableProviders }: SignupStep1Props) {
   const { lastProvider, setLastProvider } = useLastProvider()
   const [loading, setLoading] = useState<Provider | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -21,12 +21,16 @@ function SignupStep1({ onComplete }: SignupStep1Props) {
     setError(null)
 
     try {
-      await authClient.signIn.social({
+      const result = await authClient.signIn.social({
         provider,
         callbackURL: '/signup',
       })
+
+      if (result.error) {
+        throw new Error(result.error.message ?? 'Sign-in failed')
+      }
+
       setLastProvider(provider)
-      onComplete()
     } catch {
       setLoading(null)
       setError(
@@ -37,9 +41,10 @@ function SignupStep1({ onComplete }: SignupStep1Props) {
     }
   }
 
-  const providers: Provider[] = lastProvider
-    ? [lastProvider, lastProvider === 'google' ? 'telegram-oidc' : 'google']
-    : ['google', 'telegram-oidc']
+  const providers: Provider[] =
+    lastProvider && availableProviders.includes(lastProvider)
+      ? [lastProvider, ...availableProviders.filter((provider) => provider !== lastProvider)]
+      : availableProviders
 
   return (
     <>

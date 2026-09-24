@@ -3,13 +3,11 @@
  * Server functions in auth.config.ts lazily import this inside their handlers.
  */
 import { createAuth } from '@abugida/auth'
-import { createClient } from '@abugida/database/client'
 import { authSchema } from '@abugida/database/auth'
 import { twoFactor } from 'better-auth/plugins/two-factor'
 import { organization } from 'better-auth/plugins/organization'
 import { env } from './app.config'
-
-const db = createClient(env.DATABASE_URL)
+import { db } from './db.config'
 
 export const auth = createAuth({
   cors: { origins: [env.WEB_APP_URL ?? env.AUTH_BASE_URL, env.AUTH_BASE_URL] },
@@ -44,6 +42,18 @@ export const auth = createAuth({
         lockDuration: env.ACCOUNT_LOCKOUT_DURATION,
       },
     }),
-    organization(),
+    organization({
+      schema: {
+        organization: {
+          additionalFields: {
+            useCase: {
+              type: 'string',
+              required: true,
+              input: true,
+            },
+          },
+        },
+      },
+    }),
   ],
 })

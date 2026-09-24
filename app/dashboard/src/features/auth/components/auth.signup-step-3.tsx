@@ -4,7 +4,6 @@ import {
   BookEditIcon,
   CreditCardIcon,
   PaletteIcon,
-  Tick04Icon,
   UserAdd01Icon,
 } from '@hugeicons/core-free-icons'
 
@@ -40,29 +39,6 @@ const CHECKLIST_ITEMS = [
 function SignupStep3({ onComplete }: SignupStep3Props) {
   return (
     <div className="flex flex-col gap-6 text-center">
-      <div className="flex justify-center">
-        <div className="relative">
-          <div className="flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <HugeiconsIcon icon={Tick04Icon} size={28} strokeWidth={1.5} />
-          </div>
-          <div
-            className="absolute -top-1 -right-1 size-3 rounded-full bg-chart-2"
-            style={{ animation: 'float 3s ease-in-out infinite' }}
-            aria-hidden="true"
-          />
-          <div
-            className="absolute -bottom-1 -left-1 size-2 rounded-full bg-chart-4"
-            style={{ animation: 'float 4s ease-in-out infinite 1s' }}
-            aria-hidden="true"
-          />
-          <div
-            className="absolute top-0 -left-2 size-1.5 rounded-full bg-chart-1"
-            style={{ animation: 'float 3.5s ease-in-out infinite 0.5s' }}
-            aria-hidden="true"
-          />
-        </div>
-      </div>
-
       <ol className="flex flex-col gap-2.5 text-left">
         {CHECKLIST_ITEMS.map((item, index) => (
           <li
