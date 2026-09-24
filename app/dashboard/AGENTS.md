@@ -146,7 +146,7 @@ Auth is configured in `src/config/auth.config.ts` using the shared `@abugida/aut
 - `getServerSession` / `refreshServerSession` / `signOutServer` / `getServerAccessToken` — Server functions for session management.
 - `authServerFns` — Exported bundle of server functions, consumed by `requireAuthBeforeLoad`.
 
-Client-side auth: `src/lib/auth.client.ts` creates an auth client via `createAuthClient` from `@abugida/auth/tanstack`.
+Client-side auth: `src/lib/auth-client.ts` creates a same-origin client via `createAuthClient` from `@abugida/auth/tanstack/client`. The TanStack server entry in `src/default-entry/server.ts` handles the configured auth path.
 
 When adding new auth features, use the existing `createServerFn` pattern from `@tanstack/react-start` and access auth through the shared config — do not create separate auth instances.
 
@@ -232,7 +232,7 @@ routes → features → lib / integrations
 ## 13. Server/Client Boundaries
 
 - **Server-only:** `src/server/`, `src/config/auth.config.ts`, `src/config/db.config.ts`, `features/*/server/`.
-- **Client-safe:** `src/components/`, `src/lib/auth.client.ts`, `src/features/*/components/`, `src/features/*/hooks/`.
+- **Client-safe:** `src/components/`, `src/lib/auth-client.ts`, `src/features/*/components/`, `src/features/*/hooks/`.
 - `src/config/app.config.ts` is server-only despite its name (uses `process.env`, `dotenv`).
 - Client-side env access uses `import.meta.env.VITE_*` — never bare `env.*` for browser code.
 
@@ -242,7 +242,7 @@ routes → features → lib / integrations
 
 - Never create a second database client, auth instance, or query client. Use the singletons in `src/config/db.config.ts`, `src/config/auth.config.ts`, and `src/integrations/tanstack-query/root-provider.tsx`.
 - Never re-instantiate a shared package locally. If `@abugida/database` provides `createClient`, use it — don't write your own Drizzle setup.
-- The auth client in `src/lib/auth.client.ts` is the single client-side auth instance.
+- The auth client in `src/lib/auth-client.ts` is the single client-side auth instance.
 
 ---
 

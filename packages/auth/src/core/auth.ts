@@ -107,14 +107,10 @@ export function buildAdvancedOptions(config: AuthConfig) {
       domain: config.session?.cookie?.domain,
     },
     cookiePrefix: config.session?.cookie?.name ?? 'abugida.session',
-    // The app `users` table's PK (text) is fully better-auth-owned; mint the
-    // ids as UUIDs server-side so every environment generates the same
-    // format regardless of DB driver. See packages/database schema auth.
-    // Uses "uuid" to delegate to global crypto.randomUUID() (Web Crypto API),
-    // available in Node ≥14.17, Bun, Deno, and all modern browsers.
-    database: {
-      generateId: 'uuid' as const,
-    },
+    // Let Better Auth generate IDs in the adapter. The database package uses
+    // text primary keys without database-side defaults, so
+    // `generateId: 'uuid'` would make the PostgreSQL adapter assume the DB
+    // supplies UUID defaults and insert NULL into id.
   }
 }
 

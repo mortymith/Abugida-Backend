@@ -12,7 +12,10 @@ import { createAuthClient as createBetterAuthReactClient } from 'better-auth/rea
 // ---------------------------------------------------------------------------
 
 export interface AuthClientOptions {
-  baseUrl: string
+  /** Optional auth origin. When omitted, the client uses the current browser origin. */
+  baseUrl?: string
+  /** Auth endpoint path, such as `/auth`. */
+  basePath?: string
 }
 
 /**
@@ -21,7 +24,7 @@ export interface AuthClientOptions {
  *
  * @example
  * ```tsx
- * const authClient = createAuthClient({ baseUrl: "https://api.abugida.com" });
+ * const authClient = createAuthClient({ basePath: "/auth" });
  *
  * function LoginButton() {
  *   const { data: session } = authClient.useSession();
@@ -33,5 +36,6 @@ export interface AuthClientOptions {
 export function createAuthClient(options: AuthClientOptions) {
   return createBetterAuthReactClient({
     baseURL: options.baseUrl,
+    basePath: options.basePath,
   })
 }

@@ -26,6 +26,10 @@
       "types": "./dist/middleware/tanstack/index.d.ts",
       "import": "./dist/middleware/tanstack/index.js"
     },
+    "./tanstack/guard": {
+      "types": "./dist/middleware/tanstack/guards.d.ts",
+      "import": "./dist/middleware/tanstack/guards.js"
+    },
     "./tanstack/server": {
       "types": "./dist/middleware/tanstack/server.d.ts",
       "import": "./dist/middleware/tanstack/server.js"
