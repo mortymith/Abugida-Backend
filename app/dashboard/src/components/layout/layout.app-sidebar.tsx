@@ -18,12 +18,11 @@ import {
 import { Logo } from '#/components/common/logo'
 import { SidebarUserSection } from './layout.sidebar-user-section'
 import { getVisibleNavItems } from '#/features/navigation'
-import { useSession } from '#/features/auth'
+import { useRole } from '#/features/auth'
 
 export function AppSidebar() {
-  const { data: session } = useSession()
-  const userRole = (session?.user as Record<string, unknown> | undefined)?.role ?? 'viewer'
-  const navItems = getVisibleNavItems(userRole as string)
+  const role = useRole()
+  const navItems = getVisibleNavItems(role)
 
   return (
     <Sidebar collapsible="icon" side="left" variant="sidebar">
