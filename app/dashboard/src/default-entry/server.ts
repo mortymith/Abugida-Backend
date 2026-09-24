@@ -10,7 +10,7 @@ const fetch: RequestHandler<Register> = async (...args) => {
   const request = args[0]
   const url = new URL(request.url)
 
-  if (url.pathname.startsWith(env.AUTH_BASE_PATH)) {
+  if (url.pathname === env.AUTH_BASE_PATH || url.pathname.startsWith(`${env.AUTH_BASE_PATH}/`)) {
     console.log('Auth route triggered:', url.pathname, 'method:', request.method)
     const { auth } = await import('../config/auth.server')
     try {
