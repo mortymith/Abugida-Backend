@@ -1,4 +1,3 @@
-import { useNavigate } from '@tanstack/react-router'
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '#/components/ui/sidebar'
 import {
   DropdownMenu,
@@ -10,11 +9,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { UserIcon, Settings02Icon, Logout02Icon } from '@hugeicons/core-free-icons'
-import { useSession } from '#/features/auth'
+import { useLogout, useSession } from '#/features/auth'
 
 export function SidebarUserSection() {
   const { data: session } = useSession()
-  const navigate = useNavigate()
+  const { logout, isLoggingOut } = useLogout()
   const user = session?.user
   const userImage = user?.image ?? undefined
 
@@ -27,9 +26,8 @@ export function SidebarUserSection() {
         .slice(0, 2)
     : '??'
 
-  async function handleLogout() {
-    // TODO: Wire to auth signOut
-    navigate({ to: '/login' })
+  function handleLogout() {
+    void logout()
   }
 
   return (
@@ -53,7 +51,7 @@ export function SidebarUserSection() {
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
               <HugeiconsIcon icon={Logout02Icon} strokeWidth={2} />
               Logout
             </DropdownMenuItem>
