@@ -72,6 +72,10 @@ export const users = pgTable(
     email: text('email'),
     emailVerified: boolean('email_verified').notNull().default(false),
     image: text('image'),
+    // Set by the two-factor plugin (better-auth/plugins/two-factor). The
+    // plugin injects this field's default into every user insert, so the
+    // column must exist or auth operations fail.
+    twoFactorEnabled: boolean('two_factor_enabled').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()
