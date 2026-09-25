@@ -21,6 +21,7 @@ export { archiveCourse, deleteCourse, duplicateCourse, publishCourse } from './c
 export { getImageReadUrl, getImageUploadUrl } from './courses.storage'
 export { getQuizForLesson, saveQuiz } from './courses.quiz'
 export { getLessonForEdit, saveLesson, submitLessonForReview } from './courses.lessons'
+export { duplicateLesson } from './courses.duplication'
 export { getUnlockRules, saveUnlockRules } from './courses.unlock-rules'
 export {
   decideReview,

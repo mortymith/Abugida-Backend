@@ -202,9 +202,18 @@ export interface CourseTemplateDTO {
   structure: TemplateStructure
 }
 
+/**
+ * Canonical lesson content types, mirrored from the `content_type` Postgres
+ * enum. Template structures live in a JSONB column, so anything read back is
+ * untrusted and may contain legacy/out-of-enum values — always run it through
+ * `normalizeTemplateContentType` before writing it to `lessons.contentType`.
+ */
+export const TEMPLATE_CONTENT_TYPES = ['pdf', 'video', 'quiz', 'exercise', 'link'] as const
+export type TemplateContentType = (typeof TEMPLATE_CONTENT_TYPES)[number]
+
 export interface TemplateLesson {
   title: string
-  contentType: 'pdf' | 'video' | 'quiz' | 'exercise' | 'link'
+  contentType: string
   body: string | null
   videoUrl: string | null
   durationMinutes: number | null

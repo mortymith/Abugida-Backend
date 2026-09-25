@@ -21,6 +21,10 @@ import {
 } from './courses.server-helpers.server'
 import type { TemplateQuery } from '../schemas/courses.workflow.schema'
 import type { CourseTemplateDTO, TemplateStructure } from '../courses.types'
+import {
+  normalizeTemplateContentType,
+  normalizeTemplateStructure,
+} from '../courses.templates.normalize'
 
 export async function getCourseTemplatesImpl(data: TemplateQuery): Promise<CourseTemplateDTO[]> {
   await requireAuthoringRole()
@@ -52,7 +56,7 @@ export async function getCourseTemplatesImpl(data: TemplateQuery): Promise<Cours
     lessonCount: row.lessonCount,
     quizCount: row.quizCount,
     isFeatured: row.isFeatured,
-    structure: row.structure as TemplateStructure,
+    structure: normalizeTemplateStructure(row.structure),
   }))
 }
 
@@ -69,7 +73,7 @@ export async function useTemplateImpl(
   const template = rows.at(0)
   if (!template) throw new Error('TEMPLATE_NOT_FOUND')
 
-  const structure = template.structure as TemplateStructure
+  const structure = normalizeTemplateStructure(template.structure)
   const examTypeId = await firstExamTypeIdOrSeed()
 
   const title = `${template.name} Course`.slice(0, 300)
@@ -116,9 +120,13 @@ export async function useTemplateImpl(
             instructorId: userId,
             title: lesson.title,
             description: null,
-            contentType: lesson.contentType,
+            contentType: normalizeTemplateContentType(lesson.contentType),
             body: lesson.body,
             videoUrl: lesson.videoUrl,
+            durationSeconds:
+              typeof lesson.durationMinutes === 'number' && lesson.durationMinutes > 0
+                ? Math.round(lesson.durationMinutes * 60)
+                : null,
             sortOrder: lessonIndex,
             tags: ['source:template'],
           })

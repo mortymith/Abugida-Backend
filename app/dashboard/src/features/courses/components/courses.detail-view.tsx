@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '#/components/ui/dialog'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { Button } from '#/components/ui/button'
+import { Button, buttonVariants } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Spinner } from '#/components/ui/spinner'
@@ -40,11 +40,11 @@ type CourseTab = (typeof TABS)[number]
 export function CourseDetail({
   courseId,
   role,
-  webAppUrl,
+  previewBaseUrl,
 }: {
   courseId: string
   role: string
-  webAppUrl?: string
+  previewBaseUrl?: string
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -105,6 +105,12 @@ export function CourseDetail({
     return <RetryErrorState onRetry={() => void details.refetch()} />
   }
   const course = details.data
+  const previewHref = previewBaseUrl
+    ? new URL(
+        `courses/${encodeURIComponent(course.slug)}`,
+        `${previewBaseUrl.replace(/\/+$/, '')}/`,
+      ).toString()
+    : undefined
 
   return (
     <div className="flex flex-col gap-4">
@@ -126,37 +132,32 @@ export function CourseDetail({
           </div>
           {isAuthoring ? (
             <div className="flex flex-wrap items-center gap-2">
-              {webAppUrl ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  render={
-                    <a
-                      href={`${webAppUrl}/courses/${course.slug}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    />
-                  }
+              {previewHref ? (
+                <a
+                  href={previewHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
                 >
                   Preview
-                </Button>
+                </a>
               ) : (
                 <Button
                   variant="outline"
                   size="sm"
                   disabled
-                  title="Set WEB_APP_URL to preview the student view"
+                  title="Set COURSE_PREVIEW_URL to preview the student view"
                 >
                   Preview
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                render={<Link to="/courses/new" search={{ step: 1, from: courseId }} />}
+              <Link
+                to="/courses/new"
+                search={{ step: 1, from: courseId }}
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
               >
                 Edit Details
-              </Button>
+              </Link>
               <Button variant="outline" size="sm" onClick={() => setConfirm('archive')}>
                 Archive
               </Button>

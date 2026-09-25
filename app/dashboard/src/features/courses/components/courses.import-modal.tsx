@@ -61,8 +61,8 @@ export function BulkImportModal({
       const buffer = await file.arrayBuffer()
       let binary = ''
       const bytes = new Uint8Array(buffer)
-      for (let index = 0; index < bytes.length; index += 1) {
-        binary += String.fromCharCode(bytes[index])
+      for (const byte of bytes) {
+        binary += String.fromCharCode(byte)
       }
       return btoa(binary)
     }

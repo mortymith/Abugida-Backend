@@ -7,12 +7,13 @@ import { eq, isNull } from 'drizzle-orm'
 import { courses, courseTemplates, examTypes } from '@abugida/database/catalog'
 import { createClient } from '@abugida/database/client'
 import { env } from '#/config/app.config'
+import { normalizeTemplateStructure } from '#/features/courses/courses.templates.normalize'
 
 const db = createClient(env.DATABASE_URL)
 
 interface SeedLesson {
   title: string
-  contentType: 'video' | 'reading' | 'quiz' | 'exercise'
+  contentType: 'pdf' | 'video' | 'quiz' | 'exercise' | 'link'
   durationMinutes: number
 }
 interface SeedModule {
@@ -27,7 +28,7 @@ const TOEFL: SeedModule[] = [
     description: 'Test format, scoring, and study planning.',
     lessons: [
       { title: 'What is the TOEFL?', contentType: 'video', durationMinutes: 20 },
-      { title: 'Scoring & test-day strategy', contentType: 'reading', durationMinutes: 25 },
+      { title: 'Scoring & test-day strategy', contentType: 'pdf', durationMinutes: 25 },
       { title: 'Foundations check', contentType: 'quiz', durationMinutes: 15 },
     ],
   },
@@ -37,7 +38,7 @@ const TOEFL: SeedModule[] = [
     lessons: [
       { title: 'Skimming basics', contentType: 'video', durationMinutes: 25 },
       { title: 'Scanning techniques', contentType: 'exercise', durationMinutes: 20 },
-      { title: 'Inference questions', contentType: 'reading', durationMinutes: 30 },
+      { title: 'Inference questions', contentType: 'pdf', durationMinutes: 30 },
     ],
   },
   {
@@ -53,7 +54,7 @@ const TOEFL: SeedModule[] = [
     title: 'Writing & Mock Test',
     description: 'Essays and a full timed rehearsal.',
     lessons: [
-      { title: 'Integrated essay structure', contentType: 'reading', durationMinutes: 30 },
+      { title: 'Integrated essay structure', contentType: 'pdf', durationMinutes: 30 },
       { title: 'Final mock test', contentType: 'quiz', durationMinutes: 60 },
     ],
   },
@@ -73,7 +74,7 @@ const WORKSHOP: SeedModule[] = [
     description: 'Prototyping and decision-making.',
     lessons: [
       { title: 'Prototype rotation', contentType: 'exercise', durationMinutes: 90 },
-      { title: 'Decision log & next steps', contentType: 'reading', durationMinutes: 30 },
+      { title: 'Decision log & next steps', contentType: 'pdf', durationMinutes: 30 },
     ],
   },
 ]
@@ -84,7 +85,7 @@ const IELTS: SeedModule[] = [
     description: 'Band descriptors and fast wins.',
     lessons: [
       { title: 'How IELTS is scored', contentType: 'video', durationMinutes: 15 },
-      { title: 'Band descriptor walkthrough', contentType: 'reading', durationMinutes: 20 },
+      { title: 'Band descriptor walkthrough', contentType: 'pdf', durationMinutes: 20 },
     ],
   },
   {
@@ -119,6 +120,33 @@ async function seedExamTypes(): Promise<Map<string, number>> {
     ids.set(item.slug, inserted.at(0)!.id)
   }
   return ids
+}
+
+/**
+ * Earlier seed revisions stored content types that are not members of the
+ * `content_type` Postgres enum (e.g. 'reading'). Importing such a template
+ * fails at the lessons insert, so repair the stored JSONB in place.
+ */
+async function repairTemplateContentTypes(): Promise<void> {
+  const rows = await db
+    .select({ id: courseTemplates.id, structure: courseTemplates.structure })
+    .from(courseTemplates)
+    .where(isNull(courseTemplates.deletedAt))
+
+  for (const row of rows) {
+    const before = collectContentTypes(row.structure)
+    const structure = normalizeTemplateStructure(row.structure)
+    const after = collectContentTypes(structure)
+    if (before.join(',') === after.join(',')) continue
+    await db.update(courseTemplates).set({ structure }).where(eq(courseTemplates.id, row.id))
+    console.log(`↺ repaired template content types: #${row.id}`)
+  }
+}
+
+function collectContentTypes(structure: unknown): string[] {
+  return normalizeTemplateStructure(structure).modules.flatMap((module) =>
+    module.lessons.map((lesson) => lesson.contentType),
+  )
 }
 
 async function seedTemplate(input: {
@@ -173,6 +201,7 @@ async function main(): Promise<void> {
   const examTypeIds = await seedExamTypes()
   console.log(`✔ exam types ready (${examTypeIds.size})`)
   await ensureCourseTemplatesShape()
+  await repairTemplateContentTypes()
 
   await seedTemplate({
     name: '12-Week TOEFL Prep',

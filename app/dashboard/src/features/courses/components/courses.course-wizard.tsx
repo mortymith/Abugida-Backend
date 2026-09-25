@@ -524,8 +524,8 @@ export function CurriculumEditor({
   })
   const createLesson = useMutation({
     mutationFn: async (input: { modulePublicId: string; title: string }) => {
-      const { createLesson } = await import('../server/all')
-      return createLesson({ data: input })
+      const { createLesson: createLessonRequest } = await import('../server/all')
+      return createLessonRequest({ data: input })
     },
     onSuccess: () => {
       invalidate()
@@ -535,16 +535,16 @@ export function CurriculumEditor({
   })
   const renameModule = useMutation({
     mutationFn: async (input: { modulePublicId: string; title: string }) => {
-      const { renameModule } = await import('../server/all')
-      return renameModule({ data: input })
+      const { renameModule: renameModuleRequest } = await import('../server/all')
+      return renameModuleRequest({ data: input })
     },
     onSuccess: invalidate,
     onError: (cause) => toast.error(cause instanceof Error ? cause.message : 'Failed'),
   })
   const deleteModule = useMutation({
     mutationFn: async (modulePublicId: string) => {
-      const { deleteModule } = await import('../server/all')
-      return deleteModule({ data: { modulePublicId } })
+      const { deleteModule: deleteModuleRequest } = await import('../server/all')
+      return deleteModuleRequest({ data: { modulePublicId } })
     },
     onSuccess: () => {
       invalidate()
@@ -554,8 +554,8 @@ export function CurriculumEditor({
   })
   const deleteLesson = useMutation({
     mutationFn: async (lessonPublicId: string) => {
-      const { deleteLesson } = await import('../server/all')
-      return deleteLesson({ data: { lessonPublicId } })
+      const { deleteLesson: deleteLessonRequest } = await import('../server/all')
+      return deleteLessonRequest({ data: { lessonPublicId } })
     },
     onSuccess: () => {
       invalidate()
