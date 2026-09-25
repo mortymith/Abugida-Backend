@@ -170,11 +170,11 @@ export function buildImportPlan(table: ParsedTable, mapping: ImportMapping): Val
 
   table.rows.forEach((row, rowIndex) => {
     const get = (field: ImportField): string => {
-      const index = Object.entries(mapping)
+      const columnIndex = Object.entries(mapping)
         .filter(([, value]) => value === field)
         .map(([header]) => table.headers.indexOf(header))
-        .find((index) => index >= 0)
-      const cell = index == null ? undefined : row[index]
+        .find((mappedIndex) => mappedIndex >= 0)
+      const cell = columnIndex == null ? undefined : row[columnIndex]
       return (cell ?? '').trim()
     }
 

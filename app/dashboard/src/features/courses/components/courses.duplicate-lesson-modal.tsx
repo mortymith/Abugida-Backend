@@ -49,47 +49,36 @@ export function DuplicateLessonModal({
   const [includeContent, setIncludeContent] = useState(true)
   const [includeQuiz, setIncludeQuiz] = useState(true)
 
-  const _targetCourseId = targetCourseId
-  void _targetCourseId
-
   const copy = useMutation({
     mutationFn: async () => {
-      if (!targetCourseId || !targetModuleId || !lessonPublicId) {
+      if (!targetModuleId || !lessonPublicId) {
         throw new Error('Pick a target course and module')
       }
-      const { createLesson, saveLesson } = await import('../server/all')
-      const title = lessonTitle.toLowerCase().endsWith('(copy)')
-        ? lessonTitle
-        : `${lessonTitle} (copy)`
-      // Create the lesson with the " (copy)" suffix pre-shown to the user (spec).
-      const created = await createLesson({
-        data: { modulePublicId: targetModuleId, title: title.slice(0, 300) },
+      // One atomic server call: the copy, its media fields and (optionally) its
+      // quiz are written together, and the server returns the new lesson's id
+      // rather than us guessing it by matching on title.
+      const { duplicateLesson } = await import('../server/all')
+      return duplicateLesson({
+        data: {
+          lessonPublicId,
+          targetModulePublicId: targetModuleId,
+          includeContent,
+          includeQuiz,
+        },
       })
-      const shellLesson = created.modules
-        .flatMap((module) => module.lessons)
-        .find((lesson) => lesson.title === title.slice(0, 300))
-      if (shellLesson && sourceLesson) {
-        // Copy content per the user's checkbox choices (media referenced, not re-uploaded).
-        await saveLesson({
-          data: {
-            lessonPublicId: shellLesson.publicId,
-            title: shellLesson.title,
-            body: includeContent ? (sourceLesson.hasBody ? null : null) : null,
-            contentType: sourceLesson.contentType ?? 'video',
-            videoUrl: includeContent ? sourceLesson.videoUrl : null,
-            durationMinutes: sourceLesson.durationMinutes,
-            tags: includeContent ? ['source:copy'] : [],
-            expectedRowVersion: 1,
-          },
-        })
-      }
-      return { created, includeContent, includeQuiz, targetCourseId }
     },
     onSuccess: async (result) => {
       void queryClient.invalidateQueries({
-        queryKey: courseQueryKeys.curriculum(result.targetCourseId),
+        queryKey: courseQueryKeys.curriculum(result.coursePublicId),
       })
-      toast.success('Lesson duplicated. Unlock rules were not copied.')
+      void queryClient.invalidateQueries({
+        queryKey: courseQueryKeys.curriculum(sourceCoursePublicId),
+      })
+      toast.success(
+        result.copiedQuiz
+          ? 'Lesson duplicated with its quiz. Unlock rules were not copied.'
+          : 'Lesson duplicated. Unlock rules were not copied.',
+      )
       onClose()
     },
     onError: (cause) => toast.error(cause instanceof Error ? cause.message : 'Copy failed'),
@@ -148,18 +137,20 @@ export function DuplicateLessonModal({
               type="checkbox"
               checked={includeContent}
               onChange={(event) => setIncludeContent(event.target.checked)}
-              disabled
             />
-            Include content &amp; media {sourceLesson?.hasBody ? '' : '(none to copy)'}
+            Include content &amp; media
+            {sourceLesson && !sourceLesson.hasBody && !sourceLesson.videoUrl
+              ? ' (none to copy)'
+              : ''}
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={includeQuiz}
               onChange={(event) => setIncludeQuiz(event.target.checked)}
-              disabled
             />
-            Include attached quiz (copied unlinked){sourceLesson?.hasQuiz ? '' : ' (none to copy)'}
+            Include attached quiz (copied unlinked)
+            {sourceLesson && !sourceLesson.hasQuiz ? ' (none to copy)' : ''}
           </label>
 
           <p className="text-xs text-muted-foreground">

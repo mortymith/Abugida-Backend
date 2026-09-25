@@ -280,11 +280,12 @@ function SortableModule({
           aria-expanded={!collapsed}
         >
           <HugeiconsIcon icon={FolderIcon} size={16} className="shrink-0 text-violet-500" />
-          <ModuleTitle title={module.title} editable={authoring} onSave={onRenameModule} />
+          <span className="min-w-0 flex-1 truncate font-medium">{module.title}</span>
           <span className="text-xs tabular-nums text-muted-foreground">
             {module.lessons.length} lessons
           </span>
         </button>
+        {authoring ? <ModuleTitle title={module.title} editable onSave={onRenameModule} /> : null}
         {authoring ? (
           <div className="flex items-center gap-1">
             <Button
@@ -502,20 +503,17 @@ function ModuleTitle({
     )
   }
   return (
-    <>
-      <span className="min-w-0 flex-1 truncate font-medium">{title}</span>
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        aria-label={`Rename module ${title}`}
-        onClick={() => {
-          setValue(title)
-          setEditing(true)
-        }}
-      >
-        <HugeiconsIcon icon={Edit02Icon} size={12} />
-      </Button>
-    </>
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      aria-label={`Rename module ${title}`}
+      onClick={() => {
+        setValue(title)
+        setEditing(true)
+      }}
+    >
+      <HugeiconsIcon icon={Edit02Icon} size={12} />
+    </Button>
   )
 }
 

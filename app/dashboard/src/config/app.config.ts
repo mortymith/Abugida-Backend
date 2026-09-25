@@ -31,6 +31,7 @@ const envSchema = z
     AUTH_ERROR_CALLBACK_URL: z.string().optional(),
     AUTH_NEW_USER_CALLBACK_URL: z.string().optional(),
     WEB_APP_URL: z.string().optional(),
+    COURSE_PREVIEW_URL: z.url().optional(),
     TOKEN_AUDIENCE: z.string().optional(),
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
