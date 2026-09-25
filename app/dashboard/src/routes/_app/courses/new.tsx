@@ -10,7 +10,12 @@ type NewCourseSearch = {
 export const Route = createFileRoute('/_app/courses/new')({
   // (declared before use below — TS hoists the type)
   validateSearch: (search: Record<string, unknown>): NewCourseSearch => ({
-    step: typeof search.step === 'string' ? Number(search.step) : undefined,
+    step:
+      typeof search.step === 'number'
+        ? search.step
+        : typeof search.step === 'string'
+          ? Number(search.step)
+          : undefined,
     from: typeof search.from === 'string' ? search.from : undefined,
   }),
   component: NewCourseRoute,
