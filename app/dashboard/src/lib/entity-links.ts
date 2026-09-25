@@ -9,7 +9,7 @@
  * module as those specs are implemented.
  */
 export type LinkableEntityType =
-  'course' | 'lesson' | 'student' | 'asset' | 'revenue' | 'team' | 'notification'
+  'course' | 'lesson' | 'review_queue' | 'student' | 'asset' | 'revenue' | 'team' | 'notification'
 
 export interface EntityLink {
   path: string
@@ -17,8 +17,9 @@ export interface EntityLink {
 }
 
 const REGISTRY: Record<LinkableEntityType, EntityLink> = {
-  course: { path: '/courses/{id}', exists: false }, // S-2.6 Course Detail (spec part 04)
-  lesson: { path: '/courses/{id}', exists: false }, // S-2.7 Lesson Editor (spec part 04)
+  course: { path: '/courses/{id}', exists: true }, // S-2.6 Course Detail (spec part 04) — live
+  lesson: { path: '/courses/{id}', exists: false }, // S-2.7 editor needs course+lesson ids; flip when notifications carry both
+  review_queue: { path: '/courses/reviews', exists: true }, // S-2.14 Approval Queue — live
   student: { path: '/students/{id}', exists: false }, // S-4.2 Student Profile (spec part 06)
   asset: { path: '/content-library/{id}', exists: false }, // S-3.3 Asset Detail (spec part 05)
   revenue: { path: '/dashboard/revenue', exists: true },
@@ -26,10 +27,17 @@ const REGISTRY: Record<LinkableEntityType, EntityLink> = {
   notification: { path: '/notifications', exists: true },
 }
 
-export function resolveEntityLink(type: LinkableEntityType, entityPublicId: string): EntityLink {
+export function resolveEntityLink(
+  type: LinkableEntityType,
+  entityPublicId: string,
+  extra?: Record<string, string>,
+): EntityLink {
   const entry = REGISTRY[type]
-  return {
-    path: entry.path.replace('{id}', encodeURIComponent(entityPublicId)),
-    exists: entry.exists,
+  let path = entry.path.replace('{id}', encodeURIComponent(entityPublicId))
+  if (extra) {
+    for (const [key, value] of Object.entries(extra)) {
+      path = path.replace(`{${key}}`, encodeURIComponent(value))
+    }
   }
+  return { path, exists: entry.exists }
 }

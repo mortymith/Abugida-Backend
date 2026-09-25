@@ -1,5 +1,36 @@
 {
-  "*.{js,mjs,cjs,ts,tsx,jsx}": ["eslint --fix --no-warn-ignored", "prettier --write"],
+  "app/dashboard/**/*.{js,mjs,cjs,ts,tsx,jsx}": [
+    "pnpm --dir app/dashboard exec eslint --fix --no-warn-ignored",
+    "prettier --write"
+  ],
+  "app/api/**/*.{js,mjs,cjs,ts,tsx,jsx}": [
+    "pnpm --dir app/api exec eslint --fix --no-warn-ignored",
+    "prettier --write"
+  ],
+  "app/marketing/**/*.{js,mjs,cjs,ts,tsx,jsx}": [
+    "pnpm --dir app/marketing exec eslint --fix --no-warn-ignored",
+    "prettier --write"
+  ],
+  "packages/auth/**/*.{js,mjs,cjs,ts,tsx,jsx}": [
+    "pnpm --dir packages/auth exec eslint --fix --no-warn-ignored",
+    "prettier --write"
+  ],
+  "packages/database/**/*.{js,mjs,cjs,ts,tsx,jsx}": [
+    "pnpm --dir packages/database exec eslint --fix --no-warn-ignored",
+    "prettier --write"
+  ],
+  "packages/observability/**/*.{js,mjs,cjs,ts,tsx,jsx}": [
+    "pnpm --dir packages/observability exec eslint --fix --no-warn-ignored",
+    "prettier --write"
+  ],
+  "packages/queue/**/*.{js,mjs,cjs,ts,tsx,jsx}": [
+    "pnpm --dir packages/queue exec eslint --fix --no-warn-ignored",
+    "prettier --write"
+  ],
+  "packages/storage/**/*.{js,mjs,cjs,ts,tsx,jsx}": [
+    "pnpm --dir packages/storage exec eslint --fix --no-warn-ignored",
+    "prettier --write"
+  ],
   "*.astro": ["eslint --fix --no-warn-ignored", "prettier --write"],
   "*.{sh,bash,ksh,zsh}": ["shfmt -w -i 2 -sr -ln bash"],
   "*.{json,jsonc,md,mdx,yaml,yml,css,scss,html,graphql}": ["prettier --write"]

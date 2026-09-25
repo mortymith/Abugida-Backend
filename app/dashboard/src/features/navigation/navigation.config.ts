@@ -14,6 +14,8 @@ export interface NavItem {
   to: string
   badge?: number
   roles: string[]
+  /** Roles that see a live badge for this item (S-A.1 pending-review badge). */
+  badgeFor?: string[]
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -29,7 +31,9 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Courses',
     icon: Book01Icon,
     to: '/courses',
-    roles: ['admin', 'editor', 'viewer'],
+    roles: ['admin', 'editor', 'reviewer', 'viewer', 'support'],
+    /** Courses nav badge = pending review count (spec S-A.1) — admin/reviewer only. */
+    badgeFor: ['admin', 'reviewer'],
   },
   {
     id: 'content-library',

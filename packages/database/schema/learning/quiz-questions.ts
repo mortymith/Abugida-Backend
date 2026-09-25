@@ -9,6 +9,7 @@ import {
   uniqueIndex,
   index,
   check,
+  pgEnum,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import { relations } from 'drizzle-orm'
@@ -16,6 +17,14 @@ import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { z } from 'zod'
 import { lessons } from '../catalog/lessons'
 import { quizAnswers } from './quiz-answers'
+
+export const quizQuestionTypeEnum = z.enum(['multiple_choice', 'true_false', 'short_answer'])
+export type QuizQuestionType = z.infer<typeof quizQuestionTypeEnum>
+export const quizQuestionTypePgEnum = pgEnum('quiz_question_type', [
+  'multiple_choice',
+  'true_false',
+  'short_answer',
+])
 export const quizQuestions = pgTable(
   'quiz_questions',
   {
@@ -28,6 +37,8 @@ export const quizQuestions = pgTable(
         onUpdate: 'cascade',
       }),
     questionIndex: smallint('question_index').notNull(),
+    questionType: quizQuestionTypePgEnum(),
+    points: integer('points').notNull().default(10),
     questionText: text('question_text').notNull(),
     correctAnswer: text('correct_answer').notNull(),
     explanation: text('explanation'),
@@ -57,6 +68,8 @@ export const quizQuestionsRelations = relations(quizQuestions, ({ one, many }) =
 export const insertQuizQuestionSchema = createInsertSchema(quizQuestions, {
   lessonId: z.number().positive(),
   questionIndex: z.number().int().min(0),
+  questionType: quizQuestionTypeEnum.nullable().optional(),
+  points: z.number().int().min(1).default(10),
   questionText: z.string().min(1),
   correctAnswer: z.string().min(1),
   explanation: z.string().nullable().optional(),

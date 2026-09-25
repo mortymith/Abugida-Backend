@@ -8,4 +8,4 @@ export { createClient, type DatabaseClient } from './src/client'
  * explicit instead of turning the database root into an unbounded Drizzle
  * facade; domain schemas remain available through their dedicated subpaths.
  */
-export { and, asc, desc, eq, gte, ilike, inArray, isNull, lt, or, sql } from 'drizzle-orm'
+export { and, asc, desc, eq, gte, ilike, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm'

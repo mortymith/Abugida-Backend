@@ -14,6 +14,7 @@ describe('mapBetterAuthRoleToPlatformRole', () => {
 
   test('platform roles map verbatim', () => {
     expect(mapBetterAuthRoleToPlatformRole('editor')).toBe('editor')
+    expect(mapBetterAuthRoleToPlatformRole('reviewer')).toBe('reviewer')
     expect(mapBetterAuthRoleToPlatformRole('viewer')).toBe('viewer')
     expect(mapBetterAuthRoleToPlatformRole('support')).toBe('support')
   })
