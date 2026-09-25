@@ -7,6 +7,7 @@ import { Button } from '#/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -14,7 +15,8 @@ import {
 } from '#/components/ui/dropdown-menu'
 import { EmptyState } from '#/components/common/empty-state'
 import { RetryErrorState } from '#/components/common/retry-error-state'
-import { requireRolesBeforeLoad, REVENUE_ROLES } from '#/features/auth'
+import { requireRolesBeforeLoad } from '#/features/auth/server'
+import { REVENUE_ROLES } from '#/features/auth'
 import { DateRangePicker } from '#/features/dashboard/components/dashboard.date-range-picker'
 import type { DateRangeSelection } from '#/features/dashboard/components/dashboard.date-range-picker'
 import { RevenueSummaryCards } from '#/features/dashboard/components/revenue.summary-cards'
@@ -172,26 +174,28 @@ function RevenueAnalyticsPage() {
                   }
                 />
                 <DropdownMenuContent align="end" className="w-52">
-                  <DropdownMenuLabel>Payment gateway</DropdownMenuLabel>
-                  <DropdownMenuItem
-                    onClick={() =>
-                      navigate({ search: (prev) => ({ ...prev, gateway: undefined }) })
-                    }
-                  >
-                    All gateways
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {gatewayRows.map((row) => (
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>Payment gateway</DropdownMenuLabel>
                     <DropdownMenuItem
-                      key={row.gatewayId}
                       onClick={() =>
-                        navigate({ search: (prev) => ({ ...prev, gateway: row.gatewayId }) })
+                        navigate({ search: (prev) => ({ ...prev, gateway: undefined }) })
                       }
-                      className={search.gateway === row.gatewayId ? 'bg-accent' : undefined}
                     >
-                      {row.displayName}
+                      All gateways
                     </DropdownMenuItem>
-                  ))}
+                    <DropdownMenuSeparator />
+                    {gatewayRows.map((row) => (
+                      <DropdownMenuItem
+                        key={row.gatewayId}
+                        onClick={() =>
+                          navigate({ search: (prev) => ({ ...prev, gateway: row.gatewayId }) })
+                        }
+                        className={search.gateway === row.gatewayId ? 'bg-accent' : undefined}
+                      >
+                        {row.displayName}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
             </CardHeader>

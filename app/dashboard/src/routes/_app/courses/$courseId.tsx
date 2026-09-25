@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useRole, requireRolesBeforeLoad } from '#/features/auth'
+import { useRole } from '#/features/auth'
+import { requireRolesBeforeLoad } from '#/features/auth/server'
 import { env } from '#/config/app.config'
 import { CourseDetail } from '#/features/courses'
 

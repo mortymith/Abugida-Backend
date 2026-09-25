@@ -3,8 +3,8 @@
  * TanStack Start dashboard and React-based internal tools.
  */
 
-import type { Storage } from '../../core/storage.ts'
-import type { BodyInput } from '../../core/types.ts'
+import type { Storage } from '../../core/storage.js'
+import type { BodyInput } from '../../core/types.js'
 
 /**
  * TanStack Start storage client.

@@ -12,10 +12,11 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { UserIcon, Settings02Icon, Logout02Icon } from '@hugeicons/core-free-icons'
 import { AppBreadcrumbs } from './layout.breadcrumbs'
 import { SearchTrigger, CreateCourseButton } from '#/features/navigation'
-import { useSession } from '#/features/auth'
+import { useLogout, useSession } from '#/features/auth'
 
 export function Header() {
   const { data: session } = useSession()
+  const { logout, isLoggingOut } = useLogout()
   const user = session?.user
 
   const initials = user?.name
@@ -29,9 +30,8 @@ export function Header() {
 
   const userImage = user?.image ?? undefined
 
-  async function handleLogout() {
-    // TODO: Wire to auth signOut
-    window.location.href = '/login'
+  function handleLogout() {
+    void logout()
   }
 
   return (
@@ -66,7 +66,7 @@ export function Header() {
             Settings
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout}>
+          <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
             <HugeiconsIcon icon={Logout02Icon} strokeWidth={2} />
             Logout
           </DropdownMenuItem>

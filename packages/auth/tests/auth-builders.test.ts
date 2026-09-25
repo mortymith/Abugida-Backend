@@ -116,6 +116,11 @@ describe('buildAdvancedOptions', () => {
     expect(options.defaultCookieAttributes.httpOnly).toBe(true)
     expect(options.defaultCookieAttributes.sameSite).toBe('lax')
   })
+
+  it('leaves IDs to Better Auth for text primary keys without database defaults', () => {
+    const options = buildAdvancedOptions(baseConfig())
+    expect(options.database).toBeUndefined()
+  })
 })
 
 describe('buildRateLimitOptions', () => {

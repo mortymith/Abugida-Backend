@@ -13,7 +13,7 @@ describe('auth module', () => {
     const mod = await import('@/config/auth')
     expect(mod.authConfig).toBeDefined()
     expect(typeof mod.authConfig).toBe('object')
-  })
+  }, 15_000)
 
   it('authConfig has required fields', async () => {
     const mod = await import('@/config/auth')

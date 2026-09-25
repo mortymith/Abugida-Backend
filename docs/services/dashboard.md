@@ -6,15 +6,15 @@
 
 ## Overview
 
-| Property              | Value                                     |
-| --------------------- | ----------------------------------------- |
-| **Runtime**           | Bun 1.3.14-alpine (shared base toolchain) |
-| **Framework**         | TanStack Start (Vite + TanStack Router)   |
-| **Container Port**    | 8080                                      |
-| **Staging Host Port** | 8081 (`DASHBOARD_PORT`)                   |
-| **Replicas**          | `DASHBOARD_REPLICAS`                      |
-| **Networks**          | `backend`, `infrastructure`               |
-| **Environments**      | Staging, Prod                             |
+| Property              | Value                                    |
+| --------------------- | ---------------------------------------- |
+| **Runtime**           | Bun 1.4.2-alpine (shared base toolchain) |
+| **Framework**         | TanStack Start (Vite + TanStack Router)  |
+| **Container Port**    | 8080                                     |
+| **Staging Host Port** | 8081 (`DASHBOARD_PORT`)                  |
+| **Replicas**          | `DASHBOARD_REPLICAS`                     |
+| **Networks**          | `backend`, `infrastructure`              |
+| **Environments**      | Staging, Prod                            |
 
 ---
 
@@ -23,7 +23,7 @@
 The image builds from `app/dashboard/Dockerfile` using the **monorepo root as the build context**, so manifest, source, and entrypoint paths are repo-relative:
 
 ```dockerfile
-# Stage 0 (base): Bun 1.3.14 + pnpm, runtime tooling, non-root appuser (1000:1000)
+# Stage 0 (base): Bun 1.4.2 + pnpm, runtime tooling, non-root appuser (1000:1000)
 # Stage 1 (builder): pnpm install --filter @abugida/dashboard --frozen-lockfile,
 #                    then the TanStack Start production build (vite build)
 # Stage 2 (runtime): pruned production node_modules + dist/ + Bun SSR server

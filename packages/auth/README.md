@@ -7,7 +7,7 @@ OpenID Connect** (through the
 [`better-auth-telegram`](https://www.npmjs.com/package/better-auth-telegram)
 plugin), with a documented interface for adding your own providers.
 
-- Runtime: Bun `>=1.3.14`, TypeScript, ESM-only
+- Runtime: Bun `>=1.4.2`, TypeScript, ESM-only
 - Database: PostgreSQL via Drizzle ORM — you inject the schema, this package
   never owns migrations
 - One factory function (`createAuth`) wires everything together

@@ -8,14 +8,10 @@ import { courses, courseStats } from '@abugida/database/catalog'
 import { enrollments } from '@abugida/database/learning'
 import { purchases } from '@abugida/database/finance'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
-import { getRequest } from '@tanstack/react-start/server'
 import { z } from 'zod'
 import { resolveDateRange, DATE_RANGE_PRESETS } from '../schemas/dashboard.date-range.schema'
 import type { CoursePerformancePage } from '../dashboard.types'
 import { REVENUE_ROLES } from '#/features/auth'
-import type { PlatformRole } from '#/features/auth'
-import { resolvePlatformRoleImpl } from '#/features/auth/server/auth.roles.impl.server'
 
 const coursePerformanceInputSchema = z.object({
   preset: z.enum(DATE_RANGE_PRESETS).optional(),
@@ -35,11 +31,8 @@ export async function loadCoursePerformance(data: {
   page: number
   pageSize: number
 }): Promise<CoursePerformancePage> {
-  const request = getRequest()
-  const session = await auth.getSession(request.headers)
-  const role: PlatformRole = session.ok
-    ? await resolvePlatformRoleImpl(session.value.user.id)
-    : 'viewer'
+  const { getServerRoleImpl } = await import('#/features/auth/server/auth.roles.impl.server')
+  const role = await getServerRoleImpl()
   const canSeeRevenue = REVENUE_ROLES.includes(role)
 
   const { page, pageSize, ...rangeInput } = data

@@ -1,6 +1,5 @@
 import type { Provider } from '#/features/auth/hooks/auth.provider-memory'
 import { Spinner } from '#/components/ui/spinner'
-import { Logo } from '#/components/common/logo'
 import { ProviderIcon } from '#/features/auth/components/auth.provider-button'
 
 interface RedirectingOverlayProps {
@@ -17,7 +16,6 @@ function RedirectingOverlay({ provider }: RedirectingOverlayProps) {
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/85 backdrop-blur-md"
     >
       <div className="anim-up flex flex-col items-center gap-6">
-        <Logo />
         <div className="relative">
           <div className="absolute inset-0 animate-ping rounded-full bg-primary/15" />
           <div className="relative flex size-14 items-center justify-center rounded-full border bg-card shadow-sm">

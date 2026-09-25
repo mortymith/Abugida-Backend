@@ -12,7 +12,7 @@ const envSchema = z
     BETTER_AUTH_URL: z.url(),
     AUTH_BASE_URL: z.url(),
     AUTH_BASE_PATH: z.string().default('/auth'),
-    VITE_AUTH_BASE_URL: z.url().default('http://localhost:3000/auth'),
+    VITE_AUTH_BASE_PATH: z.string().startsWith('/').default('/auth'),
     LOGIN_PATH: z.string().default('/login'),
     DEFAULT_LOGIN_REDIRECT: z.string().default('/dashboard'),
     TOTP_ISSUER: z.string().default('Abugida Academy'),

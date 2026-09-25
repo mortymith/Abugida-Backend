@@ -13,7 +13,6 @@
 
 import { betterAuth, type Auth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { randomUUID } from 'node:crypto'
 import type { AuthConfig, AuthDatabaseSchema } from './types'
 import { validateAuthConfig, withDefaults } from '../config'
 import { googleProvider } from '../providers'
@@ -108,12 +107,10 @@ export function buildAdvancedOptions(config: AuthConfig) {
       domain: config.session?.cookie?.domain,
     },
     cookiePrefix: config.session?.cookie?.name ?? 'abugida.session',
-    // The app `users` table's PK (text) is fully better-auth-owned; mint the
-    // ids as UUIDs server-side so every environment generates the same
-    // format regardless of DB driver. See packages/database schema auth.
-    database: {
-      generateId: () => randomUUID(),
-    },
+    // Let Better Auth generate IDs in the adapter. The database package uses
+    // text primary keys without database-side defaults, so
+    // `generateId: 'uuid'` would make the PostgreSQL adapter assume the DB
+    // supplies UUID defaults and insert NULL into id.
   }
 }
 

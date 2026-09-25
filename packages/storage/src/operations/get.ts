@@ -4,8 +4,8 @@
 
 import { GetObjectCommand, type GetObjectCommandInput } from '@aws-sdk/client-s3'
 import type { S3Client } from '@aws-sdk/client-s3'
-import type { GetOptions, GetResult, ObjectMetadata } from '../core/types.ts'
-import { StorageDownloadError, StorageNotFoundError } from '../utils/errors.ts'
+import type { GetOptions, GetResult, ObjectMetadata } from '../core/types.js'
+import { StorageDownloadError, StorageNotFoundError } from '../utils/errors.js'
 
 /**
  * Download an object from storage.

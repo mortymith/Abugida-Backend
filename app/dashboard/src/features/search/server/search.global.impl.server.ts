@@ -7,10 +7,6 @@ import { and, asc, eq, ilike, isNull, or, sql } from '@abugida/database'
 import { courses, courseStats, lessons, modules } from '@abugida/database/catalog'
 import { users } from '@abugida/database/auth'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
-import { getRequest } from '@tanstack/react-start/server'
-import type { PlatformRole } from '#/features/auth'
-import { resolvePlatformRoleImpl } from '#/features/auth/server/auth.roles.impl.server'
 import { resolveEntityLink } from '#/lib/entity-links'
 import type { GlobalSearchPayload, SearchGroup, SearchResultsItem } from '../search.types'
 
@@ -23,11 +19,8 @@ function likeLiteral(input: string): string {
 
 export async function loadGlobalSearch(data: { query: string }): Promise<GlobalSearchPayload> {
   // Role resolved server-side — never trusted from client input.
-  const request = getRequest()
-  const session = await auth.getSession(request.headers)
-  const role: PlatformRole = session.ok
-    ? await resolvePlatformRoleImpl(session.value.user.id)
-    : 'viewer'
+  const { getServerRoleImpl } = await import('#/features/auth/server/auth.roles.impl.server')
+  const role = await getServerRoleImpl()
 
   const term = `%${likeLiteral(data.query)}%`
 

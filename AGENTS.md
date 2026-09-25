@@ -1,7 +1,7 @@
 ## Tooling
 
-- **Runtime:** bun (>= 1.3.14, pinned in `.bun-version`). Run scripts, dev servers, and tests with bun.
-- **Package manager:** pnpm (>= 11, pinned in `package.json` `packageManager`). Install deps with `pnpm install` only.
+- **Runtime:** bun (>= 1.4.2, pinned in `.bun-version`). Run scripts, dev servers, and tests with bun.
+- **Package manager:** pnpm (>= 12, pinned in `package.json` `packageManager`). Install deps with `pnpm install` only.
 - Never let bun touch the dependency graph: `bunfig.toml` sets `frozenLockfile = true` and there is intentionally no `bun.lockb`. Do not run `bun add`/`bun install` or introduce a bun lockfile — edit `package.json` + `pnpm-workspace.yaml` and reinstall with pnpm.
 - `pnpm-workspace.yaml` has explicit `allowBuilds` for native deps (`@google/genai`, `esbuild`, `sharp`, etc.). Don't add new native packages without checking this list.
 
@@ -30,6 +30,15 @@ Turborepo over pnpm workspaces (`app/*`, `packages/*`). Root `pnpm <script>` fan
 - All apps import from the shared packages via `workspace:*`. Do not reimplement auth, database, queue, storage, or observability logic locally.
 - To scope to one workspace, run from that directory or `pnpm --filter <name> <script>`.
 - Shared packages must be built (`tsc` → `dist/`) before consuming apps can import them. Turbo handles this via `^build` dependencies.
+
+### Application boundaries and authentication
+
+- `app/api` and `app/dashboard` each implement and own their own authentication layer and runtime instance by composing the shared `@abugida/auth` package. The shared package provides the common auth foundation; it does not make either app a dependency of the other.
+- The API uses the shared Hono integration (`@abugida/auth/hono`), while the dashboard uses the shared TanStack integrations (`@abugida/auth/tanstack/*`). Keep auth configuration, route mounting, clients, middleware, and session guards inside their respective app.
+- `app/api` must not import, call, mount, proxy, or otherwise access code from `app/dashboard`.
+- `app/dashboard` must not import, call, mount, proxy, or otherwise access code from `app/api`.
+- Communication between the apps must happen only through explicitly supported boundaries such as public HTTP APIs, shared packages, or shared infrastructure. Never bypass these boundaries with cross-app imports.
+- When authentication is involved, each app must use its own locally configured auth entry point and integration. Do not reuse the other app's auth instance, client, middleware, route handlers, or server functions.
 
 ## Commands
 

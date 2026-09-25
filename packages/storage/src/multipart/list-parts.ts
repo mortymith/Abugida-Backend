@@ -4,7 +4,7 @@
 
 import { ListPartsCommand } from '@aws-sdk/client-s3'
 import type { S3Client } from '@aws-sdk/client-s3'
-import type { MultipartListedPart } from './types.ts'
+import type { MultipartListedPart } from './types.js'
 
 /**
  * List parts that have been uploaded for a multipart upload.

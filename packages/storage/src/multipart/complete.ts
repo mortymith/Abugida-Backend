@@ -4,7 +4,7 @@
 
 import { CompleteMultipartUploadCommand } from '@aws-sdk/client-s3'
 import type { S3Client } from '@aws-sdk/client-s3'
-import type { MultipartCompleteResult, CompletedPart } from './types.ts'
+import type { MultipartCompleteResult, CompletedPart } from './types.js'
 
 /**
  * Finalize a multipart upload by assembling all uploaded parts.

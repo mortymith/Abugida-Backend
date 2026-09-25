@@ -7,8 +7,6 @@ import { and, eq, gte, isNull, lt, sql } from '@abugida/database'
 import { courses, courseStats } from '@abugida/database/catalog'
 import { enrollments } from '@abugida/database/learning'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
-import { getRequest } from '@tanstack/react-start/server'
 import { resolveDateRange, resolveTrendGranularity } from '../schemas/dashboard.date-range.schema'
 import type { DateRange, TrendGranularity } from '../schemas/dashboard.date-range.schema'
 import type { DashboardOverview, KpiMetric, TrendPoint, TrendSeries } from '../dashboard.types'
@@ -21,12 +19,9 @@ function pctDelta(current: number, previous: number): number | null {
   return ((current - previous) / Math.abs(previous)) * 100
 }
 
-async function getSessionRole(): Promise<PlatformRole> {
-  const request = getRequest()
-  const session = await auth.getSession(request.headers)
-  if (!session.ok) return 'viewer'
-  const { resolvePlatformRoleImpl } = await import('#/features/auth/server/auth.roles.impl.server')
-  return resolvePlatformRoleImpl(session.value.user.id)
+async function getRequestRole(): Promise<PlatformRole> {
+  const { getServerRoleImpl } = await import('#/features/auth/server/auth.roles.impl.server')
+  return getServerRoleImpl()
 }
 
 /** Sum of completed purchases in [from, to). */
@@ -64,7 +59,7 @@ async function countNewStudents(from: Date, to: Date): Promise<number> {
 export async function loadDashboardOverview(
   data: Parameters<typeof resolveDateRange>[0],
 ): Promise<DashboardOverview> {
-  const role = await getSessionRole()
+  const role = await getRequestRole()
   const canSeeRevenue = REVENUE_ROLES.includes(role)
   const range = resolveDateRange(data)
 

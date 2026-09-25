@@ -31,33 +31,33 @@ import type {
   ListResult,
   ListedObject,
   TagSet,
-} from './types.ts'
+} from './types.js'
 
-import { getOrCreateClient } from './client.ts'
-import { checkHealth, CircuitBreaker } from './connection.ts'
-import type { HealthCheckResult, CircuitBreakerConfig } from './connection.ts'
+import { getOrCreateClient } from './client.js'
+import { checkHealth, CircuitBreaker } from './connection.js'
+import type { HealthCheckResult, CircuitBreakerConfig } from './connection.js'
 
 // Operations
-import { put, putMany, putManyParallel } from '../operations/put.ts'
-import { get, getAsBuffer, getAsString } from '../operations/get.ts'
-import { head, exists } from '../operations/head.ts'
-import { deleteObject, deleteMany } from '../operations/delete.ts'
-import { copy } from '../operations/copy.ts'
-import { move } from '../operations/move.ts'
-import { list, listAll } from '../operations/list.ts'
+import { put, putMany, putManyParallel } from '../operations/put.js'
+import { get, getAsBuffer, getAsString } from '../operations/get.js'
+import { head, exists } from '../operations/head.js'
+import { deleteObject, deleteMany } from '../operations/delete.js'
+import { copy } from '../operations/copy.js'
+import { move } from '../operations/move.js'
+import { list, listAll } from '../operations/list.js'
 
 // Presigned
-import { presignedUpload, presignedPut } from '../presigned/upload.ts'
-import { presignedDownload, presignedGet } from '../presigned/download.ts'
-import { presignedDelete } from '../presigned/delete.ts'
-import type { PresignedUrlOptions, PresignedUrlResult } from '../presigned/types.ts'
+import { presignedUpload, presignedPut } from '../presigned/upload.js'
+import { presignedDownload, presignedGet } from '../presigned/download.js'
+import { presignedDelete } from '../presigned/delete.js'
+import type { PresignedUrlOptions, PresignedUrlResult } from '../presigned/types.js'
 
 // Multipart
-import { multipartCreate } from '../multipart/create.ts'
-import { multipartUploadPart } from '../multipart/upload-part.ts'
-import { multipartComplete } from '../multipart/complete.ts'
-import { multipartAbort } from '../multipart/abort.ts'
-import { multipartListParts } from '../multipart/list-parts.ts'
+import { multipartCreate } from '../multipart/create.js'
+import { multipartUploadPart } from '../multipart/upload-part.js'
+import { multipartComplete } from '../multipart/complete.js'
+import { multipartAbort } from '../multipart/abort.js'
+import { multipartListParts } from '../multipart/list-parts.js'
 import type {
   MultipartCreateResult,
   MultipartUploadPartResult,
@@ -65,23 +65,23 @@ import type {
   CompletedPart,
   MultipartListedPart,
   MultipartUploadPartOptions,
-} from '../multipart/types.ts'
+} from '../multipart/types.js'
 
 // Keys
-import * as courseKeys from '../keys/courses.ts'
-import * as userKeys from '../keys/users.ts'
-import * as orgKeys from '../keys/organizations.ts'
-import * as exportKeys from '../keys/exports.ts'
-import * as tempKeys from '../keys/temp.ts'
+import * as courseKeys from '../keys/courses.js'
+import * as userKeys from '../keys/users.js'
+import * as orgKeys from '../keys/organizations.js'
+import * as exportKeys from '../keys/exports.js'
+import * as tempKeys from '../keys/temp.js'
 
 // Metadata / Tags (via S3 commands)
 import { GetObjectTaggingCommand, PutObjectTaggingCommand } from '@aws-sdk/client-s3'
 
 // Config
-import { validateConfig } from '../config/schema.ts'
+import { validateConfig } from '../config/schema.js'
 
 // Retry
-import { withRetry } from '../utils/retry.ts'
+import { withRetry } from '../utils/retry.js'
 
 // ---------------------------------------------------------------------------
 // Key managers unified under one namespace

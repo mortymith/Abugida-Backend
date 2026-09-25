@@ -35,7 +35,7 @@ export const authServerFns = createAuthServerFunctions(auth)
 
 // --- app/lib/auth.client.ts -------------------------------------------------
 
-export const authClient = createAuthClient({ baseUrl: import.meta.env.VITE_AUTH_BASE_URL })
+export const authClient = createAuthClient({ basePath: import.meta.env.VITE_AUTH_BASE_PATH })
 
 // --- app/routes/dashboard.tsx ------------------------------------------------
 

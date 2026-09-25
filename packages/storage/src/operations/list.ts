@@ -4,7 +4,7 @@
 
 import { ListObjectsV2Command, type ListObjectsV2CommandInput } from '@aws-sdk/client-s3'
 import type { S3Client } from '@aws-sdk/client-s3'
-import type { ListOptions, ListResult, ListedObject } from '../core/types.ts'
+import type { ListOptions, ListResult, ListedObject } from '../core/types.js'
 
 /**
  * List objects under a given prefix.
