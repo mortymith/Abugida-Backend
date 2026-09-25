@@ -8,23 +8,32 @@
  * This module is pure (no db, no env) so both server and client code — and
  * unit tests — can import it safely.
  */
-export const PLATFORM_ROLES = ['admin', 'editor', 'viewer', 'support'] as const
+export const PLATFORM_ROLES = ['admin', 'editor', 'reviewer', 'support', 'viewer'] as const
 
 export type PlatformRole = (typeof PLATFORM_ROLES)[number]
 
 /**
  * Higher wins when a user holds several org memberships. `owner` outranks
- * `admin`; the rest follow the privilege order of the permissions matrix.
+ * `admin`; the rest follow the privilege order of the permissions matrix
+ * (spec 11): Reviewer approves but cannot author; Support views students
+ * and comms; Viewer is read-only.
  */
 export const ROLE_PRIORITY: Record<PlatformRole, number> = {
-  admin: 4,
-  editor: 3,
+  admin: 5,
+  editor: 4,
+  reviewer: 3,
   support: 2,
   viewer: 1,
 }
 
 /** Roles allowed to open Revenue Analytics (S-1.2) and see revenue figures. */
 export const REVENUE_ROLES: readonly PlatformRole[] = ['admin', 'editor']
+
+/** Roles allowed to author/edit course content (spec 04 authoring screens). */
+export const COURSE_AUTHORING_ROLES: readonly PlatformRole[] = ['admin', 'editor']
+
+/** Roles allowed to open the Review & Approval Queue (S-2.14). */
+export const REVIEW_DECISION_ROLES: readonly PlatformRole[] = ['admin', 'reviewer']
 
 export function isPlatformRole(value: unknown): value is PlatformRole {
   return typeof value === 'string' && (PLATFORM_ROLES as readonly string[]).includes(value)
