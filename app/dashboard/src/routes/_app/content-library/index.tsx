@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, createFileRoute } from '@tanstack/react-router'
+import { useHydrated } from '#/hooks/use-hydrated'
 import { toast } from 'sonner'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { Button } from '#/components/ui/button'
-import { Input } from '#/components/ui/input'
 import { Skeleton } from '#/components/ui/skeleton'
 import { ConfirmDialog } from '#/components/common/confirm-dialog'
 import { EmptyState } from '#/components/common/empty-state'
@@ -23,6 +23,7 @@ import {
 import { parseLibrarySearch, trailFolderId } from '#/features/library/schemas/library.schema'
 import { LibraryStatCards } from '#/features/library/components/library.stat-cards'
 import { LibraryFoldersBar } from '#/features/library/components/library.folders-bar'
+import { LibrarySearchInput } from '#/features/library/components/library.search-input'
 import { LibraryAssetCard } from '#/features/library/components/library.asset-card'
 import { LibraryPreviewModal } from '#/features/library/components/library.preview-modal'
 import { LibraryUploadModal } from '#/features/library/components/library.upload-modal'
@@ -116,6 +117,13 @@ function ContentLibraryPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const [draggingAsset, setDraggingAsset] = useState<AssetCardDTO | null>(null)
 
+  // `isFetching` flips to `true` during the first client render when the SSR
+  // data is already stale by then (hydration can take longer than the list's
+  // `staleTime`), which the server could never have rendered. Gating on
+  // hydration keeps the grid's first render identical on both sides.
+  const hydrated = useHydrated()
+  const gridBusy = hydrated && assets.isFetching
+
   /**
    * Merges `patch` into the current search.
    *
@@ -126,14 +134,20 @@ function ContentLibraryPage() {
    * "leave unchanged", so "All", "All folders" and "Newest" could never reset
    * their filter. Any filter change also drops `page`, otherwise the user
    * lands on a page that no longer exists for the new filter.
+   *
+   * `replace` keeps refining in place: chips, sort and typing are exploration,
+   * not navigation, so Back should return to the previous *view*, not to the
+   * previous keystroke. Paging opts out (`{ replace: false }`) because moving
+   * between result pages is a step a user may legitimately want to undo.
    */
-  function patchSearch(patch: LibrarySearch) {
+  function patchSearch(patch: LibrarySearch, options?: { replace?: boolean }) {
     // Key *presence* (not value) signals a filter change: clearing a filter
     // passes `undefined`, which is exactly the case that must reset paging.
     const filters = ['q', 'folder', 'type', 'sort'] as const
     const resetsPage = filters.some((key) => key in patch)
     void navigate({
       to: '/content-library',
+      replace: options?.replace ?? true,
       search: (prev) => {
         // At runtime `prev` is this route's already-validated search object.
         // The router types it loosely because `validateSearch` is a plain
@@ -246,14 +260,7 @@ function ContentLibraryPage() {
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <Input
-          type="search"
-          placeholder="Search assets, tags, descriptions…"
-          value={search.q ?? ''}
-          aria-label="Search assets"
-          className="max-w-xs"
-          onChange={(event) => patchSearch({ q: event.target.value || undefined, page: undefined })}
-        />
+        <LibrarySearchInput value={search.q} onCommit={(q) => patchSearch({ q })} />
         <nav aria-label="Type filter" className="flex flex-wrap gap-1">
           {TYPE_FILTERS.map((filter) => {
             const active = (search.type ?? 'all') === filter.value
@@ -353,8 +360,24 @@ function ContentLibraryPage() {
           />
         )
       ) : (
-        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        // `id` keeps dnd-kit's `aria-describedby` target stable. Without it
+        // dnd-kit falls back to a module-level counter that keeps growing on the
+        // long-lived SSR process, so the server and the client disagree on the id
+        // and hydration mismatches.
+        <DndContext
+          id="content-library-assets"
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          {/* `keepPreviousData` keeps the last page on screen while a new search
+              runs; `isPlaceholderData` marks those rows as not yet matching the
+              current query so the grid can read as "updating", not "final". */}
+          <div
+            className="grid grid-cols-1 gap-3 transition-opacity sm:grid-cols-2 lg:grid-cols-3 aria-busy:opacity-60"
+            aria-busy={gridBusy}
+            aria-label="Assets"
+          >
             {rows.map((asset) => (
               <LibraryAssetCard
                 key={asset.publicId}
@@ -403,7 +426,7 @@ function ContentLibraryPage() {
               variant="outline"
               size="sm"
               disabled={assets.data.page <= 1}
-              onClick={() => patchSearch({ page: assets.data.page - 1 })}
+              onClick={() => patchSearch({ page: assets.data.page - 1 }, { replace: false })}
             >
               Previous
             </Button>
@@ -411,7 +434,7 @@ function ContentLibraryPage() {
               variant="outline"
               size="sm"
               disabled={!assets.data.hasNextPage}
-              onClick={() => patchSearch({ page: assets.data.page + 1 })}
+              onClick={() => patchSearch({ page: assets.data.page + 1 }, { replace: false })}
             >
               Next
             </Button>

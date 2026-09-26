@@ -5,7 +5,9 @@
  */
 export { LibraryAssetPicker } from './components/library.asset-picker'
 export { LibraryPreviewModal } from './components/library.preview-modal'
+export { LibrarySearchInput } from './components/library.search-input'
 export { libraryQueryKeys } from './hooks/library.queries'
 export { libraryListQueryOptions } from './hooks/library.queries'
 export { formatBytes } from './library.asset-category'
+export { normalizeLibrarySearchTerm } from './library.search-term'
 export type { LibraryAssetCard } from './library.types'
