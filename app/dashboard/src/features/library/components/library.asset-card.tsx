@@ -115,11 +115,14 @@ export function LibraryAssetCard({
                 }
               />
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={onEdit}>Edit metadata</DropdownMenuItem>
-                <DropdownMenuItem onSelect={onPreview}>Preview</DropdownMenuItem>
-                <DropdownMenuItem onSelect={onMove}>Move to folder…</DropdownMenuItem>
-                <DropdownMenuItem onSelect={onDuplicate}>Duplicate</DropdownMenuItem>
-                <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+                {/* Base UI's Menu.Item exposes `onClick`, not Radix's `onSelect`:
+                    an `onSelect` prop falls through to the DOM as a text-selection
+                    listener and the action never fires. */}
+                <DropdownMenuItem onClick={onEdit}>Edit metadata</DropdownMenuItem>
+                <DropdownMenuItem onClick={onPreview}>Preview</DropdownMenuItem>
+                <DropdownMenuItem onClick={onMove}>Move to folder…</DropdownMenuItem>
+                <DropdownMenuItem onClick={onDuplicate}>Duplicate</DropdownMenuItem>
+                <DropdownMenuItem variant="destructive" onClick={onDelete}>
                   Delete asset
                 </DropdownMenuItem>
               </DropdownMenuContent>

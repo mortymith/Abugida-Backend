@@ -83,3 +83,39 @@ export function planFolderDelete(
     assetCountInside,
   }
 }
+
+/**
+ * The view to fall back to after a folder delete: the deleted folder's parent
+ * when it sits in the current breadcrumb trail, `'all'` when it is the folder
+ * in view or the root of the trail, `null` when the delete does not affect the
+ * current view at all.
+ *
+ * Without this, deleting an ancestor of the open folder (reachable from the
+ * breadcrumb) left `activeFolder` pointing at a folder the user can no longer
+ * reach from the UI.
+ */
+export function viewAfterFolderDelete(
+  trail: readonly { publicId: string }[],
+  activeFolder: string,
+  deletedPublicId: string,
+): string | null {
+  if (deletedPublicId === activeFolder) return 'all'
+  const index = trail.findIndex((step) => step.publicId === deletedPublicId)
+  if (index === -1) return null
+  return trail[index - 1]?.publicId ?? 'all'
+}
+
+/** Impact copy for the folder delete confirmation (spec 05 S-3.4). */
+export function describeFolderDelete(assetCount: number, childFolderCount: number): string {
+  const parts: string[] = []
+  if (assetCount > 0) {
+    parts.push(`${assetCount} asset${assetCount === 1 ? '' : 's'} will move to Uncategorized.`)
+  }
+  if (childFolderCount > 0) {
+    parts.push(
+      `${childFolderCount} subfolder${childFolderCount === 1 ? '' : 's'} will move to this folder’s parent.`,
+    )
+  }
+  if (parts.length === 0) return 'This folder is empty. Deleting it cannot be undone.'
+  return parts.join(' ')
+}
