@@ -7,12 +7,19 @@ import { z } from 'zod'
 
 export const LIBRARY_PAGE_SIZE = 12 // 3-column grid × 4 rows
 
+/**
+ * Max characters of the search term, shared by `libraryListQuerySchema.q`,
+ * `parseLibrarySearch` and the search input (which caps its draft) so a typed
+ * term can never be silently truncated on the way to the server.
+ */
+export const LIBRARY_SEARCH_MAX_LENGTH = 100
+
 export const assetCategoryFilterSchema = z.enum(['all', 'video', 'image', 'audio', 'document'])
 
 export const librarySortSchema = z.enum(['newest', 'oldest', 'name', 'size', 'uses'])
 
 export const libraryListQuerySchema = z.object({
-  q: z.string().trim().max(100).optional(),
+  q: z.string().trim().max(LIBRARY_SEARCH_MAX_LENGTH).optional(),
   category: assetCategoryFilterSchema.optional(),
   /** 'all' = everything, 'root' = uncategorized, else a folder public id. */
   folder: z.union([z.literal('all'), z.literal('root'), z.string().uuid()]).optional(),
@@ -79,10 +86,25 @@ function folderSelector(value: unknown): string | undefined {
   return uuidSchema.safeParse(raw).success ? raw : undefined
 }
 
+/**
+ * The folder public id the breadcrumb trail should be loaded for, or
+ * `undefined` when there is nothing to load.
+ *
+ * `all` and `root` are view sentinels, not folder ids — `getFolderTrail`
+ * validates its input as a uuid, so requesting a trail for them produced a
+ * guaranteed Zod failure (and React Query's default retries) on every
+ * "All folders" / "Uncategorized" view.
+ */
+export function trailFolderId(folder: string | undefined): string | undefined {
+  return folder && uuidSchema.safeParse(folder).success ? folder : undefined
+}
+
 export function parseLibrarySearch(search: Record<string, unknown>): LibrarySearch {
   const category = pick(assetCategoryFilterSchema, search.type)
   return {
-    q: nonEmptyString(search.q)?.slice(0, 100),
+    // Trimmed so `"lecture "` does not become a second cache entry that re-runs
+    // the same query; `normalizeLibrarySearchTerm` is the client-side twin.
+    q: nonEmptyString(search.q)?.trim().slice(0, LIBRARY_SEARCH_MAX_LENGTH) || undefined,
     folder: folderSelector(search.folder),
     // `all` is the "All" chip's sentinel for "no filter"; normalising it away
     // here keeps the unfiltered view on a single React Query cache entry.

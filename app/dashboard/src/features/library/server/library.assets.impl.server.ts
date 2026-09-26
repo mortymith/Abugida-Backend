@@ -19,6 +19,7 @@ import { storageEnv } from '#/config/app.config'
 import {
   ASSET_MAX_SIZE_BYTES,
   categoryForMime,
+  isLibraryObjectKey,
   isSupportedAssetMime,
 } from '../library.asset-category'
 import { escapeLike, requireLibraryWriteRole, requireUserId } from './library.server-helpers.server'
@@ -44,9 +45,23 @@ export async function resolveAsset(assetPublicId: string) {
   return asset
 }
 
-/** Correlated usage count used for both sorting and display. */
+/**
+ * Correlated "used in" count used for sorting and for the card's "N uses".
+ *
+ * Two deliberate rules keep the number identical everywhere it appears (S-3.1
+ * card, S-3.3 detail + delete warning, S-3.3 "Used In" list):
+ * 1. Usage rows pointing at a **soft-deleted** lesson do not count — the "Used
+ *    In" list already filters them, so counting them made the card disagree
+ *    with the detail view (and wrongly blocked blob cleanup on delete).
+ * 2. A live course whose banner points at this object counts as a use, because
+ *    the delete warning covers course banners too.
+ */
 const usageCountSql = sql<number>`(
-  SELECT COUNT(*)::int FROM ${assetUsage} WHERE ${assetUsage.assetId} = ${assetLibrary.id}
+  (SELECT COUNT(*)::int FROM ${assetUsage}
+     INNER JOIN ${lessons} ON ${lessons.id} = ${assetUsage.lessonId}
+    WHERE ${assetUsage.assetId} = ${assetLibrary.id} AND ${lessons.deletedAt} IS NULL)
+  + (SELECT COUNT(*)::int FROM ${courses}
+    WHERE ${courses.thumbnailObjectKey} = ${assetLibrary.objectKey} AND ${courses.deletedAt} IS NULL)
 )`
 
 export async function getLibraryAssetsImpl(query: LibraryListQuery): Promise<LibraryAssetPage> {
@@ -208,7 +223,15 @@ export async function getAssetDetailImpl(assetPublicId: string): Promise<AssetDe
   const usageRows = await db
     .select({ count: sql<number>`COUNT(*)::int` })
     .from(assetUsage)
-    .where(eq(assetUsage.assetId, asset.id))
+    .innerJoin(lessons, eq(lessons.id, assetUsage.lessonId))
+    .where(and(eq(assetUsage.assetId, asset.id), isNull(lessons.deletedAt)))
+  const lessonUses = usageRows.at(0)?.count ?? 0
+
+  const thumbnailRows = await db
+    .select({ count: sql<number>`COUNT(*)::int` })
+    .from(courses)
+    .where(and(eq(courses.thumbnailObjectKey, asset.objectKey), isNull(courses.deletedAt)))
+  const thumbnailUses = thumbnailRows.at(0)?.count ?? 0
 
   return {
     publicId: asset.publicId,
@@ -226,7 +249,7 @@ export async function getAssetDetailImpl(assetPublicId: string): Promise<AssetDe
     uploadedByName: uploaderRows.at(0)?.name ?? null,
     createdAt: asset.createdAt.toISOString(),
     updatedAt: asset.updatedAt.toISOString(),
-    usageCount: usageRows.at(0)?.count ?? 0,
+    usageCount: lessonUses + thumbnailUses,
   }
 }
 
@@ -242,6 +265,11 @@ export async function completeAssetUploadImpl(
 
   const { getStorage } = await import('./library.presign.impl.server')
   const storage = getStorage()
+  // The browser only ever receives a server-minted key under `asset-library/`.
+  // Anything else would let a caller adopt an unrelated object in the bucket.
+  if (!isLibraryObjectKey(input.objectKey)) {
+    throw new Error('INVALID_OBJECT_KEY: upload must be completed with a library-issued key')
+  }
   let head
   try {
     head = await storage.head(input.objectKey)
@@ -303,13 +331,15 @@ export async function completeAssetUploadImpl(
           })
           .where(eq(assetLibrary.id, existing.id))
         // Lessons linked to this asset must keep pointing at the latest file.
+        // `null` duration means "unknown" (the browser never measures it), so
+        // fall back to the asset's value instead of blanking every lesson.
         await tx
           .update(lessons)
           .set({
             fileObjectKey: input.objectKey,
             fileSizeBytes: head.contentLength ?? null,
             mimeType: mimeType ?? storedMime,
-            durationSeconds: input.durationSeconds,
+            durationSeconds: input.durationSeconds ?? existing.durationSeconds,
             rowVersion: sql`${lessons.rowVersion} + 1`,
           })
           .where(and(eq(lessons.assetId, existing.id), isNull(lessons.deletedAt)))
@@ -388,7 +418,8 @@ export async function deleteAssetImpl(input: AssetDeleteInput): Promise<{ ok: tr
   const usageRows = await db
     .select({ count: sql<number>`COUNT(*)::int` })
     .from(assetUsage)
-    .where(eq(assetUsage.assetId, asset.id))
+    .innerJoin(lessons, eq(lessons.id, assetUsage.lessonId))
+    .where(and(eq(assetUsage.assetId, asset.id), isNull(lessons.deletedAt)))
   const lessonUses = usageRows.at(0)?.count ?? 0
 
   const thumbnailRows = await db
@@ -396,6 +427,16 @@ export async function deleteAssetImpl(input: AssetDeleteInput): Promise<{ ok: tr
     .from(courses)
     .where(and(eq(courses.thumbnailObjectKey, asset.objectKey), isNull(courses.deletedAt)))
   const thumbnailUses = thumbnailRows.at(0)?.count ?? 0
+
+  // Spec S-3.1/S-3.3: an in-use asset may only be deleted once the author has
+  // acknowledged the S-7.1 warning. The count is re-derived server-side, so a
+  // client cannot pass `acknowledgedUsage: true` to skip the check silently —
+  // it just has to have actually seen the prompt.
+  if ((lessonUses > 0 || thumbnailUses > 0) && !input.acknowledgedUsage) {
+    throw new Error(
+      'USAGE_NOT_ACKNOWLEDGED: this asset is still in use — confirm the deletion warning first',
+    )
+  }
 
   await db.transaction(async (tx) => {
     await tx

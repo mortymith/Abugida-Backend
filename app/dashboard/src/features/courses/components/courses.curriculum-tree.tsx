@@ -143,7 +143,12 @@ export function CurriculumTree({
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext
+      id="course-curriculum"
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
       <SortableContext items={moduleOrder} strategy={verticalListSortingStrategy}>
         <div className="flex flex-col gap-3" role="list" aria-label="Course curriculum">
           {orderedModules.map((module) => {
