@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '#/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '#/components/ui/dialog'
-import { Input } from '#/components/ui/input'
 import { EmptyState } from '#/components/common/empty-state'
 import { RetryErrorState } from '#/components/common/retry-error-state'
 import { CategoryGlyph } from './library.asset-card'
+import { LibrarySearchInput } from './library.search-input'
 import { libraryListQueryOptions } from '../hooks/library.queries'
-import { formatBytes } from '../library.asset-category'
+import { formatBytes, pickerCategoryFilter } from '../library.asset-category'
 import type { AssetCategory } from '@abugida/database/catalog'
 import type { LibraryListQuery } from '../schemas/library.schema'
 
@@ -29,13 +29,17 @@ export function LibraryAssetPicker({
   categories: AssetCategory[]
   onSelect: (asset: { publicId: string; name: string; category: AssetCategory }) => void
 }) {
-  const [query, setQuery] = useState<LibraryListQuery>({})
+  const [textQuery, setTextQuery] = useState<string | undefined>(undefined)
+  const { category, filterLocally } = pickerCategoryFilter(categories)
+  const query: LibraryListQuery = { q: textQuery, category }
   const assets = useQuery({
     ...libraryListQueryOptions(query),
     enabled: open,
   })
 
-  const rows = (assets.data?.rows ?? []).filter((row) => categories.includes(row.category))
+  const rows = filterLocally
+    ? (assets.data?.rows ?? []).filter((row) => categories.includes(row.category))
+    : (assets.data?.rows ?? [])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -43,14 +47,11 @@ export function LibraryAssetPicker({
         <DialogHeader>
           <DialogTitle>Choose from Content Library</DialogTitle>
         </DialogHeader>
-        <Input
-          type="search"
+        {/* Same debounced field as S-3.1 so both surfaces query identically. */}
+        <LibrarySearchInput
+          value={textQuery}
+          onCommit={setTextQuery}
           placeholder="Search assets…"
-          aria-label="Search assets"
-          value={query.q ?? ''}
-          onChange={(event) =>
-            setQuery((previous) => ({ ...previous, q: event.target.value || undefined }))
-          }
         />
         {assets.isPending ? (
           <p className="py-8 text-center text-sm text-muted-foreground" aria-busy="true">

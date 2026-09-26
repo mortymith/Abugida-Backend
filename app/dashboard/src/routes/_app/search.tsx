@@ -1,18 +1,25 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
-import { GlobalSearchResults, globalSearchQueryOptions } from '#/features/search'
+import {
+  GlobalSearchInput,
+  GlobalSearchResults,
+  SEARCH_MAX_LENGTH,
+  SEARCH_MIN_LENGTH,
+  globalSearchQueryOptions,
+  normalizeSearchTerm,
+} from '#/features/search'
 
 const searchRouteSchema = z.object({
-  q: z.string().trim().max(100).optional(),
+  q: z.string().trim().max(SEARCH_MAX_LENGTH).optional(),
 })
 
 export const Route = createFileRoute('/_app/search')({
   validateSearch: searchRouteSchema,
-  loaderDeps: ({ search }) => ({ q: search.q ?? '' }),
+  loaderDeps: ({ search }) => ({ q: normalizeSearchTerm(search.q) }),
   loader: ({ context, deps }) => {
-    if (deps.q.trim().length < 2) return null
-    // Warm the search cache server-side; component query renders states.
+    if (deps.q.length < SEARCH_MIN_LENGTH) return null
+    // Warm the search cache server-side; the component query renders states.
     return Promise.allSettled([
       context.queryClient.ensureQueryData(globalSearchQueryOptions(deps.q)),
     ])
@@ -26,11 +33,12 @@ export const Route = createFileRoute('/_app/search')({
  */
 function GlobalSearchPage() {
   const search = Route.useSearch()
-  const query = (search.q ?? '').trim()
+  const navigate = useNavigate()
+  const query = normalizeSearchTerm(search.q)
 
   return (
     <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6">
-      <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold tracking-tight">
           {query ? (
             <>
@@ -40,6 +48,13 @@ function GlobalSearchPage() {
             'Search'
           )}
         </h1>
+        <GlobalSearchInput
+          value={query}
+          // `replace` so refining in place is a single history entry.
+          onCommit={(term) => {
+            void navigate({ to: '/search', search: { q: term || undefined }, replace: true })
+          }}
+        />
       </div>
 
       <Card className="py-6">
@@ -47,9 +62,10 @@ function GlobalSearchPage() {
           <CardTitle className="sr-only">Search results</CardTitle>
         </CardHeader>
         <CardContent className="px-3">
-          {query.trim().length < 2 ? (
+          {query.length < SEARCH_MIN_LENGTH ? (
             <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-              Type at least two characters to search across courses, lessons, and students.
+              Type at least {SEARCH_MIN_LENGTH} characters to search across courses, lessons, and
+              students.
             </p>
           ) : (
             <GlobalSearchResults query={query} />

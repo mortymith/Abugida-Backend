@@ -1,4 +1,4 @@
-import { queryOptions } from '@tanstack/react-query'
+import { keepPreviousData, queryOptions } from '@tanstack/react-query'
 import {
   getAssetDetail,
   getAssetUsage,
@@ -31,6 +31,11 @@ export function libraryListQueryOptions(query: LibraryListQuery) {
     queryKey: libraryQueryKeys.list(query),
     queryFn: () => getLibraryAssets({ data: query }),
     staleTime: STALE.list,
+    // Refining the search, changing a filter chip or paging changes the query
+    // key. Without this the grid would fall back to `isPending` and flash the
+    // skeleton grid on every change; keeping the previous page on screen while
+    // the next one loads keeps the list stable.
+    placeholderData: keepPreviousData,
   })
 }
 

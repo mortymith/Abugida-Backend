@@ -17,8 +17,9 @@ import { users } from '@abugida/database/auth'
 import { db } from '#/config/db.config'
 import { resolveEntityLink } from '#/lib/entity-links'
 import type { GlobalSearchPayload, SearchGroup, SearchResultsItem } from '../search.types'
+import { SEARCH_GROUP_LABELS, SEARCH_RESULT_LIMIT } from '../search.types'
 
-const PER_GROUP_MAX = 20
+const PER_GROUP_MAX = SEARCH_RESULT_LIMIT
 
 /** Escape LIKE wildcards so user input is matched literally. */
 function likeLiteral(input: string): string {
@@ -161,12 +162,21 @@ export async function loadGlobalSearch(data: { query: string }): Promise<GlobalS
     }
   })
 
-  const groups: SearchGroup[] = [
-    { kind: 'course', label: 'Courses', total: courseItems.length, items: courseItems },
-    { kind: 'lesson', label: 'Lessons', total: lessonItems.length, items: lessonItems },
-    { kind: 'asset', label: 'Assets', total: assetItems.length, items: assetItems },
-    { kind: 'student', label: 'Students', total: studentItems.length, items: studentItems },
-  ].filter((group): group is SearchGroup => group.items.length > 0)
+  const groups: SearchGroup[] = (
+    [
+      ['course', courseItems],
+      ['lesson', lessonItems],
+      ['asset', assetItems],
+      ['student', studentItems],
+    ] as const
+  )
+    .map(([kind, items]) => ({
+      kind,
+      label: SEARCH_GROUP_LABELS[kind],
+      total: items.length,
+      items,
+    }))
+    .filter((group) => group.items.length > 0)
 
   const omittedGroups: GlobalSearchPayload['omittedGroups'] = []
   if (!canSeeAssets) {

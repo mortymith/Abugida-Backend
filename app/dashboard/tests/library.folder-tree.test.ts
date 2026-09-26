@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import {
   buildTrail,
+  describeFolderDelete,
   isMoveIntoDescendant,
   planFolderDelete,
+  viewAfterFolderDelete,
 } from '#/features/library/library.folder-tree'
 
 const FOLDERS = [
@@ -49,5 +51,48 @@ describe('folder tree rules (spec 05 S-3.4)', () => {
 
   test('planFolderDelete returns null for unknown folders', () => {
     expect(planFolderDelete(FOLDERS, 'nope', 0)).toBeNull()
+  })
+})
+
+describe('viewAfterFolderDelete', () => {
+  // Videos → TOEFL Speaking → Intro
+  const trail = buildTrail(FOLDERS, 'child-a1-1')
+
+  test('deleting the folder in view falls back to "all"', () => {
+    expect(viewAfterFolderDelete(trail, 'child-a1-1', 'child-a1-1')).toBe('all')
+  })
+
+  test('deleting an ancestor steps out to its parent', () => {
+    expect(viewAfterFolderDelete(trail, 'child-a1-1', 'child-a1')).toBe('root-a')
+  })
+
+  test('deleting the root of the trail falls back to "all"', () => {
+    expect(viewAfterFolderDelete(trail, 'child-a1-1', 'root-a')).toBe('all')
+  })
+
+  test('deleting an unrelated folder leaves the view alone', () => {
+    expect(viewAfterFolderDelete(trail, 'child-a1-1', 'root-b')).toBeNull()
+  })
+
+  test('a folder outside the trail never moves the view', () => {
+    expect(viewAfterFolderDelete([], 'all', 'root-b')).toBeNull()
+  })
+})
+
+describe('describeFolderDelete', () => {
+  test('counts assets and subfolders', () => {
+    expect(describeFolderDelete(12, 2)).toBe(
+      '12 assets will move to Uncategorized. 2 subfolders will move to this folder’s parent.',
+    )
+  })
+
+  test('uses singular wording for one of each', () => {
+    expect(describeFolderDelete(1, 1)).toBe(
+      '1 asset will move to Uncategorized. 1 subfolder will move to this folder’s parent.',
+    )
+  })
+
+  test('omits lines for a folder with no contents', () => {
+    expect(describeFolderDelete(0, 0)).toBe('This folder is empty. Deleting it cannot be undone.')
   })
 })

@@ -18,7 +18,7 @@ import {
   resolveAssetMime,
   isSupportedAssetMime,
 } from '../library.asset-category'
-import { uploadQueueReducer, validatePickedFile } from '../library.upload-queue'
+import { summarizeUploadRun, uploadQueueReducer, validatePickedFile } from '../library.upload-queue'
 import type { QueueItem } from '../library.upload-queue'
 
 /**
@@ -151,14 +151,20 @@ export function LibraryUploadModal({
 
   async function startUpload() {
     const pending = queue.filter((item) => queuedIds.includes(item.id))
+    // Per-file outcomes from *this* run. Re-reading `queue` after the loop would
+    // return the pre-run snapshot (dispatch does not update the value captured
+    // in this render), which reported success even when every file failed.
+    const outcomes: boolean[] = []
     for (const item of pending) {
       const file = filesRef.current.get(item.id)
       if (!file) {
         dispatch({ type: 'error', id: item.id, message: 'File missing — re-select it.' })
+        outcomes.push(false)
         continue
       }
       try {
         await uploadOne(item, file)
+        outcomes.push(true)
       } catch (cause) {
         dispatch({
           type: 'error',
@@ -166,18 +172,19 @@ export function LibraryUploadModal({
           message:
             cause instanceof Error ? cause.message.replace(/^[A-Z_]+:\s*/, '') : 'Upload failed.',
         })
+        outcomes.push(false)
       }
     }
-    const failed = queue.filter((item) => item.status === 'error').length
-    if (pending.length > 0) {
-      if (failed === 0) {
+    const summary = summarizeUploadRun(outcomes)
+    if (summary.attempted > 0) {
+      if (summary.allSucceeded) {
         toast.success(
-          `${pending.length} asset${pending.length === 1 ? '' : 's'} uploaded successfully.`,
+          `${summary.attempted} asset${summary.attempted === 1 ? '' : 's'} uploaded successfully.`,
         )
         onOpenChange(false)
       } else {
         toast.warning(
-          `${pending.length - failed} uploaded, ${failed} failed — retry from the list.`,
+          `${summary.succeeded} uploaded, ${summary.failed} failed — retry from the list.`,
         )
       }
       void queryClient.invalidateQueries({ queryKey: libraryQueryKeys.stats() })

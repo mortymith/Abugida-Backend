@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, createFileRoute } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { ArrowLeft01Icon, SparklesIcon } from '@hugeicons/core-free-icons'
@@ -8,8 +8,11 @@ import { Button } from '#/components/ui/button'
 import { Label } from '#/components/ui/label'
 import { Spinner } from '#/components/ui/spinner'
 import { RetryErrorState } from '#/components/common/retry-error-state'
+import { useRole } from '#/features/auth'
+import { canEditLibrary } from '#/features/library/library.permissions'
 import { getAssetReadUrl } from '#/features/library/server/all'
-import { transcriptQueryOptions } from '#/features/library/hooks/library.queries'
+import { parseLibraryReturnTo } from '#/features/library/library.return-to'
+import { transcriptQueryOptions, libraryQueryKeys } from '#/features/library/hooks/library.queries'
 import type { TranscriptDTO } from '#/features/library/library.types'
 import {
   formatClock,
@@ -21,8 +24,12 @@ import {
 import { toSrt, toVtt } from '#/features/library/library.srt'
 
 export const Route = createFileRoute('/_app/content-library/$assetId/transcript')({
+  // `returnTo` arrives from the URL, so it is narrowed to the two screens S-3.6
+  // is allowed to return to (S-2.7 lesson editor / S-3.3 asset detail).
+  // Anything else — an absolute URL, a protocol-relative host, a traversal —
+  // degrades to `undefined` so "Save & Apply" stays on the editor.
   validateSearch: (search: Record<string, unknown>) => ({
-    returnTo: typeof search.returnTo === 'string' ? search.returnTo : undefined,
+    returnTo: parseLibraryReturnTo(search.returnTo),
   }),
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(transcriptQueryOptions(params.assetId, 'en')),
@@ -43,6 +50,12 @@ function TranscriptEditorPage() {
   const { assetId } = Route.useParams()
   const search = Route.useSearch()
   const navigate = useNavigate()
+  const role = useRole()
+  // S-3.6 is an Admin/Editor authoring screen. The route sits under
+  // /content-library, which Reviewer/Viewer may read, so the editor controls
+  // have to be gated here too — otherwise every save came back FORBIDDEN.
+  const canEdit = canEditLibrary(role)
+  const queryClient = useQueryClient()
 
   const transcript = useQuery(transcriptQueryOptions(assetId, 'en'))
   const [language, setLanguage] = useState('en')
@@ -51,6 +64,8 @@ function TranscriptEditorPage() {
     enabled: language !== 'en',
   })
   const data = language === 'en' ? transcript.data : languageQuery.data
+  /** The query for the language actually on screen — not always the 'en' one. */
+  const activeQuery = language === 'en' ? transcript : languageQuery
 
   const [segments, setSegments] = useState<EditableSegment[]>([])
   const [hydrated, setHydrated] = useState(false)
@@ -140,6 +155,7 @@ function TranscriptEditorPage() {
         if (status === 'published') {
           toast.success('Captions applied to lesson.')
           // Spec S-3.6: "Save & Apply" returns to the calling screen.
+          // `search.returnTo` is allow-listed by validateSearch.
           if (search.returnTo) {
             void navigate({ to: search.returnTo })
             return
@@ -147,8 +163,7 @@ function TranscriptEditorPage() {
         } else {
           toast.success('Draft saved.')
         }
-        void transcript.refetch()
-        void languageQuery.refetch()
+        void activeQuery.refetch()
       } catch (cause) {
         toast.error(
           cause instanceof Error
@@ -157,28 +172,28 @@ function TranscriptEditorPage() {
         )
       }
     },
-    [buildSaveInput, issues, languageQuery, transcript],
+    [activeQuery, buildSaveInput, issues, navigate, search.returnTo],
   )
 
   // Autosave draft every 30s while dirty (spec S-3.6 editing state).
   useEffect(() => {
-    if (!dirty || generating) return
+    if (!dirty || generating || !canEdit) return
     const timer = setInterval(() => {
       void save('draft')
     }, AUTOSAVE_INTERVAL_MS)
     return () => clearInterval(timer)
-  }, [dirty, generating, save])
+  }, [canEdit, dirty, generating, save])
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault()
-        void save('draft')
+        if (canEdit) void save('draft')
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [save])
+  }, [canEdit, save])
 
   if (transcript.isPending) return <Spinner className="mx-auto my-12" />
   if (transcript.isError) {
@@ -248,6 +263,7 @@ function TranscriptEditorPage() {
   }
 
   async function autoTranscribe(rangeMs?: { start: number; end: number }) {
+    if (!canEdit) return
     setGenerating(true)
     try {
       const { generateTranscription, regenerateTranscriptRange } =
@@ -266,7 +282,9 @@ function TranscriptEditorPage() {
       }
       setHydrated(false)
       setDirty(false)
-      await transcript.refetch()
+      // Refresh the track actually on screen — `transcript` is only the 'en'
+      // query, so refetching it left a non-English language showing stale cues.
+      await activeQuery.refetch()
       toast.success('Transcription drafted — review and edit before applying.')
     } catch (cause) {
       toast.error(
@@ -280,6 +298,7 @@ function TranscriptEditorPage() {
   }
 
   async function importFile(file: File) {
+    if (!canEdit) return
     const content = await file.text()
     const { importTranscriptFile } = await import('#/features/library/server/all')
     try {
@@ -297,7 +316,7 @@ function TranscriptEditorPage() {
       }
       setHydrated(false)
       setDirty(false)
-      await transcript.refetch()
+      await activeQuery.refetch()
       toast.success(`Imported ${result.segmentCount} segments as a draft.`)
     } catch (cause) {
       toast.error(
@@ -307,14 +326,28 @@ function TranscriptEditorPage() {
   }
 
   async function translate(toLanguage: string) {
+    if (!canEdit) return
     const { translateTranscript } = await import('#/features/library/server/all')
     try {
       const result = await translateTranscript({
         data: { assetPublicId: assetId, fromLanguage: language, toLanguage },
       })
+      // Drop any cached copy of the target track first: a stale entry would be
+      // re-hydrated into the editor (hydrated was just reset) before a refetch
+      // resolved, leaving the previous translation on screen. Removing (rather
+      // than invalidating) also guarantees a `data === undefined` render in
+      // between, which is what stops the hydration effect from latching.
+      queryClient.removeQueries({
+        queryKey: libraryQueryKeys.transcript(assetId, result.language),
+        exact: true,
+      })
       setLanguage(result.language)
       setHydrated(false)
-      await transcript.refetch()
+      if (result.language === 'en') {
+        await transcript.refetch()
+      } else {
+        await queryClient.fetchQuery(transcriptQueryOptions(assetId, result.language))
+      }
       toast.success(`Translated ${result.segmentCount} segments into a new draft track.`)
     } catch (cause) {
       toast.error(
@@ -476,7 +509,7 @@ function TranscriptEditorPage() {
             <Button
               size="sm"
               variant="secondary"
-              disabled={generating}
+              disabled={generating || !canEdit}
               onClick={() => void autoTranscribe()}
             >
               <HugeiconsIcon icon={SparklesIcon} className="size-4" aria-hidden="true" />
@@ -485,7 +518,7 @@ function TranscriptEditorPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled={generating}
+              disabled={generating || !canEdit}
               onClick={() => fileInputRef.current?.click()}
             >
               Import .srt/.vtt
@@ -493,6 +526,7 @@ function TranscriptEditorPage() {
             <select
               aria-label="Translate track to"
               defaultValue=""
+              disabled={!canEdit}
               className="h-8 rounded-lg border bg-input/30 px-2 text-sm"
               onChange={(event) => {
                 const target = event.target.value
@@ -523,8 +557,9 @@ function TranscriptEditorPage() {
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Auto-Transcribe requires a configured speech-to-text provider (TRANSCRIPTION_API_KEY).
-            Import and manual editing always work.
+            {canEdit
+              ? 'Auto-Transcribe requires a configured speech-to-text provider (TRANSCRIPTION_API_KEY). Import and manual editing always work.'
+              : 'Read-only access — transcription authoring requires the Editor or Admin role.'}
           </p>
         </section>
 
@@ -534,7 +569,7 @@ function TranscriptEditorPage() {
             <Button
               variant="outline"
               size="xs"
-              disabled={generating}
+              disabled={generating || !canEdit}
               onClick={() => addSegment(null)}
             >
               + Add segment
@@ -557,7 +592,13 @@ function TranscriptEditorPage() {
                     </button>
                     <input
                       type="text"
+                      // `key` carries the value: these are uncontrolled inputs,
+                      // so without it a snapped timing (or a language switch,
+                      // which reuses the same `seg-i-j` keys) left the box
+                      // showing the pre-edit time.
+                      key={`${segment.key}:${segment.startMs}`}
                       defaultValue={formatClock(segment.startMs)}
+                      readOnly={!canEdit}
                       className="w-16 rounded border bg-input/30 px-1 font-mono text-xs"
                       aria-label="Start time"
                       onBlur={(event) => {
@@ -574,7 +615,9 @@ function TranscriptEditorPage() {
                     </span>
                     <input
                       type="text"
+                      key={`${segment.key}:${segment.endMs}`}
                       defaultValue={formatClock(segment.endMs)}
+                      readOnly={!canEdit}
                       className="w-16 rounded border bg-input/30 px-1 font-mono text-xs"
                       aria-label="End time"
                       onBlur={(event) => {
@@ -588,7 +631,9 @@ function TranscriptEditorPage() {
                     />
                     <input
                       type="text"
+                      key={`${segment.key}:${segment.speaker}`}
                       defaultValue={segment.speaker}
+                      readOnly={!canEdit}
                       placeholder="Speaker"
                       className="w-24 rounded border bg-input/30 px-1 text-xs"
                       aria-label="Speaker"
@@ -610,7 +655,7 @@ function TranscriptEditorPage() {
                       variant="ghost"
                       size="icon-xs"
                       aria-label="Delete segment"
-                      disabled={generating}
+                      disabled={generating || !canEdit}
                       onClick={() => deleteSegment(segment.key)}
                     >
                       ✕
@@ -621,31 +666,33 @@ function TranscriptEditorPage() {
                     rows={2}
                     className="mt-1 w-full resize-y rounded border bg-input/30 px-2 py-1 text-sm"
                     aria-label="Segment text"
-                    disabled={generating}
+                    disabled={generating || !canEdit}
                     onChange={(event) => updateSegment(segment.key, { text: event.target.value })}
                   />
-                  <div className="mt-1 flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="text-xs text-muted-foreground hover:underline"
-                      onClick={() => addSegment(segment.key)}
-                    >
-                      + Add after
-                    </button>
-                    <button
-                      type="button"
-                      className="text-xs text-muted-foreground hover:underline"
-                      onClick={() =>
-                        void autoTranscribe({
-                          start: segment.startMs,
-                          end: segment.endMs,
-                        })
-                      }
-                      disabled={generating}
-                    >
-                      ↻ Regenerate this range
-                    </button>
-                  </div>
+                  {canEdit ? (
+                    <div className="mt-1 flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:underline"
+                        onClick={() => addSegment(segment.key)}
+                      >
+                        + Add after
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:underline"
+                        onClick={() =>
+                          void autoTranscribe({
+                            start: segment.startMs,
+                            end: segment.endMs,
+                          })
+                        }
+                        disabled={generating}
+                      >
+                        ↻ Regenerate this range
+                      </button>
+                    </div>
+                  ) : null}
                 </li>
               )
             })}
@@ -659,6 +706,7 @@ function TranscriptEditorPage() {
           <select
             id="caption-font"
             value={captionStyle?.font ?? 'inter'}
+            disabled={!canEdit}
             className="h-8 rounded-lg border bg-input/30 px-2 text-sm"
             onChange={(event) => {
               setCaptionStyle({
@@ -680,6 +728,7 @@ function TranscriptEditorPage() {
           <select
             id="caption-size"
             value={captionStyle?.fontSizePx ?? 16}
+            disabled={!canEdit}
             className="h-8 rounded-lg border bg-input/30 px-2 text-sm"
             onChange={(event) => {
               setCaptionStyle({
@@ -702,6 +751,7 @@ function TranscriptEditorPage() {
           <select
             id="caption-bg"
             value={captionStyle?.background ?? 'semi'}
+            disabled={!canEdit}
             className="h-8 rounded-lg border bg-input/30 px-2 text-sm"
             onChange={(event) => {
               setCaptionStyle({
@@ -721,6 +771,7 @@ function TranscriptEditorPage() {
           <input
             type="checkbox"
             checked={showByDefault}
+            disabled={!canEdit}
             onChange={(event) => {
               setShowByDefault(event.target.checked)
               setDirty(true)
@@ -739,12 +790,20 @@ function TranscriptEditorPage() {
             Saved {lastSavedAt.toLocaleTimeString()}
           </span>
         ) : null}
-        <Button variant="ghost" disabled={!dirty || generating} onClick={() => void save('draft')}>
-          Save draft
-        </Button>
-        <Button disabled={generating} onClick={() => void save('published')}>
-          Save &amp; Apply to Lesson
-        </Button>
+        {canEdit ? (
+          <>
+            <Button
+              variant="ghost"
+              disabled={!dirty || generating}
+              onClick={() => void save('draft')}
+            >
+              Save draft
+            </Button>
+            <Button disabled={generating} onClick={() => void save('published')}>
+              Save &amp; Apply to Lesson
+            </Button>
+          </>
+        ) : null}
       </footer>
       {search.returnTo ? (
         <p className="text-xs text-muted-foreground">Return target: {search.returnTo}</p>
