@@ -13,16 +13,21 @@ import {
   ASSET_MAX_SIZE_BYTES,
   categoryForMime,
   extensionOf,
+  isLibraryObjectKey,
   sanitizeFileName,
 } from '../library.asset-category'
 import { resolveAsset } from './library.assets.impl.server'
 import { getStorage } from './library.presign.impl.server'
-import { requireLibraryWriteRole } from './library.server-helpers.server'
+import { requireLibraryWriteRole, requireUserId } from './library.server-helpers.server'
 import type { AssetVersionDTO } from '../library.types'
 import type { AssetVersionCompleteInput, AssetVersionInitInput } from '../schemas/library.schema'
 
 export async function getAssetVersionsImpl(assetPublicId: string): Promise<AssetVersionDTO[]> {
-  await requireLibraryWriteRole()
+  // Version history is part of the read-only S-3.3 screen (Admin/Editor/Viewer),
+  // so this needs a session but not the write role. Gating it behind
+  // requireLibraryWriteRole left Reviewer/Viewer with a silently empty history
+  // (the route loader's allSettled swallowed the FORBIDDEN).
+  await requireUserId()
   const asset = await resolveAsset(assetPublicId)
 
   const rows = await db
@@ -80,6 +85,11 @@ export async function completeAssetVersionImpl(input: AssetVersionCompleteInput)
   const asset = await resolveAsset(input.assetPublicId)
 
   const storage = getStorage()
+  // Same namespace guard as the initial upload: the key must be one this
+  // version-upload flow minted under `asset-library/versions/`.
+  if (!isLibraryObjectKey(input.objectKey)) {
+    throw new Error('INVALID_OBJECT_KEY: upload must be completed with a library-issued key')
+  }
   let head
   try {
     head = await storage.head(input.objectKey)
@@ -122,7 +132,9 @@ export async function completeAssetVersionImpl(input: AssetVersionCompleteInput)
         fileObjectKey: input.objectKey,
         fileSizeBytes: head.contentLength ?? null,
         mimeType: storedMime,
-        durationSeconds: input.durationSeconds,
+        // The browser never measures duration, so `null` means "unknown" —
+        // keep the previous value rather than blanking every linked lesson.
+        durationSeconds: input.durationSeconds ?? asset.durationSeconds,
         rowVersion: sql`${lessons.rowVersion} + 1`,
       })
       .where(and(eq(lessons.assetId, asset.id), isNull(lessons.deletedAt)))

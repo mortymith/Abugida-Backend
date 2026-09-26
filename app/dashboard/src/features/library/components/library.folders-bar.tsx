@@ -100,6 +100,10 @@ export function LibraryFoldersBar({
           active={activeFolder === 'root'}
           onSelect={() => setFolder('root')}
           canEdit={false}
+          // "Uncategorized" is a real destination (the drag handler maps
+          // `folder:root` → folderId null), so it stays a drop target even
+          // though it has no rename/delete actions of its own.
+          droppable={canEdit}
           onRename={() => undefined}
           onDelete={() => undefined}
         />
@@ -195,6 +199,7 @@ function FolderChip({
   active,
   onSelect,
   canEdit,
+  droppable: droppableEnabled = canEdit,
   onRename,
   onDelete,
 }: {
@@ -203,10 +208,12 @@ function FolderChip({
   active: boolean
   onSelect: () => void
   canEdit: boolean
+  /** Whether assets can be dragged onto this chip (defaults to the edit role). */
+  droppable?: boolean
   onRename: () => void
   onDelete: () => void
 }) {
-  const droppable = useDroppable({ id: `folder:${publicId}`, disabled: !canEdit })
+  const droppable = useDroppable({ id: `folder:${publicId}`, disabled: !droppableEnabled })
   return (
     <span
       ref={droppable.setNodeRef}

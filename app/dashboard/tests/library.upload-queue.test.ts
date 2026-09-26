@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import {
   findExistingByName,
+  summarizeUploadRun,
   uploadQueueReducer,
   validatePickedFile,
 } from '#/features/library/library.upload-queue'
@@ -59,6 +60,38 @@ describe('upload queue (spec 05 S-3.2)', () => {
     expect(findExistingByName(existing, 'toefl_syllabus.pdf')?.publicId).toBe('a')
     expect(findExistingByName(existing, 'other.pdf')).toBeNull()
     expect(findExistingByName(existing, '   ')).toBeNull()
+  })
+
+  test('summarizeUploadRun reports a clean run as success', () => {
+    expect(summarizeUploadRun([true, true, true])).toEqual({
+      attempted: 3,
+      succeeded: 3,
+      failed: 0,
+      allSucceeded: true,
+    })
+  })
+
+  test('summarizeUploadRun never reports success when files failed (regression)', () => {
+    // The modal used to re-read the reducer state after the upload loop, which
+    // is the pre-run snapshot — so a run where every file failed toasted
+    // "3 assets uploaded successfully" and closed the modal.
+    expect(summarizeUploadRun([false, false, false])).toEqual({
+      attempted: 3,
+      succeeded: 0,
+      failed: 3,
+      allSucceeded: false,
+    })
+    expect(summarizeUploadRun([true, false]).allSucceeded).toBe(false)
+    expect(summarizeUploadRun([false, true]).succeeded).toBe(1)
+  })
+
+  test('summarizeUploadRun treats an empty run as nothing to report', () => {
+    expect(summarizeUploadRun([])).toEqual({
+      attempted: 0,
+      succeeded: 0,
+      failed: 0,
+      allSucceeded: false,
+    })
   })
 
   test('validatePickedFile mirrors the server gate', () => {

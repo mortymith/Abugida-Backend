@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, createFileRoute } from '@tanstack/react-router'
+import { toast } from 'sonner'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { Button } from '#/components/ui/button'
@@ -10,6 +11,7 @@ import { ConfirmDialog } from '#/components/common/confirm-dialog'
 import { EmptyState } from '#/components/common/empty-state'
 import { RetryErrorState } from '#/components/common/retry-error-state'
 import { useRole } from '#/features/auth'
+import { canEditLibrary } from '#/features/library/library.permissions'
 import { Folder02Icon, FolderAddIcon, UploadIcon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -18,7 +20,7 @@ import {
   libraryStatsQueryOptions,
   libraryTrailQueryOptions,
 } from '#/features/library/hooks/library.queries'
-import { parseLibrarySearch } from '#/features/library/schemas/library.schema'
+import { parseLibrarySearch, trailFolderId } from '#/features/library/schemas/library.schema'
 import { LibraryStatCards } from '#/features/library/components/library.stat-cards'
 import { LibraryFoldersBar } from '#/features/library/components/library.folders-bar'
 import { LibraryAssetCard } from '#/features/library/components/library.asset-card'
@@ -62,12 +64,14 @@ export const Route = createFileRoute('/_app/content-library/')({
       sort: deps.sort,
       page: deps.page,
     }
+    // `all` / `root` are view sentinels, not folder ids — no trail to load.
+    const trailFolder = trailFolderId(deps.folder)
     return Promise.allSettled([
       context.queryClient.ensureQueryData(libraryListQueryOptions(query)),
       context.queryClient.ensureQueryData(libraryStatsQueryOptions()),
       context.queryClient.ensureQueryData(libraryFoldersQueryOptions()),
-      ...(deps.folder
-        ? [context.queryClient.ensureQueryData(libraryTrailQueryOptions(deps.folder))]
+      ...(trailFolder
+        ? [context.queryClient.ensureQueryData(libraryTrailQueryOptions(trailFolder))]
         : []),
     ])
   },
@@ -78,7 +82,7 @@ function ContentLibraryPage() {
   const search = Route.useSearch()
   const navigate = useNavigate()
   const role = useRole()
-  const canEdit = role === 'admin' || role === 'editor'
+  const canEdit = canEditLibrary(role)
 
   const query = {
     q: search.q,
@@ -91,9 +95,10 @@ function ContentLibraryPage() {
   const assets = useQuery(libraryListQueryOptions(query))
   const stats = useQuery(libraryStatsQueryOptions())
   const folders = useQuery(libraryFoldersQueryOptions())
+  const trailFolder = trailFolderId(search.folder)
   const trail = useQuery({
-    ...libraryTrailQueryOptions(search.folder ?? '__none__'),
-    enabled: Boolean(search.folder),
+    ...libraryTrailQueryOptions(trailFolder ?? 'root'),
+    enabled: trailFolder != null,
   })
 
   const [uploadOpen, setUploadOpen] = useState(false)
@@ -459,18 +464,29 @@ function ContentLibraryPage() {
         title={`Delete asset “${deleteTarget?.name ?? ''}”?`}
         body={
           deleteTarget && deleteTarget.usageCount > 0
-            ? `This asset is used in ${deleteTarget.usageCount} lesson${deleteTarget.usageCount === 1 ? '' : 's'}. Are you sure you want to delete it? Linked lessons keep working, but the library entry will be gone.`
+            ? `This asset is used in ${deleteTarget.usageCount} place${deleteTarget.usageCount === 1 ? '' : 's'} (lessons and course banners). Are you sure you want to delete it? Linked lessons keep working, but the library entry will be gone.`
             : 'Are you sure you want to delete this asset? This cannot be undone.'
         }
         confirmLabel="Delete asset"
         destructive
         onConfirm={async () => {
           if (!deleteTarget) return
-          await deleteAsset.mutateAsync({
-            assetPublicId: deleteTarget.publicId,
-            acknowledgedUsage: deleteTarget.usageCount > 0,
-          })
-          setDeleteTarget(null)
+          try {
+            await deleteAsset.mutateAsync({
+              assetPublicId: deleteTarget.publicId,
+              acknowledgedUsage: deleteTarget.usageCount > 0,
+            })
+            setDeleteTarget(null)
+          } catch (cause) {
+            // The server rejects an in-use delete that was not acknowledged
+            // (e.g. usage changed since the card rendered). Surface it and
+            // leave the dialog open instead of hanging on an unhandled reject.
+            toast.error(
+              cause instanceof Error
+                ? cause.message.replace(/^[A-Z_]+:\s*/, '')
+                : 'Unable to delete this asset.',
+            )
+          }
         }}
       />
     </div>

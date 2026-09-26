@@ -7,7 +7,7 @@ import { EmptyState } from '#/components/common/empty-state'
 import { RetryErrorState } from '#/components/common/retry-error-state'
 import { CategoryGlyph } from './library.asset-card'
 import { libraryListQueryOptions } from '../hooks/library.queries'
-import { formatBytes } from '../library.asset-category'
+import { formatBytes, pickerCategoryFilter } from '../library.asset-category'
 import type { AssetCategory } from '@abugida/database/catalog'
 import type { LibraryListQuery } from '../schemas/library.schema'
 
@@ -29,13 +29,17 @@ export function LibraryAssetPicker({
   categories: AssetCategory[]
   onSelect: (asset: { publicId: string; name: string; category: AssetCategory }) => void
 }) {
-  const [query, setQuery] = useState<LibraryListQuery>({})
+  const [textQuery, setTextQuery] = useState('')
+  const { category, filterLocally } = pickerCategoryFilter(categories)
+  const query: LibraryListQuery = { q: textQuery || undefined, category }
   const assets = useQuery({
     ...libraryListQueryOptions(query),
     enabled: open,
   })
 
-  const rows = (assets.data?.rows ?? []).filter((row) => categories.includes(row.category))
+  const rows = filterLocally
+    ? (assets.data?.rows ?? []).filter((row) => categories.includes(row.category))
+    : (assets.data?.rows ?? [])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -47,10 +51,8 @@ export function LibraryAssetPicker({
           type="search"
           placeholder="Search assets…"
           aria-label="Search assets"
-          value={query.q ?? ''}
-          onChange={(event) =>
-            setQuery((previous) => ({ ...previous, q: event.target.value || undefined }))
-          }
+          value={textQuery}
+          onChange={(event) => setTextQuery(event.target.value)}
         />
         {assets.isPending ? (
           <p className="py-8 text-center text-sm text-muted-foreground" aria-busy="true">

@@ -79,6 +79,19 @@ function folderSelector(value: unknown): string | undefined {
   return uuidSchema.safeParse(raw).success ? raw : undefined
 }
 
+/**
+ * The folder public id the breadcrumb trail should be loaded for, or
+ * `undefined` when there is nothing to load.
+ *
+ * `all` and `root` are view sentinels, not folder ids — `getFolderTrail`
+ * validates its input as a uuid, so requesting a trail for them produced a
+ * guaranteed Zod failure (and React Query's default retries) on every
+ * "All folders" / "Uncategorized" view.
+ */
+export function trailFolderId(folder: string | undefined): string | undefined {
+  return folder && uuidSchema.safeParse(folder).success ? folder : undefined
+}
+
 export function parseLibrarySearch(search: Record<string, unknown>): LibrarySearch {
   const category = pick(assetCategoryFilterSchema, search.type)
   return {

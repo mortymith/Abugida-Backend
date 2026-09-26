@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { Link } from '@tanstack/react-router'
 import { DocIcon, ImageIcon, PlayCircleIcon, MusicNoteIcon } from '@hugeicons/core-free-icons'
@@ -45,6 +46,7 @@ export function LibraryAssetCard({
     id: `asset:${asset.publicId}`,
     disabled: !canEdit || selectMode,
   })
+  const [thumbFailed, setThumbFailed] = useState(false)
 
   return (
     <Card
@@ -69,10 +71,23 @@ export function LibraryAssetCard({
       <button
         type="button"
         onClick={() => (selectMode && canEdit ? onSelectToggle(!selected) : onPreview())}
-        className="flex h-28 w-full items-center justify-center border-b bg-muted/30 text-muted-foreground"
+        className="flex h-28 w-full items-center justify-center overflow-hidden border-b bg-muted/30 text-muted-foreground"
         aria-label={selectMode && canEdit ? `Select ${asset.name}` : `Preview ${asset.name}`}
       >
-        <CategoryGlyph category={asset.category} size="large" />
+        {/* S-3.1 wireframe: a real thumbnail for images, the category glyph otherwise. */}
+        {asset.previewUrl && !thumbFailed ? (
+          <img
+            src={asset.previewUrl}
+            alt=""
+            loading="lazy"
+            className="size-full object-cover"
+            // A dead / expired presigned URL falls back to the glyph rather
+            // than leaving a broken image box.
+            onError={() => setThumbFailed(true)}
+          />
+        ) : (
+          <CategoryGlyph category={asset.category} size="large" />
+        )}
       </button>
 
       <div className="flex flex-1 flex-col gap-1 p-3">

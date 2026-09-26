@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { parseLibrarySearch } from '#/features/library/schemas/library.schema'
+import { parseLibrarySearch, trailFolderId } from '#/features/library/schemas/library.schema'
 
 /**
  * Regression cover for the `/content-library` search params.
@@ -97,5 +97,30 @@ describe('parseLibrarySearch', () => {
       folder: {},
     }
     expect(() => parseLibrarySearch(hostile as unknown as Record<string, unknown>)).not.toThrow()
+  })
+})
+
+/**
+ * `trailFolderId` guards the breadcrumb query. `all` and `root` are view
+ * sentinels, not folder ids: `getFolderTrail` validates its input as a uuid, so
+ * requesting a trail for them threw a Zod error on every "All folders" /
+ * "Uncategorized" view (and React Query retried it three times).
+ */
+describe('trailFolderId', () => {
+  test('returns the id for a real folder', () => {
+    const id = '3f2504e0-4f89-41d3-9a0c-0305e82c3301'
+    expect(trailFolderId(id)).toBe(id)
+  })
+
+  test('returns undefined for the view sentinels', () => {
+    expect(trailFolderId('all')).toBeUndefined()
+    expect(trailFolderId('root')).toBeUndefined()
+  })
+
+  test('returns undefined for missing or malformed values', () => {
+    expect(trailFolderId(undefined)).toBeUndefined()
+    expect(trailFolderId('')).toBeUndefined()
+    expect(trailFolderId('not-a-uuid')).toBeUndefined()
+    expect(trailFolderId('__none__')).toBeUndefined()
   })
 })
