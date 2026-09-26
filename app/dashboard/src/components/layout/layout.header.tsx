@@ -11,7 +11,8 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react'
 import { UserIcon, Settings02Icon, Logout02Icon } from '@hugeicons/core-free-icons'
 import { AppBreadcrumbs } from './layout.breadcrumbs'
-import { SearchTrigger, CreateCourseButton } from '#/features/navigation'
+import { CreateCourseButton } from '#/features/navigation'
+import { SearchTrigger } from '#/features/search'
 import { useLogout, useSession } from '#/features/auth'
 
 export function Header() {
