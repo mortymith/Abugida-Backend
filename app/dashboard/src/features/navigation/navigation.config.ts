@@ -3,6 +3,7 @@ import {
   Book01Icon,
   Folder02Icon,
   StudentsIcon,
+  AnalyticsUpIcon,
   MarketingIcon,
   Settings02Icon,
 } from '@hugeicons/core-free-icons'
@@ -40,7 +41,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Content Library',
     icon: Folder02Icon,
     to: '/content-library',
-    roles: ['admin', 'editor'],
+    // Spec 11: Admin/Editor full; Reviewer/Viewer view-only → nav visible.
+    roles: ['admin', 'editor', 'reviewer', 'viewer'],
   },
   {
     id: 'students',
@@ -48,6 +50,15 @@ export const NAV_ITEMS: NavItem[] = [
     icon: StudentsIcon,
     to: '/students',
     roles: ['admin', 'editor', 'support'],
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: AnalyticsUpIcon,
+    to: '/analytics',
+    // Spec 11 "Dashboard & Analytics": Admin/Editor full; Reviewer/Viewer
+    // view-only; Support sees analytics minus revenue → nav visible to all.
+    roles: ['admin', 'editor', 'reviewer', 'viewer', 'support'],
   },
   {
     id: 'marketing',

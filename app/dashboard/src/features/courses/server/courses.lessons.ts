@@ -30,6 +30,8 @@ export const saveLessonSchema = z.object({
   videoUrl: VIDEO_URL.nullable(),
   durationMinutes: z.number().int().positive().nullable(),
   tags: z.array(z.string().trim().min(1).max(50)).max(10).default([]),
+  /** Content Library provenance (spec 05): null clears any linked asset. */
+  assetId: z.string().uuid().nullable().optional(),
   /** Optimistic concurrency: reject stale saves (concurrent edits). */
   expectedRowVersion: z.number().int().positive(),
 })

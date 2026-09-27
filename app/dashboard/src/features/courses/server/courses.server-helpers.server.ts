@@ -119,7 +119,7 @@ export async function uniqueCourseSlug(base: string): Promise<string> {
 export async function createNotifications(
   recipientIds: string[],
   input: {
-    type: 'system' | 'publish' | 'review' | 'team_invite' | 'mention'
+    type: 'system' | 'publish' | 'review' | 'team_invite' | 'mention' | 'enrollment'
     title: string
     body?: string | null
     linkEntityType?: 'course' | 'lesson' | 'review_queue' | 'revenue' | 'notification'

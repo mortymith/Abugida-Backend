@@ -78,6 +78,8 @@ export const courses = pgTable(
     enrollmentStartAt: timestamp('enrollment_start_at', { withTimezone: true }),
     enrollmentEndAt: timestamp('enrollment_end_at', { withTimezone: true }),
     requiresApproval: boolean('requires_approval').notNull().default(false),
+    /** Max active enrollments; null = unlimited (waitlists/rules honor this). */
+    capacity: integer('capacity'),
     scheduledPublishAt: timestamp('scheduled_publish_at', { withTimezone: true }),
     version: integer('version').notNull().default(1),
     rowVersion: integer('row_version').notNull().default(1),
@@ -163,6 +165,7 @@ export const insertCourseSchema = createInsertSchema(courses, {
   level: courseLevelEnum.nullable().optional(),
   enrollmentStartAt: z.date().nullable().optional(),
   enrollmentEndAt: z.date().nullable().optional(),
+  capacity: z.number().int().min(1).nullable().optional(),
   requiresApproval: z.boolean().default(false),
   scheduledPublishAt: z.date().nullable().optional(),
   version: z.number().int().min(1).default(1),
