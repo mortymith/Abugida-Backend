@@ -6,8 +6,7 @@
     "paths": { "@/*": ["./src/*"] },
     "types": ["bun"],
     "outDir": "./dist",
-    "rootDir": "./src",
-    "noEmit": true
+    "rootDir": "./src"
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
