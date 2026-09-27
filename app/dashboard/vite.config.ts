@@ -23,13 +23,18 @@ const config = defineConfig({
     // `@abugida/queue` pulls Bun's native Redis client (`import 'bun'`), which
     // rolldown cannot bundle — keep it a runtime import resolved by Bun, and
     // never reachable from the client environment (only `.server` chunks use it).
-    external: ['pg', '@abugida/database/client', '@abugida/queue'],
+    // Marketing campaign sends enqueue EMAIL_NOTIFICATION jobs through it.
+    //
+    // `@abugida/database` is deliberately NOT listed here: it compiles with
+    // `moduleResolution: "Bundler"`, so tsc emits extensionless specifiers that
+    // Node's ESM loader rejects. Bundling it lets Vite resolve those imports.
+    external: ['pg', '@abugida/queue'],
     resolve: {
       conditions: ['node', 'import'],
     },
   },
   optimizeDeps: {
-    exclude: ['pg', '@abugida/database/client', '@abugida/queue'],
+    exclude: ['pg', '@abugida/queue'],
   },
 })
 
