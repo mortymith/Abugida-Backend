@@ -1,8 +1,10 @@
 {
   "name": "@abugida/storage",
   "version": "0.0.1",
-  "description": "Shared object storage layer for the Abugida Application monorepo — S3-compatible operations, presigned URLs, multipart uploads, and key management",
+  "description": "Shared object storage layer for the Abugida Application monorepo \u2014 S3-compatible operations, presigned URLs, multipart uploads, and key management",
   "type": "module",
+  "license": "MIT",
+  "private": false,
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,16 +15,12 @@
       "default": "./dist/index.js"
     },
     "./hono": {
-      "import": {
-        "types": "./dist/middleware/hono/index.d.ts",
-        "default": "./dist/middleware/hono/index.js"
-      }
+      "types": "./dist/middleware/hono/index.d.ts",
+      "import": "./dist/middleware/hono/index.js"
     },
     "./tanstack": {
-      "import": {
-        "types": "./dist/middleware/tanstack/index.d.ts",
-        "default": "./dist/middleware/tanstack/index.js"
-      }
+      "types": "./dist/middleware/tanstack/index.d.ts",
+      "import": "./dist/middleware/tanstack/index.js"
     }
   },
   "files": [
@@ -49,12 +47,12 @@
     "@smithy/node-http-handler": "^3.1.0"
   },
   "devDependencies": {
-    "@types/bun": "^1.1.0",
-    "eslint": "^9.0.0",
+    "@types/bun": "^1.4.2",
+    "eslint": "^10.8.1",
     "hono": "^4.6.0",
-    "prettier": "^3.4.0",
-    "typescript": "^5.7.0",
-    "typescript-eslint": "^8.0.0"
+    "prettier": "^3.9.6",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.67.0"
   },
   "peerDependencies": {
     "hono": "^4.0.0"
@@ -73,7 +71,6 @@
     "multipart",
     "abugida"
   ],
-  "packageManager": "pnpm@12.5.1",
   "engines": {
     "bun": ">=1.4.2"
   }

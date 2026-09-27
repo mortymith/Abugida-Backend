@@ -41,16 +41,6 @@ export interface EncryptionConfig {
   algorithm?: 'AES256' | 'aws:kms'
 }
 
-/** Logging configuration. */
-export interface LoggingConfig {
-  /** Minimum log level. */
-  level: 'debug' | 'info' | 'warn' | 'error'
-  /** Output format. */
-  format: 'json' | 'pretty'
-  /** Mask sensitive values (credentials, presigned URLs) in log output. */
-  sensitiveDataMasking?: boolean
-}
-
 /** Quota configuration. */
 export interface QuotaConfig {
   /** Maximum file size in megabytes. */
@@ -89,9 +79,6 @@ export interface StorageConfig {
 
   /** Server-side encryption settings. */
   encryption?: EncryptionConfig
-
-  /** Logging settings. */
-  logging?: LoggingConfig
 
   /** Quota limits. */
   quotas?: QuotaConfig

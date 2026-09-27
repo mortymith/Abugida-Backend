@@ -48,10 +48,63 @@ export const MIME_TYPES = {
   DATA: ['application/json', 'text/csv', 'application/xml', 'text/plain'] as const,
 } as const
 
+/** Extension → MIME type lookup. This is the single source of truth for the package. */
+const MIME_BY_EXTENSION: Record<string, string> = {
+  // Images
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+  ico: 'image/x-icon',
+  bmp: 'image/bmp',
+  // Video
+  mp4: 'video/mp4',
+  mpeg: 'video/mpeg',
+  webm: 'video/webm',
+  avi: 'video/x-msvideo',
+  mov: 'video/quicktime',
+  mkv: 'video/x-matroska',
+  // Audio
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+  flac: 'audio/flac',
+  aac: 'audio/aac',
+  // Documents
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ppt: 'application/vnd.ms-powerpoint',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  // Data
+  json: 'application/json',
+  csv: 'text/csv',
+  xml: 'application/xml',
+  txt: 'text/plain',
+  // Subtitles
+  vtt: 'text/vtt',
+  srt: 'text/srt',
+  // Archive
+  zip: 'application/zip',
+  gz: 'application/gzip',
+  tar: 'application/x-tar',
+}
+
+/** Fallback used when an extension is unknown or absent. */
+const DEFAULT_MIME_TYPE = 'application/octet-stream'
+
 /**
  * Validate that a MIME type is in the allowed set.
  *
  * Supports wildcard patterns like `image/*`.
+ *
+ * @param contentType - The MIME type to check.
+ * @param allowed - Allowed MIME types (may include wildcards).
+ * @throws {StorageValidationError} when the type is not allowed.
  */
 export function validateMimeType(contentType: string, allowed: readonly string[]): void {
   const isAllowed = allowed.some((pattern) => {
@@ -70,33 +123,32 @@ export function validateMimeType(contentType: string, allowed: readonly string[]
 }
 
 /**
- * Detect MIME type from a file extension.
+ * Validate a MIME type and narrow an `unknown` value to `string`.
+ *
+ * Use this at trust boundaries (request bodies, form fields) where the value is
+ * not yet known to be a string.
+ *
+ * @param contentType - The untrusted MIME type.
+ * @param allowed - Allowed MIME types (may include wildcards).
+ * @throws {StorageValidationError} when the value is not a string or not allowed.
+ */
+export function assertMimeType(
+  contentType: unknown,
+  allowed: readonly string[],
+): asserts contentType is string {
+  if (typeof contentType !== 'string' || contentType.length === 0) {
+    throw new StorageValidationError('MIME type must be a non-empty string.', { rule: 'mime' })
+  }
+  validateMimeType(contentType, allowed)
+}
+
+/**
+ * Detect the MIME type for a file extension.
+ *
+ * @param extension - File extension, with or without a leading dot.
+ * @returns The matching MIME type, or `application/octet-stream` when unknown.
  */
 export function detectMimeType(extension: string): string {
   const ext = extension.toLowerCase().replace(/^\./, '')
-  const map: Record<string, string> = {
-    jpg: 'image/jpeg',
-    jpeg: 'image/jpeg',
-    png: 'image/png',
-    gif: 'image/gif',
-    webp: 'image/webp',
-    svg: 'image/svg+xml',
-    mp4: 'video/mp4',
-    webm: 'video/webm',
-    mov: 'video/quicktime',
-    mp3: 'audio/mpeg',
-    wav: 'audio/wav',
-    ogg: 'audio/ogg',
-    flac: 'audio/flac',
-    pdf: 'application/pdf',
-    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    json: 'application/json',
-    csv: 'text/csv',
-    vtt: 'text/vtt',
-    srt: 'text/srt',
-    txt: 'text/plain',
-  }
-  return map[ext] ?? 'application/octet-stream'
+  return MIME_BY_EXTENSION[ext] ?? DEFAULT_MIME_TYPE
 }

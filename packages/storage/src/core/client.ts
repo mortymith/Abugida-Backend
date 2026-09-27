@@ -3,7 +3,7 @@
  *
  * This module is the single source of truth for constructing the `S3Client`
  * instance used by all storage operations. It handles provider-specific
- * defaults, connection pooling, and Bun-optimised HTTP handlers.
+ * defaults, connection pooling, and Bun-optimized HTTP handlers.
  */
 
 import { S3Client } from '@aws-sdk/client-s3'
@@ -21,7 +21,7 @@ import { validateConfig, PROVIDER_DEFAULTS } from '../config/schema.js'
  * The config is validated and defaults are applied before the client is
  * constructed. The client is configured with:
  * - Provider-specific `forcePathStyle` and endpoint
- * - Bun-optimised `NodeHttpHandler` with connection/socket timeouts
+ * - Bun-optimized `NodeHttpHandler` with connection/socket timeouts
  * - Adaptive retry mode with configurable max attempts
  * - Optional S3 Transfer Acceleration
  * - Optional server-side encryption defaults
@@ -29,7 +29,7 @@ import { validateConfig, PROVIDER_DEFAULTS } from '../config/schema.js'
  * @param config - Raw storage configuration.
  * @returns A ready-to-use `S3Client` instance.
  */
-export function createClient(config: StorageConfig): S3Client {
+export function createS3Client(config: StorageConfig): S3Client {
   const resolved = validateConfig(config)
   const providerDefaults = PROVIDER_DEFAULTS[resolved.provider]
 
@@ -75,7 +75,7 @@ export function getOrCreateClient(config: StorageConfig): S3Client {
   const existing = clientCache.get(cacheKey)
   if (existing) return existing
 
-  const client = createClient(config)
+  const client = createS3Client(config)
   clientCache.set(cacheKey, client)
   return client
 }

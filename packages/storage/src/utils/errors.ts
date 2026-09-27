@@ -4,18 +4,29 @@
  * Every error produced by the storage package is an instance of `StorageError`
  * (or one of its subclasses), making it easy to catch and discriminate
  * storage-specific failures in application code.
+ *
+ * Every error also carries a stable, machine-readable `code`
+ * (SCREAMING_SNAKE_CASE), so consumers can branch on the failure kind without
+ * relying on `instanceof`:
+ *
+ * ```ts
+ * if (error instanceof StorageError && error.code === 'NOT_FOUND') { ... }
+ * ```
  */
 
 /** Base error for all storage operations. */
 export class StorageError extends Error {
+  /** Stable, machine-readable failure kind. */
+  public readonly code: string
   /** Original cause (if any). */
-  public readonly cause?: unknown
+  public override readonly cause?: unknown
   /** Storage key involved in the error (if applicable). */
   public readonly key?: string
 
-  constructor(message: string, options?: { cause?: unknown; key?: string }) {
+  constructor(message: string, code: string, options?: { cause?: unknown; key?: string }) {
     super(message)
     this.name = 'StorageError'
+    this.code = code
     this.cause = options?.cause
     this.key = options?.key
   }
@@ -24,7 +35,7 @@ export class StorageError extends Error {
 /** The requested object does not exist. */
 export class StorageNotFoundError extends StorageError {
   constructor(key: string, options?: { cause?: unknown }) {
-    super(`Object not found: ${key}`, { cause: options?.cause, key })
+    super(`Object not found: ${key}`, 'NOT_FOUND', { cause: options?.cause, key })
     this.name = 'StorageNotFoundError'
   }
 }
@@ -32,7 +43,7 @@ export class StorageNotFoundError extends StorageError {
 /** Access was denied by the storage provider. */
 export class StorageAccessDeniedError extends StorageError {
   constructor(key: string, options?: { cause?: unknown }) {
-    super(`Access denied for key: ${key}`, { cause: options?.cause, key })
+    super(`Access denied for key: ${key}`, 'ACCESS_DENIED', { cause: options?.cause, key })
     this.name = 'StorageAccessDeniedError'
   }
 }
@@ -40,7 +51,7 @@ export class StorageAccessDeniedError extends StorageError {
 /** An upload operation failed. */
 export class StorageUploadError extends StorageError {
   constructor(message: string, options?: { cause?: unknown; key?: string }) {
-    super(message, options)
+    super(message, 'UPLOAD_FAILED', options)
     this.name = 'StorageUploadError'
   }
 }
@@ -48,7 +59,7 @@ export class StorageUploadError extends StorageError {
 /** A download operation failed. */
 export class StorageDownloadError extends StorageError {
   constructor(message: string, options?: { cause?: unknown; key?: string }) {
-    super(message, options)
+    super(message, 'DOWNLOAD_FAILED', options)
     this.name = 'StorageDownloadError'
   }
 }
@@ -59,7 +70,7 @@ export class StorageValidationError extends StorageError {
   public readonly rule?: string
 
   constructor(message: string, options?: { cause?: unknown; key?: string; rule?: string }) {
-    super(message, options)
+    super(message, 'VALIDATION_FAILED', options)
     this.name = 'StorageValidationError'
     this.rule = options?.rule
   }
@@ -71,7 +82,7 @@ export class StorageTimeoutError extends StorageError {
   public readonly timeout?: number
 
   constructor(message: string, options?: { cause?: unknown; key?: string; timeout?: number }) {
-    super(message, options)
+    super(message, 'TIMEOUT', options)
     this.name = 'StorageTimeoutError'
     this.timeout = options?.timeout
   }
@@ -80,7 +91,7 @@ export class StorageTimeoutError extends StorageError {
 /** A conflict occurred (e.g. object already exists with a condition). */
 export class StorageConflictError extends StorageError {
   constructor(message: string, options?: { cause?: unknown; key?: string }) {
-    super(message, options)
+    super(message, 'CONFLICT', options)
     this.name = 'StorageConflictError'
   }
 }
@@ -91,7 +102,7 @@ export class StorageQuotaError extends StorageError {
   public readonly limit?: number
 
   constructor(message: string, options?: { cause?: unknown; key?: string; limit?: number }) {
-    super(message, options)
+    super(message, 'QUOTA_EXCEEDED', options)
     this.name = 'StorageQuotaError'
     this.limit = options?.limit
   }
@@ -100,7 +111,7 @@ export class StorageQuotaError extends StorageError {
 /** A storage key is malformed or invalid. */
 export class StorageKeyError extends StorageError {
   constructor(message: string, options?: { cause?: unknown; key?: string }) {
-    super(message, options)
+    super(message, 'INVALID_KEY', options)
     this.name = 'StorageKeyError'
   }
 }
@@ -138,5 +149,5 @@ export function classifyError(error: unknown, key?: string): StorageError {
     return new StorageQuotaError(message, { cause: error, key })
   }
 
-  return new StorageError(message, { cause: error, key })
+  return new StorageError(message, 'STORAGE_ERROR', { cause: error, key })
 }

@@ -9,28 +9,16 @@ import {
   getExtension,
   extensionToMime,
   keyToMime,
-  normaliseKey,
+  normalizeKey,
   joinKey,
-  maskSensitive,
 } from '../../src/utils/format.ts'
+import { StorageValidationError, StorageQuotaError } from '../../src/utils/errors.ts'
+import { validateSize, assertSize, SIZE_LIMITS, validateQuota } from '../../src/validation/size.ts'
+import { validateMimeType, assertMimeType, MIME_TYPES } from '../../src/validation/mime.ts'
 import {
-  validateSize,
-  validateMimeType,
   validateExtension,
-  validateCustom,
-} from '../../src/utils/validators.ts'
-import { StorageValidationError } from '../../src/utils/errors.ts'
-import {
-  validateSize as validateSizeValidation,
-  SIZE_LIMITS,
-  validateQuota,
-} from '../../src/validation/size.ts'
-import {
-  validateMimeType as validateMimeTypeValidation,
-  MIME_TYPES,
-} from '../../src/validation/mime.ts'
-import {
-  validateExtension as validateExtensionValidation,
+  assertExtension,
+  extractExtension,
   EXTENSIONS,
 } from '../../src/validation/extension.ts'
 
@@ -111,56 +99,37 @@ describe('Format utilities', () => {
     expect(keyToMime('courses/123/videos/vid.mp4')).toBe('video/mp4')
   })
 
-  test('normaliseKey strips leading slashes and collapses repeats', () => {
-    expect(normaliseKey('/foo//bar/')).toBe('foo/bar/')
-    expect(normaliseKey('foo/bar')).toBe('foo/bar')
+  test('normalizeKey strips leading slashes and collapses repeats', () => {
+    expect(normalizeKey('/foo//bar/')).toBe('foo/bar/')
+    expect(normalizeKey('foo/bar')).toBe('foo/bar')
   })
 
   test('joinKey joins segments', () => {
     expect(joinKey('a', 'b', 'c')).toBe('a/b/c')
   })
-
-  test('maskSensitive masks values', () => {
-    expect(maskSensitive('mysecretkey123', 4)).toBe('myse**********')
-    expect(maskSensitive('ab', 4)).toBe('**')
-  })
 })
 
-describe('Validator utilities', () => {
-  test('validateSize passes within limit', () => {
+describe('Size validation', () => {
+  test('validateSize passes within limit (bytes)', () => {
     expect(() => validateSize(1000, 2000)).not.toThrow()
   })
 
-  test('validateSize throws when exceeded', () => {
-    // validateSize takes maxSizeMb, so 0.001 MB = ~1KB
-    expect(() => validateSize(3000, 0.001)).toThrow(StorageValidationError)
+  test('validateSize throws StorageQuotaError when exceeded', () => {
+    expect(() => validateSize(10_000_000, 5_000_000)).toThrow(StorageQuotaError)
   })
 
-  test('validateMimeType accepts allowed types', () => {
-    expect(() => validateMimeType('image/jpeg', ['image/*', 'video/mp4'])).not.toThrow()
+  test('assertSize narrows a valid number', () => {
+    const value: unknown = 1024
+    expect(() => assertSize(value, 5000)).not.toThrow()
   })
 
-  test('validateMimeType rejects disallowed types', () => {
-    expect(() => validateMimeType('text/html', ['image/*'])).toThrow()
+  test('assertSize rejects non-numbers', () => {
+    expect(() => assertSize('1024', 5000)).toThrow(StorageQuotaError)
+    expect(() => assertSize(-1, 5000)).toThrow(StorageQuotaError)
   })
 
-  test('validateExtension accepts allowed extensions', () => {
-    expect(() => validateExtension('mp4', ['mp4', 'webm'])).not.toThrow()
-  })
-
-  test('validateExtension rejects disallowed extensions', () => {
-    expect(() => validateExtension('exe', ['mp4', 'webm'])).toThrow()
-  })
-
-  test('validateCustom works with predicate', () => {
-    expect(() => validateCustom(5, (v) => v > 0, 'must be positive')).not.toThrow()
-    expect(() => validateCustom(-1, (v) => v > 0, 'must be positive')).toThrow()
-  })
-})
-
-describe('Validation modules', () => {
-  test('validateSizeValidation throws for oversized files', () => {
-    expect(() => validateSizeValidation(10_000_000, 5_000_000)).toThrow()
+  test('assertSize rejects oversized values', () => {
+    expect(() => assertSize(10_000_000, 5_000_000)).toThrow(StorageQuotaError)
   })
 
   test('validateQuota checks MB limit', () => {
@@ -172,14 +141,55 @@ describe('Validation modules', () => {
     expect(SIZE_LIMITS.AVATAR).toBe(5 * 1024 * 1024)
     expect(SIZE_LIMITS.S3_MAX).toBe(5 * 1024 * 1024 * 1024)
   })
+})
 
-  test('validateMimeTypeValidation works with wildcard', () => {
-    expect(() => validateMimeTypeValidation('image/png', MIME_TYPES.IMAGES)).not.toThrow()
-    expect(() => validateMimeTypeValidation('text/html', MIME_TYPES.IMAGES)).toThrow()
+describe('MIME type validation', () => {
+  test('validateMimeType accepts allowed types and wildcards', () => {
+    expect(() => validateMimeType('image/jpeg', ['image/*', 'video/mp4'])).not.toThrow()
+    expect(() => validateMimeType('image/png', MIME_TYPES.IMAGES)).not.toThrow()
   })
 
-  test('validateExtensionValidation works', () => {
-    expect(() => validateExtensionValidation('mp4', EXTENSIONS.VIDEOS)).not.toThrow()
-    expect(() => validateExtensionValidation('exe', EXTENSIONS.VIDEOS)).toThrow()
+  test('validateMimeType rejects disallowed types', () => {
+    expect(() => validateMimeType('text/html', ['image/*'])).toThrow(StorageValidationError)
+    expect(() => validateMimeType('text/html', MIME_TYPES.IMAGES)).toThrow()
+  })
+
+  test('assertMimeType narrows a valid string', () => {
+    const value: unknown = 'image/png'
+    expect(() => assertMimeType(value, MIME_TYPES.IMAGES)).not.toThrow()
+  })
+
+  test('assertMimeType rejects non-strings and disallowed types', () => {
+    expect(() => assertMimeType(undefined, MIME_TYPES.IMAGES)).toThrow(StorageValidationError)
+    expect(() => assertMimeType('', MIME_TYPES.IMAGES)).toThrow(StorageValidationError)
+    expect(() => assertMimeType('text/html', MIME_TYPES.IMAGES)).toThrow(StorageValidationError)
+  })
+})
+
+describe('Extension validation', () => {
+  test('validateExtension accepts allowed extensions', () => {
+    expect(() => validateExtension('mp4', ['mp4', 'webm'])).not.toThrow()
+    expect(() => validateExtension('mp4', EXTENSIONS.VIDEOS)).not.toThrow()
+  })
+
+  test('validateExtension rejects disallowed extensions', () => {
+    expect(() => validateExtension('exe', ['mp4', 'webm'])).toThrow(StorageValidationError)
+    expect(() => validateExtension('exe', EXTENSIONS.VIDEOS)).toThrow()
+  })
+
+  test('assertExtension narrows a valid string', () => {
+    const value: unknown = 'mp4'
+    expect(() => assertExtension(value, EXTENSIONS.VIDEOS)).not.toThrow()
+  })
+
+  test('assertExtension rejects non-strings and disallowed extensions', () => {
+    expect(() => assertExtension(null, EXTENSIONS.VIDEOS)).toThrow(StorageValidationError)
+    expect(() => assertExtension('exe', EXTENSIONS.VIDEOS)).toThrow(StorageValidationError)
+  })
+
+  test('extractExtension handles keys and missing extensions', () => {
+    expect(extractExtension('path/to/file.MP4')).toBe('mp4')
+    expect(extractExtension('noext')).toBe('')
+    expect(extractExtension('trailing.')).toBe('')
   })
 })

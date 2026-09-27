@@ -34,7 +34,32 @@ export function validateExtension(extension: string, allowed: readonly string[])
 }
 
 /**
+ * Validate a file extension and narrow an `unknown` value to `string`.
+ *
+ * Use this at trust boundaries (request bodies, form fields) where the value is
+ * not yet known to be a string.
+ *
+ * @param extension - The untrusted extension.
+ * @param allowed - Allowed extensions.
+ * @throws {StorageValidationError} when the value is not a string or not allowed.
+ */
+export function assertExtension(
+  extension: unknown,
+  allowed: readonly string[],
+): asserts extension is string {
+  if (typeof extension !== 'string' || extension.length === 0) {
+    throw new StorageValidationError('File extension must be a non-empty string.', {
+      rule: 'extension',
+    })
+  }
+  validateExtension(extension, allowed)
+}
+
+/**
  * Extract the extension from a filename or key.
+ *
+ * @param filename - Filename or storage key.
+ * @returns The lowercased extension without the dot, or `''` when absent.
  */
 export function extractExtension(filename: string): string {
   const dotIndex = filename.lastIndexOf('.')

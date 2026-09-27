@@ -23,7 +23,6 @@ describe('validateConfig', () => {
     expect(result.connectionTimeout).toBe(5_000)
     expect(result.retryStrategy?.backoff).toBe('adaptive')
     expect(result.encryption?.enabled).toBe(false)
-    expect(result.logging?.level).toBe('warn')
     expect(result.quotas?.maxFileSize).toBe(5120)
   })
 

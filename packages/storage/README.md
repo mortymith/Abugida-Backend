@@ -86,12 +86,6 @@ const config: StorageConfig = {
     algorithm: 'AES256',
   },
 
-  logging: {
-    level: 'info',
-    format: 'json',
-    sensitiveDataMasking: true,
-  },
-
   quotas: {
     maxFileSize: 5120, // 5 GB
   },
@@ -274,17 +268,21 @@ const tags = await storage.getTags('key')
 import {
   validateSize,
   validateQuota,
+  assertSize,
   SIZE_LIMITS,
   validateMimeType,
+  assertMimeType,
   MIME_TYPES,
   validateExtension,
+  assertExtension,
   EXTENSIONS,
   calculateChecksum,
   calculateChecksumHex,
 } from "@abugida/storage";
 
-// Size validation
+// Size validation — limit is in BYTES
 validateSize(file.size, SIZE_LIMITS.VIDEO);  // throws StorageQuotaError
+validateQuota(file.size, 512);               // limit is in MB
 
 // MIME type validation
 validateMimeType(file.type, MIME_TYPES.IMAGES);  // throws StorageValidationError
@@ -295,6 +293,33 @@ validateExtension("mp4", EXTENSIONS.VIDEOS);  // throws StorageValidationError
 // Checksums
 const sha256Base64 = await calculateChecksum(new Uint8Array([...]));
 const sha256Hex = await calculateChecksumHex(new Uint8Array([...]));
+```
+
+> **Units:** `validateSize` takes **bytes**. `validateQuota` takes **megabytes** and
+> converts internally. There is only one `validateSize` export in this package.
+
+### Narrowing `unknown` input
+
+`assertSize`, `assertMimeType`, and `assertExtension` mirror the `validate*` checks
+but accept `unknown` and narrow the value via an `asserts` clause — useful at trust
+boundaries where a value has not been type-checked yet:
+
+```typescript
+import {
+  assertSize,
+  assertMimeType,
+  assertExtension,
+  SIZE_LIMITS,
+  MIME_TYPES,
+  EXTENSIONS,
+} from '@abugida/storage'
+
+function handleUpload(contentType: unknown, size: unknown, ext: unknown) {
+  assertSize(size, SIZE_LIMITS.VIDEO) // size is now `number`
+  assertMimeType(contentType, MIME_TYPES.IMAGES) // contentType is now `string`
+  assertExtension(ext, EXTENSIONS.IMAGES) // ext is now `string`
+  // ...
+}
 ```
 
 ## Hono Integration
@@ -364,32 +389,36 @@ function CourseVideo({ client }) {
 
 ## Error Handling
 
-All errors extend `StorageError`:
+All errors extend `StorageError` and carry a stable, machine-readable `code`, so you
+can branch on the failure kind without `instanceof`:
 
 ```typescript
-import {
-  StorageError,
-  StorageNotFoundError,
-  StorageAccessDeniedError,
-  StorageUploadError,
-  StorageDownloadError,
-  StorageValidationError,
-  StorageTimeoutError,
-  StorageConflictError,
-  StorageQuotaError,
-  StorageKeyError,
-} from '@abugida/storage'
+import { StorageError, StorageQuotaError } from '@abugida/storage'
 
 try {
   await storage.get('non-existent-key')
 } catch (error) {
-  if (error instanceof StorageNotFoundError) {
-    // Handle 404
-  } else if (error instanceof StorageQuotaError) {
+  if (error instanceof StorageQuotaError) {
     // Handle file too large
+  } else if (error instanceof StorageError && error.code === 'NOT_FOUND') {
+    // Handle 404
   }
 }
 ```
+
+| Class                      | `code`              |
+| -------------------------- | ------------------- |
+| `StorageError`             | _(caller-supplied)_ |
+| `StorageNotFoundError`     | `NOT_FOUND`         |
+| `StorageAccessDeniedError` | `ACCESS_DENIED`     |
+| `StorageUploadError`       | `UPLOAD_FAILED`     |
+| `StorageDownloadError`     | `DOWNLOAD_FAILED`   |
+| `StorageValidationError`   | `VALIDATION_FAILED` |
+| `StorageTimeoutError`      | `TIMEOUT`           |
+| `StorageConflictError`     | `CONFLICT`          |
+| `StorageQuotaError`        | `QUOTA_EXCEEDED`    |
+| `StorageKeyError`          | `INVALID_KEY`       |
+| `classifyError` fallback   | `STORAGE_ERROR`     |
 
 ### Auto-Classification
 

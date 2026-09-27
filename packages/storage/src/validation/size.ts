@@ -3,6 +3,7 @@
  */
 
 import { StorageQuotaError } from '../utils/errors.js'
+import { formatFileSize } from '../utils/format.js'
 
 /** Common file size limits in bytes. */
 export const SIZE_LIMITS = {
@@ -28,33 +29,45 @@ export const SIZE_LIMITS = {
  * Validate that a file size is within the allowed limit.
  *
  * @param sizeBytes - File size in bytes.
- * @param maxSizeBytes - Maximum size in bytes.
+ * @param maxSizeBytes - Maximum size in **bytes**.
  * @throws {StorageQuotaError} when the file exceeds the limit.
  */
 export function validateSize(sizeBytes: number, maxSizeBytes: number): void {
   if (sizeBytes > maxSizeBytes) {
     throw new StorageQuotaError(
-      `File size ${formatBytes(sizeBytes)} exceeds limit of ${formatBytes(maxSizeBytes)}`,
+      `File size ${formatFileSize(sizeBytes)} exceeds limit of ${formatFileSize(maxSizeBytes)}`,
       { limit: maxSizeBytes },
     )
   }
 }
 
 /**
+ * Validate a file size and narrow an `unknown` value to `number`.
+ *
+ * Use this at trust boundaries (request bodies, multipart metadata) where the
+ * value is not yet known to be a number.
+ *
+ * @param sizeBytes - The untrusted size.
+ * @param maxSizeBytes - Maximum size in **bytes**.
+ * @throws {StorageQuotaError} when the value is not a number or exceeds the limit.
+ */
+export function assertSize(sizeBytes: unknown, maxSizeBytes: number): asserts sizeBytes is number {
+  if (typeof sizeBytes !== 'number' || !Number.isFinite(sizeBytes) || sizeBytes < 0) {
+    throw new StorageQuotaError('File size must be a non-negative number.', {
+      limit: maxSizeBytes,
+    })
+  }
+  validateSize(sizeBytes, maxSizeBytes)
+}
+
+/**
  * Validate that a file size is within the global quota.
  *
  * @param sizeBytes - File size in bytes.
- * @param maxFileSizeMb - Maximum size in megabytes from config.
+ * @param maxFileSizeMb - Maximum size in **megabytes** from config.
  * @throws {StorageQuotaError} when the file exceeds the quota.
  */
 export function validateQuota(sizeBytes: number, maxFileSizeMb: number): void {
   const maxBytes = maxFileSizeMb * 1024 * 1024
   validateSize(sizeBytes, maxBytes)
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
 }

@@ -10,7 +10,7 @@ import type { BodyInput } from '../../core/types.js'
  * TanStack Start storage client.
  *
  * Designed for use in server functions and React components that need
- * to interact with the storage layer. All methods return serialisable
+ * to interact with the storage layer. All methods return serializable
  * results that can be sent over the wire.
  */
 export class TanStackStorageClient {

@@ -72,9 +72,11 @@ export async function deleteMany(
         if (e.Key) {
           errors.push({
             key: e.Key,
-            error: new StorageError(`Delete failed: ${e.Message ?? 'Unknown error'}`, {
-              key: e.Key,
-            }),
+            error: new StorageError(
+              `Delete failed: ${e.Message ?? 'Unknown error'}`,
+              'DELETE_FAILED',
+              { key: e.Key },
+            ),
           })
         }
       }
@@ -83,7 +85,10 @@ export async function deleteMany(
       for (const key of batch) {
         errors.push({
           key,
-          error: new StorageError(`Delete batch failed`, { cause: error, key }),
+          error: new StorageError(`Delete batch failed`, 'DELETE_BATCH_FAILED', {
+            cause: error,
+            key,
+          }),
         })
       }
     }

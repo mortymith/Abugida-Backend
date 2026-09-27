@@ -2,7 +2,7 @@
  * Environment-based configuration helpers.
  *
  * These functions read storage configuration from environment variables,
- * which is the recommended approach for 12-factor apps and containerised
+ * which is the recommended approach for 12-factor apps and containerized
  * deployments.
  */
 
@@ -14,7 +14,7 @@ const PREFIX = 'STORAGE_'
 /**
  * Build a `StorageConfig` from environment variables.
  *
- * Recognised variables (all prefixed with `STORAGE_`):
+ * Recognized variables (all prefixed with `STORAGE_`):
  * | Variable                  | Maps to            |
  * |--------------------------|--------------------|
  * | `STORAGE_PROVIDER`       | `provider`         |

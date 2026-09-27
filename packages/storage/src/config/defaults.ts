@@ -20,11 +20,6 @@ export const DEFAULT_MINIO_CONFIG: Partial<StorageConfig> = {
     maxDelay: 10_000,
   },
   encryption: { enabled: false },
-  logging: {
-    level: 'warn',
-    format: 'json',
-    sensitiveDataMasking: true,
-  },
   quotas: { maxFileSize: 5120 },
 }
 
@@ -44,11 +39,6 @@ export const DEFAULT_AWS_CONFIG: Partial<StorageConfig> = {
     maxDelay: 20_000,
   },
   encryption: { enabled: true, algorithm: 'AES256' },
-  logging: {
-    level: 'info',
-    format: 'json',
-    sensitiveDataMasking: true,
-  },
   quotas: { maxFileSize: 5120 },
 }
 
@@ -67,10 +57,5 @@ export const DEFAULT_R2_CONFIG: Partial<StorageConfig> = {
     maxDelay: 10_000,
   },
   encryption: { enabled: false },
-  logging: {
-    level: 'warn',
-    format: 'json',
-    sensitiveDataMasking: true,
-  },
   quotas: { maxFileSize: 5120 },
 }

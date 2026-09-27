@@ -127,7 +127,7 @@ export class Storage {
   private readonly config: StorageConfig
   private readonly circuit: CircuitBreaker
 
-  /** Normalised configuration (after defaults applied). */
+  /** Normalized configuration (after defaults applied). */
   get storageConfig(): StorageConfig {
     return this.config
   }

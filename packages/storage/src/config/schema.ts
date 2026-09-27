@@ -58,10 +58,10 @@ const VALID_PROVIDERS: StorageProvider[] = ['aws-s3', 'minio', 'r2', 'spaces', '
 const VALID_BACKOFF: BackoffStrategy[] = ['exponential', 'fixed', 'adaptive']
 
 /**
- * Validate and normalise a `StorageConfig`.
+ * Validate and normalize a `StorageConfig`.
  *
  * @throws {Error} when required fields are missing or values are invalid.
- * @returns A normalised copy with defaults applied.
+ * @returns A normalized copy with defaults applied.
  */
 export function validateConfig(config: StorageConfig): StorageConfig {
   if (!VALID_PROVIDERS.includes(config.provider)) {
@@ -145,12 +145,6 @@ function applyDefaults(config: StorageConfig): StorageConfig {
       ...config.retryStrategy,
     },
     encryption: config.encryption ?? { enabled: false },
-    logging: {
-      level: 'warn',
-      format: 'json',
-      sensitiveDataMasking: true,
-      ...config.logging,
-    },
     quotas: config.quotas ?? { maxFileSize: 5120 }, // 5 GB default
   }
 }

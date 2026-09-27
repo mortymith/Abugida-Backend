@@ -19,33 +19,58 @@ import {
 
 describe('Error hierarchy', () => {
   test('StorageError is base class', () => {
-    const err = new StorageError('test')
+    const err = new StorageError('test', 'CUSTOM_CODE')
     expect(err).toBeInstanceOf(Error)
     expect(err).toBeInstanceOf(StorageError)
     expect(err.name).toBe('StorageError')
+    expect(err.code).toBe('CUSTOM_CODE')
   })
 
-  test('StorageNotFoundError has correct name and key', () => {
+  test('StorageNotFoundError has correct name, code, and key', () => {
     const err = new StorageNotFoundError('test-key')
     expect(err).toBeInstanceOf(StorageError)
     expect(err.name).toBe('StorageNotFoundError')
+    expect(err.code).toBe('NOT_FOUND')
     expect(err.key).toBe('test-key')
     expect(err.message).toContain('test-key')
   })
 
-  test('StorageValidationError has rule', () => {
+  test('StorageValidationError has rule and code', () => {
     const err = new StorageValidationError('bad file', { rule: 'size' })
     expect(err.rule).toBe('size')
+    expect(err.code).toBe('VALIDATION_FAILED')
   })
 
-  test('StorageTimeoutError has timeout', () => {
+  test('StorageTimeoutError has timeout and code', () => {
     const err = new StorageTimeoutError('timed out', { timeout: 30000 })
     expect(err.timeout).toBe(30000)
+    expect(err.code).toBe('TIMEOUT')
   })
 
-  test('StorageQuotaError has limit', () => {
+  test('StorageQuotaError has limit and code', () => {
     const err = new StorageQuotaError('too big', { limit: 5_000_000 })
     expect(err.limit).toBe(5_000_000)
+    expect(err.code).toBe('QUOTA_EXCEEDED')
+  })
+
+  test('every subclass carries a distinct SCREAMING_SNAKE code', () => {
+    const errors = [
+      new StorageNotFoundError('k'),
+      new StorageAccessDeniedError('k'),
+      new StorageUploadError('up'),
+      new StorageDownloadError('down'),
+      new StorageValidationError('bad'),
+      new StorageTimeoutError('slow'),
+      new StorageConflictError('conflict'),
+      new StorageQuotaError('quota'),
+      new StorageKeyError('key'),
+    ]
+
+    for (const err of errors) {
+      expect(err.code).toMatch(/^[A-Z][A-Z0-9_]*$/)
+    }
+
+    expect(new Set(errors.map((e) => e.code)).size).toBe(errors.length)
   })
 })
 
@@ -93,6 +118,7 @@ describe('classifyError', () => {
     const err = classifyError({ name: 'UnknownError', message: 'Something broke' })
     expect(err).toBeInstanceOf(StorageError)
     expect(err).not.toBeInstanceOf(StorageNotFoundError)
+    expect(err.code).toBe('STORAGE_ERROR')
   })
 
   test('passes through existing StorageError instances', () => {

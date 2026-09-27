@@ -23,7 +23,6 @@ export type {
   BackoffStrategy,
   RetryConfig,
   EncryptionConfig,
-  LoggingConfig,
   QuotaConfig,
   PutResult,
   PutManyResult,
@@ -50,7 +49,12 @@ export type {
 } from './core/types.js'
 
 // Client & Connection
-export { createClient, getOrCreateClient, destroyClient, destroyAllClients } from './core/client.js'
+export {
+  createS3Client,
+  getOrCreateClient,
+  destroyClient,
+  destroyAllClients,
+} from './core/client.js'
 export { checkHealth, CircuitBreaker } from './core/connection.js'
 export type { HealthCheckResult, CircuitState, CircuitBreakerConfig } from './core/connection.js'
 
@@ -89,9 +93,14 @@ export type {
 export { MIN_PART_SIZE, MAX_PARTS } from './multipart/types.js'
 
 // Validation
-export { validateSize, validateQuota, SIZE_LIMITS } from './validation/size.js'
-export { validateMimeType, detectMimeType, MIME_TYPES } from './validation/mime.js'
-export { validateExtension, extractExtension, EXTENSIONS } from './validation/extension.js'
+export { validateSize, assertSize, validateQuota, SIZE_LIMITS } from './validation/size.js'
+export { validateMimeType, assertMimeType, detectMimeType, MIME_TYPES } from './validation/mime.js'
+export {
+  validateExtension,
+  assertExtension,
+  extractExtension,
+  EXTENSIONS,
+} from './validation/extension.js'
 export {
   calculateChecksum,
   calculateStreamChecksum,
@@ -114,8 +123,6 @@ export {
   getExtension,
   extensionToMime,
   keyToMime,
-  normaliseKey,
+  normalizeKey,
   joinKey,
-  maskSensitive,
 } from './utils/format.js'
-export { validateCustom } from './utils/validators.js'
