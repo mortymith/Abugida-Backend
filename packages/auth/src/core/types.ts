@@ -22,7 +22,7 @@ export type AuthEnvironment = 'development' | 'test' | 'production'
 
 /**
  * Minimal shape a Drizzle schema package must satisfy to be usable by this
- * package. Concrete schemas live in `@abugida/db-schemas` (or any
+ * package. Concrete schemas live in `@abugida/database` (or any
  * workspace-local equivalent) and are passed in by the consumer — this
  * package never imports a schema package directly, which is what keeps
  * schema versions swappable per-app.

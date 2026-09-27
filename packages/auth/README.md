@@ -26,7 +26,7 @@ bun add @tanstack/react-start @tanstack/react-router react
 
 ### 1. Provide your schema
 
-Your app (or a shared `@abugida/db-schemas` package) owns the Drizzle table
+Your app (or a shared `@abugida/database` package) owns the Drizzle table
 definitions. They just need to match the shape below — see
 `examples/fixtures/schema.ts` for a complete, copy-pasteable version.
 
@@ -39,7 +39,7 @@ export const authSchema = { user, session, account, verification }
 ```ts
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { createAuth } from '@abugida/auth'
-import { authSchema } from '@abugida/db-schemas/auth'
+import { authSchema } from '@abugida/database/auth'
 
 const db = drizzle(process.env.DATABASE_URL!)
 

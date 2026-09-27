@@ -105,7 +105,7 @@ export function csrfProtection(auth: AuthInstance): MiddlewareHandler {
         return c.json({ error: { kind: result.error.kind, message: result.error.message } }, 403)
       }
     }
-    await next()
+    return next()
   }
 }
 
@@ -157,6 +157,6 @@ export function requireSession(
       c.set('user', user)
     }
 
-    await next()
+    return next()
   }
 }

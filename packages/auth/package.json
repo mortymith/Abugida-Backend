@@ -3,16 +3,16 @@
   "version": "0.0.1",
   "description": "Shared authentication layer for Hono and TanStack Start apps, built on better-auth. Ships a Google OAuth provider and Telegram sign-in (better-auth-telegram, OIDC only).",
   "type": "module",
-  "license": "UNLICENSED",
-  "private": true,
+  "license": "MIT",
+  "private": false,
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "node": "./dist/index.js",
-      "default": "./dist/client/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./client": {
       "types": "./dist/client/index.d.ts",
@@ -50,7 +50,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "eslint src tests --ext .ts,.tsx",
+    "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\" \"examples/**/*.{ts,tsx}\"",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
@@ -91,7 +91,6 @@
     "@tanstack/react-start": "^1.87.0",
     "@types/bun": "^1.4.2",
     "@types/react": "^19.2.18",
-    "@typescript-eslint/parser": "^8.67.0",
     "better-auth": "1.6.26",
     "drizzle-orm": "^0.36.4",
     "eslint": "^10.8.1",
@@ -106,12 +105,17 @@
     "bun": ">=1.4.2"
   },
   "publishConfig": {
-    "access": "restricted"
+    "access": "public"
   },
-  "directories": {
-    "example": "examples",
-    "test": "tests"
-  },
-  "keywords": [],
-  "author": ""
+  "keywords": [
+    "auth",
+    "authentication",
+    "better-auth",
+    "oauth",
+    "google",
+    "telegram",
+    "hono",
+    "tanstack",
+    "abugida"
+  ]
 }
