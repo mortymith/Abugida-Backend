@@ -240,7 +240,7 @@ export function DuplicateLessonModal({
     },
     onSuccess: (result) => {
       void queryClient.invalidateQueries({
-        queryKey: courseQueryKeys.curriculum(result.coursePublicId),
+        queryKey: courseQueryKeys.curriculum(result.targetCourseId),
       })
       toast.success(`Lesson duplicated to ${targetCourse?.title ?? 'the target course'}.`, {
         action: {

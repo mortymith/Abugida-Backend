@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { toast } from '#/components/common/toast'
 import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { EmptyState } from '#/components/common/empty-state'
 import { RetryErrorState } from '#/components/common/retry-error-state'
