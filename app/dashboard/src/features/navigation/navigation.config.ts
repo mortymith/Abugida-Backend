@@ -65,7 +65,9 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Marketing',
     icon: MarketingIcon,
     to: '/marketing',
-    roles: ['admin', 'editor'],
+    // Spec 11 matrix: Admin/Editor full; Reviewer/Viewer/Support view-only
+    // (Support: no send, no financials; payouts are admin-only).
+    roles: ['admin', 'editor', 'reviewer', 'viewer', 'support'],
   },
   {
     id: 'settings',

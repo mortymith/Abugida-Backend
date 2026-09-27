@@ -17,9 +17,11 @@ export {
   gte,
   ilike,
   inArray,
+  isNotNull,
   isNull,
   lt,
   ne,
+  notInArray,
   or,
   sql,
 } from 'drizzle-orm'
