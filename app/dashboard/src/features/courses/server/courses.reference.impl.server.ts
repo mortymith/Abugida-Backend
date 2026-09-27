@@ -9,8 +9,28 @@ import { db } from '#/config/db.config'
 import { requireUserId } from './courses.server-helpers.server'
 import type { CourseFormReference } from '../courses.types'
 
+const DEFAULT_EXAM_TYPES = [
+  { name: 'TOEFL', slug: 'toefl', sortOrder: 10 },
+  { name: 'IELTS', slug: 'ielts', sortOrder: 20 },
+  { name: 'GRE', slug: 'gre', sortOrder: 30 },
+  { name: 'Other', slug: 'other', sortOrder: 100 },
+]
+
+/**
+ * The category select is backed by exam_types, which is reference data rather
+ * than user-created course data. Keep the first-run experience usable while
+ * preserving administrator-created categories and existing soft-deleted rows.
+ */
+async function ensureDefaultExamTypes(): Promise<void> {
+  await db
+    .insert(examTypes)
+    .values(DEFAULT_EXAM_TYPES)
+    .onConflictDoNothing({ target: examTypes.slug })
+}
+
 export async function loadCourseFormReference(): Promise<CourseFormReference> {
   await requireUserId()
+  await ensureDefaultExamTypes()
 
   const [examTypeRows, instructorRows, gatewayRows] = await Promise.all([
     db

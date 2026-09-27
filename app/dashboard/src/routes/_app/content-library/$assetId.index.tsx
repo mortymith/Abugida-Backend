@@ -11,9 +11,13 @@ import { Textarea } from '#/components/ui/textarea'
 import { Card } from '#/components/ui/card'
 import { ConfirmDialog } from '#/components/common/confirm-dialog'
 import { RetryErrorState } from '#/components/common/retry-error-state'
+import { useRole } from '#/features/auth'
+import { canEditLibrary } from '#/features/library/library.permissions'
+import { toast } from 'sonner'
 import {
   formatBytes,
   isSupportedAssetMime,
+  isTranscribableCategory,
   resolveAssetMime,
 } from '#/features/library/library.asset-category'
 import {
@@ -42,6 +46,11 @@ export const Route = createFileRoute('/_app/content-library/$assetId/')({
 function AssetDetailPage() {
   const { assetId } = Route.useParams()
   const navigate = useNavigate()
+  const role = useRole()
+  // S-3.3 is a read screen (Admin/Editor/Viewer) but every write control on it
+  // is Admin/Editor only. Without this the buttons rendered for Reviewer/
+  // Viewer too and the server answered each one with FORBIDDEN.
+  const canEdit = canEditLibrary(role)
 
   const detail = useQuery(assetDetailQueryOptions(assetId))
   const usage = useQuery(assetUsageQueryOptions(assetId))
@@ -94,6 +103,7 @@ function AssetDetailPage() {
     tagsDraft !== asset.tags.join(', ')
 
   function saveMetadata() {
+    if (!canEdit) return
     updateMetadata.mutate({
       assetPublicId: assetId,
       name: name.trim(),
@@ -113,6 +123,11 @@ function AssetDetailPage() {
     document: true,
     other: false,
   }
+
+  // `usageCount` already covers live lesson links *and* course banners, so it
+  // matches what the server re-derives before rejecting an unacknowledged delete.
+  const acknowledged = asset.usageCount > 0
+  const thumbnailUses = usage.data?.thumbnailCourses.length ?? 0
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-4">
@@ -247,6 +262,30 @@ function AssetDetailPage() {
             <p className="text-sm text-muted-foreground">
               Folder: {asset.folderName ?? 'Uncategorized'} · v{asset.currentVersion}
             </p>
+            {/* S-3.6 Navigation: the transcription editor is opened from
+                S-3.3 Asset Detail for video/audio assets. */}
+            {isTranscribableCategory(asset.category) ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="self-start"
+                title={
+                  canEdit
+                    ? 'Open the transcription & subtitle editor'
+                    : 'Transcription authoring requires the Editor or Admin role'
+                }
+                disabled={!canEdit}
+                onClick={() =>
+                  void navigate({
+                    to: '/content-library/$assetId/transcript',
+                    params: { assetId: asset.publicId },
+                    search: { returnTo: window.location.pathname + window.location.search },
+                  })
+                }
+              >
+                Captions &amp; transcript
+              </Button>
+            ) : null}
           </Card>
 
           <Card className="flex flex-col gap-3 p-4">
@@ -256,6 +295,7 @@ function AssetDetailPage() {
                 id="asset-name"
                 value={name}
                 maxLength={300}
+                readOnly={!canEdit}
                 onChange={(event) => setName(event.target.value)}
               />
             </div>
@@ -265,6 +305,7 @@ function AssetDetailPage() {
                 id="asset-tags"
                 value={tagsDraft}
                 maxLength={400}
+                readOnly={!canEdit}
                 placeholder="TOEFL, Syllabus"
                 onChange={(event) => setTagsDraft(event.target.value)}
               />
@@ -276,27 +317,32 @@ function AssetDetailPage() {
                 value={description}
                 rows={3}
                 maxLength={2_000}
+                readOnly={!canEdit}
                 onChange={(event) => setDescription(event.target.value)}
               />
             </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={!dirty}
-                onClick={() => setHydrated(false)}
-              >
-                Revert
-              </Button>
-              <Button
-                size="sm"
-                disabled={!dirty || updateMetadata.isPending}
-                onClick={saveMetadata}
-              >
-                {updateMetadata.isPending ? <Spinner className="size-4" /> : null}
-                Save changes
-              </Button>
-            </div>
+            {canEdit ? (
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={!dirty}
+                  onClick={() => setHydrated(false)}
+                >
+                  Revert
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!dirty || updateMetadata.isPending}
+                  onClick={saveMetadata}
+                >
+                  {updateMetadata.isPending ? <Spinner className="size-4" /> : null}
+                  Save changes
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Read-only access</p>
+            )}
           </Card>
 
           <Card className="flex flex-col gap-2 p-4">
@@ -328,12 +374,18 @@ function AssetDetailPage() {
                 ))}
               </ul>
             )}
-            <UploadNewVersionButton assetId={assetId} nextVersion={asset.currentVersion + 1} />
+            <UploadNewVersionButton
+              assetId={assetId}
+              nextVersion={asset.currentVersion + 1}
+              canEdit={canEdit}
+            />
           </Card>
 
-          <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
-            Delete Asset
-          </Button>
+          {canEdit ? (
+            <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
+              Delete Asset
+            </Button>
+          ) : null}
         </aside>
       </div>
 
@@ -342,18 +394,29 @@ function AssetDetailPage() {
         onOpenChange={setConfirmDelete}
         title={`Delete asset “${asset.name}”?`}
         body={
-          asset.usageCount > 0
-            ? `This asset is used in ${asset.usageCount} lesson${asset.usageCount === 1 ? '' : 's'}. Are you sure you want to delete it? Linked lessons keep working, but the library entry will be gone.`
+          acknowledged
+            ? `This asset is used in ${asset.usageCount} place${asset.usageCount === 1 ? '' : 's'}: ${asset.usageCount - thumbnailUses} lesson${asset.usageCount - thumbnailUses === 1 ? '' : 's'}${thumbnailUses > 0 ? ` and ${thumbnailUses} course banner${thumbnailUses === 1 ? '' : 's'}` : ''}. Are you sure you want to delete it? Linked lessons keep working, but the library entry will be gone.`
             : 'Are you sure you want to delete this asset? This cannot be undone.'
         }
         confirmLabel="Delete asset"
         destructive
         onConfirm={async () => {
-          const { deleteAsset: deleteAssetFn } = await import('#/features/library/server/all')
-          await deleteAssetFn({
-            data: { assetPublicId: assetId, acknowledgedUsage: asset.usageCount > 0 },
-          })
-          void navigate({ to: '/content-library' })
+          try {
+            const { deleteAsset: deleteAssetFn } = await import('#/features/library/server/all')
+            await deleteAssetFn({
+              data: { assetPublicId: assetId, acknowledgedUsage: acknowledged },
+            })
+            setConfirmDelete(false)
+            void navigate({ to: '/content-library' })
+          } catch (cause) {
+            // Keep the dialog open so the warning can be acknowledged and
+            // retried; a silent rejection left the modal stuck on "Delete".
+            toast.error(
+              cause instanceof Error
+                ? cause.message.replace(/^[A-Z_]+:\s*/, '')
+                : 'Unable to delete this asset.',
+            )
+          }
         }}
       />
 
@@ -388,9 +451,11 @@ function AssetDetailPage() {
 function UploadNewVersionButton({
   assetId,
   nextVersion,
+  canEdit,
 }: {
   assetId: string
   nextVersion: number
+  canEdit: boolean
 }) {
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -449,26 +514,35 @@ function UploadNewVersionButton({
 
   return (
     <div className="flex flex-col gap-1">
-      <Button variant="outline" size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>
-        {busy ? `Uploading ${progress}%` : `Upload New Version (v${nextVersion})`}
-      </Button>
+      {canEdit ? (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={busy}
+          onClick={() => inputRef.current?.click()}
+        >
+          {busy ? `Uploading ${progress}%` : `Upload New Version (v${nextVersion})`}
+        </Button>
+      ) : null}
       {error ? (
         <p className="text-xs text-destructive" role="alert">
           {error}
         </p>
       ) : null}
-      <input
-        ref={inputRef}
-        type="file"
-        className="sr-only"
-        aria-label="Select file for new version"
-        accept=".mp4,.pdf,.png,.jpg,.jpeg,.mp3"
-        onChange={(event) => {
-          const file = event.target.files?.[0]
-          event.target.value = ''
-          if (file) void uploadVersion(file)
-        }}
-      />
+      {canEdit ? (
+        <input
+          ref={inputRef}
+          type="file"
+          className="sr-only"
+          aria-label="Select file for new version"
+          accept=".mp4,.pdf,.png,.jpg,.jpeg,.mp3"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            event.target.value = ''
+            if (file) void uploadVersion(file)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

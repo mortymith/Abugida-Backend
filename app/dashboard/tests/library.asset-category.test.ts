@@ -2,12 +2,15 @@ import { describe, expect, test } from 'bun:test'
 import {
   ASSET_MAX_SIZE_BYTES,
   ASSET_MIME_LIST,
+  ASSET_OBJECT_KEY_PREFIX,
   categoryForMime,
   extensionOf,
   formatBytes,
   formatStorageUsed,
+  isLibraryObjectKey,
   isSupportedAssetMime,
   isTranscribableCategory,
+  pickerCategoryFilter,
   resolveAssetMime,
   sanitizeFileName,
 } from '#/features/library/library.asset-category'
@@ -74,5 +77,66 @@ describe('asset category & formatting (spec 05 S-3.1/S-3.2)', () => {
     expect(isTranscribableCategory('audio')).toBe(true)
     expect(isTranscribableCategory('image')).toBe(false)
     expect(isTranscribableCategory('document')).toBe(false)
+  })
+})
+
+describe('library object key guard (upload completion integrity)', () => {
+  test('accepts keys minted by the library presign flow', () => {
+    expect(isLibraryObjectKey(`${ASSET_OBJECT_KEY_PREFIX}9f1c-uuid.mp4`)).toBe(true)
+    expect(
+      isLibraryObjectKey(
+        `${ASSET_OBJECT_KEY_PREFIX}versions/3f2504e0-4f89-41d3-9a0c-0305e82c3301/2-uuid.pdf`,
+      ),
+    ).toBe(true)
+    // Surrounding whitespace is tolerated (the value is trimmed first).
+    expect(isLibraryObjectKey(`  ${ASSET_OBJECT_KEY_PREFIX}abc.png  `)).toBe(true)
+  })
+
+  test('rejects keys outside the library namespace', () => {
+    expect(isLibraryObjectKey('courses/thumb.png')).toBe(false)
+    expect(isLibraryObjectKey('uploads/abc.mp4')).toBe(false)
+    expect(isLibraryObjectKey('asset-library')).toBe(false)
+    expect(isLibraryObjectKey('')).toBe(false)
+    expect(isLibraryObjectKey('   ')).toBe(false)
+  })
+
+  test('rejects traversal that would escape the prefix', () => {
+    expect(isLibraryObjectKey(`${ASSET_OBJECT_KEY_PREFIX}../../secrets/key`)).toBe(false)
+    expect(isLibraryObjectKey(`${ASSET_OBJECT_KEY_PREFIX}a/../../b`)).toBe(false)
+    expect(isLibraryObjectKey(`${ASSET_OBJECT_KEY_PREFIX}a\\b`)).toBe(false)
+  })
+
+  test('a key that merely starts with the prefix text is not enough', () => {
+    expect(isLibraryObjectKey(`${ASSET_OBJECT_KEY_PREFIX}../evil.mp4`)).toBe(false)
+    expect(isLibraryObjectKey('asset-library-evil/x.mp4')).toBe(false)
+  })
+})
+
+describe('pickerCategoryFilter (lesson media picker, spec 04 S-2.7 → spec 05 S-3.1)', () => {
+  test('pushes a single accepted category down to the server', () => {
+    expect(pickerCategoryFilter(['video'])).toEqual({ category: 'video', filterLocally: false })
+    expect(pickerCategoryFilter(['document'])).toEqual({
+      category: 'document',
+      filterLocally: false,
+    })
+    expect(pickerCategoryFilter(['image'])).toEqual({ category: 'image', filterLocally: false })
+    expect(pickerCategoryFilter(['audio'])).toEqual({ category: 'audio', filterLocally: false })
+  })
+
+  test('falls back to a local filter when several categories are accepted', () => {
+    // Regression: filtering after server pagination made a page of 12 videos
+    // look like "No matching assets" for a video-or-pdf slot.
+    expect(pickerCategoryFilter(['video', 'document'])).toEqual({
+      category: undefined,
+      filterLocally: true,
+    })
+  })
+
+  test('"other" has no server filter, so it always falls back locally', () => {
+    expect(pickerCategoryFilter(['other'])).toEqual({ category: undefined, filterLocally: false })
+  })
+
+  test('an empty category list is not narrowed and not locally filtered', () => {
+    expect(pickerCategoryFilter([])).toEqual({ category: undefined, filterLocally: false })
   })
 })

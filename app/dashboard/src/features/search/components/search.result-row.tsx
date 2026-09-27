@@ -1,15 +1,7 @@
-import { HugeiconsIcon } from '@hugeicons/react'
-import { Book01Icon, FileEditIcon, Folder02Icon, StudentsIcon } from '@hugeicons/core-free-icons'
 import { Skeleton } from '#/components/ui/skeleton'
 import { cn } from 'cn'
-import type { SearchGroupType, SearchResultsItem } from '../search.types'
-
-const GROUP_ICONS: Record<SearchGroupType, typeof Book01Icon> = {
-  course: Book01Icon,
-  lesson: FileEditIcon,
-  asset: Folder02Icon,
-  student: StudentsIcon,
-}
+import { SearchGroupIcon } from './search.group-icon'
+import type { SearchResultsItem } from '../search.types'
 
 /**
  * A single result row (S-1.3). Rows deep-link via URL; `exists=false` targets
@@ -23,24 +15,17 @@ export function SearchResultRow({
   item: SearchResultsItem
   onSelect: (item: SearchResultsItem) => void
 }) {
-  const Icon = GROUP_ICONS[item.kind]
-
   return (
     <button
       type="button"
       onClick={() => onSelect(item)}
       className={cn(
-        'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors min-h-10',
-        'hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex min-h-10 w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors',
+        'hover:bg-muted focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-ring',
+        !item.exists && 'text-muted-foreground',
       )}
     >
-      <HugeiconsIcon
-        icon={Icon}
-        size={18}
-        strokeWidth={1.5}
-        aria-hidden="true"
-        className="shrink-0 text-muted-foreground"
-      />
+      <SearchGroupIcon kind={item.kind} className="size-[18px]" />
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">{item.title}</span>
         {item.subtitle ? (
@@ -58,7 +43,7 @@ export function SearchResultRow({
 
 export function SearchResultRowSkeleton() {
   return (
-    <div className="flex items-center gap-3 px-3 py-2.5">
+    <div className="flex items-center gap-3 px-3 py-2.5" aria-hidden="true">
       <Skeleton className="size-5 rounded" />
       <div className="flex-1 space-y-1.5">
         <Skeleton className="h-4 w-2/5" />

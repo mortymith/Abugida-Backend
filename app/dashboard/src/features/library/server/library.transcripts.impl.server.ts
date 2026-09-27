@@ -18,12 +18,18 @@ import { transcripts, transcriptSegments } from '@abugida/database/catalog'
 import { db } from '#/config/db.config'
 import { env } from '#/config/app.config'
 import { detectSubtitleFormat, parseSubtitleFile } from '../library.srt'
-import { validateMonotonic } from '../library.transcript-logic'
+import {
+  MIN_SEGMENT_MS,
+  mergeTranscriptRange,
+  selectTranscriptTrack,
+  validateMonotonic,
+} from '../library.transcript-logic'
 import { isTranscribableCategory } from '../library.asset-category'
 import { resolveAsset } from './library.assets.impl.server'
 import { getStorage } from './library.presign.impl.server'
 import { requireLibraryWriteRole, requireUserId } from './library.server-helpers.server'
 import type { TranscriptDTO, TranscriptSegmentDTO } from '../library.types'
+import type { TimedCue } from '../library.transcript-logic'
 import type { z } from 'zod'
 import type {
   TranscriptGenerateInput,
@@ -88,12 +94,13 @@ export async function getTranscriptImpl(input: TranscriptGetInput): Promise<Tran
     .orderBy(asc(transcripts.language))
 
   const availableLanguages = trackRows.map((row) => row.language)
-  const requested = input.language
-    ? trackRows.find((row) => row.language === input.language)
-    : undefined
-  const fallback = availableLanguages.length > 0 ? availableLanguages[0] : 'en'
-  const language = requested?.language ?? fallback
-  const track = trackRows.find((row) => row.language === language) ?? null
+  // A language that has no track resolves to an *empty* track for that exact
+  // language. Falling back to another language would show the editor e.g.
+  // English cues under an "AM" selector, and the next save would then persist
+  // them under the wrong language code.
+  const selection = selectTranscriptTrack(trackRows, input.language)
+  const language = selection.language
+  const track = selection.track
 
   const segments = track ? await loadSegments(track.id) : []
 
@@ -113,9 +120,20 @@ export async function getTranscriptImpl(input: TranscriptGetInput): Promise<Tran
   }
 }
 
+interface PersistOptions {
+  /**
+   * Machine-authored writes (STT, .srt/.vtt import) only replace the *cues*.
+   * Caption styling and "show by default" are presentation choices the author
+   * made in the S-3.6 editor, so re-running the recognizer on one range — or
+   * importing a fresh track — must not silently reset them to the defaults.
+   */
+  preservePresentation?: boolean
+}
+
 /** Shared write path: validate → upsert track → replace segments. */
 async function persistTrack(
   input: TranscriptSaveInput,
+  options: PersistOptions = {},
 ): Promise<{ ok: true; segmentCount: number }> {
   const asset = await resolveTranscribableAsset(input.assetPublicId)
 
@@ -132,11 +150,16 @@ async function persistTrack(
 
   await db.transaction(async (tx) => {
     const existingRows = await tx
-      .select({ id: transcripts.id })
+      .select({
+        id: transcripts.id,
+        captionStyle: transcripts.captionStyle,
+        showByDefault: transcripts.showByDefault,
+      })
       .from(transcripts)
       .where(and(eq(transcripts.assetId, asset.id), eq(transcripts.language, input.language)))
       .limit(1)
-    let trackId = existingRows.at(0)?.id
+    const existing = existingRows.at(0)
+    let trackId = existing?.id
     if (trackId == null) {
       const inserted = await tx
         .insert(transcripts)
@@ -151,12 +174,15 @@ async function persistTrack(
         .returning({ id: transcripts.id })
       trackId = inserted.at(0)?.id
     } else {
+      const preserve = options.preservePresentation === true
       await tx
         .update(transcripts)
         .set({
           status: input.status,
-          showByDefault: input.showByDefault,
-          captionStyle: style,
+          showByDefault: preserve
+            ? (existing?.showByDefault ?? input.showByDefault)
+            : input.showByDefault,
+          captionStyle: preserve ? (existing?.captionStyle ?? null) : style,
           source: input.source,
         })
         .where(eq(transcripts.id, trackId))
@@ -205,21 +231,24 @@ export async function importTranscriptFileImpl(input: TranscriptImportInput) {
     return { ok: false as const, issues: [{ line: 1, message: 'No subtitle cues found.' }] }
   }
 
-  await persistTrack({
-    assetPublicId: input.assetPublicId,
-    language: input.language,
-    segments: parsed.cues.map((cue) => ({
-      segmentIndex: 0,
-      startMs: cue.startMs,
-      endMs: cue.endMs,
-      speaker: null,
-      text: cue.text,
-    })),
-    captionStyle: null,
-    showByDefault: true,
-    status: 'draft',
-    source: 'imported',
-  })
+  await persistTrack(
+    {
+      assetPublicId: input.assetPublicId,
+      language: input.language,
+      segments: parsed.cues.map((cue) => ({
+        segmentIndex: 0,
+        startMs: cue.startMs,
+        endMs: cue.endMs,
+        speaker: null,
+        text: cue.text,
+      })),
+      captionStyle: null,
+      showByDefault: true,
+      status: 'draft',
+      source: 'imported',
+    },
+    { preservePresentation: true },
+  )
 
   return { ok: true as const, segmentCount: parsed.cues.length, format }
 }
@@ -295,21 +324,24 @@ export async function generateTranscriptionImpl(input: TranscriptGenerateInput):
   const cues = await runStt(asset.objectKey, asset.fileSizeBytes)
   if (cues.length === 0) throw new Error('TRANSCRIPTION_EMPTY: no speech was recognized')
 
-  return persistTrack({
-    assetPublicId: input.assetPublicId,
-    language: input.language,
-    segments: cues.map((cue, index) => ({
-      segmentIndex: index,
-      startMs: cue.start,
-      endMs: Math.max(cue.end, cue.start + 200),
-      speaker: null,
-      text: cue.text,
-    })),
-    captionStyle: null,
-    showByDefault: true,
-    status: 'draft',
-    source: 'stt',
-  })
+  return persistTrack(
+    {
+      assetPublicId: input.assetPublicId,
+      language: input.language,
+      segments: cues.map((cue, index) => ({
+        segmentIndex: index,
+        startMs: cue.start,
+        endMs: Math.max(cue.end, cue.start + MIN_SEGMENT_MS),
+        speaker: null,
+        text: cue.text,
+      })),
+      captionStyle: null,
+      showByDefault: true,
+      status: 'draft',
+      source: 'stt',
+    },
+    { preservePresentation: true },
+  )
 }
 
 /** Per-range retry (spec S-3.6): re-runs STT and replaces overlapping cues. */
@@ -335,39 +367,40 @@ export async function regenerateTranscriptRangeImpl(input: TranscriptGenerateInp
   const rangeStart = input.rangeStartMs
   const rangeEnd = input.rangeEndMs
 
-  const replacement = fresh
-    .filter((cue) => cue.start < rangeEnd && cue.end > rangeStart)
-    .map((cue, index) => ({
-      segmentIndex: index,
-      startMs: cue.start,
-      endMs: Math.max(cue.end, cue.start + 200),
-      speaker: null,
-      text: cue.text,
-    }))
-  if (replacement.length === 0) {
+  // "No speech in this range" is about the *recognizer's* output, not about the
+  // merged result — cues outside the window always survive the merge.
+  const overlapping = fresh.filter((cue) => cue.start < rangeEnd && cue.end > rangeStart)
+  if (overlapping.length === 0) {
     throw new Error('TRANSCRIPTION_EMPTY: no speech was recognized in the selected range')
   }
 
-  const kept = existing
-    .filter((segment) => segment.endMs <= rangeStart || segment.startMs >= rangeEnd)
-    .map((segment) => ({
-      segmentIndex: 0,
-      startMs: segment.startMs,
-      endMs: segment.endMs,
-      speaker: segment.speaker,
-      text: segment.text,
-    }))
-  const merged = [...kept, ...replacement].sort((a, b) => a.startMs - b.startMs)
+  // runStt already normalizes provider seconds to milliseconds.
+  const freshCues: TimedCue[] = fresh.map((cue) => ({
+    startMs: cue.start,
+    endMs: cue.end,
+    speaker: null,
+    text: cue.text,
+  }))
+  const merged = mergeTranscriptRange(existing, freshCues, rangeStart, rangeEnd)
 
-  return persistTrack({
-    assetPublicId: input.assetPublicId,
-    language: input.language,
-    segments: merged,
-    captionStyle: null,
-    showByDefault: true,
-    status: 'draft',
-    source: 'stt',
-  })
+  return persistTrack(
+    {
+      assetPublicId: input.assetPublicId,
+      language: input.language,
+      segments: merged.map((cue, index) => ({
+        segmentIndex: index,
+        startMs: cue.startMs,
+        endMs: cue.endMs,
+        speaker: cue.speaker ?? null,
+        text: cue.text,
+      })),
+      captionStyle: null,
+      showByDefault: true,
+      status: 'draft',
+      source: 'stt',
+    },
+    { preservePresentation: true },
+  )
 }
 
 function activeLlmProvider(): 'openai' | 'anthropic' | 'gemini' | null {
@@ -491,21 +524,24 @@ export async function translateTranscriptImpl(input: TranscriptTranslateInput): 
     }
   }
 
-  await persistTrack({
-    assetPublicId: input.assetPublicId,
-    language: input.toLanguage,
-    segments: sourceSegments.map((segment, index) => ({
-      segmentIndex: index,
-      startMs: segment.startMs,
-      endMs: segment.endMs,
-      speaker: segment.speaker,
-      text: translated[index] ?? segment.text,
-    })),
-    captionStyle: null,
-    showByDefault: true,
-    status: 'draft',
-    source: 'translated',
-  })
+  await persistTrack(
+    {
+      assetPublicId: input.assetPublicId,
+      language: input.toLanguage,
+      segments: sourceSegments.map((segment, index) => ({
+        segmentIndex: index,
+        startMs: segment.startMs,
+        endMs: segment.endMs,
+        speaker: segment.speaker,
+        text: translated[index] ?? segment.text,
+      })),
+      captionStyle: null,
+      showByDefault: true,
+      status: 'draft',
+      source: 'translated',
+    },
+    { preservePresentation: true },
+  )
 
   return { language: input.toLanguage, segmentCount: translated.length }
 }

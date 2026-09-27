@@ -86,6 +86,30 @@ export function findExistingByName(
   return existingNames.find((candidate) => candidate.name.trim().toLowerCase() === needle) ?? null
 }
 
+export interface UploadRunSummary {
+  attempted: number
+  succeeded: number
+  failed: number
+  /** True only when at least one file was attempted and none failed. */
+  allSucceeded: boolean
+}
+
+/**
+ * Summarises one "Upload N Assets" run.
+ *
+ * The caller must feed the *results of the run it just performed*, never the
+ * reducer state it started from: `dispatch` does not synchronously update the
+ * `queue` value captured in the current render closure, so re-reading it after
+ * the upload loop reports the pre-run snapshot and reports success for a run
+ * where every file failed.
+ */
+export function summarizeUploadRun(outcomes: readonly boolean[]): UploadRunSummary {
+  const attempted = outcomes.length
+  const failed = outcomes.filter((ok) => !ok).length
+  const succeeded = attempted - failed
+  return { attempted, succeeded, failed, allSucceeded: attempted > 0 && failed === 0 }
+}
+
 export interface FileValidationIssue {
   code: 'unsupported_type' | 'too_large' | 'empty'
   message: string

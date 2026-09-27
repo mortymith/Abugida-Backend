@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useRole, requireRolesBeforeLoad } from '#/features/auth'
+import { useRole } from '#/features/auth'
+import { requireRolesBeforeLoad } from '#/features/auth/server'
 import { ReviewsQueue } from '#/features/courses'
 
 export const Route = createFileRoute('/_app/courses/reviews')({

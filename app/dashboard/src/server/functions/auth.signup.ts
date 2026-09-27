@@ -1,13 +1,20 @@
 import { createServerFn } from '@tanstack/react-start'
 
-export interface SignupInput {
-  name: string
-  slug: string
-  useCase: string
-}
+import { WorkspaceSchema } from '#/features/auth/schemas/auth.signup.schema'
+
+export const getSignupProviders = createServerFn({ method: 'GET' }).handler(async () => {
+  const { env } = await import('#/config/app.config')
+
+  return [
+    ...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET ? (['google'] as const) : []),
+    ...(env.TELEGRAM_OIDC_CLIENT_ID && env.TELEGRAM_OIDC_CLIENT_SECRET
+      ? (['telegram-oidc'] as const)
+      : []),
+  ]
+})
 
 export const signupOrganization = createServerFn({ method: 'POST' })
-  .validator((input: SignupInput) => input)
+  .validator(WorkspaceSchema)
   .handler(async ({ data }) => {
     const { getRequest } = await import('@tanstack/react-start/server')
     const { auth } = await import('#/config/auth.server')
@@ -15,22 +22,22 @@ export const signupOrganization = createServerFn({ method: 'POST' })
     const session = await auth.getSession(request.headers)
 
     if (!session.ok) {
-      throw new Error('You must be signed in to create a workspace')
+      throw new Error('UNAUTHENTICATED: You must be signed in to create a workspace')
     }
 
-    const userId = session.value.user.id
-
-    // Create the organization using better-auth's organization plugin
+    // The organization plugin must receive the current request so it can resolve
+    // the session, create the owner membership, and activate the organization.
     const result = await (auth.raw.api as any).createOrganization({
+      headers: request.headers,
       body: {
         name: data.name,
         slug: data.slug,
-        userId,
+        useCase: data.useCase,
       },
     })
 
     if (!result) {
-      throw new Error('Failed to create workspace')
+      throw new Error('ORGANIZATION_CREATION_FAILED: Failed to create workspace')
     }
 
     return {

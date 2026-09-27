@@ -118,6 +118,10 @@ export function useRenameFolder() {
       ['library', 'folders'],
       ['library', 'list'],
       ['library', 'detail'],
+      // The breadcrumb trail is fetched per folder and caches the names it
+      // read, so without this a rename left the breadcrumb showing the old
+      // name until the entry went stale.
+      ['library', 'trail'],
     ],
     successToast: 'Folder renamed.',
   })

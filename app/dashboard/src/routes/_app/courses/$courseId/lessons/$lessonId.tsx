@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { requireRolesBeforeLoad } from '#/features/auth'
+import { requireRolesBeforeLoad } from '#/features/auth/server'
 import { LessonEditor, QuizBuilderModal, AiQuizModal } from '#/features/courses'
 import type { AiQuizQuestionDraft } from '#/features/courses'
 

@@ -6,7 +6,7 @@
  * deployments.
  */
 
-import type { StorageConfig, StorageProvider } from '../core/types.ts'
+import type { StorageConfig, StorageProvider } from '../core/types.js'
 
 /** Environment variable prefix. */
 const PREFIX = 'STORAGE_'

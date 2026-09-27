@@ -22,7 +22,7 @@ const COURSE_IMPORT = '/courses/import' as const
 export function CreateCourseButton() {
   return (
     <div className="hidden items-center gap-0 md:flex">
-      <Button size="sm" render={<a href={COURSE_NEW} />}>
+      <Button nativeButton={false} size="sm" render={<a href={COURSE_NEW} />}>
         <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" />
         Create Course
       </Button>

@@ -7,8 +7,6 @@ import { and, desc, eq, gte, isNull, lt, sql } from '@abugida/database'
 import { purchases, paymentGateways } from '@abugida/database/finance'
 import { courses } from '@abugida/database/catalog'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
-import { getRequest } from '@tanstack/react-start/server'
 import { resolveDateRange } from '../schemas/dashboard.date-range.schema'
 import type { DateRangeInput } from '../schemas/dashboard.date-range.schema'
 import type {
@@ -18,8 +16,6 @@ import type {
   RevenueByGatewayRow,
 } from '../dashboard.types'
 import { REVENUE_ROLES } from '#/features/auth'
-import type { PlatformRole } from '#/features/auth'
-import { resolvePlatformRoleImpl } from '#/features/auth/server/auth.roles.impl.server'
 
 function pctDelta(current: number, previous: number): number | null {
   if (!Number.isFinite(current) || !Number.isFinite(previous)) return null
@@ -32,11 +28,8 @@ const REVENUE_NOTE = 'Subscriptions and refunds are not supported by the payment
 export async function loadRevenueAnalytics(data: DateRangeInput): Promise<RevenueAnalytics> {
   // Hard re-check at the data boundary (defense in depth — the route gate
   // is not the security boundary).
-  const request = getRequest()
-  const session = await auth.getSession(request.headers)
-  const role: PlatformRole = session.ok
-    ? await resolvePlatformRoleImpl(session.value.user.id)
-    : 'viewer'
+  const { getServerRoleImpl } = await import('#/features/auth/server/auth.roles.impl.server')
+  const role = await getServerRoleImpl()
   if (!REVENUE_ROLES.includes(role)) {
     throw new Error('FORBIDDEN: revenue analytics requires the admin or editor role')
   }

@@ -4,8 +4,8 @@
 
 import { UploadPartCommand } from '@aws-sdk/client-s3'
 import type { S3Client } from '@aws-sdk/client-s3'
-import type { BodyInput } from '../core/types.ts'
-import type { MultipartUploadPartResult, MultipartUploadPartOptions } from './types.ts'
+import type { BodyInput } from '../core/types.js'
+import type { MultipartUploadPartResult, MultipartUploadPartOptions } from './types.js'
 
 /**
  * Upload a part to an active multipart upload.

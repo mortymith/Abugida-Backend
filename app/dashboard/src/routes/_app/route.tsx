@@ -1,6 +1,6 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router'
-import { requireAuthBeforeLoad } from '@abugida/auth/tanstack/server'
-import { getServerRole } from '#/features/auth'
+import { requireAuthBeforeLoad } from '@abugida/auth/tanstack/guard'
+import { getServerRole } from '#/features/auth/server'
 import { SidebarProvider, SidebarInset } from '#/components/ui/sidebar'
 import { TooltipProvider } from '#/components/ui/tooltip'
 import { AppSidebar } from '#/components/layout/layout.app-sidebar'

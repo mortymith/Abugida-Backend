@@ -17,7 +17,7 @@
  */
 
 import { Hono } from 'hono'
-import type { Storage } from '../../core/storage.ts'
+import type { Storage } from '../../core/storage.js'
 
 /**
  * Create a set of Hono routes for common storage operations.

@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, createFileRoute } from '@tanstack/react-router'
-import { z } from 'zod'
+import { useHydrated } from '#/hooks/use-hydrated'
+import { toast } from 'sonner'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { Button } from '#/components/ui/button'
-import { Input } from '#/components/ui/input'
 import { Skeleton } from '#/components/ui/skeleton'
 import { ConfirmDialog } from '#/components/common/confirm-dialog'
 import { EmptyState } from '#/components/common/empty-state'
 import { RetryErrorState } from '#/components/common/retry-error-state'
 import { useRole } from '#/features/auth'
+import { canEditLibrary } from '#/features/library/library.permissions'
 import { Folder02Icon, FolderAddIcon, UploadIcon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
@@ -19,8 +20,10 @@ import {
   libraryStatsQueryOptions,
   libraryTrailQueryOptions,
 } from '#/features/library/hooks/library.queries'
+import { parseLibrarySearch, trailFolderId } from '#/features/library/schemas/library.schema'
 import { LibraryStatCards } from '#/features/library/components/library.stat-cards'
 import { LibraryFoldersBar } from '#/features/library/components/library.folders-bar'
+import { LibrarySearchInput } from '#/features/library/components/library.search-input'
 import { LibraryAssetCard } from '#/features/library/components/library.asset-card'
 import { LibraryPreviewModal } from '#/features/library/components/library.preview-modal'
 import { LibraryUploadModal } from '#/features/library/components/library.upload-modal'
@@ -30,18 +33,23 @@ import {
   useDuplicateAsset,
   useMoveAssets,
 } from '#/features/library/hooks/library.mutations'
+import type { LibrarySearch } from '#/features/library/schemas/library.schema'
 import type { LibraryAssetCard as AssetCardDTO } from '#/features/library/library.types'
 
-const librarySearchSchema = z.object({
-  q: z.string().optional(),
-  folder: z.string().optional(),
-  type: z.enum(['video', 'image', 'audio', 'document']).optional(),
-  sort: z.enum(['newest', 'oldest', 'name', 'size', 'uses']).optional(),
-  page: z.coerce.number().int().min(1).optional(),
-})
+/** Filter chips for the type nav. `all` clears `type` rather than setting it. */
+const TYPE_FILTERS = [
+  { value: 'all', label: 'All' },
+  { value: 'video', label: 'Video' },
+  { value: 'document', label: 'PDFs' },
+  { value: 'image', label: 'Image' },
+  { value: 'audio', label: 'Audio' },
+] as const
 
 export const Route = createFileRoute('/_app/content-library/')({
-  validateSearch: librarySearchSchema,
+  // Narrowing parser (see features/library/schemas/library.schema.ts): an
+  // unrecognised ?type=/?sort=/?page= is dropped, never thrown, so a stale or
+  // hand-edited URL can't take the page down.
+  validateSearch: parseLibrarySearch,
   loaderDeps: ({ search }) => ({
     q: search.q,
     folder: search.folder,
@@ -57,31 +65,25 @@ export const Route = createFileRoute('/_app/content-library/')({
       sort: deps.sort,
       page: deps.page,
     }
+    // `all` / `root` are view sentinels, not folder ids — no trail to load.
+    const trailFolder = trailFolderId(deps.folder)
     return Promise.allSettled([
       context.queryClient.ensureQueryData(libraryListQueryOptions(query)),
       context.queryClient.ensureQueryData(libraryStatsQueryOptions()),
       context.queryClient.ensureQueryData(libraryFoldersQueryOptions()),
-      ...(deps.folder
-        ? [context.queryClient.ensureQueryData(libraryTrailQueryOptions(deps.folder))]
+      ...(trailFolder
+        ? [context.queryClient.ensureQueryData(libraryTrailQueryOptions(trailFolder))]
         : []),
     ])
   },
   component: ContentLibraryPage,
 })
 
-type SearchShape = {
-  q?: string
-  folder?: string
-  type?: 'video' | 'image' | 'audio' | 'document'
-  sort?: 'newest' | 'oldest' | 'name' | 'size' | 'uses'
-  page?: number
-}
-
 function ContentLibraryPage() {
   const search = Route.useSearch()
   const navigate = useNavigate()
   const role = useRole()
-  const canEdit = role === 'admin' || role === 'editor'
+  const canEdit = canEditLibrary(role)
 
   const query = {
     q: search.q,
@@ -94,9 +96,10 @@ function ContentLibraryPage() {
   const assets = useQuery(libraryListQueryOptions(query))
   const stats = useQuery(libraryStatsQueryOptions())
   const folders = useQuery(libraryFoldersQueryOptions())
+  const trailFolder = trailFolderId(search.folder)
   const trail = useQuery({
-    ...libraryTrailQueryOptions(search.folder ?? '__none__'),
-    enabled: Boolean(search.folder),
+    ...libraryTrailQueryOptions(trailFolder ?? 'root'),
+    enabled: trailFolder != null,
   })
 
   const [uploadOpen, setUploadOpen] = useState(false)
@@ -114,18 +117,45 @@ function ContentLibraryPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const [draggingAsset, setDraggingAsset] = useState<AssetCardDTO | null>(null)
 
-  function patchSearch(patch: Partial<SearchShape>) {
+  // `isFetching` flips to `true` during the first client render when the SSR
+  // data is already stale by then (hydration can take longer than the list's
+  // `staleTime`), which the server could never have rendered. Gating on
+  // hydration keeps the grid's first render identical on both sides.
+  const hydrated = useHydrated()
+  const gridBusy = hydrated && assets.isFetching
+
+  /**
+   * Merges `patch` into the current search.
+   *
+   * A key present in `patch` with an `undefined` value *clears* that param —
+   * which is how the "All" chips opt out of a filter. Spreading `patch` over
+   * the current search is what makes that work: the earlier
+   * `patch.x !== undefined ? patch.x : current.x` treated `undefined` as
+   * "leave unchanged", so "All", "All folders" and "Newest" could never reset
+   * their filter. Any filter change also drops `page`, otherwise the user
+   * lands on a page that no longer exists for the new filter.
+   *
+   * `replace` keeps refining in place: chips, sort and typing are exploration,
+   * not navigation, so Back should return to the previous *view*, not to the
+   * previous keystroke. Paging opts out (`{ replace: false }`) because moving
+   * between result pages is a step a user may legitimately want to undo.
+   */
+  function patchSearch(patch: LibrarySearch, options?: { replace?: boolean }) {
+    // Key *presence* (not value) signals a filter change: clearing a filter
+    // passes `undefined`, which is exactly the case that must reset paging.
+    const filters = ['q', 'folder', 'type', 'sort'] as const
+    const resetsPage = filters.some((key) => key in patch)
     void navigate({
       to: '/content-library',
+      replace: options?.replace ?? true,
       search: (prev) => {
-        const current = prev as Partial<SearchShape>
-        return {
-          q: patch.q !== undefined ? patch.q : current.q,
-          folder: patch.folder !== undefined ? patch.folder : current.folder,
-          type: patch.type !== undefined ? patch.type : current.type,
-          sort: patch.sort !== undefined ? patch.sort : current.sort,
-          page: patch.page !== undefined ? patch.page : current.page,
-        }
+        // At runtime `prev` is this route's already-validated search object.
+        // The router types it loosely because `validateSearch` is a plain
+        // function rather than a schema, so narrow it back here.
+        const current = prev as LibrarySearch
+        const next: LibrarySearch = { ...current, ...patch }
+        if (resetsPage) next.page = undefined
+        return next
       },
     })
   }
@@ -230,32 +260,27 @@ function ContentLibraryPage() {
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <Input
-          type="search"
-          placeholder="Search assets, tags, descriptions…"
-          value={search.q ?? ''}
-          aria-label="Search assets"
-          className="max-w-xs"
-          onChange={(event) => patchSearch({ q: event.target.value || undefined, page: undefined })}
-        />
+        <LibrarySearchInput value={search.q} onCommit={(q) => patchSearch({ q })} />
         <nav aria-label="Type filter" className="flex flex-wrap gap-1">
-          {(['all', 'video', 'document', 'image', 'audio'] as const).map((type) => (
-            <Button
-              key={type}
-              variant={(search.type ?? 'all') === type ? 'default' : 'outline'}
-              size="xs"
-              aria-pressed={(search.type ?? 'all') === type}
-              onClick={() =>
-                patchSearch({ type: type === 'all' ? undefined : type, page: undefined })
-              }
-            >
-              {type === 'all'
-                ? 'All'
-                : type === 'document'
-                  ? 'PDFs'
-                  : type[0].toUpperCase() + type.slice(1)}
-            </Button>
-          ))}
+          {TYPE_FILTERS.map((filter) => {
+            const active = (search.type ?? 'all') === filter.value
+            return (
+              <Button
+                key={filter.value}
+                variant={active ? 'default' : 'outline'}
+                size="xs"
+                aria-pressed={active}
+                onClick={() =>
+                  patchSearch({
+                    type: filter.value === 'all' ? undefined : filter.value,
+                    page: undefined,
+                  })
+                }
+              >
+                {filter.label}
+              </Button>
+            )
+          })}
         </nav>
         <label className="ml-auto flex items-center gap-1 text-sm text-muted-foreground">
           Sort
@@ -263,15 +288,13 @@ function ContentLibraryPage() {
             value={search.sort ?? 'newest'}
             aria-label="Sort assets"
             className="h-8 rounded-lg border bg-input/30 px-2 text-sm"
-            onChange={(event) =>
+            onChange={(event) => {
+              const next = event.target.value
               patchSearch({
-                sort:
-                  event.target.value === 'newest'
-                    ? undefined
-                    : (event.target.value as Exclude<SearchShape['sort'], undefined>),
+                sort: next === 'newest' ? undefined : (next as LibrarySearch['sort']),
                 page: undefined,
               })
-            }
+            }}
           >
             <option value="newest">Newest</option>
             <option value="oldest">Oldest</option>
@@ -337,8 +360,24 @@ function ContentLibraryPage() {
           />
         )
       ) : (
-        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        // `id` keeps dnd-kit's `aria-describedby` target stable. Without it
+        // dnd-kit falls back to a module-level counter that keeps growing on the
+        // long-lived SSR process, so the server and the client disagree on the id
+        // and hydration mismatches.
+        <DndContext
+          id="content-library-assets"
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          {/* `keepPreviousData` keeps the last page on screen while a new search
+              runs; `isPlaceholderData` marks those rows as not yet matching the
+              current query so the grid can read as "updating", not "final". */}
+          <div
+            className="grid grid-cols-1 gap-3 transition-opacity sm:grid-cols-2 lg:grid-cols-3 aria-busy:opacity-60"
+            aria-busy={gridBusy}
+            aria-label="Assets"
+          >
             {rows.map((asset) => (
               <LibraryAssetCard
                 key={asset.publicId}
@@ -387,7 +426,7 @@ function ContentLibraryPage() {
               variant="outline"
               size="sm"
               disabled={assets.data.page <= 1}
-              onClick={() => patchSearch({ page: assets.data.page - 1 })}
+              onClick={() => patchSearch({ page: assets.data.page - 1 }, { replace: false })}
             >
               Previous
             </Button>
@@ -395,7 +434,7 @@ function ContentLibraryPage() {
               variant="outline"
               size="sm"
               disabled={!assets.data.hasNextPage}
-              onClick={() => patchSearch({ page: assets.data.page + 1 })}
+              onClick={() => patchSearch({ page: assets.data.page + 1 }, { replace: false })}
             >
               Next
             </Button>
@@ -448,18 +487,29 @@ function ContentLibraryPage() {
         title={`Delete asset “${deleteTarget?.name ?? ''}”?`}
         body={
           deleteTarget && deleteTarget.usageCount > 0
-            ? `This asset is used in ${deleteTarget.usageCount} lesson${deleteTarget.usageCount === 1 ? '' : 's'}. Are you sure you want to delete it? Linked lessons keep working, but the library entry will be gone.`
+            ? `This asset is used in ${deleteTarget.usageCount} place${deleteTarget.usageCount === 1 ? '' : 's'} (lessons and course banners). Are you sure you want to delete it? Linked lessons keep working, but the library entry will be gone.`
             : 'Are you sure you want to delete this asset? This cannot be undone.'
         }
         confirmLabel="Delete asset"
         destructive
         onConfirm={async () => {
           if (!deleteTarget) return
-          await deleteAsset.mutateAsync({
-            assetPublicId: deleteTarget.publicId,
-            acknowledgedUsage: deleteTarget.usageCount > 0,
-          })
-          setDeleteTarget(null)
+          try {
+            await deleteAsset.mutateAsync({
+              assetPublicId: deleteTarget.publicId,
+              acknowledgedUsage: deleteTarget.usageCount > 0,
+            })
+            setDeleteTarget(null)
+          } catch (cause) {
+            // The server rejects an in-use delete that was not acknowledged
+            // (e.g. usage changed since the card rendered). Surface it and
+            // leave the dialog open instead of hanging on an unhandled reject.
+            toast.error(
+              cause instanceof Error
+                ? cause.message.replace(/^[A-Z_]+:\s*/, '')
+                : 'Unable to delete this asset.',
+            )
+          }
         }}
       />
     </div>

@@ -18,5 +18,3 @@ minimumReleaseAgeExclude:
 
 patchedDependencies:
   '@tanstack/react-router@1.170.38': patches/@tanstack__react-router@1.170.38.patch
-overrides:
-  '@types/bun': 1.4.0

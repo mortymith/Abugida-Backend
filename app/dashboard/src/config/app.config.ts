@@ -12,7 +12,7 @@ const envSchema = z
     BETTER_AUTH_URL: z.url(),
     AUTH_BASE_URL: z.url(),
     AUTH_BASE_PATH: z.string().default('/auth'),
-    VITE_AUTH_BASE_URL: z.url().default('http://localhost:3000/auth'),
+    VITE_AUTH_BASE_PATH: z.string().startsWith('/').default('/auth'),
     LOGIN_PATH: z.string().default('/login'),
     DEFAULT_LOGIN_REDIRECT: z.string().default('/dashboard'),
     TOTP_ISSUER: z.string().default('Abugida Academy'),
@@ -31,7 +31,24 @@ const envSchema = z
     AUTH_ERROR_CALLBACK_URL: z.string().optional(),
     AUTH_NEW_USER_CALLBACK_URL: z.string().optional(),
     WEB_APP_URL: z.string().optional(),
+    COURSE_PREVIEW_URL: z.url().optional(),
     TOKEN_AUDIENCE: z.string().optional(),
+
+    // ── Object storage (Content Library) ────────────────────────────────
+    // Optional so the dashboard can start without storage; the Library
+    // server bridge returns STORAGE_NOT_CONFIGURED until these are present.
+    STORAGE_PROVIDER: z.enum(['aws-s3', 'minio', 'r2', 'spaces', 'wasabi', 'b2']).optional(),
+    STORAGE_ENDPOINT: z.string().optional(),
+    STORAGE_PUBLIC_ENDPOINT: z.string().optional(),
+    STORAGE_REGION: z.string().optional(),
+    STORAGE_ACCESS_KEY_ID: z.string().optional(),
+    STORAGE_SECRET_ACCESS_KEY: z.string().optional(),
+    STORAGE_BUCKET: z.string().optional(),
+    STORAGE_FORCE_PATH_STYLE: z.enum(['true', 'false']).optional(),
+    STORAGE_MAX_ATTEMPTS: z.coerce.number().int().positive().optional(),
+    STORAGE_REQUEST_TIMEOUT: z.coerce.number().int().positive().optional(),
+    STORAGE_CONNECTION_TIMEOUT: z.coerce.number().int().positive().optional(),
+
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     TELEGRAM_OIDC_CLIENT_ID: z.string().optional(),
@@ -83,3 +100,18 @@ const envSchema = z
   )
 
 export const env = envSchema.parse(process.env)
+
+/** Raw STORAGE_* values for @abugida/storage's environment adapter. */
+export const storageEnv = {
+  STORAGE_PROVIDER: env.STORAGE_PROVIDER,
+  STORAGE_ENDPOINT: env.STORAGE_ENDPOINT,
+  STORAGE_PUBLIC_ENDPOINT: env.STORAGE_PUBLIC_ENDPOINT,
+  STORAGE_REGION: env.STORAGE_REGION,
+  STORAGE_ACCESS_KEY_ID: env.STORAGE_ACCESS_KEY_ID,
+  STORAGE_SECRET_ACCESS_KEY: env.STORAGE_SECRET_ACCESS_KEY,
+  STORAGE_BUCKET: env.STORAGE_BUCKET,
+  STORAGE_FORCE_PATH_STYLE: env.STORAGE_FORCE_PATH_STYLE,
+  STORAGE_MAX_ATTEMPTS: env.STORAGE_MAX_ATTEMPTS?.toString(),
+  STORAGE_REQUEST_TIMEOUT: env.STORAGE_REQUEST_TIMEOUT?.toString(),
+  STORAGE_CONNECTION_TIMEOUT: env.STORAGE_CONNECTION_TIMEOUT?.toString(),
+}

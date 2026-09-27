@@ -4,8 +4,8 @@
 
 import { CreateMultipartUploadCommand } from '@aws-sdk/client-s3'
 import type { S3Client } from '@aws-sdk/client-s3'
-import type { PutOptions } from '../core/types.ts'
-import type { MultipartCreateResult } from './types.ts'
+import type { PutOptions } from '../core/types.js'
+import type { MultipartCreateResult } from './types.js'
 
 /**
  * Start a multipart upload session.

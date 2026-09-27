@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 
 import { SignupStep1 } from '#/features/auth/components/auth.signup-step-1'
@@ -7,9 +7,11 @@ import { SignupStep3 } from '#/features/auth/components/auth.signup-step-3'
 import { Stepper } from '#/components/ui/stepper'
 import { Badge } from '#/components/ui/badge'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { SparklesIcon } from '@hugeicons/core-free-icons'
+import { SparklesIcon, Tick04Icon } from '@hugeicons/core-free-icons'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card'
-import { signupOrganization } from '#/server/functions/auth.signup'
+import { Spinner } from '#/components/ui/spinner'
+import { getSignupProviders, signupOrganization } from '#/server/functions/auth.signup'
+import { useSession } from '#/features/auth/hooks/auth.session'
 import type { WorkspaceInput } from '#/features/auth/schemas/auth.signup.schema'
 
 export const Route = createFileRoute('/_auth/signup')({
@@ -37,14 +39,26 @@ const STEP_KEY = ['Account', 'Workspace', 'Start'] as const
 
 function SignupPage() {
   const navigate = useNavigate()
+  const { data: session, isPending: isSessionPending } = useSession()
   const [currentStep, setCurrentStep] = useState(1)
+  const [availableProviders, setAvailableProviders] = useState<
+    ('google' | 'telegram-oidc')[] | null
+  >(null)
   const [loading, setLoading] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
   const [slugError, setSlugError] = useState<string | null>(null)
 
-  const handleStep1Complete = () => {
-    setCurrentStep(2)
-  }
+  useEffect(() => {
+    if (session) {
+      setCurrentStep(2)
+    }
+  }, [session])
+
+  useEffect(() => {
+    void getSignupProviders()
+      .then(setAvailableProviders)
+      .catch(() => setAvailableProviders([]))
+  }, [])
 
   const handleStep2Complete = async (data: WorkspaceInput) => {
     setLoading(true)
@@ -56,7 +70,7 @@ function SignupPage() {
       setCurrentStep(3)
     } catch (err) {
       const message = err instanceof Error ? err.message : ''
-      if (/subdomain|slug|taken|already exist/i.test(message)) {
+      if (/SLUG|subdomain|slug|taken|already exist/i.test(message)) {
         setSlugError('That subdomain is already taken. Try another one.')
       } else {
         setServerError(
@@ -74,35 +88,61 @@ function SignupPage() {
     navigate({ to: '/dashboard' })
   }
 
-  const meta = STEP_META[STEP_KEY[currentStep - 1]]
+  const displayStep = currentStep === 3 ? 3 : session ? 2 : currentStep
+  const meta = STEP_META[STEP_KEY[displayStep - 1]]
 
   return (
     <div className="flex flex-col gap-6">
-      <Stepper steps={[...STEPS]} currentStep={currentStep} className="justify-center" />
+      <Stepper steps={[...STEPS]} currentStep={displayStep} className="justify-center" />
 
       <Card>
         <CardHeader className="text-center">
-          {currentStep === 1 && (
+          {displayStep === 1 && (
             <Badge variant="secondary" className="justify-self-center">
               <HugeiconsIcon icon={SparklesIcon} data-icon="inline-start" />
               Getting started
             </Badge>
+          )}
+          {displayStep === 3 && (
+            <div className="relative mx-auto mb-3 flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <HugeiconsIcon icon={Tick04Icon} size={28} strokeWidth={1.5} />
+            </div>
           )}
           <CardTitle className="text-lg font-semibold">{meta.title}</CardTitle>
           <CardDescription>{meta.description}</CardDescription>
         </CardHeader>
 
         <CardContent>
-          {currentStep === 1 && <SignupStep1 onComplete={handleStep1Complete} />}
-          {currentStep === 2 && (
-            <SignupStep2
-              onComplete={handleStep2Complete}
-              loading={loading}
-              serverError={serverError}
-              slugError={slugError}
-            />
+          {isSessionPending ? (
+            <div className="flex min-h-40 items-center justify-center">
+              <Spinner className="size-6" aria-label="Checking your session" />
+            </div>
+          ) : (
+            <>
+              {displayStep === 1 && availableProviders && (
+                <SignupStep1 availableProviders={availableProviders} />
+              )}
+              {displayStep === 1 && availableProviders?.length === 0 && (
+                <p className="text-center text-sm text-destructive">
+                  No sign-in providers are configured. Contact an administrator.
+                </p>
+              )}
+              {displayStep === 1 && availableProviders === null && (
+                <div className="flex min-h-40 items-center justify-center">
+                  <Spinner className="size-6" aria-label="Loading sign-in options" />
+                </div>
+              )}
+              {displayStep === 2 && (
+                <SignupStep2
+                  onComplete={handleStep2Complete}
+                  loading={loading}
+                  serverError={serverError}
+                  slugError={slugError}
+                />
+              )}
+              {displayStep === 3 && <SignupStep3 onComplete={handleStep3Complete} />}
+            </>
           )}
-          {currentStep === 3 && <SignupStep3 onComplete={handleStep3Complete} />}
         </CardContent>
       </Card>
 

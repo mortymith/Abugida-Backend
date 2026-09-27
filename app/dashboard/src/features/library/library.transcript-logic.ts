@@ -7,7 +7,9 @@
  */
 
 export interface SegmentLike {
-  segmentIndex: number
+  /** Optional: callers that only have timings (e.g. a range merge) get the
+   *  array position reported instead. */
+  segmentIndex?: number | undefined
   startMs: number
   endMs: number
 }
@@ -24,21 +26,22 @@ export const MAX_LINES = 2
 export function validateMonotonic(segments: SegmentLike[]): MonotonicIssue[] {
   const issues: MonotonicIssue[] = []
   let previous: SegmentLike | undefined
-  for (const segment of segments) {
+  segments.forEach((segment, position) => {
+    const segmentIndex = segment.segmentIndex ?? position
     if (segment.endMs <= segment.startMs) {
       issues.push({
-        segmentIndex: segment.segmentIndex,
+        segmentIndex,
         message: 'Segment end must be after its start.',
       })
     }
     if (previous && segment.startMs < previous.endMs) {
       issues.push({
-        segmentIndex: segment.segmentIndex,
+        segmentIndex,
         message: 'Segment overlaps the previous one.',
       })
     }
     previous = segment
-  }
+  })
   return issues
 }
 
@@ -133,4 +136,118 @@ export function formatClock(ms: number): string {
   const seconds = Math.floor((clamped % 60_000) / 1000)
   const pad = (value: number) => value.toString().padStart(2, '0')
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${pad(minutes)}:${pad(seconds)}`
+}
+
+// ---------------------------------------------------------------------------
+// Track selection (per-range retry + language switching)
+// ---------------------------------------------------------------------------
+
+export interface TranscriptTrackLike {
+  language: string
+}
+
+export interface TrackSelection<T extends TranscriptTrackLike = TranscriptTrackLike> {
+  /** Language to report back to the caller. */
+  language: string
+  /** The track to load, or null when the requested language has no track. */
+  track: T | null
+}
+
+/**
+ * Resolves which transcript track a request should read.
+ *
+ * When the caller asks for a language that has **no** track, the answer is an
+ * empty track for exactly that language — never another language's track.
+ * Falling back silently would hand the editor one language's cues while the
+ * language selector shows another, and the next save would then persist those
+ * cues under the wrong language code.
+ *
+ * With no explicit request (and no tracks at all) the default `en` label is
+ * used so the editor still renders.
+ */
+export function selectTranscriptTrack<T extends TranscriptTrackLike>(
+  available: readonly T[],
+  requested: string | null | undefined,
+  defaultLanguage = 'en',
+): TrackSelection<T> {
+  if (requested) {
+    const exact = available.find((track) => track.language === requested) ?? null
+    return { language: requested, track: exact }
+  }
+  const first = available.at(0)
+  if (first) return { language: first.language, track: first }
+  return { language: defaultLanguage, track: null }
+}
+
+export interface TimedCue {
+  startMs: number
+  endMs: number
+  speaker?: string | null
+  text: string
+}
+
+/** Shortest span a regenerated cue is allowed to occupy. */
+export const MIN_SEGMENT_MS = 200
+
+/**
+ * Rebuilds a track after re-transcribing `[rangeStartMs, rangeEndMs)`.
+ *
+ * Freshly recognised cues are **clamped to the requested window** and then
+ * de-overlapped. Both steps are required: the recognizer works on the whole
+ * file, so a cue routinely straddles the window boundary, and provider output
+ * can itself contain overlapping cues. Passing either through unchanged
+ * produced a track the server's monotonic check rejected, so "Regenerate this
+ * range" failed outright instead of repairing the range.
+ *
+ * Kept segments are the ones entirely outside the window. The result is
+ * ordered by start time and is always safe for `validateMonotonic`.
+ */
+export function mergeTranscriptRange(
+  existing: readonly TimedCue[],
+  fresh: readonly TimedCue[],
+  rangeStartMs: number,
+  rangeEndMs: number,
+): TimedCue[] {
+  const start = Math.max(0, Math.min(rangeStartMs, rangeEndMs))
+  const end = Math.max(start, Math.max(rangeStartMs, rangeEndMs))
+
+  const kept = existing
+    .filter((cue) => cue.endMs <= start || cue.startMs >= end)
+    .map((cue) => ({
+      startMs: cue.startMs,
+      endMs: cue.endMs,
+      speaker: cue.speaker,
+      text: cue.text,
+    }))
+
+  // Clamp into the window, then walk in start order pushing each cue past the
+  // previous one. A cue squeezed out of existence is dropped, not emitted
+  // inverted — the caller decides whether the range came back empty.
+  const clamped = fresh
+    .filter((cue) => cue.startMs < end && cue.endMs > start)
+    .map((cue) => ({
+      startMs: Math.max(cue.startMs, start),
+      endMs: Math.max(cue.endMs, start),
+      speaker: cue.speaker ?? null,
+      text: cue.text,
+    }))
+    .sort((a, b) => a.startMs - b.startMs || a.endMs - b.endMs)
+
+  const replacement: TimedCue[] = []
+  let previousEnd = start
+  for (const cue of clamped) {
+    // Everything is sorted by start, so once a cue cannot fit, none after it can.
+    if (cue.startMs < previousEnd) cue.startMs = previousEnd
+    if (cue.startMs >= end) break
+    const cueEnd = Math.min(Math.max(cue.endMs, cue.startMs + MIN_SEGMENT_MS), end)
+    replacement.push({
+      startMs: cue.startMs,
+      endMs: cueEnd,
+      speaker: cue.speaker,
+      text: cue.text,
+    })
+    previousEnd = cueEnd
+  }
+
+  return [...kept, ...replacement].sort((a, b) => a.startMs - b.startMs || a.endMs - b.endMs)
 }

@@ -3,9 +3,9 @@
  */
 
 import type { S3Client } from '@aws-sdk/client-s3'
-import type { MoveOptions, MoveResult } from '../core/types.ts'
-import { copy } from './copy.ts'
-import { deleteObject } from './delete.ts'
+import type { MoveOptions, MoveResult } from '../core/types.js'
+import { copy } from './copy.js'
+import { deleteObject } from './delete.js'
 
 /**
  * Move an object to a new key (copy then delete source).

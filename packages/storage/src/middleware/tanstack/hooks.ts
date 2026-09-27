@@ -7,9 +7,9 @@
  * Note: React must be installed as a peer dependency in the consuming app.
  */
 
-import type { TanStackStorageClient } from './client.ts'
-import type { PutResult, ObjectMetadata, ListResult, BodyInput } from '../../core/types.ts'
-import type { PresignedUrlResult } from '../../presigned/types.ts'
+import type { TanStackStorageClient } from './client.js'
+import type { PutResult, ObjectMetadata, ListResult, BodyInput } from '../../core/types.js'
+import type { PresignedUrlResult } from '../../presigned/types.js'
 
 // React imports — the consuming app must provide React
 // We use a type-only import pattern to avoid bundling React

@@ -2,6 +2,7 @@ import { Button } from '#/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -56,56 +57,58 @@ export function DateRangePicker({ selection, label, onChange }: DateRangePickerP
         }
       />
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuLabel>Date range</DropdownMenuLabel>
-        {DATE_RANGE_PRESETS.map((preset) => (
-          <DropdownMenuItem
-            key={preset}
-            onClick={() => apply({ preset })}
-            className={selection.preset === preset && !isCustom ? 'bg-accent' : undefined}
-          >
-            {PRESET_LABELS[preset]}
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <div className="grid gap-2 px-2 py-1.5">
-          <label className="grid gap-1 text-xs text-muted-foreground">
-            From
-            <input
-              type="date"
-              aria-label="Custom range start"
-              className="h-8 rounded-md border bg-background px-2 text-sm"
-              value={selection.from ?? ''}
-              onChange={(event) => {
-                if (event.target.value) {
-                  apply({ from: event.target.value, to: selection.to })
-                }
-              }}
-            />
-          </label>
-          <label className="grid gap-1 text-xs text-muted-foreground">
-            To
-            <input
-              type="date"
-              aria-label="Custom range end"
-              className="h-8 rounded-md border bg-background px-2 text-sm"
-              value={selection.to ?? ''}
-              onChange={(event) => {
-                if (event.target.value) {
-                  apply({ from: selection.from, to: event.target.value })
-                }
-              }}
-            />
-          </label>
-          {isCustom ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => apply({ preset: selection.preset ?? '30d' })}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Date range</DropdownMenuLabel>
+          {DATE_RANGE_PRESETS.map((preset) => (
+            <DropdownMenuItem
+              key={preset}
+              onClick={() => apply({ preset })}
+              className={selection.preset === preset && !isCustom ? 'bg-accent' : undefined}
             >
-              Clear custom range
-            </Button>
-          ) : null}
-        </div>
+              {PRESET_LABELS[preset]}
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <div className="grid gap-2 px-2 py-1.5">
+            <label className="grid gap-1 text-xs text-muted-foreground">
+              From
+              <input
+                type="date"
+                aria-label="Custom range start"
+                className="h-8 rounded-md border bg-background px-2 text-sm"
+                value={selection.from ?? ''}
+                onChange={(event) => {
+                  if (event.target.value) {
+                    apply({ from: event.target.value, to: selection.to })
+                  }
+                }}
+              />
+            </label>
+            <label className="grid gap-1 text-xs text-muted-foreground">
+              To
+              <input
+                type="date"
+                aria-label="Custom range end"
+                className="h-8 rounded-md border bg-background px-2 text-sm"
+                value={selection.to ?? ''}
+                onChange={(event) => {
+                  if (event.target.value) {
+                    apply({ from: selection.from, to: event.target.value })
+                  }
+                }}
+              />
+            </label>
+            {isCustom ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => apply({ preset: selection.preset ?? '30d' })}
+              >
+                Clear custom range
+              </Button>
+            ) : null}
+          </div>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )

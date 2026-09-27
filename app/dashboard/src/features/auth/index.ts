@@ -1,4 +1,5 @@
 export { useSession } from './hooks/auth.session'
+export { useLogout } from './hooks/auth.logout'
 export { useRole } from './hooks/auth.role'
 export {
   PLATFORM_ROLES,
@@ -11,7 +12,6 @@ export {
   mapBetterAuthRoleToPlatformRole,
   type PlatformRole,
 } from './auth.roles'
-export { getServerRole, requireRolesBeforeLoad } from './server/auth.roles'
 export { useLastProvider, type Provider } from './hooks/auth.provider-memory'
 export { ProviderButton } from './components/auth.provider-button'
 export { RedirectingOverlay } from './components/auth.redirecting-overlay'

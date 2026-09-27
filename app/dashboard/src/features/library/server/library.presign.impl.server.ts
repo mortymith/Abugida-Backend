@@ -8,6 +8,7 @@ import { createStorage, configFromEnv, hasEnvConfig } from '@abugida/storage'
 import { and, eq } from '@abugida/database'
 import { assetVersions } from '@abugida/database/catalog'
 import { db } from '#/config/db.config'
+import { storageEnv } from '#/config/app.config'
 import { requireLibraryWriteRole, requireUserId } from './library.server-helpers.server'
 import { extensionOf, sanitizeFileName } from '../library.asset-category'
 import { resolveAsset } from './library.assets.impl.server'
@@ -17,13 +18,33 @@ import type { z } from 'zod'
 const UPLOAD_TTL_SECONDS = 900
 const READ_TTL_SECONDS = 3600
 
-export function getStorage() {
-  if (!hasEnvConfig()) {
+/**
+ * Single gate for every storage client in the library bridge. Without the
+ * guard, `configFromEnv` surfaces its raw "Missing environment variable:
+ * STORAGE_PROVIDER" text, which tells an operator nothing about where to fix
+ * it. Keeping the check here means presign, complete and delete all fail the
+ * same actionable way.
+ */
+function requireStorageConfig() {
+  if (!hasEnvConfig(storageEnv)) {
     throw new Error(
       'STORAGE_NOT_CONFIGURED: set STORAGE_* env vars to enable Content Library uploads (see .env.example)',
     )
   }
-  return createStorage(configFromEnv())
+  return configFromEnv(storageEnv)
+}
+
+export function getStorage() {
+  return createStorage(requireStorageConfig())
+}
+
+/** Storage client used only to sign browser-facing URLs. */
+function getPresignStorage() {
+  const config = requireStorageConfig()
+  return createStorage({
+    ...config,
+    endpoint: storageEnv.STORAGE_PUBLIC_ENDPOINT || config.endpoint,
+  })
 }
 
 export async function getAssetUploadUrlImpl(input: AssetUploadInitInput): Promise<{
@@ -37,7 +58,7 @@ export async function getAssetUploadUrlImpl(input: AssetUploadInitInput): Promis
   const extension = extensionOf(cleanName) || 'bin'
   const objectKey = `asset-library/${globalThis.crypto.randomUUID()}.${extension}`
 
-  const storage = getStorage()
+  const storage = getPresignStorage()
   const presigned = await storage.presignedUpload(objectKey, {
     expiresIn: UPLOAD_TTL_SECONDS,
     contentType: input.contentType,
@@ -49,7 +70,7 @@ export async function getAssetReadUrlImpl(
   input: z.infer<typeof readUrlSchema>,
 ): Promise<{ url: string | null }> {
   await requireUserId()
-  if (!hasEnvConfig()) return { url: null }
+  if (!hasEnvConfig(storageEnv)) return { url: null }
 
   let objectKey: string
   try {
@@ -76,7 +97,7 @@ export async function getAssetReadUrlImpl(
   }
 
   try {
-    const storage = createStorage(configFromEnv())
+    const storage = createStorage(configFromEnv(storageEnv))
     const disposition = input.disposition
     const contentDisposition =
       disposition === 'attachment'

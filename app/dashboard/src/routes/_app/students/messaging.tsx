@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
-import { requireRolesBeforeLoad } from '#/features/auth'
+import { requireRolesBeforeLoad } from '#/features/auth/server'
 import { StudentsMessagingView } from '#/features/students'
 import { threadsQueryOptions } from '#/features/students/hooks/students.queries'
 

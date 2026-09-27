@@ -1,4 +1,5 @@
 import type { AssetCategory } from '@abugida/database/catalog'
+import type { LibraryCategoryFilter } from './schemas/library.schema'
 
 /**
  * Content Library asset classification + upload constraints (spec 05 S-3.1 /
@@ -8,6 +9,22 @@ import type { AssetCategory } from '@abugida/database/catalog'
  */
 
 export const ASSET_MAX_SIZE_BYTES = 500 * 1024 * 1024
+
+/**
+ * Object-key namespace owned by the Content Library. Presigned PUTs are always
+ * minted under this prefix by `getAssetUploadUrl` / `uploadAssetVersion`, and
+ * upload completion re-checks the key it is handed so a caller cannot adopt an
+ * arbitrary object that happens to exist in the bucket.
+ */
+export const ASSET_OBJECT_KEY_PREFIX = 'asset-library/'
+
+/** True when `objectKey` came from the library's own presign flow. */
+export function isLibraryObjectKey(objectKey: string): boolean {
+  const trimmed = objectKey.trim()
+  if (!trimmed.startsWith(ASSET_OBJECT_KEY_PREFIX)) return false
+  // Reject traversal: "asset-library/../../other-bucket/key" would escape the prefix.
+  return !trimmed.split('/').includes('..') && !trimmed.includes('\\')
+}
 
 /** MIME types accepted by the library upload flow, with display labels. */
 export const ASSET_MIME_TYPES = {
@@ -94,4 +111,23 @@ export const ASSET_CATEGORY_LABELS: Record<AssetCategory, string> = {
   audio: 'Audio',
   document: 'PDF',
   other: 'Other',
+}
+
+/**
+ * Server filter for a picker restricted to a set of categories.
+ *
+ * Filtering client-side *after* the server already paged the list is unsound:
+ * a page of 12 videos rendered as "No matching assets" for a PDF slot even when
+ * PDFs existed on page 2. With a single acceptable category the filter is
+ * pushed down to the server. The server filter only knows real categories
+ * (never the 'other' bucket, which the wireframe never offers), so several
+ * categories fall back to filtering the fetched page locally.
+ */
+export function pickerCategoryFilter(categories: readonly AssetCategory[]): {
+  category?: LibraryCategoryFilter
+  filterLocally: boolean
+} {
+  const only = categories.length === 1 ? categories[0] : undefined
+  if (only && only !== 'other') return { category: only, filterLocally: false }
+  return { category: undefined, filterLocally: categories.length > 1 }
 }

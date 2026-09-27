@@ -2,7 +2,7 @@
  * Retry strategies with configurable backoff.
  */
 
-import type { BackoffStrategy } from '../core/types.ts'
+import type { BackoffStrategy } from '../core/types.js'
 
 export interface RetryOptions {
   /** Maximum number of retry attempts. */

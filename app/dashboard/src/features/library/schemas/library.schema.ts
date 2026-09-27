@@ -7,17 +7,112 @@ import { z } from 'zod'
 
 export const LIBRARY_PAGE_SIZE = 12 // 3-column grid × 4 rows
 
+/**
+ * Max characters of the search term, shared by `libraryListQuerySchema.q`,
+ * `parseLibrarySearch` and the search input (which caps its draft) so a typed
+ * term can never be silently truncated on the way to the server.
+ */
+export const LIBRARY_SEARCH_MAX_LENGTH = 100
+
 export const assetCategoryFilterSchema = z.enum(['all', 'video', 'image', 'audio', 'document'])
 
+export const librarySortSchema = z.enum(['newest', 'oldest', 'name', 'size', 'uses'])
+
 export const libraryListQuerySchema = z.object({
-  q: z.string().trim().max(100).optional(),
+  q: z.string().trim().max(LIBRARY_SEARCH_MAX_LENGTH).optional(),
   category: assetCategoryFilterSchema.optional(),
   /** 'all' = everything, 'root' = uncategorized, else a folder public id. */
   folder: z.union([z.literal('all'), z.literal('root'), z.string().uuid()]).optional(),
-  sort: z.enum(['newest', 'oldest', 'name', 'size', 'uses']).optional(),
+  sort: librarySortSchema.optional(),
   page: z.coerce.number().int().min(1).optional(),
 })
 export type LibraryListQuery = z.infer<typeof libraryListQuerySchema>
+
+// ---------------------------------------------------------------------------
+// URL search params
+// ---------------------------------------------------------------------------
+
+/** Category values that actually narrow a query — i.e. `all` excluded. */
+export type LibraryCategoryFilter = Exclude<z.infer<typeof assetCategoryFilterSchema>, 'all'>
+export type LibrarySort = z.infer<typeof librarySortSchema>
+
+/**
+ * Search params for `/content-library`.
+ *
+ * Deliberately **narrowing, not validating**: every field drops any value it
+ * does not recognise instead of throwing. A URL is user-editable and survives
+ * bookmarks, shared links and deploys, so `?type=all`, `?type=undefined`,
+ * `?type=` (empty) or a repeated `?q=a&q=b` must all degrade to "no filter"
+ * rather than blow up the route with a raw Zod payload. This mirrors the
+ * narrowing style already used by the sibling `/courses` route.
+ *
+ * `all` is accepted for `type` because it is the sentinel the filter chips
+ * use; it is normalised to `undefined` here so the rest of the app only ever
+ * sees a real narrowing value, and so the unfiltered view keeps a single
+ * React Query cache entry.
+ */
+export interface LibrarySearch {
+  q?: string | undefined
+  folder?: string | undefined
+  type?: LibraryCategoryFilter | undefined
+  sort?: LibrarySort | undefined
+  page?: number | undefined
+}
+
+const uuidSchema = z.string().uuid()
+
+/** The parsed value when `schema` accepts it, else `undefined`. */
+function pick<T extends z.ZodType>(schema: T, value: unknown): z.output<T> | undefined {
+  const parsed = schema.safeParse(value)
+  return parsed.success ? parsed.data : undefined
+}
+
+/** Positive integer, or `undefined` for anything else (NaN, 0, 1.5, "abc", …). */
+function positiveInt(value: unknown): number | undefined {
+  if (typeof value === 'number') return Number.isInteger(value) && value >= 1 ? value : undefined
+  if (typeof value !== 'string' || value.trim() === '') return undefined
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed >= 1 ? parsed : undefined
+}
+
+function nonEmptyString(value: unknown): string | undefined {
+  return typeof value === 'string' && value !== '' ? value : undefined
+}
+
+/** Folder selector: `all`, `root` or a folder public id (uuid). */
+function folderSelector(value: unknown): string | undefined {
+  const raw = nonEmptyString(value)
+  if (raw === 'all' || raw === 'root') return raw
+  return uuidSchema.safeParse(raw).success ? raw : undefined
+}
+
+/**
+ * The folder public id the breadcrumb trail should be loaded for, or
+ * `undefined` when there is nothing to load.
+ *
+ * `all` and `root` are view sentinels, not folder ids — `getFolderTrail`
+ * validates its input as a uuid, so requesting a trail for them produced a
+ * guaranteed Zod failure (and React Query's default retries) on every
+ * "All folders" / "Uncategorized" view.
+ */
+export function trailFolderId(folder: string | undefined): string | undefined {
+  return folder && uuidSchema.safeParse(folder).success ? folder : undefined
+}
+
+export function parseLibrarySearch(search: Record<string, unknown>): LibrarySearch {
+  const category = pick(assetCategoryFilterSchema, search.type)
+  return {
+    // Trimmed so `"lecture "` does not become a second cache entry that re-runs
+    // the same query; `normalizeLibrarySearchTerm` is the client-side twin.
+    q: nonEmptyString(search.q)?.trim().slice(0, LIBRARY_SEARCH_MAX_LENGTH) || undefined,
+    folder: folderSelector(search.folder),
+    // `all` is the "All" chip's sentinel for "no filter"; normalising it away
+    // here keeps the unfiltered view on a single React Query cache entry.
+    type: category === 'all' ? undefined : category,
+    sort: pick(librarySortSchema, search.sort),
+    page: positiveInt(search.page),
+  }
+}
 
 /** MIME whitelist mirrors the wireframe: MP4, PDF, PNG, JPG, MP3. */
 export const ASSET_UPLOAD_MIME_SCHEMA = z.enum([
