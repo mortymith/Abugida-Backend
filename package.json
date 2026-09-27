@@ -2,6 +2,7 @@
   "name": "abugida-backend",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "packageManager": "pnpm@12.5.1",
   "engines": {
     "bun": ">=1.4.2"
