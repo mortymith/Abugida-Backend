@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { requireRolesBeforeLoad } from '#/features/auth'
+import { requireRolesBeforeLoad } from '#/features/auth/server'
 import { SecurityView, securityPoliciesQueryOptions } from '#/features/settings'
 
 /**

@@ -101,7 +101,7 @@ export async function getTeamPageImpl(): Promise<TeamPage> {
     email: row.email,
     role: row.role ? mapBetterAuthRoleToPlatformRole(row.role) : null,
     status: row.status,
-    expiresAt: row.expiresAt.toISOString(),
+    expiresAt: row.expiresAt?.toISOString() ?? null,
     inviterName: inviterNames.get(row.inviterId) ?? null,
   }))
 
