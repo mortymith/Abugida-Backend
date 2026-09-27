@@ -59,6 +59,14 @@ export function GeneralSettingsView() {
     if (data && !dirty) setForm(defaults(data))
   }, [data, dirty])
 
+  // Must stay above the pending/error early returns below: a hook that only
+  // mounts once the queries resolve renders more hooks than the previous
+  // render and React throws "Rendered more hooks than during the previous
+  // render".
+  useEffect(() => {
+    if (save.isSuccess) setDirty(false)
+  }, [save.isSuccess])
+
   if (settingsQuery.isPending || referenceQuery.isPending) {
     return (
       <div className="space-y-4">
@@ -78,10 +86,6 @@ export function GeneralSettingsView() {
   }
 
   const isDirty = dirty && JSON.stringify(form) !== JSON.stringify(defaults(data))
-
-  useEffect(() => {
-    if (save.isSuccess) setDirty(false)
-  }, [save.isSuccess])
 
   return (
     <div className="space-y-6">
