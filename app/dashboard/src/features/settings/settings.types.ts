@@ -48,7 +48,8 @@ export interface TeamInvitationItem {
   email: string
   role: string | null
   status: string
-  expiresAt: string
+  /** Better Auth leaves `expires_at` null for invitations created without an expiry. */
+  expiresAt: string | null
   inviterName: string | null
 }
 
