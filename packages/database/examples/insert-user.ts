@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { db } from './db'
-import { users, userProfiles } from '../schema'
+import { users, userProfiles } from '../src/schema'
 
 /**
  * Example: Creating a user with profile validation

@@ -18,7 +18,7 @@ import {
   outboxEventStatusEnum,
   webhookEventStatusEnum,
   principalTypeEnum,
-} from '../../schema/ops'
+} from '../../src/schema/ops'
 
 describe('ops schemas', () => {
   describe('roles', () => {

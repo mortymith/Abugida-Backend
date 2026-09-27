@@ -24,7 +24,7 @@ import {
   outboxEventStatusEnum,
   webhookEventStatusEnum,
   principalTypeEnum,
-} from '../schema'
+} from '../src/schema'
 
 describe('pgEnum definitions', () => {
   describe('auth enums', () => {

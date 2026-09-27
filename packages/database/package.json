@@ -1,8 +1,10 @@
 {
   "name": "@abugida/database",
   "version": "1.0.0",
+  "description": "Shared Drizzle ORM schema by domain plus the PostgreSQL client factory for the Abugida monorepo",
   "type": "module",
-  "private": true,
+  "license": "MIT",
+  "private": false,
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -40,16 +42,16 @@
       "import": "./dist/schema/shared/index.js"
     },
     "./client": {
-      "types": "./dist/src/client.d.ts",
-      "import": "./dist/src/client.js"
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js"
     },
     "./enums": {
-      "types": "./dist/src/enums.d.ts",
-      "import": "./dist/src/enums.js"
+      "types": "./dist/enums.d.ts",
+      "import": "./dist/enums.js"
     },
     "./types": {
-      "types": "./dist/src/types.d.ts",
-      "import": "./dist/src/types.js"
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
     }
   },
   "files": [
@@ -84,6 +86,9 @@
     "@types/node": "^22.10.2",
     "@types/pg": "^8.21.0",
     "drizzle-kit": "^0.31.10",
-    "typescript-eslint": "^8.66.0"
+    "eslint": "^10.8.1",
+    "prettier": "^3.9.6",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.67.0"
   }
 }

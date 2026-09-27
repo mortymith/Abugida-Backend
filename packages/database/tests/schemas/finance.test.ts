@@ -14,7 +14,7 @@ import {
   licenseGrantStatusEnum,
   paymentProviderEnum,
   platformEnum,
-} from '../../schema/finance'
+} from '../../src/schema/finance'
 
 describe('finance schemas', () => {
   describe('purchases', () => {

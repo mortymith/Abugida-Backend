@@ -9,7 +9,7 @@ import {
   insertCourseReviewSchema,
   enrollmentSourceEnum,
   moderationStatusEnum,
-} from '../../schema/learning'
+} from '../../src/schema/learning'
 
 describe('learning schemas', () => {
   describe('enrollments', () => {

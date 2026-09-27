@@ -18,7 +18,7 @@ import {
   selectAccountSchema,
   insertVerificationSchema,
   selectVerificationSchema,
-} from '../../schema/auth'
+} from '../../src/schema/auth'
 
 describe('auth schemas', () => {
   describe('users', () => {

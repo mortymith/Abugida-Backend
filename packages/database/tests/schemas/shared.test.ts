@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test'
-import { insertFileMetadataSchema } from '../../schema/shared'
+import { insertFileMetadataSchema } from '../../src/schema/shared'
 
 describe('shared schemas', () => {
   describe('file metadata', () => {

@@ -1,24 +1,28 @@
 import { describe, it, expect } from 'bun:test'
-import { updateUserSchema, updateUserProfileSchema, updateDeviceSchema } from '../../schema/auth'
+import {
+  updateUserSchema,
+  updateUserProfileSchema,
+  updateDeviceSchema,
+} from '../../src/schema/auth'
 import {
   updateCourseSchema,
   updateModuleSchema,
   updateLessonSchema,
   updateBundleSchema,
-} from '../../schema/catalog'
-import { updatePurchaseSchema, updatePaymentGatewaySchema } from '../../schema/finance'
+} from '../../src/schema/catalog'
+import { updatePurchaseSchema, updatePaymentGatewaySchema } from '../../src/schema/finance'
 import {
   updateEnrollmentSchema,
   updateCourseReviewSchema,
   updateQuizAttemptSchema,
-} from '../../schema/learning'
+} from '../../src/schema/learning'
 import {
   updateRoleSchema,
   updateFeatureFlagSchema,
   updateOutboxEventSchema,
   updateApiKeySchema,
-} from '../../schema/ops'
-import { updateFileMetadataSchema } from '../../schema/shared'
+} from '../../src/schema/ops'
+import { updateFileMetadataSchema } from '../../src/schema/shared'
 
 describe('update schemas', () => {
   describe('auth', () => {

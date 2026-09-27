@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test'
-import * as db from '../index'
+import * as db from '../src/index'
 
 describe('package barrel exports', () => {
   describe('schema tables', () => {

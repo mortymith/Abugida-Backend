@@ -20,7 +20,7 @@ import {
   testimonialStatusEnum,
   testimonialTriggerEnum,
   templateDocumentSchema,
-} from '../../schema/marketing'
+} from '../../src/schema/marketing'
 
 describe('marketing schemas', () => {
   describe('email templates', () => {

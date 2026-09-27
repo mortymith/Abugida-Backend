@@ -1,6 +1,6 @@
 import { eq, and, desc } from 'drizzle-orm'
 import { db } from './db'
-import { courses, modules, lessons, enrollments, courseStats, courseReviews } from '../schema'
+import { courses, modules, lessons, enrollments, courseStats, courseReviews } from '../src/schema'
 
 /**
  * Example: Querying courses with relations

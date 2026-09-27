@@ -13,7 +13,7 @@ import {
   courseStatusEnum,
   bundleStatusEnum,
   contentTypeEnum,
-} from '../../schema/catalog'
+} from '../../src/schema/catalog'
 
 describe('catalog schemas', () => {
   describe('exam types', () => {

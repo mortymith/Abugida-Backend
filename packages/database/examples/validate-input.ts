@@ -1,8 +1,8 @@
-import { insertUserSchema } from '../schema/auth'
-import { insertCourseSchema } from '../schema/catalog'
-import { insertPurchaseSchema } from '../schema/finance'
-import { insertEnrollmentSchema } from '../schema/learning'
-import { insertAuditLogSchema } from '../schema/ops'
+import { insertUserSchema } from '../src/schema/auth'
+import { insertCourseSchema } from '../src/schema/catalog'
+import { insertPurchaseSchema } from '../src/schema/finance'
+import { insertEnrollmentSchema } from '../src/schema/learning'
+import { insertAuditLogSchema } from '../src/schema/ops'
 
 /**
  * Example: Using Zod schemas for API input validation

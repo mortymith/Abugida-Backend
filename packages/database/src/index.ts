@@ -1,7 +1,7 @@
 export * from './schema'
-export * from './src/enums'
-export * from './src/types'
-export { createClient, type DatabaseClient } from './src/client'
+export * from './enums'
+export * from './types'
+export { createClient, type DatabaseClient } from './client'
 
 /**
  * Re-export the Drizzle operators used by workspace consumers. Keep this
