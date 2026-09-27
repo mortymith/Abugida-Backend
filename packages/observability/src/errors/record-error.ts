@@ -88,7 +88,7 @@ export function recordError(
         errMessage,
       )
     } catch {
-      // Logger not initialised — skip rather than throwing
+      // Logger not initialized — skip rather than throwing
     }
   }
 

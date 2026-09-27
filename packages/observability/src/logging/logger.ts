@@ -17,13 +17,18 @@ import { createTraceMergeObject } from './serializers'
 let _logger: Logger | null = null
 
 /**
- * Create (or return) the shared logger singleton.
+ * Initialize the shared logger singleton.
+ *
+ * This is a get-or-create: the first call builds the logger, and every
+ * later call returns the existing instance and ignores `serviceName`.
+ * Call it once per process — `initObservability()` is the intended
+ * entry point.
  *
  * The `mixin` function runs on every log call and injects trace context
  * fields when a span is active, without creating fake IDs when no span
  * exists.
  */
-export function createLogger(serviceName: string): Logger {
+export function initLogger(serviceName: string): Logger {
   if (_logger) {
     return _logger
   }
@@ -73,7 +78,7 @@ export function createLogger(serviceName: string): Logger {
 export function getLogger(): Logger {
   if (!_logger) {
     throw new Error(
-      '[@abugida/observability] Logger not initialised. ' +
+      '[@abugida/observability] Logger not initialized. ' +
         'Call initObservability() before using the logger.',
     )
   }

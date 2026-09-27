@@ -6,7 +6,7 @@ process.env.OTEL_TRACES_EXPORTER = 'none'
 
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
 import { trace, context } from '@opentelemetry/api'
-import { createLogger, getLogger, resetLogger } from '../src/logging/logger'
+import { getLogger, initLogger, resetLogger } from '../src/logging/logger'
 import { createTraceMergeObject } from '../src/logging/serializers'
 import { bindLoggerToContext, getActiveTraceContext } from '../src/logging/context'
 import { redactSensitiveHeaders } from '../src/logging/serializers'
@@ -30,22 +30,22 @@ describe('Logging', () => {
     resetPropagation()
   })
 
-  describe('createLogger', () => {
+  describe('initLogger', () => {
     it('creates a logger with the service name', () => {
-      const logger = createLogger('test-service')
+      const logger = initLogger('test-service')
       expect(logger).toBeDefined()
       expect(typeof logger.info).toBe('function')
       expect(typeof logger.error).toBe('function')
     })
 
     it('is idempotent — returns the same logger on repeated calls', () => {
-      const first = createLogger('test-service')
-      const second = createLogger('test-service')
+      const first = initLogger('test-service')
+      const second = initLogger('test-service')
       expect(first).toBe(second)
     })
 
     it('outputs structured JSON', () => {
-      const logger = createLogger('test-service')
+      const logger = initLogger('test-service')
       logger.info({ userId: 123 }, 'Test message')
       // If no error thrown, logger works
       expect(true).toBe(true)
@@ -55,11 +55,11 @@ describe('Logging', () => {
   describe('getLogger', () => {
     it('throws if initObservability has not been called', () => {
       resetLogger()
-      expect(() => getLogger()).toThrow('Logger not initialised')
+      expect(() => getLogger()).toThrow('Logger not initialized')
     })
 
-    it('returns a logger after createLogger', () => {
-      createLogger('test-service')
+    it('returns a logger after initLogger', () => {
+      initLogger('test-service')
       expect(getLogger()).toBeDefined()
     })
   })

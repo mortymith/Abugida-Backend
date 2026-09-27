@@ -9,7 +9,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
 import { Hono } from 'hono'
 import { trace, context, propagation } from '@opentelemetry/api'
 import { observabilityMiddleware } from '../../src/integrations/hono'
-import { resetLogger, createLogger } from '../../src/logging/logger'
+import { resetLogger, initLogger } from '../../src/logging/logger'
 import { initTracerProvider, resetTracerProvider } from '../../src/tracing/provider'
 import { initMeterProvider, resetMeterProvider } from '../../src/metrics/provider'
 import { getTracer } from '../../src/tracing/tracer'
@@ -35,7 +35,7 @@ describe('Hono Integration', () => {
     })
     initTracerProvider(resource, config)
     initMeterProvider(resource, config)
-    createLogger('api')
+    initLogger('api')
 
     app = new Hono()
     app.use('*', observabilityMiddleware())

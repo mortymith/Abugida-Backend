@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "Shared observability layer for the Abugida backend ecosystem — Pino logging + OpenTelemetry tracing & metrics over OTLP",
   "type": "module",
+  "license": "MIT",
+  "private": false,
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -33,7 +35,8 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "@opentelemetry/api": "1.9.0",
@@ -48,12 +51,12 @@
     "pino": "9.6.0"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.4",
-    "eslint": "^9.18.0",
+    "@types/bun": "^1.4.2",
+    "eslint": "^10.8.1",
     "hono": "^4.7.4",
-    "prettier": "^3.4.2",
-    "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0"
+    "prettier": "^3.9.6",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.67.0"
   },
   "peerDependencies": {
     "hono": ">=4.0.0"
@@ -62,5 +65,19 @@
     "hono": {
       "optional": true
     }
-  }
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "keywords": [
+    "observability",
+    "opentelemetry",
+    "otel",
+    "pino",
+    "logging",
+    "tracing",
+    "metrics",
+    "hono",
+    "abugida"
+  ]
 }

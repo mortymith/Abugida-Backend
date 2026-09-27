@@ -18,7 +18,7 @@ import { metrics } from '@opentelemetry/api'
 let provider: MeterProvider | null = null
 
 /**
- * Initialise the global MeterProvider.
+ * Initialize the global MeterProvider.
  *
  * Safe to call multiple times.
  */
@@ -49,7 +49,7 @@ export function initMeterProvider(resource: Resource, config: ObservabilityConfi
 }
 
 /**
- * Return the already-initialised MeterProvider, or `null`.
+ * Return the already-initialized MeterProvider, or `null`.
  */
 export function getMeterProvider(): MeterProvider | null {
   return provider

@@ -15,7 +15,7 @@ import type { ObservabilityConfig } from '../config'
 let provider: BasicTracerProvider | null = null
 
 /**
- * Initialise the global TracerProvider.
+ * Initialize the global TracerProvider.
  *
  * Safe to call multiple times — returns the already-created provider
  * on subsequent invocations.
@@ -48,7 +48,7 @@ export function initTracerProvider(
 }
 
 /**
- * Return the already-initialised TracerProvider, or `null` if
+ * Return the already-initialized TracerProvider, or `null` if
  * {@link initTracerProvider} has not yet been called.
  */
 export function getTracerProvider(): BasicTracerProvider | null {

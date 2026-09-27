@@ -15,7 +15,7 @@ import {
 } from '@opentelemetry/core'
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks'
 
-let initialised = false
+let initialized = false
 
 /**
  * Install the global context manager and propagators.
@@ -23,7 +23,7 @@ let initialised = false
  * Idempotent — subsequent calls are no-ops.
  */
 export function initPropagation(): void {
-  if (initialised) return
+  if (initialized) return
 
   // 1. Set the AsyncLocalStorage-based context manager.
   //    Without this, `context.with()` is a no-op (NoopContextManager)
@@ -38,7 +38,7 @@ export function initPropagation(): void {
     }),
   )
 
-  initialised = true
+  initialized = true
 }
 
 /**
@@ -46,7 +46,7 @@ export function initPropagation(): void {
  * Intended for test teardown only.
  */
 export function resetPropagation(): void {
-  initialised = false
+  initialized = false
 }
 
 /**

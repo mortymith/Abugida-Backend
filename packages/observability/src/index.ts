@@ -35,18 +35,18 @@ import { initTracerProvider, shutdownTracerProvider } from './tracing/provider'
 import { initMeterProvider, shutdownMeterProvider } from './metrics/provider'
 
 // ─── Logging ────────────────────────────────────────────────────────
-import { createLogger, getLogger } from './logging/logger'
+import { getLogger, initLogger } from './logging/logger'
 
 // ─── Context ────────────────────────────────────────────────────────
 import { initPropagation } from './context/propagation'
 
 // ─── State ──────────────────────────────────────────────────────────
-let initialised = false
+let initialized = false
 
 // ─── Public API ─────────────────────────────────────────────────────
 
 /**
- * Initialise the full observability stack.
+ * Initialize the full observability stack.
  *
  * This function is idempotent — calling it more than once returns
  * immediately without creating duplicate providers or exporters.
@@ -61,7 +61,7 @@ let initialised = false
  * ```
  */
 export async function initObservability(options: ObservabilityInitOptions): Promise<void> {
-  if (initialised) return
+  if (initialized) return
 
   const config = resolveConfig(options)
   const resource = createResource(config.serviceName, config.serviceVersion, config.environment)
@@ -80,9 +80,9 @@ export async function initObservability(options: ObservabilityInitOptions): Prom
   }
 
   // 4. Logging (Pino — stdout/stderr, no OTLP)
-  createLogger(config.serviceName)
+  initLogger(config.serviceName)
 
-  initialised = true
+  initialized = true
 }
 
 /**
@@ -94,7 +94,7 @@ export async function shutdownObservability(): Promise<void> {
   try {
     await Promise.all([shutdownTracerProvider(), shutdownMeterProvider()])
   } finally {
-    initialised = false
+    initialized = false
   }
 }
 

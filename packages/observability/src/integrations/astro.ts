@@ -59,24 +59,24 @@ export function astroObservability(options: AstroObservabilityOptions): {
   name: string
   hooks: Record<string, (...args: unknown[]) => Promise<void> | void>
 } {
-  let initialised = false
+  let initialized = false
 
   return {
     name: '@abugida/observability',
     hooks: {
       async 'astro:server:setup'() {
-        if (initialised) return
+        if (initialized) return
         await initObservability({
           serviceName: options.serviceName,
           serviceVersion: options.serviceVersion,
           environment: options.environment,
         })
-        initialised = true
+        initialized = true
       },
       async 'astro:server:done'() {
-        if (!initialised) return
+        if (!initialized) return
         await shutdownObservability()
-        initialised = false
+        initialized = false
       },
     },
   }

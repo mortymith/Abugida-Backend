@@ -7,7 +7,7 @@ process.env.OTEL_TRACES_EXPORTER = 'none'
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test'
 import { trace, context } from '@opentelemetry/api'
 import { recordError } from '../src/errors/record-error'
-import { resetLogger, createLogger } from '../src/logging/logger'
+import { resetLogger, initLogger } from '../src/logging/logger'
 import { initTracerProvider, resetTracerProvider } from '../src/tracing/provider'
 import { getTracer } from '../src/tracing/tracer'
 import { createResource } from '../src/resource'
@@ -36,7 +36,7 @@ describe('Errors', () => {
       environment: 'test',
     })
     initTracerProvider(resource, config)
-    createLogger('test')
+    initLogger('test')
 
     const tracer = getTracer('test')
     const span = tracer.startSpan('test.error-recording')
@@ -58,7 +58,7 @@ describe('Errors', () => {
       environment: 'test',
     })
     initTracerProvider(resource, config)
-    createLogger('test')
+    initLogger('test')
 
     const tracer = getTracer('test')
     const span = tracer.startSpan('test.non-error')
@@ -72,20 +72,20 @@ describe('Errors', () => {
   })
 
   it('works silently when no span is active', () => {
-    createLogger('test')
+    initLogger('test')
     recordError(new Error('orphan error'), { silent: true })
     expect(true).toBe(true)
   })
 
   it('logs the error when not silent', () => {
-    createLogger('test')
+    initLogger('test')
     // Just verify it doesn't throw
     recordError(new Error('logged error'))
     expect(true).toBe(true)
   })
 
   it('preserves the original error (does not wrap it)', () => {
-    createLogger('test')
+    initLogger('test')
     const original = new Error('preserve me')
 
     recordError(original, { silent: true })

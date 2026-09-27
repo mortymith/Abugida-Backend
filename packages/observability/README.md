@@ -415,16 +415,16 @@ In most projects, initialization lives in a dedicated entry point that runs befo
 // src/observability.ts
 import { initObservability } from '@abugida/observability'
 
-let initialised = false
+let initialized = false
 
 export async function ensureObservability(): Promise<void> {
-  if (initialised) return
+  if (initialized) return
   await initObservability({
     serviceName: 'api',
     serviceVersion: process.env.APP_VERSION ?? '0.0.0',
     environment: process.env.NODE_ENV ?? 'development',
   })
-  initialised = true
+  initialized = true
 }
 ```
 
@@ -476,16 +476,16 @@ pnpm add @abugida/observability
 // This file is imported only by server-side code.
 import { initObservability } from '@abugida/observability'
 
-let initialised = false
+let initialized = false
 
 export async function ensureObservability(): Promise<void> {
-  if (initialised) return
+  if (initialized) return
   await initObservability({
     serviceName: 'course-builder',
     serviceVersion: process.env.APP_VERSION ?? '0.0.0',
     environment: process.env.NODE_ENV ?? 'development',
   })
-  initialised = true
+  initialized = true
 }
 ```
 

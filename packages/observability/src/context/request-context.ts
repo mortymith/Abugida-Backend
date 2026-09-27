@@ -11,7 +11,7 @@ import { extractContext } from './propagation'
 /**
  * Extract trace context from a set of HTTP headers.
  *
- * This is a convenience wrapper that normalises header names
+ * This is a convenience wrapper that normalizes header names
  * to lowercase (as required by the W3C propagator) and calls
  * {@link extractContext}.
  *
