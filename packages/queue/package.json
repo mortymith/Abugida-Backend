@@ -1,41 +1,44 @@
 {
   "name": "@abugida/queue",
   "version": "0.0.1",
-  "description": "Shared message queue layer for the Abugida Application monorepo – BullMQ with Redis",
+  "description": "Shared message queue layer for the Abugida Application monorepo \u2013 BullMQ with Redis",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./core": {
-      "import": "./dist/core/types.js",
-      "types": "./dist/core/types.d.ts"
+      "types": "./dist/core/types.d.ts",
+      "import": "./dist/core/types.js"
     },
     "./integrations": {
-      "import": "./dist/integrations/index.js",
-      "types": "./dist/integrations/index.d.ts"
+      "types": "./dist/integrations/index.d.ts",
+      "import": "./dist/integrations/index.js"
     },
     "./hono": {
-      "import": "./dist/middleware/hono/client.js",
-      "types": "./dist/middleware/hono/client.d.ts"
+      "types": "./dist/middleware/hono/client.d.ts",
+      "import": "./dist/middleware/hono/client.js"
     },
     "./tanstack": {
-      "import": "./dist/middleware/tanstack/client.js",
-      "types": "./dist/middleware/tanstack/client.d.ts"
+      "types": "./dist/middleware/tanstack/client.d.ts",
+      "import": "./dist/middleware/tanstack/client.js"
     }
   },
   "files": [
     "dist",
     "README.md"
   ],
+  "engines": {
+    "bun": ">=1.4.2"
+  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "bun test",
     "test:unit": "bun test tests/unit",
@@ -60,10 +63,10 @@
   "devDependencies": {
     "@types/bun": "^1.4.2",
     "@types/node": "^22.10.2",
-    "eslint": "^10.8.0",
+    "eslint": "^10.8.1",
     "prettier": "^3.9.6",
-    "typescript": "^5.7.0",
-    "typescript-eslint": "^8.66.0"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.67.0"
   },
   "keywords": [
     "queue",
@@ -73,6 +76,6 @@
     "jobs",
     "worker"
   ],
-  "license": "UNLICENSED",
-  "private": true
+  "license": "MIT",
+  "private": false
 }

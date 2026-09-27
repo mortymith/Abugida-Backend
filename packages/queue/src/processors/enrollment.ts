@@ -27,9 +27,9 @@ import { QUEUE_NAMES } from '../definitions/queues.js'
  * - Send enrollment confirmation notifications
  *
  * Integration notes:
- * - Import `db` from `@abugida/db-schemas`
- * - Import `enrollments` from `@abugida/db-schemas/enrollment`
- * - Import `bundles` from `@abugida/db-schemas/course`
+ * - Import `db` from `@abugida/database`
+ * - Import `enrollments` from `@abugida/database/learning`
+ * - Import `bundles` from `@abugida/database/catalog`
  * - Use Drizzle transaction for atomicity
  */
 export const processBundleEnrollmentCreate: JobProcessor<BundleEnrollmentCreateJobData> = async (

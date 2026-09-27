@@ -5,7 +5,7 @@
  * completion from payment callbacks.
  *
  * These processors integrate with the database (via Drizzle ORM and
- * `@abugida/db-schemas`) and use idempotency to prevent duplicate
+ * `@abugida/database`) and use idempotency to prevent duplicate
  * purchase processing from webhook retries.
  */
 
@@ -40,8 +40,8 @@ import { getLogger } from '../utils/logger.js'
  * - Return the payment reference (prepay id) and checkout URL
  *
  * Integration notes:
- * - Import `db` from `@abugida/db-schemas`
- * - Import `purchases` table from `@abugida/db-schemas/finance`
+ * - Import `db` from `@abugida/database`
+ * - Import `purchases` table from `@abugida/database/finance`
  * - Use Drizzle transactions for atomicity
  */
 export const processPurchaseInitiate: JobProcessor<PurchaseInitiateJobData> = async (data, job) => {

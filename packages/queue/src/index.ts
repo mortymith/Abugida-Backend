@@ -126,14 +126,6 @@ export {
   markProcessingFailed,
 } from './utils/idempotency.js'
 
-export {
-  calculateBackoff,
-  withRetry,
-  withConditionalRetry,
-  RetryPredicates,
-  type RetryOptions,
-} from './utils/retry.js'
-
 export { validateJobData, assertJobData, type ValidationResult } from './utils/validators.js'
 
 export { classifyError, safeErrorMessage } from './utils/errors.js'
