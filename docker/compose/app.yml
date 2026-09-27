@@ -54,6 +54,10 @@ services:
       # DATABASE_URL is NOT passed here on purpose — entrypoint.sh builds it from
       # the POSTGRES_* variables above (Postgres via PgBouncer) so the in-container
       # host resolves correctly, or exports it from Vault in staging/prod.
+      # Container port is pinned to 3000 regardless of the app's dev default
+      # (3001): Caddy proxies to api:3000, the image healthcheck curls
+      # localhost:3000, and the profiles publish ${API_PORT}:3000.
+      PORT: '3000'
       REDIS_HOST: redis-primary
       REDIS_PORT: '6379'
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required (set it in .env or export from Vault)}

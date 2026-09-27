@@ -25,7 +25,7 @@ describe('parseAppConfig', () => {
 
   it('applies default values for optional fields', () => {
     const config = parseAppConfig(baseEnv())
-    expect(config.PORT).toBe(3000)
+    expect(config.PORT).toBe(3001)
     expect(config.HOST).toBe('localhost')
     expect(config.LOG_LEVEL).toBe('info')
     expect(config.DATABASE_POOL_MAX).toBe(20)

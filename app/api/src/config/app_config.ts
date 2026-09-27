@@ -114,7 +114,12 @@ const appConfigSchema = z
     // resolved value is exposed as `NODE_ENV` on the parsed config.
     ENVIRONMENT: z.enum(ENV_NAMES).optional(),
     NODE_ENV: z.enum(ENV_NAMES).optional(),
-    PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+    // Dev default is 3001 so `pnpm dev` can run the API and the dashboard
+    // (hardcoded to 3000) side by side. The container port is a deployment
+    // concern and is pinned to 3000 in docker/compose/app.yml, which is what
+    // Caddy (`api:3000`), the image healthcheck, and the published
+    // `${API_PORT}:3000` mapping all expect.
+    PORT: z.coerce.number().int().min(1).max(65535).default(3001),
     HOST: z.string().min(1).default('localhost'),
     LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
 

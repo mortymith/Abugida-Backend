@@ -20,7 +20,7 @@ secret values are never echoed. See `.env.example` for the full annotated list.
 | Variable                              | Required | Description                                                       |
 | ------------------------------------- | -------- | ----------------------------------------------------------------- |
 | `ENVIRONMENT` / `NODE_ENV`            | no       | `development` \| `staging` \| `production` \| `test`              |
-| `PORT` / `HOST`                       | no       | Bind address (defaults `3000` / `0.0.0.0`)                        |
+| `PORT` / `HOST`                       | no       | Bind address (defaults `3001` / `localhost`)                      |
 | `LOG_LEVEL`                           | no       | `fatal`…`trace` (default `info`)                                  |
 | `DATABASE_URL`                        | **yes**  | PostgreSQL connection string (Postgres URL)                       |
 | `BETTER_AUTH_SECRET`                  | **yes**  | Auth signing secret (min 32 chars)                                |
@@ -40,7 +40,7 @@ configurable via `OTEL_*`.
 
 | Command         | Action                                        |
 | --------------- | --------------------------------------------- |
-| `pnpm dev`      | Start dev server with hot reload on port 3000 |
+| `pnpm dev`      | Start dev server with hot reload on port 3001 |
 | `pnpm lint`     | Run ESLint                                    |
 | `pnpm lint:fix` | Run ESLint with auto-fix                      |
 | `pnpm test`     | Run tests                                     |
@@ -72,7 +72,7 @@ must not be supplied by the client.
 ### Google
 
 ```bash
-curl -i -X POST 'http://localhost:3000/auth/sign-in/social' \
+curl -i -X POST 'http://localhost:3001/auth/sign-in/social' \
   -H 'Content-Type: application/json' \
   -d '{"provider":"google"}'
 ```
@@ -80,7 +80,7 @@ curl -i -X POST 'http://localhost:3000/auth/sign-in/social' \
 ### Telegram
 
 ```bash
-curl -i -X POST 'http://localhost:3000/auth/sign-in/social' \
+curl -i -X POST 'http://localhost:3001/auth/sign-in/social' \
   -H 'Content-Type: application/json' \
   -d '{"provider":"telegram"}'
 ```
@@ -104,8 +104,8 @@ For local testing, set the corresponding provider credentials in `.env` and
 configure the provider console's callback URL to:
 
 ```text
-http://localhost:3000/auth/callback/google
-http://localhost:3000/auth/callback/telegram-oidc
+http://localhost:3001/auth/callback/google
+http://localhost:3001/auth/callback/telegram-oidc
 ```
 
 You can optionally set `AUTH_CALLBACK_URL`, `AUTH_ERROR_CALLBACK_URL`, and
