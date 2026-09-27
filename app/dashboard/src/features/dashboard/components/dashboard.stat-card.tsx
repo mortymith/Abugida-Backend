@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from '#/components/ui/card'
 import { Skeleton } from '#/components/ui/skeleton'
 import { StatTrend } from '#/components/common/stat-trend'
-import { formatCurrency, formatInteger, formatRating } from '#/lib/format'
+import { formatCurrency, formatInteger, formatPercent, formatRating } from '#/lib/format'
 import { cn } from 'cn'
 import type { KpiMetric } from '../dashboard.types'
 
@@ -20,7 +20,11 @@ export function StatCard({ metric, className }: { metric: KpiMetric; className?:
         ? formatCurrency(metric.value)
         : metric.format === 'rating'
           ? formatRating(metric.value)
-          : formatInteger(metric.value)
+          : metric.format === 'percent'
+            ? formatPercent(metric.value)
+            : metric.format === 'hours'
+              ? `${formatRating(metric.value)} hrs`
+              : formatInteger(metric.value)
 
   const body = (
     <Card className={cn('gap-1 py-5', className)}>
