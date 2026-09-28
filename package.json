@@ -16,6 +16,7 @@
   },
   "scripts": {
     "dev": "turbo dev",
+    "dev:tui": "turbo dev --ui=tui",
     "build": "turbo build",
     "lint": "turbo lint",
     "format": "turbo format",
