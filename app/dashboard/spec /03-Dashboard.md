@@ -2,6 +2,16 @@
 
 > **Abugida Academy — UX Design Specification** · Part 03 of 11 · [↑ Overview & Sitemap](00-Overview-and-Sitemap.md) · [← Global Navigation](02-Global-Navigation.md) · [Courses →](04-Courses.md)
 
+## What changed in Part 03 (Revision 2)
+
+No new screens and no layout changes. Three deep-link targets moved because course work now lives in a workspace with tabs:
+
+- **Course row** → [S-2.6](04-Courses.md#scr-2-6) Course Workspace · **Overview** (was: a flat Course Detail screen)
+- **Curriculum item search result** → [S-2.17](04-Courses.md#scr-2-17) Curriculum tab with **that item's pane open** (was: the standalone Lesson Editor route)
+- **Publish notification** → [S-2.22](04-Courses.md#scr-2-22) Publish Readiness, showing that course's publication history
+
+The course performance table also gains a **state** column carrying each course's lifecycle pill, so a published course and a draft are distinguishable at a glance — the same [status pill](11-Global-Standards.md#status-colour-mapping) used in the catalog and the workspace header. A course in review shows its pending-decision count, and a draft with unfinished items shows how many items need content, so the dashboard answers _what needs me_ without opening every course.
+
 <a id="scr-1-1"></a>
 
 ##### Screen Name: S-1.1 Analytics Overview
@@ -43,7 +53,7 @@
   2. Interact with charts (hover for details, zoom).
   3. Filter by date range.
   4. Export dashboard data.
-  5. Click course row to navigate to Course Detail.
+  5. Click a course row to open its Course Workspace.
 - **Data Displayed/Modified:** Reads from analytics.aggregated_metrics, analytics.revenue, analytics.enrollments.
 - **States:**
   - **Default:** All cards and charts populated.
@@ -52,8 +62,8 @@
   - **Error:** "Unable to load analytics. Retry?" with retry button.
   - **Date Range Applied:** Stats and charts update to reflect selected range.
 - **Navigation:**
-  - Course Row → [S-2.6](04-Courses.md#scr-2-6) Course Detail
-  - Chart Interaction → [S-5.1](07-Analytics.md#scr-5-1) Course Performance (drill-down)
+  - Course Row → [S-2.6](04-Courses.md#scr-2-6) Course Workspace · Overview
+  - Chart Interaction → [S-2.19](04-Courses.md#scr-2-19) workspace Analytics (course-scoped)
   - "Export" → [S-5.4](07-Analytics.md#scr-5-4) Export Reports
 
 ---
@@ -103,7 +113,7 @@
   - **Empty:** "No revenue data available."
   - **Error:** "Unable to load revenue data. Retry?"
 - **Navigation:**
-  - Course Row → [S-2.6](04-Courses.md#scr-2-6) Course Detail
+  - Course Row → [S-2.6](04-Courses.md#scr-2-6) Course Workspace · Overview
   - Export → [S-5.4](07-Analytics.md#scr-5-4) Export Reports
 
 ---
@@ -112,18 +122,21 @@
 
 ##### Screen Name: S-1.3 Global Search Results
 
-- **Purpose:** Unified results page for the header search bar in [S-A.1](02-Global-Navigation.md#scr-a-1), spanning courses, lessons, students, and content-library assets.
+- **Purpose:** Unified results page for the header search bar in [S-A.1](02-Global-Navigation.md#scr-a-1), spanning courses, curriculum items, students, and content-library assets. Revision 2 adds curriculum items as a first-class result type.
 - **User Role(s):** Admin, Editor, Viewer, Support
 - **Wireframe Layout (Text-Based):**
   ```
   ┌──────────────────────────────────────────────────────────────────┐
   │ Header: Results for "toefl"                          [🔍 toefl] │
-  │ Tabs: [All (18)] [Courses (4)] [Lessons (9)] [Students (3)]      │
+  │ Tabs: [All (18)] [Courses (4)] [Items (9)] [Students (3)]      │
   │       [Assets (2)]                                               │
   ├──────────────────────────────────────────────────────────────────┤
   │ 📚 Courses                                                       │
-  │  TOEFL Complete Course — 234 students — Published                │
-  │  TOEFL Speaking Intensive — 41 students — Draft                  │
+  │  TOEFL Complete Course — 234 students — 🟣 Published             │
+  │  TOEFL Speaking Intensive — 41 students — 🟠 Draft                │
+  │ 📄 Curriculum items                                              │
+  │  Skimming Basics — TOEFL Complete ▸ S2 Reading Skills            │
+  │  Reading check ✎ Quiz — IELTS Advanced ▸ S1 Overview            │
   │ 👨‍🎓 Students                                                     │
   │  Alemayehu K. — enrolled in TOEFL Complete                       │
   │ 📁 Assets                                                        │
@@ -137,11 +150,13 @@
 - **Data Displayed/Modified:** Read-only; queries `courses`, `lessons`, `users`, `asset_library` via a search index.
 - **States:**
   - **Default:** Grouped, ranked results.
-  - **No Results:** [S-7.3](09-Shared-Components.md#scr-7-3) Empty State: "No results for “{query}”. Try a different term."
+  - **Item Results (new):** An item result shows its kind icon, its course, and its section path, so two items with the same title in different courses are distinguishable. A result belonging to an archived item is badged **Archived** and its parent section is shown.
+  - **Archived Courses (new):** Archived-course results are dimmed and badged; they never compete with live results in ranking unless the query matches nothing else.
+  - **No Results:** [S-7.3](09-Shared-Components.md#scr-7-3) Empty State: "No results for {query}. Try a different term."
   - **Loading:** Skeleton rows per group.
 - **Navigation:**
-  - Course result → [S-2.6](04-Courses.md#scr-2-6) Course Detail
-  - Lesson result → [S-2.7](04-Courses.md#scr-2-7) Lesson Editor
+  - Course result → [S-2.6](04-Courses.md#scr-2-6) Course Workspace · Overview
+  - Curriculum item result → [S-2.17](04-Courses.md#scr-2-17) Curriculum tab with that item selected and its pane open — the author lands on the thing they searched for, already in context
   - Student result → [S-4.2](06-Students.md#scr-4-2) Student Profile
   - Asset result → [S-3.3](05-Content-Library.md#scr-3-3) Asset Detail View
 
@@ -174,10 +189,14 @@
   - **Unread Badge:** Sidebar bell shows count of unread items.
   - **Empty:** [S-7.3](09-Shared-Components.md#scr-7-3) Empty State: "You're all caught up."
   - **Real-Time:** New items stream in without a manual refresh.
+  - **Authoring Notifications (new):** the feed gains the events the workspace produces — _item moved_, _section renamed_, _item archived_, _duplicated_, _submitted for review_, _changes requested_, _course published/unpublished/archived_, _readiness check failed_. Each carries the course and the affected section, and clicking one opens the exact place to fix it, not the course root.
+  - **Grouping (new):** Workflow notifications group by course, so a bulk operation does not produce twenty separate rows.
 - **Navigation:**
   - Enrollment notification → [S-4.2](06-Students.md#scr-4-2) Student Profile
   - Payment notification → [S-1.2](#scr-1-2) Revenue Analytics
-  - Publish notification → [S-2.6](04-Courses.md#scr-2-6) Course Detail
+  - Publish notification → [S-2.22](04-Courses.md#scr-2-22) Publish Readiness for that course
   - Team invite → [S-6.2](08-Settings.md#scr-6-2) Team Management
-  - Review requested / decision → [S-2.14](04-Courses.md#scr-2-14) Approval Queue
+  - Review requested / decision → [S-2.14](04-Courses.md#scr-2-14) Approval Queue, filtered to the submission
+  - Authoring event (moved, renamed, archived, duplicated) → [S-2.17](04-Courses.md#scr-2-17) Curriculum tab with the affected row selected
+  - Readiness check failed → [S-2.22](04-Courses.md#scr-2-22) with the failing check expanded
   - "⚙️" → [S-6.1](08-Settings.md#scr-6-1) General Settings (Notifications section)

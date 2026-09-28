@@ -2,11 +2,19 @@
 
 > **Abugida Academy — UX Design Specification** · Part 05 of 11 · [↑ Overview & Sitemap](00-Overview-and-Sitemap.md) · [← Courses](04-Courses.md) · [Students →](06-Students.md)
 
+## What changed in Part 05 (Revision 2)
+
+The library itself is unchanged. It became more central to the authoring flow, so three things were added:
+
+- **Picker mode** ([S-3.1](05-Content-Library.md#scr-3-1)) is now a first-class mode with a **return-to** target, because media is attached from inside the curriculum item pane and must return the author to the item they left.
+- **Asset Detail** ([S-3.3](05-Content-Library.md#scr-3-3)) gains _Attach to curriculum item…_, and its _Used in_ list deep-links into the workspace Curriculum tab with the item selected, instead of the retired flat lesson screen.
+- **Transcription** ([S-3.6](05-Content-Library.md#scr-3-6)) resolves its return path to the workspace item pane, and captions on video items are now a publish blocker (`RC-5`).
+
 <a id="scr-3-1"></a>
 
-##### Screen Name: S-3.1 Asset Repository
+##### Screen Name: S-3.1 Asset Repository 🔄 CHANGED
 
-- **Purpose:** Central repository for all media assets (videos, PDFs, images) used across courses. Supports upload, organization, tagging, and search.
+- **Purpose:** Central repository for all media assets (videos, PDFs, images) used across courses. Supports upload, organization, tagging, and search. In Revision 2 it also serves as the media picker invoked from inside the curriculum item pane.
 - **User Role(s):** Admin, Editor, Viewer
 - **Wireframe Layout (Text-Based):**
   ```
@@ -49,10 +57,15 @@
   - **Uploading:** Upload progress modal.
   - **Deleting:** [S-7.1](09-Shared-Components.md#scr-7-1) Confirmation: "This asset is used in 3 courses. Are you sure you want to delete it?"
   - **Error:** "Unable to load assets. Retry?"
+  - **Picker Mode (new):** the header names the destination item and its full path; selection is multi-select with a running count; the primary CTA is **Attach selected**; a persistent _Return to {item}_ link is always present. Attaching never navigates away from the item — on success the picker closes and the item pane shows the new media.
+  - **Return-To (new):** entering the library from an item records that item. Every way out — back, cancel, `Esc`, browser Back — returns to the same item with the pane still open and the scroll position preserved. Losing an author's place because they opened a file picker is a defect, not a detail.
+  - **Already Attached (new):** assets attached to the calling item are shown checked and badged **Attached**, so the same asset is not attached twice by accident.
 - **Navigation:**
   - "Upload" → [S-3.2](#scr-3-2) Asset Upload Modal
   - Asset Click → S-3.3 Asset Detail View
   - "Edit" → S-3.3 Asset Detail View
+  - **Attach selected** → [S-2.7](04-Courses.md#scr-2-7) item pane, selection unchanged
+  - _Return to {item}_ → [S-2.17](04-Courses.md#scr-2-17) Curriculum tab with that item's pane open
 
 ---
 
@@ -112,7 +125,7 @@
 
 <a id="scr-3-3"></a>
 
-##### Screen Name: S-3.3 Asset Detail View
+##### Screen Name: S-3.3 Asset Detail View 🔄 CHANGED
 
 - **Purpose:** Detail and management screen for a single content-library asset: preview, metadata, usage, and version history.
 - **User Role(s):** Admin, Editor, Viewer
@@ -141,14 +154,18 @@
   3. Upload a new version or replace the file.
   4. View everywhere the asset is used.
   5. Delete the asset.
-- **Data Displayed/Modified:** Reads/writes `asset_library`, `asset_versions`, `asset_usage`.
+  6. **Attach to a curriculum item** — pick a course, a section, and an item, then attach without leaving the asset view.
+- **Data Displayed/Modified:** Reads/writes `asset_library`, `asset_versions`, `asset_usage`; attachment writes the target item's media reference.
 - **States:**
   - **Default:** Preview + metadata populated.
   - **In Use Delete Attempt:** Warns "This asset is used in 3 lessons" before allowing deletion via [S-7.1](09-Shared-Components.md#scr-7-1).
   - **Uploading New Version:** Progress bar; previous version retained.
   - **Success:** Toast: "Asset updated."
+  - **Used In Entries (new):** each entry shows course, section, item, and the item's kind, and links into the workspace Curriculum tab with that item selected. Entries in archived items are dimmed and badged **Archived** so a library manager can tell live usage from historical usage.
+  - **Attach Picker (new):** a scoped course/section/item selector limited to courses the user can edit; after attaching, the asset's usage list updates and a toast offers _Open item_.
 - **Navigation:**
-  - "Used In" row → [S-2.7](04-Courses.md#scr-2-7) Lesson Editor
+  - "Used In" row → [S-2.17](04-Courses.md#scr-2-17) Curriculum tab with that item's pane open
+  - "Attach to curriculum item…" → the item pane of the chosen target
   - "Delete Asset" → [S-7.1](09-Shared-Components.md#scr-7-1) Confirmation → [S-3.1](#scr-3-1) Asset Repository
   - Non-inline preview → [S-3.5](#scr-3-5) File Preview Modal
 
@@ -252,13 +269,13 @@
   - **Generating:** Progress with time estimate; the editor stays navigable but locked from edits; streaming segments appear as they are recognized.
   - **Editing:** Autosave every 30 seconds per segment; playback follows the selected segment (click-to-seek).
   - **Long-Line Warning:** Segments exceeding 42 characters per line / 2 lines get a ⚠️ styling hint (readability best practice).
-  - **Applied:** Toast: "Captions applied to lesson." — lesson shows a transcript tab for students.
+  - **Applied:** Toast: "Captions applied to lesson." — the item shows a transcript tab for students, and readiness check `RC-5` stops blocking for captions on that item.
   - **Failed:** "Transcription failed for 0:00–0:30 (unclear audio)." with per-range retry.
 - **Validation & Feedback:**
   - Segment times must be monotonic (no overlaps); overlapping edits snap to the nearest free gap.
   - Import validates .srt/.vtt syntax and reports malformed blocks with line numbers.
   - Transcript text is indexed for [S-1.3](03-Dashboard.md#scr-1-3) Global Search once applied.
 - **Navigation:**
-  - Opened from [S-2.7](04-Courses.md#scr-2-7) Lesson Editor (video lessons → "Captions & transcript") and [S-3.3](#scr-3-3) Asset Detail (video assets)
+  - Opened from the [S-2.7](04-Courses.md#scr-2-7) item pane (video items → _Captions & transcript_) and from [S-3.3](#scr-3-3) Asset Detail (video assets)
   - "Export" → file download (.srt/.vtt)
-  - "Save & Apply" → returns to the calling screen ([S-2.7](04-Courses.md#scr-2-7) or [S-3.3](#scr-3-3))
+  - **Save & Apply** → returns to the calling screen. When the call came from the workspace item pane, it returns to that **same item in the Curriculum tab with the pane still open and the editor scroll position restored**, and the item row in the tree shows a captions badge. This is a hard requirement: transcription is a long task, and returning to the course root loses the author's work context.

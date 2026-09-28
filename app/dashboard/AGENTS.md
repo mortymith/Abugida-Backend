@@ -1,308 +1,135 @@
 # Dashboard App — Agent Instructions
 
-You are working on the **Abugida Academy dashboard**, a TanStack Start application that serves as the admin/instructor interface for the Abugida education platform.
+TanStack Start admin/instructor app for the Abugida platform (port 3000). Repo-wide tooling, monorepo layout, the shared-package list, and code style live in the root `AGENTS.md`. This file covers only what is dashboard-specific.
 
----
+## Sources of truth
 
-## 1. Architecture Overview
+| File                                  | Owns                                                                                                             | Read when                               |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `DESIGN.md`                           | Design system of record: tokens, layout, components, roles, a11y, i18n, resilience, spec-conflict register (§15) | Any UI, layout, copy, or state decision |
+| `theme.css`                           | Tailwind v4 implementation of those tokens — **not wired in yet, see below**                                     | Picking a token value                   |
+| `spec /` (trailing space in the name) | Product specs `00`–`12`. Owns **screen behaviour**                                                               | Building or changing a screen           |
+| `.env.example`                        | Env var contract                                                                                                 | Adding a config value                   |
 
-- **Framework:** TanStack Start (file-based routing via TanStack Router, SSR, server functions).
-- **Runtime:** Bun >= 1.4.2. Never use Node-specific APIs.
-- **Package manager:** pnpm >= 12 (workspace protocol). Never run `bun install` or `bun add`.
-- **Monorepo scope:** This app lives at `app/dashboard`. Shared packages: `@abugida/auth`, `@abugida/database`, `@abugida/queue`, `@abugida/storage`.
+`DESIGN.md` owns visual/interaction rules, `spec /` owns screen behaviour. When they disagree, `DESIGN.md` §15 records the resolution — follow it, don't pick a side and don't edit the spec to match code.
 
----
-
-## 2. Directory Structure
+## Layout
 
 ```text
 src/
-├── routes/          # TanStack Router file-based routes
-├── features/        # Domain features (auth, courses, lessons, etc.)
-├── components/      # Globally reusable UI components
-│   ├── ui/          # Design-system primitives (shadcn)
-│   └── common/      # Application-level shared components
-├── config/          # Centralized configuration (env, auth, db)
-├── lib/             # Generic utilities (auth client, cn helper)
-├── server/          # Server-only code
-│   └── functions/   # TanStack Start server functions
-├── integrations/    # Third-party integration wiring (TanStack Query)
-├── styles.css       # Global styles (Tailwind v4 + shadcn)
-└── router.tsx       # Router factory
+├── routes/            # File-based routes: _auth/, _app/, __root.tsx, index.tsx
+├── features/          # 13 domains: analytics, auth, courses, dashboard, library,
+│                      #   marketing, navigation, notifications, onboarding, search,
+│                      #   settings, students, support
+├── components/
+│   ├── ui/            # shadcn primitives — shadcn owns naming and content
+│   ├── common/        # App-wide shared: empty/error/confirm/palette/toast
+│   └── layout/        # App shell — layout.<name>.tsx
+├── config/            # Singletons: app, auth, auth.server, db, observability
+├── lib/               # Cross-cutting utils: format, entity-links, auth-client, utils
+├── hooks/             # Generic hooks only
+├── server/functions/  # App-wide server functions; domain ones live in features/*/server
+├── integrations/      # TanStack Query root provider
+├── default-entry/     # Server entry — auth path dispatch, then the Start handler
+├── styles.css         # The only live global stylesheet
+└── router.tsx
 ```
 
-Only create directories that are actually needed. Never create empty folders to match a template.
+Create a directory only when code needs it. Never scaffold empty folders.
 
----
+## Routing
 
-## 3. Routing Conventions
+- `_auth/` — unauthenticated: `login`, `signup`, `mfa`. No guard.
+- `_app/` — authenticated. `_app/route.tsx` `beforeLoad` runs `requireAuthBeforeLoad` and resolves the platform role once per navigation. Put new screens in an `_app/<area>/` folder with its own `route.tsx` layout, mirroring the existing areas.
+- `__root.tsx` is the document shell; `index.tsx` is the root redirect.
+- Route files stay thin: define the route, compose features, delegate logic to `features/`.
 
-All routes live under `src/routes/`. Use TanStack Router's file-based routing.
-
-Route groups:
-
-- `_auth/` — Unauthenticated pages (login, signup, mfa). No auth guard.
-- `_app/` — Authenticated pages. Protected by `requireAuthBeforeLoad` in `_app/route.tsx`.
-- `__root.tsx` — Root document shell (HTML, head, devtools, scripts).
-
-After adding or renaming routes, regenerate the route tree:
+After adding or renaming a route, regenerate the tree:
 
 ```bash
-pnpm --filter @abugida/dashboard generate-routes
+pnpm --filter @abugida/dashboard generate-routes   # writes routeTree.gen.ts (never hand-edit)
 ```
 
-Route files should stay thin: define the route, compose features, and delegate business logic to `features/`. Do not place substantial logic directly in route files.
+## Features
 
----
-
-## 4. Feature Organization
-
-Business logic belongs in `src/features/<domain>/`. Each feature follows:
-
-```text
+```
 features/<domain>/
-├── components/      # Domain-specific UI
-├── hooks/           # Domain-specific hooks (queries, mutations, state)
-├── schemas/         # Zod validation schemas
-├── server/          # Server-only domain logic
-└── index.ts         # Public exports for this feature
+├── components/   # Domain UI
+├── hooks/        # Domain hooks (queries, mutations, local state)
+├── schemas/      # Zod schemas
+├── server/       # Server functions + server-only impls
+└── index.ts      # Public API — import this, not internal files
 ```
 
-Only create the subdirectories a feature actually needs. A feature's `index.ts` exports its public API — other features and routes import through it, never through internal files directly.
+- Create only the subdirectories the domain needs.
+- Cross-feature and route imports go through `index.ts`. A few legacy deep type/const imports exist; don't add more.
+- Keep pure logic (math, parsing, reducers, permission and state machines) in framework-free `<domain>.<topic>.ts` modules at the feature root. This is what the 37 `bun test` suites exercise directly.
+- `features/*/server/` pairs a thin `createServerFn` wrapper (`<domain>.<topic>.ts`) with the real work in `<domain>.<topic>.impl.server.ts`, imported dynamically inside the handler. **Follow this pattern** for new server code — it keeps the wrapper safe for the client bundle.
 
-Existing feature: `features/auth/` (login, signup, MFA, session, provider auth).
+## Naming
 
----
+- Application files: dot-separated `<domain>.<purpose>.<ext>` — `auth.session.ts`, `courses.markdown.ts`, `layout.app-sidebar.tsx`.
+- Server-only: `.server.ts` suffix, with the implementation in `.impl.server.ts`.
+- Components: PascalCase export inside a dot-named file (`auth.login-form.tsx` → `export function LoginForm()`).
+- Route files: TanStack Router naming (`__root.tsx`, `route.tsx`, `$param.tsx`, `index.tsx`).
+- `src/components/ui/` is kebab-case and shadcn-managed — add components via shadcn, don't hand-convert.
+- Tests: `tests/<domain>.<purpose>.test.ts`, colocated in the flat `tests/` dir, not next to source. Run with `pnpm test` (bun test).
+- Seed/migration scripts: `scripts/<app>.<purpose>.ts`.
 
-## 5. File Naming
+## Config and singletons
 
-Use **dot-separated** names for all application files:
+**`process.env` is banned by an ESLint rule** (only `src/config/app.config.ts` and `server.mjs` are exempt). To add a variable: add it to the Zod schema in `src/config/app.config.ts`, document it in `.env.example`, then read it as `env.VAR_NAME` on the server. Client code may only read `import.meta.env.VITE_*` — which is why most vars exist in server/`VITE_` pairs.
 
-```text
-<domain>.<purpose>.<extension>
-```
+Never create a second instance of anything in this table:
 
-Examples: `auth.login-form.tsx`, `auth.session.ts`, `auth.signup.schema.ts`.
+| Singleton             | Lives in                                                              |
+| --------------------- | --------------------------------------------------------------------- |
+| Env                   | `src/config/app.config.ts` → `env`                                    |
+| DB client             | `src/config/db.config.ts` → `db`                                      |
+| Auth server instance  | `src/config/auth.server.ts` → `auth`                                  |
+| Auth server functions | `src/config/auth.config.ts` → `authServerFns` (consumed by the guard) |
+| Auth client           | `src/lib/auth-client.ts` → `authClient`                               |
+| Query client          | `src/integrations/tanstack-query/root-provider.tsx`                   |
+| Observability         | `src/config/observability.config.ts`                                  |
 
-Avoid kebab-case (`auth-login-form.tsx`) or bare names (`schema.ts`).
+Shared packages: import from `@abugida/{auth,database,queue,storage,observability}`. Subpaths in use are `@abugida/auth/tanstack/{client,guard,server}`, `@abugida/database/{client,auth,catalog,finance,learning,marketing,ops}`, and `@abugida/queue/tanstack`. Never reimplement their logic locally.
 
-React component names use PascalCase while filenames stay dot-based:
+Auth is Google + Telegram only, via the `twoFactor` and `organization` plugins. Never add password, email, or password-reset UI. Any flow that assumes an email address (invites, receipts, notifications) needs a Telegram-safe path — a claimable link or code.
 
-```text
-File: auth.login-form.tsx
-Export: function LoginForm() { ... }
-```
+## Server / client boundary
 
-Route files follow TanStack Router's required naming (`__root.tsx`, `route.tsx`, `$param.tsx`, `index.tsx`).
+- **Server-only:** `src/config/{app,auth,auth.server,db,observability}.config.ts`, every `*.server.ts`, `src/default-entry/`.
+- **Client-safe:** `src/components/`, `src/lib/auth-client.ts`, `src/hooks/`, `features/*/{components,hooks,schemas}`.
+- `createServerFn` from `@tanstack/react-start` is the boundary. Reach server-only modules through a dynamic `await import()` inside the handler, never a top-level import.
+- Permission checks are server-side. Hiding a nav item, route, or count in the UI is convenience, not security — enforce with `requireRolesBeforeLoad` in `beforeLoad`.
 
----
+## UI stack
 
-## 6. Shared Package Usage
+- shadcn (`base-maia`) + Tailwind v4 via `@tailwindcss/vite`; shadcn config in `components.json`.
+- `hugeicons` (`@hugeicons/react`) is the shipped icon set. One set only, no emoji.
+- `cn()` from the `cn` package, re-exported by `src/lib/utils.ts`.
+- `src/components/ui/` stays generic — no domain logic. Shared app pieces go in `components/common/`, shell pieces in `components/layout/`.
+- Global styles: `src/styles.css`.
 
-The dashboard depends on four workspace packages. Always import from these instead of reimplementing functionality locally.
+## TanStack AI
 
-| Package             | Import paths                                                                       | Purpose                         |
-| ------------------- | ---------------------------------------------------------------------------------- | ------------------------------- |
-| `@abugida/auth`     | `@abugida/auth`, `@abugida/auth/tanstack`, `@abugida/auth/providers`               | Auth server, client, middleware |
-| `@abugida/database` | `@abugida/database/client`, `@abugida/database/auth`, `@abugida/database/<schema>` | Drizzle client, domain schemas  |
-| `@abugida/queue`    | `@abugida/queue`, `@abugida/queue/tanstack`                                        | BullMQ queue management         |
-| `@abugida/storage`  | `@abugida/storage`, `@abugida/storage/tanstack`                                    | S3-compatible object storage    |
+`@tanstack/ai` with OpenAI / Anthropic / Gemini / Ollama adapters is installed. Use the `chat()` API — not Vercel AI SDK's `streamText()`. Read API keys from `env.*`; never hardcode or pass them from the client. Existing bridges: `features/courses/server/courses.ai.impl.server.ts`, `features/library/server/library.transcripts.impl.server.ts`.
 
-Each shared package has framework-specific subpaths. Use the `/tanstack` subpath for TanStack Start integrations. Never create local copies of auth, database, queue, or storage logic.
+## Design-system migration state
 
----
+`theme.css` is the token target but is **not imported anywhere**. `src/styles.css` is the only live stylesheet, so:
 
-## 7. Environment Variables — Centralized Config
+- **The only tokens that resolve today are the shadcn `base-maia` ones** in `styles.css`: `bg-background`, `text-foreground`, `text-muted-foreground`, `bg-primary`, `border-border`, `bg-card`, `bg-chart-*`, etc.
+- The `theme.css` utilities — `bg-surface`, `bg-app`, `text-ink`, `border-hairline`, `.pill-*`, `.btn-*`, `.card`, `.input`, `.skeleton`, `.nav-item`, `min-w-target`, `num`, `z-toast` — **do not exist yet**. Using them ships unstyled markup.
+- Current fonts are Outfit Variable + Raleway Variable. `theme.css` targets Inter + Noto Sans Ethiopic + JetBrains Mono; the swap is pending with the import.
+- To land the migration: `@import '../../theme.css';` after `@import 'tailwindcss';` in `src/styles.css`, then migrate component by component. Don't fork a copy into `src/`, and don't add a new hardcoded colour to either system while the split exists.
+- Dark mode is a scaffolded token set, not a finished theme. Don't add dark-only styling.
 
-**Never access `process.env` directly in application code.** An ESLint rule enforces this — only `src/config/app.config.ts` and `server.mjs` are exempt.
+Rules that hold on either palette — details in `DESIGN.md` §§3, 5, 7, 9, 10, 12:
 
-All environment access goes through `src/config/app.config.ts`:
-
-```ts
-import { env } from '#/config/app.config'
-
-// Use env.DATABASE_URL, env.BETTER_AUTH_SECRET, etc.
-```
-
-The config file:
-
-1. Calls `dotenv` to load `.env` into `process.env`.
-2. Validates with a Zod schema.
-3. Exports a fully typed `env` object.
-
-If you need a new env var:
-
-1. Add it to the Zod schema in `src/config/app.config.ts`.
-2. Add it to `.env.example` with a comment.
-3. Reference it via `env.VAR_NAME` — never `process.env.VAR_NAME`.
-
----
-
-## 8. Better Auth Integration
-
-Auth is configured in `src/config/auth.config.ts` using the shared `@abugida/auth` package:
-
-- `createAuth(...)` — Server-side auth instance (Better Auth with two-factor + organization plugins).
-- `getServerSession` / `refreshServerSession` / `signOutServer` / `getServerAccessToken` — Server functions for session management.
-- `authServerFns` — Exported bundle of server functions, consumed by `requireAuthBeforeLoad`.
-
-Client-side auth: `src/lib/auth-client.ts` creates a same-origin client via `createAuthClient` from `@abugida/auth/tanstack/client`. The TanStack server entry in `src/default-entry/server.ts` handles the configured auth path.
-
-When adding new auth features, use the existing `createServerFn` pattern from `@tanstack/react-start` and access auth through the shared config — do not create separate auth instances.
-
----
-
-## 9. Database Usage
-
-The database client is instantiated once in `src/config/db.config.ts`:
-
-```ts
-import { createClient } from '@abugida/database/client'
-import { env } from './app.config'
-export const db = createClient(env.DATABASE_URL)
-```
-
-Domain schemas are imported from `@abugida/database/<domain>` (e.g., `@abugida/database/auth`).
-
-For database scripts (generate, migrate, push, pull, studio), run from the database package:
-
-```bash
-pnpm --filter @abugida/database db:generate
-pnpm --filter @abugida/database db:migrate
-pnpm --filter @abugida/database db:push
-```
-
----
-
-## 10. Server Functions
-
-Server-only code lives in `src/server/functions/`. Use `createServerFn` from `@tanstack/react-start`:
-
-```ts
-import { createServerFn } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
-```
-
-Pattern:
-
-- `.validator(...)` — Define and validate input with Zod or a type assertion.
-- `.handler(...)` — Implement the server logic.
-
-Feature-specific server logic should live in `features/<domain>/server/` instead of `src/server/functions/` when it is domain-owned.
-
-Never expose server-only imports to client code. Use `createServerFn` as the boundary.
-
----
-
-## 11. UI and Component Conventions
-
-- **Component library:** shadcn (base-maia style, hugeicons icon library).
-- **Styling:** Tailwind CSS v4 via `@tailwindcss/vite`. Global styles in `src/styles.css`.
-- **Fonts:** Outfit Variable (body), Raleway Variable (headings), via `@fontsource-variable`.
-- **Utility:** `cn()` from the `cn` package, re-exported via `src/lib/utils.ts`.
-- **Additional UI libs:** `@base-ui/react`, `@dnd-kit/*`, `@tiptap/*`, `class-variance-authority`, `input-otp`, `sonner`, `date-fns`.
-
-UI components go in `src/components/ui/`. They must be generic — no domain-specific business logic.
-
-Common reusable components (empty states, loading states, error states) go in `src/components/common/`.
-
-Layout components go in `src/components/layout/` (create when needed).
-
----
-
-## 12. Import and Dependency Rules
-
-Path aliases:
-
-- `#/` → `./src/*` (preferred, matches `package.json` imports field)
-- `@/` → `./src/*` (also configured in tsconfig)
-
-Dependency direction (strict):
-
-```text
-routes → features → lib / integrations
-```
-
-- Routes import from features. Features import from lib/integrations.
-- Never create circular dependencies between features.
-- Import from a feature's `index.ts` — never reach into its internal files.
-
----
-
-## 13. Server/Client Boundaries
-
-- **Server-only:** `src/server/`, `src/config/auth.config.ts`, `src/config/db.config.ts`, `features/*/server/`.
-- **Client-safe:** `src/components/`, `src/lib/auth-client.ts`, `src/features/*/components/`, `src/features/*/hooks/`.
-- `src/config/app.config.ts` is server-only despite its name (uses `process.env`, `dotenv`).
-- Client-side env access uses `import.meta.env.VITE_*` — never bare `env.*` for browser code.
-
----
-
-## 14. Duplicate Configuration Rules
-
-- Never create a second database client, auth instance, or query client. Use the singletons in `src/config/db.config.ts`, `src/config/auth.config.ts`, and `src/integrations/tanstack-query/root-provider.tsx`.
-- Never re-instantiate a shared package locally. If `@abugida/database` provides `createClient`, use it — don't write your own Drizzle setup.
-- The auth client in `src/lib/auth-client.ts` is the single client-side auth instance.
-
----
-
-## 15. Naming Conventions Summary
-
-| Category         | Convention                  | Example                                |
-| ---------------- | --------------------------- | -------------------------------------- |
-| Files            | Dot-separated, lowercase    | `auth.login-form.tsx`                  |
-| React components | PascalCase export           | `export function LoginForm()`          |
-| Hooks            | `use` prefix, dot-separated | `useSession`, `useLastProvider`        |
-| Schemas          | `<domain>.schema.ts`        | `auth.signup.schema.ts`                |
-| Server functions | `<domain>.<action>.ts`      | `auth.login-event.ts`                  |
-| Config files     | `<domain>.config.ts`        | `app.config.ts`, `auth.config.ts`      |
-| Route files      | TanStack Router conventions | `__root.tsx`, `route.tsx`, `login.tsx` |
-
----
-
-## 16. Development Commands
-
-Run from the dashboard directory (`app/dashboard/`):
-
-```bash
-pnpm dev                    # Start dev server (port 3000)
-pnpm build                  # Production build
-pnpm lint                   # ESLint
-pnpm format                 # Prettier + ESLint fix
-pnpm check                  # Prettier check only
-pnpm typecheck              # TypeScript --noEmit
-pnpm generate-routes        # Regenerate routeTree.gen.ts
-pnpm clean                  # Remove dist, .turbo, node_modules
-```
-
-Monorepo-scoped (from repo root):
-
-```bash
-pnpm --filter @abugida/dashboard <script>
-```
-
----
-
-## 17. Code Style
-
-- No semicolons, single quotes, trailing commas, printWidth 100.
-- React 19, TypeScript 6 (strict mode).
-- Prefer `export function` over arrow functions for components.
-- Use `import type` for type-only imports (`verbatimModuleSyntax` is enabled).
-
----
-
-## 18. Before Creating a File
-
-1. Search for existing functionality that solves the same problem.
-2. Determine which feature domain owns the functionality.
-3. Follow the dot-based naming convention.
-4. Keep route files thin — delegate to features.
-5. Do not duplicate logic already in a shared package.
-6. Do not reorganize unrelated code.
-
----
-
-## 19. TanStack AI
-
-The dashboard includes TanStack AI packages (`@tanstack/ai`, adapters for OpenAI, Anthropic, Gemini, Ollama). When implementing AI features, use the `chat()` API (not Vercel AI SDK's `streamText()`). Import from `@tanstack/ai` and framework-specific adapters. Configure via the centralized env config — never hardcode API keys.
+- Semantic tokens only in components; never consume palette values (`--color-violet-*`) directly.
+- WCAG 2.2 AA: 4.5:1 text, 3:1 UI. One meaning per colour — purple is brand/interaction, `Published` is success, AI is never signalled by hue alone (sparkle + "AI draft" + dashed border + human accept).
+- Focus ring is never removed; every interactive element is keyboard operable with default/hover/focus/active/disabled/loading/error states.
+- Every screen ships loading, empty, zero-result, error, 403, and offline states, plus autosave, resumable uploads, session-expiry, and concurrent-edit handling per `DESIGN.md` §12.
+- Externalize all strings. Ethiopic is first-class: Noto Sans Ethiopic, `line-height: 1.6`, no letter-spacing, no fixed-px line clamps, no required name split.
+- Revenue is redacted **server-side** for the Support role. Charts: max 6 series then "Other", plus a data-table and text alternative; pie only for ≤4 slices.

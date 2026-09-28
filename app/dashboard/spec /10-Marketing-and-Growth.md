@@ -137,8 +137,8 @@ Screens for attracting, converting, and retaining students: email campaigns with
   - Codes are case-insensitive at checkout and displayed uppercase in the table.
   - 100%-access codes on paid courses require [S-7.1](09-Shared-Components.md#scr-7-1) confirmation (revenue impact).
 - **Navigation:**
-  - Opened from [S-A.1](02-Global-Navigation.md#scr-a-1) Marketing group; linked from [S-2.4](04-Courses.md#scr-2-4) Pricing step ("Discount Options")
-  - Course name in Scope → [S-2.6](04-Courses.md#scr-2-6) Course Detail
+  - Opened from [S-A.1](02-Global-Navigation.md#scr-a-1) Marketing group; linked from the workspace Settings tab's Pricing & enrollment section, [S-2.20](04-Courses.md#scr-2-20), where a course references the codes that apply to it
+  - Course name in Scope → [S-2.6](04-Courses.md#scr-2-6) Course Workspace · Overview
 
 ---
 
@@ -226,5 +226,5 @@ Screens for attracting, converting, and retaining students: email campaigns with
   - Testimonial display respects [S-6.10](08-Settings.md#scr-6-10) privacy state: anonymized students' testimonials are automatically unlisted.
 - **Navigation:**
   - Opened from [S-A.1](02-Global-Navigation.md#scr-a-1) Marketing group
-  - Course attribution → [S-2.6](04-Courses.md#scr-2-6) Course Detail
+  - Course attribution → [S-2.6](04-Courses.md#scr-2-6) Course Workspace · Overview
   - Student name → [S-4.2](06-Students.md#scr-4-2) Student Profile

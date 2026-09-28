@@ -2,11 +2,19 @@
 
 > **Abugida Academy — UX Design Specification** · Part 07 of 11 · [↑ Overview & Sitemap](00-Overview-and-Sitemap.md) · [← Students](06-Students.md) · [Settings →](08-Settings.md)
 
+## What changed in Part 07 (Revision 2)
+
+No screen was added or removed. Two relationships were made explicit, and one capability added:
+
+- **[S-5.1](07-Analytics.md#scr-5-1) Course Performance is the canonical implementation** behind the Course Workspace's **Analytics** tab ([S-2.19](04-Courses.md#scr-2-19)). The workspace tab is this analysis with the course filter locked, plus an **Items** tab and an actionable insights block. It is not a second analytics implementation.
+- **[S-5.3](07-Analytics.md#scr-5-3) Drop-off Analysis** becomes a tab of that workspace view rather than a separate destination. It remains reachable standalone for cross-course comparison.
+- **Per-item engagement (new):** [S-5.1](07-Analytics.md#scr-5-1) now has a row per curriculum item — reach, completion, time-on-item, quiz average — whose rows deep-link into the workspace item pane. This is the bridge from "the numbers are bad" to "here is the paragraph to rewrite", and it is what makes analytics actionable for an author rather than only for a manager.
+
 <a id="scr-5-1"></a>
 
-##### Screen Name: S-5.1 Course Performance
+##### Screen Name: S-5.1 Course Performance 🔄 CHANGED
 
-- **Purpose:** Detailed analytics for a specific course including engagement metrics, completion rates, and student performance trends.
+- **Purpose:** Detailed analytics for a specific course including engagement metrics, completion rates, and student performance trends. In Revision 2 it is also the canonical implementation of the Course Workspace's Analytics tab ([S-2.19](04-Courses.md#scr-2-19)) and gains per-item engagement rows.
 - **User Role(s):** Admin, Editor, Viewer
 - **Wireframe Layout (Text-Based):**
   ```
@@ -36,6 +44,12 @@
   │ | Module 2: Reading  | 72%        | 68%       | 18%      | │ │
   │ | Module 3: Listening| 45%        | 52%       | 35%      | │ │
   │ +─────────────────────────────────────────────────────────────+ │
+  │ Item Engagement (24):                                           │
+  │ | Item                  | Reached | Completed | Avg time |   |
+  │ | S1 · What is TOEFL?   | 231     | 96%       | 11m      |   |
+  │ | S2 · Test format  ⚠   | 228     | 41%       | 4m       |   |
+  │ | ✎ Essay draft         | —        | unpublish. | —       |   |
+  │ +─────────────────────────────────────────────────────────────+ │
   └──────────────────────────────────────────────────────────────────┘
   ```
 - **Primary Actions:**
@@ -43,14 +57,20 @@
   2. Interact with charts.
   3. Drill down into module performance.
   4. Export reports.
-- **Data Displayed/Modified:** Reads from analytics.course_performance, analytics.module_stats.
+  5. **Act on an item (new):** open an item's editor, or see it as a student does, straight from any item-engagement row.
+- **Data Displayed/Modified:** Reads from analytics.course_performance, analytics.module_stats, `lesson_completions`, `lesson_progress`.
 - **States:**
   - **Default:** All data populated.
   - **Loading:** Skeleton cards + skeleton charts.
   - **Empty:** "No student data available for this course."
   - **Error:** "Unable to load analytics. Retry?"
+  - **Item Engagement (new):** one row per non-archived item, ordered as the curriculum is, with reach, completion, time-on-item, and quiz average where a quiz is attached. Unpublished items read **unpublished** rather than 0%, so absence of data is never mistaken for failure.
+  - **Actionable Insight (new):** a row under the weakest items names the item, the metric, the sample size, and the window, and offers _Edit item_ and _Preview as student_. Insights computed from fewer than 5 students are suppressed as noise.
+  - **Workspace Instance (new):** inside [S-2.19](04-Courses.md#scr-2-19) the course filter is locked and non-removable, with a _View all courses_ escape hatch; outside it the course selector is editable.
 - **Navigation:**
   - Module Row → [S-5.2](#scr-5-2) Quiz Analytics (drill-down)
+  - **Item row / Edit item** → [S-2.17](04-Courses.md#scr-2-17) Curriculum tab with that item's pane open
+  - **Preview as student** → [S-2.21](04-Courses.md#scr-2-21) at that item
   - "Export" → [S-5.4](#scr-5-4) Export Reports
 
 ---
@@ -98,9 +118,9 @@
 
 <a id="scr-5-3"></a>
 
-##### Screen Name: S-5.3 Drop-off Analysis
+##### Screen Name: S-5.3 Drop-off Analysis 🔄 CHANGED
 
-- **Purpose:** Funnel view showing exactly where students disengage within a course, module-by-module and lesson-by-lesson.
+- **Purpose:** Funnel view showing exactly where students disengage within a course, section-by-section and item-by-item. Revision 2 makes it a tab of the course-scoped analytics view ([S-2.19](04-Courses.md#scr-2-19)) and deep-links every funnel step into the item editor.
 - **User Role(s):** Admin, Editor, Viewer
 - **Wireframe Layout (Text-Based):**
   ```
@@ -115,21 +135,25 @@
   │ Module 3 done ██████████░░░░░░░░░░░░░░░░░░░░░░░░ 105 (45%)      │
   │ Completed     ████████░░░░░░░░░░░░░░░░░░░░░░░░░░  92 (39%)      │
   ├──────────────────────────────────────────────────────────────────┤
-  │ Biggest Drop: Module 2 → Module 3 (-27 pts). Likely cause:      │
-  │ Lesson "Listening Practice 4" (avg watch time 18% of runtime).  │
+  │ Biggest Drop: Section 2 → Section 3 (-27 pts). Likely cause:      │
+  │ ✎ "Listening Practice 4" (avg watch time 18% of runtime).         │
+  │                        [Edit item]  [Preview as student]           │
   └──────────────────────────────────────────────────────────────────┘
   ```
 - **Primary Actions:**
-  1. Identify the module/lesson with the steepest drop-off.
-  2. Drill into a lesson's engagement detail (watch-time heatmap for video).
-  3. Export the funnel report.
-- **Data Displayed/Modified:** Reads `lesson_progress`, `enrollments`.
+  1. Identify the section/item with the steepest drop-off.
+  2. Drill into an item's engagement detail (watch-time heatmap for video).
+  3. **Edit the flagged item or preview it as a student** (new) — a funnel step is a link into the workspace, not a dead end.
+  4. Export the funnel report.
+- **Data Displayed/Modified:** Reads `lesson_progress`, `enrollments`, `lesson_completions`.
 - **States:**
   - **Default:** Funnel bars scaled to enrollment count.
   - **Steep Drop Flag:** ⚠️ on any step-to-step decline greater than 20 points.
   - **Empty:** "Not enough data yet — check back once more students enroll."
+  - **As a Workspace Tab (new):** the course filter is locked; the funnel sits beside [S-5.1](#scr-5-1) performance and [S-5.2](#scr-5-2) quizzes in one view, so an author moves between _what happened_ and _what to change_ without leaving the workspace.
 - **Navigation:**
-  - Funnel step → [S-2.7](04-Courses.md#scr-2-7) Lesson Editor (for the flagged lesson)
+  - Funnel step → [S-2.7](04-Courses.md#scr-2-7) item pane for the flagged item
+  - **Preview as student** → [S-2.21](04-Courses.md#scr-2-21) at that item
   - "Export" → [S-5.4](#scr-5-4) Export Reports
 
 ---

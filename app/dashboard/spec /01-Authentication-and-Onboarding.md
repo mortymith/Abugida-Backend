@@ -77,7 +77,7 @@ Sign-in is exclusively federated: every staff member authenticates with **Google
   │ [ ] Invite your team ([S-6.2](08-Settings.md#scr-6-2))                         │
   │ [ ] Brand your workspace ([S-6.4](08-Settings.md#scr-6-4))                     │
   │ [ ] Create your first course — blank ([S-2.2](04-Courses.md#scr-2-2)),        │
-  │     template ([S-2.12](04-Courses.md#scr-2-12)), or AI draft ([S-2.11])       │
+  │     template ([S-2.12](04-Courses.md#scr-2-12)), or AI draft ([S-2.11](04-Courses.md#scr-2-11))       │
   │ [ ] Connect a payment gateway ([S-6.3](08-Settings.md#scr-6-3))                │
   └──────────────────────────────────────────────────────────────────┘
   ```

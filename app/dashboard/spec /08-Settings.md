@@ -2,11 +2,17 @@
 
 > **Abugida Academy — UX Design Specification** · Part 08 of 11 · [↑ Overview & Sitemap](00-Overview-and-Sitemap.md) · [← Analytics](07-Analytics.md) · [Shared Components →](09-Shared-Components.md)
 
+## What changed in Part 08 (Revision 2)
+
+- **[S-6.1](08-Settings.md#scr-6-1) General Settings lost its _Course Settings_ block.** Per-course configuration — pricing, enrollment window, completion rules, live sessions, the approval gate — now lives in the course's own workspace ([S-2.20](04-Courses.md#scr-2-20)). Workspace Settings keeps only **defaults applied to new courses**; anything that changes an existing course belongs with that course, not behind a global page.
+- **[S-6.9](08-Settings.md#scr-6-9) Roles & Permissions** gained the course-lifecycle capabilities (`course.submit_review`, `course.publish`, `course.unpublish`, `course.archive`, `course.archive_item`, `assignment.grade`), so a workspace can separate _may author_ from _may publish_.
+- No other screen in this part changed.
+
 <a id="scr-6-1"></a>
 
-##### Screen Name: S-6.1 General Settings
+##### Screen Name: S-6.1 General Settings 🔄 CHANGED
 
-- **Purpose:** Manage system-wide settings, configurations, and preferences.
+- **Purpose:** Manage **workspace-wide** settings, defaults, and preferences. Course configuration is **not** here — it lives in the course's own workspace ([S-2.20](04-Courses.md#scr-2-20)). What remains is what a course inherits when it is created, plus what applies to every course at once.
 - **User Role(s):** Admin
 - **Wireframe Layout (Text-Based):**
   ```
@@ -22,9 +28,10 @@
   │ │ │ Timezone: [Africa/Addis_Ababa]                         │ │
   │ │ │ Date Format: [DD/MM/YYYY]                              │ │
   │ │ │                                                        │ │
-  │ │ │ Course Settings:                                       │ │
-  │ │ │ Default Instructor: [Select]                           │ │
-  │ │ │ Default Category: [Select]                             │ │
+  │ │ │ Defaults for New Courses:                              │ │
+  │ │ │ Default Instructor: [Select]  ·  Default Category: [Sel] │ │
+  │ │ │ New items start as: (● Draft  ○ Published)             │ │
+  │ │ │ ⚠ Applies to new courses only — never to existing ones.│ │
   │ │ │                                                        │ │
   │ │ │ Notification Settings:                                 │ │
   │ │ │ [ ] Auto-notify on course publication                  │ │
@@ -37,7 +44,7 @@
   ```
 - **Primary Actions:**
   1. Update platform settings.
-  2. Configure default values.
+  2. Configure the defaults applied to newly created courses.
   3. Save configuration changes.
 - **Data Displayed/Modified:** Reads/Writes to system_settings table.
 - **States:**
@@ -46,9 +53,12 @@
   - **Saving:** Spinner on save button.
   - **Success:** Toast: "Settings saved successfully."
   - **Error:** "Unable to save settings. Retry?"
+  - **Defaults Are Not Live Edits (new):** every default field carries the caption that it applies only to new courses, with a link to the catalog filtered by that value. A global default silently rewriting existing courses is the failure this prevents.
+  - **Default New-item State (new):** _Published_ is offered for trusted teams and is blocked with an explanation when the workspace requires approval, because a course cannot begin in a state its own workflow forbids.
 - **Navigation:**
   - Tabs → Switch between sections
   - "Save Changes" → Save config
+  - Course list link → [S-2.1](04-Courses.md#scr-2-1); per-course configuration → [S-2.20](04-Courses.md#scr-2-20)
 
 ---
 
@@ -387,7 +397,7 @@
 
 ##### Screen Name: S-6.9 Roles & Permissions
 
-- **Purpose:** Dedicated, granular permission matrix editor — complements the simple role assignment in [S-6.2](#scr-6-2) Team Management with per-module capability toggles for custom roles.
+- **Purpose:** Dedicated, granular permission matrix editor — complements the simple role assignment in [S-6.2](#scr-6-2) Team Management with per-module capability toggles for custom roles. Revision 2 adds the course-lifecycle capabilities introduced by [S-2.22](04-Courses.md#scr-2-22).
 - **User Role(s):** Admin
 - **Wireframe Layout (Text-Based):**
   ```
@@ -396,26 +406,41 @@
   ├──────────────────────────────────────────────────────────────────┤
   │ Role: [Editor ▾]                                                 │
   │ | Module            | View | Create | Edit | Delete | Publish | │
-  │ |────────────────────|------|--------|------|--------|---------| │
-  │ | Courses            | ✓    | ✓      | ✓    | ✗      | ✓       | │
-  │ | Students           | ✓    | ✓      | ✓    | ✗      | —       | │
-  │ | Analytics          | ✓    | —      | —    | —      | —       | │
-  │ | Settings           | ✗    | ✗      | ✗    | ✗      | —       | │
-  │ | Billing            | ✗    | ✗      | ✗    | ✗      | —       | │
-  │ [Save Permissions]                                               │
+  │ |-------------------|------|--------|------|--------|---------| │
+  │ | Courses           | ✓    | ✓      | ✓    | ✗      | ✓       | │
+  │ | Students          | ✓    | ✓      | ✓    | ✗      | —       | │
+  │ | Analytics         | ✓    | —      | —    | —      | —       | │
+  │ | Settings          | ✗    | ✗      | ✗    | ✗      | —       | │
+  │ | Billing           | ✗    | ✗      | ✗    | ✗      | —       | │
+  │ ─────────────────────────────────────────────────────────────────│
+  │ Course lifecycle capabilities (new):                             │
+  │ | Capability               | Admin | Editor | Reviewer |        │
+  │ |--------------------------|-------|--------|----------|        │
+  │ | course.submit_review     | ✓     | ✓      | —        |        │
+  │ | course.review            | ✓     | own only | ✓      |        │
+  │ | course.publish           | ✓     | ungated  | granted |        │
+  │ | course.unpublish         | ✓     | ✗      | ✗        |        │
+  │ | course.archive / restore | ✓     | ✗      | ✗        |        │
+  │ | course.archive_item      | ✓     | ✓      | ✗        |        │
+  │ | assignment.grade         | ✓     | ✓      | ✗        |        │
+  │ [Save Permissions]                                              │
   └──────────────────────────────────────────────────────────────────┘
   ```
 - **Primary Actions:**
   1. Select a role and toggle per-module capabilities.
-  2. Create a new custom role by cloning an existing one.
-  3. Save and apply changes immediately to all users with that role.
+  2. Toggle the finer-grained **course lifecycle capabilities**, which is what separates _may author_ from _may publish_.
+  3. Create a new custom role by cloning an existing one.
+  4. Save and apply changes immediately to all users with that role.
 - **Data Displayed/Modified:** Writes to `roles`, `role_permissions`.
 - **States:**
-  - **Built-In Role:** Admin role's core permissions are locked (cannot remove the last full-Admin to avoid workspace lockout).
+  - **Built-In Role:** the Admin role's core permissions are locked (cannot remove the last full-Admin and risk a workspace lockout).
   - **Saving:** Toast: "Permissions updated. Changes apply immediately."
-  - **Conflict:** Warns if saving would leave zero users able to manage Billing/Settings.
+  - **Conflict:** warns if saving would leave zero users able to manage Billing/Settings.
+  - **Self-Approval Trap (new):** warns when a configuration would leave no user able to `course.review` a gated course, and when the only available reviewer is also the course's author. The matrix never silently produces a course nobody can publish.
+  - **Explain Row (new):** every lifecycle capability has a one-line explanation and a link to the screen that exercises it, so an administrator configures against real behaviour rather than guessing from a name.
 - **Navigation:**
   - "Create Custom Role" → inline role-naming step, then the same matrix
+  - Capability help link → the owning screen ([S-2.22](04-Courses.md#scr-2-22), [S-2.23](04-Courses.md#scr-2-23))
   - Back → [S-6.2](#scr-6-2) Team Management
 
 ---

@@ -2,6 +2,13 @@
 
 > **Abugida Academy — UX Design Specification** · Part 06 of 11 · [↑ Overview & Sitemap](00-Overview-and-Sitemap.md) · [← Content Library](05-Content-Library.md) · [Analytics →](07-Analytics.md)
 
+## What changed in Part 06 (Revision 2)
+
+No screen was added, removed, or redesigned. One relationship was made explicit, because the Course Workspace added a course-scoped roster:
+
+- **[S-4.1](06-Students.md#scr-4-1) Student Directory is the canonical implementation** behind both the global directory and the workspace's **Students** tab ([S-2.18](04-Courses.md#scr-2-18)). The workspace tab is the same data table, the same selection model, and the same bulk-action bar with the course filter **pinned** and course-specific actions added — it is not a second table. Any change to the roster is made once, here.
+- The course-scoped variant adds exactly three things: the pinned course context chip, enrolment actions scoped to one course, and an empty state for the case where a course is not yet published. Everything else is inherited.
+
 <a id="scr-4-1"></a>
 
 ##### Screen Name: S-4.1 Student Directory
@@ -47,10 +54,12 @@
   - **Add Student:** Modal collects name + email and sends a Google/Telegram sign-in invite — student accounts never store passwords.
   - **Loading:** Skeleton table rows.
   - **Error:** "Unable to load students. Retry?"
+  - **Course-Scoped Instance (new):** the same table renders inside the Course Workspace with the course filter pinned, a context chip, and a _View all students_ escape hatch back to the unscoped directory. Filtering, sorting, selection, and export behave identically in both hosts, so an author who learns the table once is never surprised. See [S-2.18](04-Courses.md#scr-2-18).
 - **Navigation:**
   - Student Row → [S-4.2](#scr-4-2) Student Profile
   - "+ Add Student" → Registration modal
   - "+ Create Cohort" → [S-4.4](#scr-4-4) Cohort Management
+  - Course chip (in the workspace instance) → [S-2.18](04-Courses.md#scr-2-18) Workspace · Students
 
 ---
 
@@ -142,9 +151,10 @@
   - **No Activity Yet:** "No activity recorded since enrollment."
   - **At Risk Flag:** 🟠 badge when a student has been inactive 14+ days.
 - **Navigation:**
-  - Course card → [S-5.1](07-Analytics.md#scr-5-1) Course Performance (student filtered)
+  - Course card → [S-2.19](04-Courses.md#scr-2-19) workspace Analytics (student filtered)
   - "Export" → [S-5.4](07-Analytics.md#scr-5-4) Export Reports (pre-filtered to this student)
   - Back → [S-4.2](#scr-4-2) Student Profile
+  - Back to course → [S-2.18](04-Courses.md#scr-2-18) Workspace · Students for the course this view was opened from
 
 ---
 
@@ -355,5 +365,5 @@
   - Rule edits apply prospectively; past enrollments are never reversed by editing.
 - **Navigation:**
   - Opened from [S-A.1](02-Global-Navigation.md#scr-a-1) Students group
-  - "Enrolled into" course → [S-2.6](04-Courses.md#scr-2-6) Course Detail (Students tab)
+  - "Enrolled into" course → [S-2.18](04-Courses.md#scr-2-18) Course Workspace · Students
   - Cohort trigger → [S-4.4](#scr-4-4) Cohort Management

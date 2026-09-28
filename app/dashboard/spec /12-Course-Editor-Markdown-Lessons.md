@@ -2,11 +2,13 @@
 
 > **Abugida Academy — Feature Specification** · Companion to Part 04 · [↑ Overview & Sitemap](00-Overview-and-Sitemap.md) · [← Global Standards](11-Global-Standards.md) · [Courses →](04-Courses.md)
 
-**Screen IDs covered:** `S-2.7` Lesson Editor (Markdown authoring surface), with supporting references to `S-2.3`, `S-2.6`, `S-2.13`, `S-2.14`, `S-2.16`, `S-3.6`, `S-7.1`, `S-7.2`.
+**Screen IDs covered:** `S-2.7` Lesson Editor (Markdown authoring surface), with supporting references to `S-2.2`, `S-2.6`, `S-2.8`, `S-2.13`, `S-2.14`, `S-2.16`, `S-2.17`, `S-2.20`, `S-2.21`, `S-2.23`, `S-3.1`, `S-3.6`, `S-7.1`, `S-7.2`, `S-7.8`.
 
 **Status:** Approved for implementation. Every technical claim in [§3](#3-toolchain-constraint-analysis-markdown-support-in-tiptap-3313) and [Appendix A](#appendix-a--verification-procedure) was verified against the installed dependency tree, not inferred from documentation.
 
-**Relationship to the UX specification:** [Part 04 § S-2.7](04-Courses.md#scr-2-7) remains the authoritative definition of the Lesson Editor's _layout, states, validation, and navigation_. This document does **not** restate or replace it. It specifies the **content model and editor implementation** behind the "Content Editor (Rich Text / Media Embed)" region of the S-2.7 wireframe, and the persistence contract that the rest of Section 2 depends on.
+**Revision 2 (Course Workspace):** the content model, storage contract, extension list, and round-trip invariants in this document are **unchanged**. Revision 2 adds one section — [§16](#16-revision-2--workspace-integration) — describing how this editor is hosted inside the Course Workspace's curriculum pane, and it updates [§8.1](#81-autosave) and [§15](#15-open-questions) where the surrounding UX moved.
+
+**Relationship to the UX specification:** [Part 04 § S-2.7](04-Courses.md#scr-2-7) remains the authoritative definition of the Lesson Editor's _layout, states, validation, and navigation_. This document does **not** restate or replace it. It specifies the **content model and editor implementation** behind the item pane's content canvas, and the persistence contract that the rest of Section 2 depends on.
 
 ---
 
@@ -25,7 +27,7 @@
 
 ### 1.2 Non-Goals
 
-- Not a redesign of the Lesson Editor layout (owned by S-2.7).
+- **Not a redesign of the Lesson Editor layout** (owned by S-2.7) — but Revision 2 does relocate it into the workspace item pane, which is a hosting change only; see [§16](#16-revision-2--workspace-integration).
 - Not collaborative/multi-user editing or CRDT merge — out of scope; the `rowVersion` guard remains the concurrency control.
 - Not a general-purpose Markdown IDE. No file tree, no multi-file vault, no Git-style diffing.
 - Not an AI authoring surface. The ✨ AI generators ([S-2.11](04-Courses.md#scr-2-11), [S-2.16](04-Courses.md#scr-2-16)) consume lesson text as _input_; making them emit Markdown is a separate spec.
@@ -37,18 +39,19 @@
 
 The following is the current state of the code this spec modifies. It is recorded so reviewers can detect drift before implementing.
 
-| Layer         | Location                                                     | Current behaviour                                                                                                  |
-| ------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| Route         | `src/routes/_app/courses/$courseId/lessons/$lessonId.tsx`    | Guards with `requireRolesBeforeLoad(['admin','editor'])`; composes `LessonEditor` + quiz modals.                   |
-| Component     | `src/features/courses/components/courses.lesson-editor.tsx`  | 573 lines. `useEditor` with `StarterKit` + `LinkExtension` + `Placeholder`.                                        |
-| Serialization | same                                                         | `editor.commands.setContent(body)` on load, `editor.getHTML()` on save. **HTML, not Markdown.**                    |
-| Toolbar       | same (inline `ToolbarButton`)                                | 8 buttons, `window.prompt` for URLs, no menu/keyboard map, no `aria-pressed` grouping semantics beyond per-button. |
-| Server fn     | `src/features/courses/server/courses.lessons.ts`             | `getLessonForEdit`, `saveLesson`, `submitLessonForReview` via `createServerFn`.                                    |
-| Validation    | same — `saveLessonSchema`                                    | `body: z.string().max(200_000).nullable()`, `expectedRowVersion: z.number().int().positive()`.                     |
-| Persistence   | `src/features/courses/server/courses.lessons.impl.server.ts` | Writes `lessons.body` verbatim. Optimistic concurrency via `rowVersion`.                                           |
-| Storage       | `packages/database/src/schema/catalog/lessons.ts`            | `body: text('body')` — no format discriminator.                                                                    |
-| Editor CSS    | `src/styles.css`                                             | **Contains no ProseMirror/Tiptap rules.** Styling is unstyled default ProseMirror today.                           |
-| Tests         | `tests/courses.spec-04.test.ts`                              | Covers pure logic (curriculum tree, review state, pricing). No editor-serialization coverage.                      |
+| Layer         | Location                                                     | Current behaviour                                                                                                                                                                                                                      |
+| ------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Route         | `src/routes/_app/courses/$courseId/lessons/$lessonId.tsx`    | Guards with `requireRolesBeforeLoad(['admin','editor'])`; composes `LessonEditor` + quiz modals. **Revision 2:** this becomes an **alias** into the workspace — `?tab=curriculum&item=<lessonId>` — and must not host a second editor. |
+| Route         | `src/routes/_app/courses/$courseId.tsx`                      | The Course Detail tabbed screen. **Revision 2:** becomes the Course Workspace shell with `?tab=` and `?item=`.                                                                                                                         |
+| Component     | `src/features/courses/components/courses.lesson-editor.tsx`  | 573 lines. `useEditor` with `StarterKit` + `LinkExtension` + `Placeholder`.                                                                                                                                                            |
+| Serialization | same                                                         | `editor.commands.setContent(body)` on load, `editor.getHTML()` on save. **HTML, not Markdown.**                                                                                                                                        |
+| Toolbar       | same (inline `ToolbarButton`)                                | 8 buttons, `window.prompt` for URLs, no menu/keyboard map, no `aria-pressed` grouping semantics beyond per-button.                                                                                                                     |
+| Server fn     | `src/features/courses/server/courses.lessons.ts`             | `getLessonForEdit`, `saveLesson`, `submitLessonForReview` via `createServerFn`.                                                                                                                                                        |
+| Validation    | same — `saveLessonSchema`                                    | `body: z.string().max(200_000).nullable()`, `expectedRowVersion: z.number().int().positive()`.                                                                                                                                         |
+| Persistence   | `src/features/courses/server/courses.lessons.impl.server.ts` | Writes `lessons.body` verbatim. Optimistic concurrency via `rowVersion`.                                                                                                                                                               |
+| Storage       | `packages/database/src/schema/catalog/lessons.ts`            | `body: text('body')` — no format discriminator.                                                                                                                                                                                        |
+| Editor CSS    | `src/styles.css`                                             | **Contains no ProseMirror/Tiptap rules.** Styling is unstyled default ProseMirror today.                                                                                                                                               |
+| Tests         | `tests/courses.spec-04.test.ts`                              | Covers pure logic (curriculum tree, review state, pricing). No editor-serialization coverage.                                                                                                                                          |
 
 **Existing helper:** `stripMarkdown()` in `src/features/courses/courses.ai-local.ts` strips both HTML tags and Markdown syntax; it is a lossy text extractor for AI prompts and is **not** a serializer. It must not be reused for persistence.
 
@@ -425,8 +428,9 @@ Beyond the Part 11 baseline, Markdown-specific obligations:
 - **Timer:** 60s of _no typing_, not 60s wall-clock. A trailing debounce avoids saving mid-sentence.
 - **Manual:** `Ctrl/⌘ + S` flushes immediately.
 - **Dirty tracking:** derived from `editor.on('update')` _and_ the settings-pane `onChange`s, exactly as today — but `update` now also fires when Markdown and the rich doc diverge, so the same `dirty` flag covers both modes.
-- **Save status indicator:** a caption-level `aria-live="polite"` region in the editor header cycling `All changes saved` → `Saving…` → `All changes saved at HH:MM`, and `Save failed — Retry` on error. Errors raise a toast ([S-7.2](09-Shared-Components.md#scr-7-2)) **and** leave the indicator in the failed state; the unsaved buffer is never discarded on failure.
-- **Autosave is skipped** when the lesson is `in_review` (editing is locked, per S-2.7) and when the user is a Viewer/Reviewer (permission-aware UI, Part 11).
+- **Save status indicator:** the shared [S-7.8](09-Shared-Components.md#scr-7-8) component, in its full variant in the pane footer and its compact variant in the pane header. It is an `aria-live="polite"` region cycling `All changes saved` → `Saving…` → `All changes saved at HH:MM`, and `Save failed — Retry` on error. Errors raise a toast ([S-7.2](09-Shared-Components.md#scr-7-2)) **and** leave the indicator in the failed state; the unsaved buffer is never discarded on failure. **Revision 2:** this document no longer specifies the indicator's appearance or its vocabulary — [S-7.8](09-Shared-Components.md#scr-7-8) is the single source for both, and `SaveStatus` maps onto it one-to-one.
+- **Context switching (new in Revision 2):** selecting another item, switching workspace tab, or navigating away **flushes first** ([S-7.8](09-Shared-Components.md#scr-7-8) rule 3). On failure the switch is blocked with Retry / Discard / Stay. This is the most important new behaviour for the workspace: the editor is now a pane inside a long-lived screen, so an unflushed buffer can survive many more navigations than it could when the editor was a page of its own.
+- **Autosave is skipped** when the lesson is `in_review` (editing is locked, per S-2.7) and when the user is a Viewer/Reviewer (permission-aware UI, Part 11). The indicator shows _Autosave paused_ rather than disappearing, so the reason there is no save is visible.
 - **On unmount / navigation:** the existing [S-7.1](09-Shared-Components.md#scr-7-1) confirmation dialog covers the unsaved case; Markdown does not change that behaviour.
 
 ### 8.2 Concurrency
@@ -583,13 +587,61 @@ Deferred deliberately, with the reason:
 
 ## 15. Open Questions
 
-| #   | Question                                                                                                                          | Owner        | Blocks |
-| --- | --------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------ |
-| Q-1 | Should the source pane be a `<textarea>` (chosen, a11y-first) or a CodeMirror 6 instance with a documented a11y layer?            | Design + Eng | Step 8 |
-| Q-2 | Do instructors need fenced math in lessons? If yes it becomes the first custom `parseMarkdown`/`renderMarkdown` node.             | Curriculum   | §14    |
-| Q-3 | Is per-lesson Markdown export ([§9.1](#91-server-functions)) needed for the Content Library, or is lesson body export sufficient? | Product      | Step 8 |
-| Q-4 | Should the reviewer queue deep-link straight into Preview mode? ([§11](#11-review-workflow-integration))                          | Product      | Step 8 |
-| Q-5 | Do `01`-`11` UX specs need updating to mention the three view modes, or is this companion document sufficient?                    | Docs         | —      |
+| #   | Question                                                                                                                                                                                                                                                                                                                                                                                                                   | Owner        | Blocks |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------ |
+| Q-1 | Should the source pane be a `<textarea>` (chosen, a11y-first) or a CodeMirror 6 instance with a documented a11y layer?                                                                                                                                                                                                                                                                                                     | Design + Eng | Step 8 |
+| Q-2 | Do instructors need fenced math in lessons? If yes it becomes the first custom `parseMarkdown`/`renderMarkdown` node.                                                                                                                                                                                                                                                                                                      | Curriculum   | §14    |
+| Q-3 | Is per-lesson Markdown export ([§9.1](#91-server-functions)) needed for the Content Library, or is lesson body export sufficient?                                                                                                                                                                                                                                                                                          | Product      | Step 8 |
+| Q-4 | Should the reviewer queue deep-link straight into Preview mode? ([§11](#11-review-workflow-integration))                                                                                                                                                                                                                                                                                                                   | Product      | Step 8 |
+| Q-5 | ~~Do `01`-`11` UX specs need updating to mention the three view modes?~~ **Answered in Revision 2 — yes.** [Part 04](04-Courses.md#scr-2-7) and [Part 11](11-Global-Standards.md#reusable-component-library) now describe the three view modes as the item pane's _Content_ sub-tab, and the mode switch is documented as a `role="tablist"` presentation concern. No further UX spec change is needed for the view modes. |
+| Q-6 | **New in Revision 2.** When an item is selected in the curriculum tree, should its body load eagerly or only on pane focus? Eager is simpler and matches the current single-item load; lazy is cheaper for a 100-item course. Recommendation: **eager for the selected item only**, which is what the tree-plus-pane model already implies.                                                                                | Eng          | Step 8 |
+| Q-7 | **New in Revision 2.** Should the curriculum tree hold the item _bodies_ so cross-section moves never round-trip? Recommendation: **no** — that would duplicate `lessons.body` and violate [G-5](#11-goals). Structural moves touch `sort_order` and `module_id` only.                                                                                                                                                     | Eng          | §16.2  |
+
+---
+
+## 16. Revision 2 — Workspace Integration
+
+Added by the Course Workspace redesign. **This section adds hosting and interaction rules only.** The Markdown content model, storage format, extension list, normalization, and round-trip invariants in [§5](#5-storage-model)–[§10](#10-normalization--invariants) are unchanged and remain authoritative.
+
+### 16.1 One editor, two hosts
+
+The editor has exactly one implementation and two hosts:
+
+| Host                               | Route                                                  | Behaviour                                                                                                                                                                                                      |
+| ---------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Curriculum item pane (primary)** | `/_app/courses/$courseId?tab=curriculum&item=<itemId>` | Renders beside the persistent [S-7.9 Curriculum Tree](09-Shared-Components.md#scr-7-9). Selection lives in the URL, so the pane is linkable and the browser Back button moves between items.                   |
+| **Alias route (compatibility)**    | `/_app/courses/$courseId/lessons/$lessonId`            | Redirects to the workspace URL above. It exists for search results, notifications, and the Content Library _Used in_ list. **It must not mount a second editor, a second toolbar, or a second autosave loop.** |
+
+The pre-Revision-2 route's `requireRolesBeforeLoad(['admin','editor'])` is replaced by the workspace route's guard plus permission-aware rendering. A Reviewer and a Viewer can therefore open the same URL as an Editor and see a read-only pane — which is what makes the [S-2.14](04-Courses.md#scr-2-14) review experience possible without a separate screen.
+
+### 16.2 Mount and unmount lifecycle inside a long-lived pane
+
+Because the pane lives inside a screen that stays mounted while the author switches items, the editor's lifecycle is now driven by the selected item rather than by the route:
+
+- On `item` change, the previous editor is **destroyed** and a new one constructed for the new item, after the flush described in [§8.1](#81-autosave). Destroying rather than reusing the instance is deliberate: a ProseMirror document belongs to one item, and reusing the instance would risk writing item A's buffer into item B.
+- Hydration still happens **after mount** ([D-8](#4-decisions), [§3.4](#34-ssr-hazard)), and the pane's skeleton replaces **only the pane** — the tree keeps its selection and scroll position.
+- Structural changes (rename, move, archive) come from the tree while the editor is mounted. The editor subscribes to the curriculum query and updates its **header** (title, breadcrumb, badges) from the server's authoritative tree; it must never assume its own copy of the item's position.
+- An item archived or deleted while its editor is open replaces the canvas with an explicit banner ([S-2.7](04-Courses.md#scr-2-7)), not a save attempt.
+
+### 16.3 Preview reuses the render path, not the editor
+
+[S-2.21 Learner Preview](04-Courses.md#scr-2-21) and the editor's **Preview** view mode must render the same Markdown through the same pipeline (`streamdown`, HTML disabled, [§13](#13-risks--mitigations)), differing only in chrome. Two render paths for the same body is how a preview comes to disagree with production, which defeats the purpose of previewing at all. **Any change to the student-facing renderer must be reflected in both**, and the round-trip fixtures in [§12.1](#121-testing) are the shared guard.
+
+### 16.4 Save state and concurrency
+
+- The editor's `SaveStatus` maps one-to-one onto the shared [S-7.8](09-Shared-Components.md#scr-7-8) state machine; this document no longer owns the vocabulary.
+- The `expectedRowVersion` guard ([§8.2](#82-concurrency)) is unchanged. In the workspace, a conflict additionally re-renders the **tree row**, so the author can see that the item moved, changed status, or was archived by someone else.
+- Autosave is suspended — and the indicator says _Autosave paused (in review)_ — exactly as specified in [§8.1](#81-autosave) and [§11](#11-review-workflow-integration).
+
+### 16.5 Unchanged by this revision
+
+Restated explicitly, because the temptation on a large UX change is to assume the content model moved with it:
+
+- `lessons.body` + `lessons.body_format` remain the single source of truth ([D-3](#4-decisions), [G-5](#11-goals)).
+- The `LESSON_EDITOR_EXTENSIONS` list, its ordering ([D-6](#4-decisions)), and the `bodyFormat: z.literal('markdown')` boundary check are untouched.
+- `MarkdownManager` DOM-free usage for server-side validation and migration is untouched ([§9.3](#93-server-side-validation)).
+- The RT1–RT5 invariants and their fixture corpus are untouched — and they now additionally protect the _preview_ renderer, per [§16.3](#163-preview-reuses-the-render-path-not-the-editor).
+- The HTML→Markdown migration plan and its run report are untouched; the curriculum reorganisation does not affect the body of any lesson.
 
 ---
 
