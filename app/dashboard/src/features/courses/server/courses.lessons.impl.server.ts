@@ -3,7 +3,7 @@
  * Review workflow: in_review lessons are locked for body edits; approved
  * lessons can only be edited after an admin resets the review.
  */
-import { eq } from '@abugida/database'
+import { and, eq } from '@abugida/database'
 import { courses, lessons } from '@abugida/database/catalog'
 import { db } from '#/config/db.config'
 import { requireAuthoringRole, requireUserId, resolveLesson } from './courses.server-helpers.server'
@@ -14,6 +14,7 @@ import {
   unlinkLessonAssets,
 } from '#/features/library/server/library.usage.impl.server'
 import { categoryForMime } from '#/features/library/library.asset-category'
+import { readBodyFormat } from '../schemas/courses.markdown.schema'
 import type { SaveLessonInput } from './courses.lessons'
 
 export interface LessonEditDTO {
@@ -24,6 +25,12 @@ export interface LessonEditDTO {
   modulePublicId: string
   title: string
   body: string | null
+  /**
+   * Serialization of `body` (spec 12 § 5.2). 'html' means the lesson predates
+   * the Markdown migration and must be hydrated as HTML; the client shows the
+   * legacy notice and converts on next save.
+   */
+  bodyFormat: 'html' | 'markdown'
   contentType: 'pdf' | 'video' | 'quiz' | 'exercise' | 'link'
   videoUrl: string | null
   /** Content Library asset backing this lesson's media (spec 05). */
@@ -109,6 +116,7 @@ export async function getLessonForEditImpl(lessonPublicId: string): Promise<Less
     modulePublicId: moduleRecord?.publicId ?? '',
     title: lesson.title,
     body: lesson.body,
+    bodyFormat: readBodyFormat(lesson.bodyFormat),
     contentType: lesson.contentType ?? 'video',
     videoUrl: lesson.videoUrl,
     assetId: assetPublicId,
@@ -171,11 +179,21 @@ export async function saveLessonImpl(input: SaveLessonInput): Promise<{ rowVersi
       assetLink = linked
     }
 
+    // Optimistic concurrency (spec 12 § 8.2). The write is guarded by the
+    // client's `expectedRowVersion`, not merely read-then-increment: a stale
+    // editor must be rejected rather than silently overwriting a newer body.
+    if (input.expectedRowVersion !== lesson.rowVersion) {
+      throw new Error('VERSION_CONFLICT: this lesson was updated elsewhere — reload to continue')
+    }
+
     const updated = await tx
       .update(lessons)
       .set({
         title: input.title.trim(),
         body: input.body?.trim() || null,
+        // Decision D-3: the body is Markdown from here on. The validator makes
+        // `bodyFormat` a literal 'markdown', so HTML can never reach this column.
+        bodyFormat: 'markdown',
         contentType: input.contentType,
         videoUrl: input.videoUrl?.trim() || null,
         durationSeconds: input.durationMinutes == null ? null : input.durationMinutes * 60,
@@ -188,11 +206,15 @@ export async function saveLessonImpl(input: SaveLessonInput): Promise<{ rowVersi
         mimeType: assetLink?.mimeType ?? (input.assetId == null ? null : lesson.mimeType),
         rowVersion: lesson.rowVersion + 1,
       })
-      .where(eq(lessons.id, lesson.id))
+      .where(and(eq(lessons.id, lesson.id), eq(lessons.rowVersion, input.expectedRowVersion)))
       .returning({ rowVersion: lessons.rowVersion })
 
     const nextRowVersion = updated.at(0)?.rowVersion
-    if (!nextRowVersion) throw new Error('LESSON_SAVE_FAILED')
+    // No row updated means another writer won the race between the version check
+    // above and this UPDATE.
+    if (!nextRowVersion) {
+      throw new Error('VERSION_CONFLICT: this lesson was updated elsewhere — reload to continue')
+    }
 
     if (input.assetId == null && lesson.assetId != null) {
       await unlinkLessonAssets(tx, { lessonId: lesson.id })

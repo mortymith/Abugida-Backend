@@ -493,6 +493,8 @@
   - "Submit for Review" → [S-2.14](#scr-2-14) Approval Queue (when the course requires approval)
   - "Add Media" → [S-3.1](05-Content-Library.md#scr-3-1) Content Library (selection mode)
 
+> **Implementation specification:** the content editor behind this screen — Markdown content model, Tiptap configuration, storage format, and the HTML→Markdown migration — is specified in [Part 12, Course Editor — Markdown Lesson Authoring](12-Course-Editor-Markdown-Lessons.md). Where that document adds editor behaviour (rich / split / source view modes), it supplements this screen definition rather than replacing it.
+
 ---
 
 <a id="scr-2-8"></a>

@@ -26,11 +26,12 @@
 18. **AI Prompt Panel ([S-2.11](04-Courses.md#scr-2-11), [S-2.16](04-Courses.md#scr-2-16)):** Prompt input, parameters, streaming output, per-item regenerate, and explicit accept/discard — AI content is always editable and labeled ✨.
 19. **Approval Status Stepper ([S-2.14](04-Courses.md#scr-2-14)):** Draft → In Review → Changes Requested → Approved → Published, shown on lesson rows and in the Lesson Editor.
 20. **Badge Card ([S-4.7](06-Students.md#scr-4-7)):** Icon, name, trigger, and status pill; renders in management grids and on student profiles.
+21. **Rich-Text Authoring Surface ([S-2.7](04-Courses.md#scr-2-7)):** The Lesson Editor's content canvas, specified in detail in [Part 12](12-Course-Editor-Markdown-Lessons.md) — rich / split / source view modes, grouped toolbar, and idle-timer autosave.
 
 ### Global Validation and Feedback Patterns
 
 - **Real-time Validation:** All forms validate inline with immediate feedback.
-- **Auto-save:** Course content autosaves every 60 seconds (draft mode).
+- **Auto-save:** Course content autosaves every 60 seconds (draft mode). Lesson bodies additionally autosave on an idle timer (60s of no typing) and flush on `Ctrl+S`; see [Part 12 § 8](12-Course-Editor-Markdown-Lessons.md#8-persistence--state).
 - **Unsaved Changes:** Warning dialog on navigation with unsaved changes.
 - **Loading States:** Skeleton loaders for all data fetching operations.
 - **Success/Error Toasts:** Non-blocking feedback for all user actions.

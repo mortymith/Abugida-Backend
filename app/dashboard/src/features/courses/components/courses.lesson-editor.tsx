@@ -1,30 +1,49 @@
-import { useEffect, useState } from 'react'
-import type { ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import LinkExtension from '@tiptap/extension-link'
-import Placeholder from '@tiptap/extension-placeholder'
 import { toast } from '#/components/common/toast'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Spinner } from '#/components/ui/spinner'
+import { Badge } from '#/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { ConfirmDialog } from '#/components/common/confirm-dialog'
 import { StatusPill } from './courses.status-pill'
+import { MarkdownEditorSurface, useLessonEditor } from './courses.markdown-editor'
+import { MarkdownToolbar } from './courses.markdown-toolbar'
+import { MarkdownSourcePane } from './courses.markdown-source'
+import { MarkdownPreview } from './courses.markdown-preview'
+import { LegacyBodyNotice } from './courses.legacy-body-notice'
+import { VIEW_MODE_HINTS, useLessonViewMode } from '../hooks/courses.markdown-views'
+import type { LessonViewMode } from '../hooks/courses.markdown-views'
+import { LESSON_AUTOSAVE_IDLE_MS, useLessonAutosave } from '../hooks/courses.markdown-autosave'
 import { courseQueryKeys } from '../hooks/courses.queries'
 import { REVIEW_STATE_LABELS } from '../courses.review-state'
+import { LESSON_MIN_TEXT_LENGTH, normalizeMarkdown, summarizeMarkdown } from '../courses.markdown'
 import { LibraryAssetPicker } from '#/features/library'
 import type { SaveLessonInput } from '../server/courses.lessons'
 import type { LessonEditDTO } from '../server/courses.lessons.impl.server'
 import type { AssetCategory } from '@abugida/database/catalog'
 
+const SPLIT_UNDO_HINT =
+  'Undo works per sync in split view. Switch to rich text for step-by-step undo.'
+
 /**
- * S-2.7 Lesson Editor: two-column layout — rich text content editor with
- * media embeds on the left, lesson settings (type, video URL, duration,
- * status, tags) on the right. In Review locks editing; Changes Requested
- * shows reviewer comments with re-submit; Approved shows ready-to-publish.
+ * S-2.7 Lesson Editor — two-column layout with a Markdown content editor.
+ *
+ * Content is stored as Markdown (spec 12). The surface offers rich / split /
+ * preview views, the toolbar is grouped and accessible, and autosave runs on a
+ * 60s idle timer with `Ctrl+S` to flush.
+ *
+ * SSR note (spec 12 § 3.4 / D-8): the Tiptap instance is created with
+ * `immediatelyRender: false` and the body is applied *after* mount, because
+ * `new Editor({ content, contentType: 'markdown' })` throws in a DOM-less
+ * runtime whenever the Markdown parses to an empty document.
+ *
+ * Review gate (S-2.14): `in_review` locks editing and suspends autosave;
+ * `changes_requested` shows reviewer comments with re-submit; `approved` shows
+ * ready-to-publish.
  */
 export function LessonEditor({
   courseId,
@@ -39,6 +58,7 @@ export function LessonEditor({
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { mode, setMode } = useLessonViewMode()
 
   const lesson = useQuery({
     queryKey: ['courses', 'lesson-edit', lessonId],
@@ -62,37 +82,64 @@ export function LessonEditor({
   const [hydrated, setHydrated] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerCategories, setPickerCategories] = useState<AssetCategory[]>(['video'])
+  /** Mirrored Markdown, kept in sync with the editor and the source pane. */
+  const [markdown, setMarkdown] = useState('')
+  /** Non-null while the author is typing in the source pane. */
+  const [sourceDraft, setSourceDraft] = useState<string | null>(null)
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      LinkExtension.configure({
-        openOnClick: false,
-        HTMLAttributes: { rel: 'noopener noreferrer' },
-      }),
-      Placeholder.configure({ placeholder: 'Lesson content — rich text, media links…' }),
-    ],
-    immediatelyRender: false,
-    editable: false,
+  const data = lesson.data
+  const locked = data?.reviewStatus === 'in_review'
+  const editable = !locked
+
+  // `editable` is passed as a stable boolean rather than read inside the
+  // callback so the editor is not rebuilt when the query object changes identity.
+  const editor = useLessonEditor({
+    editable: true,
     onUpdate: () => setDirty(true),
   })
 
   useEffect(() => {
-    if (hydrated || !lesson.data || !editor) return
-    setTitle(lesson.data.title)
-    setContentType(lesson.data.contentType)
-    setVideoUrl(lesson.data.videoUrl ?? '')
-    setAssetId(lesson.data.assetId ?? null)
-    setAssetName(lesson.data.assetName)
-    setMediaSource(lesson.data.assetId ? 'library' : 'url')
-    setDurationMinutes(lesson.data.durationMinutes?.toString() ?? '')
-    setTagsDraft(lesson.data.tags.join(', '))
-    setRowVersion(lesson.data.rowVersion)
-    editor.commands.setContent(lesson.data.body ?? '')
-    const locked = lesson.data.reviewStatus === 'in_review'
-    editor.setEditable(!locked)
+    editor?.setEditable(editable)
+  }, [editor, editable])
+
+  // Hydrate once, after mount. Markdown bodies go through `contentType:
+  // 'markdown'`; legacy HTML bodies keep the previous path so an un-migrated
+  // lesson still opens and saves (spec 12 § 5.2).
+  useEffect(() => {
+    if (hydrated || !data || !editor) return
+    setTitle(data.title)
+    setContentType(data.contentType)
+    setVideoUrl(data.videoUrl ?? '')
+    setAssetId(data.assetId ?? null)
+    setAssetName(data.assetName)
+    setMediaSource(data.assetId ? 'library' : 'url')
+    setDurationMinutes(data.durationMinutes?.toString() ?? '')
+    setTagsDraft(data.tags.join(', '))
+    setRowVersion(data.rowVersion)
+
+    const body = data.body ?? ''
+    if (data.bodyFormat === 'markdown') {
+      editor.commands.setContent(body, { contentType: 'markdown' })
+    } else {
+      editor.commands.setContent(body)
+    }
+    editor.setEditable(!(data.reviewStatus === 'in_review'))
+    setMarkdown(normalizeMarkdown(editor.getMarkdown()))
     setHydrated(true)
-  }, [hydrated, lesson.data, editor])
+  }, [hydrated, data, editor])
+
+  // Mirror the editor's Markdown whenever it changes, so the stats, the preview
+  // and the source pane all read the same canonical value.
+  useEffect(() => {
+    if (!editor || sourceDraft !== null) return
+    const handler = () => setMarkdown(normalizeMarkdown(editor.getMarkdown()))
+    editor.on('update', handler)
+    return () => {
+      editor.off('update', handler)
+    }
+  }, [editor, sourceDraft])
+
+  const summary = useMemo(() => summarizeMarkdown(markdown), [markdown])
 
   const save = useMutation({
     mutationFn: async (input: SaveLessonInput) => {
@@ -104,17 +151,63 @@ export function LessonEditor({
       setDirty(false)
       void queryClient.invalidateQueries({ queryKey: ['courses', 'lesson-edit', lessonId] })
       void queryClient.invalidateQueries({ queryKey: courseQueryKeys.curriculum(courseId) })
-      toast.success('Lesson saved successfully.')
-    },
-    onError: (cause) => {
-      const message = cause instanceof Error ? cause.message : 'Save failed'
-      if (message.includes('LOCKED_IN_REVIEW')) {
-        toast.error('A reviewer is looking at this lesson — editing is locked.')
-      } else {
-        toast.error(message.replace(/^[A-Z_]+:\s*/, ''))
-      }
     },
   })
+
+  const buildInput = useCallback((): SaveLessonInput => {
+    const body = sourceDraft !== null ? normalizeMarkdown(sourceDraft) : markdown
+    return {
+      lessonPublicId: lessonId,
+      title: title.trim(),
+      body: body === '' ? null : body,
+      // Decision D-3: the literal makes a client that forgot `getMarkdown()`
+      // fail at the boundary instead of writing HTML into a Markdown column.
+      bodyFormat: 'markdown',
+      contentType,
+      videoUrl: mediaSource === 'url' && videoUrl.trim() ? videoUrl.trim() : null,
+      assetId: mediaSource === 'library' ? assetId : null,
+      durationMinutes: durationMinutes === '' ? null : Number(durationMinutes),
+      tags: tagsDraft
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .slice(0, 10),
+      expectedRowVersion: rowVersion,
+    }
+  }, [
+    contentType,
+    durationMinutes,
+    lessonId,
+    markdown,
+    mediaSource,
+    rowVersion,
+    sourceDraft,
+    tagsDraft,
+    title,
+    videoUrl,
+    assetId,
+  ])
+
+  const autosave = useLessonAutosave({
+    enabled: editable,
+    dirty,
+    save: async () => {
+      await save.mutateAsync(buildInput())
+    },
+  })
+
+  // Surface mutation failures once, as a toast, whichever path triggered them.
+  useEffect(() => {
+    if (!save.isError) return
+    const message = save.error instanceof Error ? save.error.message : 'Save failed'
+    if (message.includes('LOCKED_IN_REVIEW')) {
+      toast.error('A reviewer is looking at this lesson — editing is locked.')
+    } else if (message.includes('VERSION_CONFLICT')) {
+      toast.error('This lesson was updated elsewhere. Reload to continue.')
+    } else {
+      toast.error(message.replace(/^[A-Z_]+:\s*/, ''))
+    }
+  }, [save.isError, save.error])
 
   const submitReview = useMutation({
     mutationFn: async () => {
@@ -128,10 +221,40 @@ export function LessonEditor({
     onError: (cause) => toast.error(cause instanceof Error ? cause.message : 'Submit failed'),
   })
 
+  function openPicker(categories: AssetCategory[]) {
+    setPickerCategories(categories)
+    setPickerOpen(true)
+  }
+
+  function handleSourceChange(value: string) {
+    setSourceDraft(value)
+    setMarkdown(normalizeMarkdown(value))
+    setDirty(true)
+    if (!editor) return
+    // The Markdown extension parses the string and replaces the document; undo
+    // history resets per sync, which spec 12 § 7.1 documents and accepts.
+    editor.commands.setContent(value, { contentType: 'markdown' })
+  }
+
+  function handlePullFromEditor() {
+    if (!editor) return
+    const next = normalizeMarkdown(editor.getMarkdown())
+    setSourceDraft(null)
+    setMarkdown(next)
+    setDirty(true)
+  }
+
+  function handleModeChange(next: LessonViewMode) {
+    // Leaving source view commits its text; the editor already holds it, but the
+    // draft must be released so `buildInput` stops preferring it.
+    if (next !== 'split' && sourceDraft !== null) setSourceDraft(null)
+    setMode(next)
+  }
+
   if (lesson.isPending) {
     return <Spinner className="mx-auto my-12" />
   }
-  if (lesson.isError) {
+  if (lesson.isError || !data) {
     return (
       <div className="py-12 text-center">
         <p className="text-muted-foreground">Unable to load this lesson.</p>
@@ -142,32 +265,13 @@ export function LessonEditor({
     )
   }
 
-  const data = lesson.data
-  const locked = data.reviewStatus === 'in_review'
   const changesRequested = data.reviewStatus === 'changes_requested'
   const approved = data.reviewStatus === 'approved'
   const reviewGate = data.requiresApproval
-
-  const buildInput = (): SaveLessonInput => ({
-    lessonPublicId: lessonId,
-    title: title.trim(),
-    body: editor && editor.getText().length > 0 ? editor.getHTML() : '',
-    contentType,
-    videoUrl: mediaSource === 'url' && videoUrl.trim() ? videoUrl.trim() : null,
-    assetId: mediaSource === 'library' ? assetId : null,
-    durationMinutes: durationMinutes === '' ? null : Number(durationMinutes),
-    tags: tagsDraft
-      .split(',')
-      .map((tag) => tag.trim())
-      .filter(Boolean)
-      .slice(0, 10),
-    expectedRowVersion: rowVersion,
-  })
-
-  function openPicker(categories: AssetCategory[]) {
-    setPickerCategories(categories)
-    setPickerOpen(true)
-  }
+  const isLegacy = data.bodyFormat === 'html'
+  const disabledReason = locked
+    ? 'Locked while this lesson is in review'
+    : 'You do not have permission to edit this lesson'
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-4">
@@ -245,6 +349,7 @@ export function LessonEditor({
           Approved — ready to publish. Publishing happens from the course wizard (S-2.5).
         </div>
       ) : null}
+      {isLegacy ? <LegacyBodyNotice lessonTitle={data.title} /> : null}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <section className="rounded-xl border bg-card p-4 shadow-sm" aria-label="Content editor">
@@ -260,90 +365,85 @@ export function LessonEditor({
             minLength={3}
           />
 
-          <div className="mb-2 flex flex-wrap gap-1" role="toolbar" aria-label="Formatting">
-            <ToolbarButton
-              label="Bold"
-              disabled={locked}
-              onClick={() => editor?.chain().focus().toggleBold().run()}
-              active={editor?.isActive('bold')}
-            >
-              B
-            </ToolbarButton>
-            <ToolbarButton
-              label="Italic"
-              disabled={locked}
-              onClick={() => editor?.chain().focus().toggleItalic().run()}
-              active={editor?.isActive('italic')}
-            >
-              I
-            </ToolbarButton>
-            <ToolbarButton
-              label="Heading"
-              disabled={locked}
-              onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-              active={editor?.isActive('heading')}
-            >
-              H2
-            </ToolbarButton>
-            <ToolbarButton
-              label="Bullet list"
-              disabled={locked}
-              onClick={() => editor?.chain().focus().toggleBulletList().run()}
-              active={editor?.isActive('bulletList')}
-            >
-              •
-            </ToolbarButton>
-            <ToolbarButton
-              label="Numbered list"
-              disabled={locked}
-              onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-              active={editor?.isActive('orderedList')}
-            >
-              1.
-            </ToolbarButton>
-            <ToolbarButton
-              label="Insert link"
-              disabled={locked}
-              onClick={() => {
-                const url = window.prompt('Link URL')
-                if (url) editor?.chain().focus().setLink({ href: url }).run()
-              }}
-            >
-              🔗
-            </ToolbarButton>
-            <ToolbarButton
-              label="Embed video by URL"
-              disabled={locked}
-              onClick={() => {
-                const url = window.prompt('YouTube or Vimeo URL')
-                if (url)
-                  editor?.chain().focus().insertContent(`<p><a href="${url}">${url}</a></p>`).run()
-              }}
-            >
-              ▶
-            </ToolbarButton>
-            <ToolbarButton
-              label="Link a PDF"
-              disabled={locked}
-              onClick={() => {
-                const url = window.prompt('PDF URL')
-                if (url)
-                  editor
-                    ?.chain()
-                    .focus()
-                    .insertContent(`<p><a href="${url}">📄 PDF resource</a></p>`)
-                    .run()
-              }}
-            >
-              📄
-            </ToolbarButton>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <Tabs value={mode} onValueChange={(next) => handleModeChange(next as LessonViewMode)}>
+              <TabsList aria-label="Lesson editor view">
+                <TabsTrigger value="rich">Rich text</TabsTrigger>
+                <TabsTrigger value="split">Split</TabsTrigger>
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <SaveIndicator status={autosave.status} savedAt={autosave.savedAt} />
           </div>
 
-          <div className="min-h-64 rounded-lg border p-3 text-sm" data-testid="lesson-editor-body">
-            <EditorContent editor={editor} />
+          <MarkdownToolbar
+            editor={editor}
+            editable={editable}
+            disabledReason={disabledReason}
+            onInsertTable={() =>
+              editor?.chain().focus().insertTable({ rows: 3, cols: 2, withHeaderRow: true }).run()
+            }
+          />
+
+          {mode === 'preview' ? (
+            <div className="mt-2 min-h-64 rounded-lg border p-3">
+              <MarkdownPreview markdown={markdown} />
+            </div>
+          ) : (
+            <div
+              className={
+                mode === 'split' ? 'mt-2 grid gap-2 md:grid-cols-2' : 'mt-2 flex flex-col gap-2'
+              }
+            >
+              <MarkdownEditorSurface
+                editor={editor}
+                editable={editable}
+                label="Lesson content"
+                className="min-h-64 rounded-lg border p-3 text-sm"
+              />
+              {mode === 'split' ? (
+                <div className="flex flex-col gap-2">
+                  <MarkdownSourcePane
+                    value={sourceDraft ?? markdown}
+                    onChange={handleSourceChange}
+                    readOnly={locked}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePullFromEditor}
+                      disabled={locked}
+                    >
+                      Pull from visual editor
+                    </Button>
+                    <p className="text-xs text-muted-foreground">{SPLIT_UNDO_HINT}</p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          <p className="mt-2 text-xs text-muted-foreground">{VIEW_MODE_HINTS[mode]}</p>
+
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <p className="text-xs text-muted-foreground" data-testid="lesson-content-stats">
+              {summary.wordCount} words · {summary.textLength} characters
+              {summary.textLength < LESSON_MIN_TEXT_LENGTH ? ' (50 minimum)' : ''}
+            </p>
+            {summary.imageCount > 0 ? (
+              <Badge variant="secondary">{summary.imageCount} images</Badge>
+            ) : null}
+            {summary.tableCount > 0 ? (
+              <Badge variant="secondary">{summary.tableCount} tables</Badge>
+            ) : null}
+            {summary.taskCount > 0 ? (
+              <Badge variant="secondary">{summary.taskCount} tasks</Badge>
+            ) : null}
           </div>
 
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             <Button variant="secondary" size="sm" onClick={onOpenQuizBuilder}>
               + Add Quiz
             </Button>
@@ -503,13 +603,20 @@ export function LessonEditor({
               Revert
             </Button>
             <Button
-              disabled={locked || save.isPending || title.trim().length < 3}
-              onClick={() => save.mutate(buildInput())}
+              disabled={locked || save.isPending || !dirty}
+              onClick={() => {
+                void autosave.flush().then((ok) => {
+                  if (ok) toast.success('Lesson saved successfully.')
+                })
+              }}
             >
               {save.isPending ? <Spinner className="size-4" /> : null}
               Save
             </Button>
           </div>
+          <p className="text-right text-xs text-muted-foreground">
+            Autosaves after {Math.round(LESSON_AUTOSAVE_IDLE_MS / 1000)}s idle, or press Ctrl+S.
+          </p>
         </aside>
       </div>
 
@@ -542,32 +649,31 @@ export function LessonEditor({
   )
 }
 
-function ToolbarButton({
-  label,
-  onClick,
-  active,
-  disabled,
-  children,
+function SaveIndicator({
+  status,
+  savedAt,
 }: {
-  label: string
-  onClick: () => void
-  active?: boolean
-  disabled?: boolean
-  children: ReactNode
+  status: 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
+  savedAt: Date | null
 }) {
+  const text =
+    status === 'saving'
+      ? 'Saving…'
+      : status === 'error'
+        ? 'Save failed — retry'
+        : status === 'dirty'
+          ? 'Unsaved changes'
+          : status === 'saved' && savedAt
+            ? `All changes saved at ${savedAt.toLocaleTimeString()}`
+            : 'All changes saved'
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="icon-xs"
-      aria-label={label}
-      title={label}
-      aria-pressed={Boolean(active)}
-      onClick={onClick}
-      disabled={disabled}
-      className={active ? 'bg-muted font-bold' : ''}
+    <p
+      className="text-xs text-muted-foreground"
+      aria-live="polite"
+      role="status"
+      data-testid="lesson-save-indicator"
     >
-      {children}
-    </Button>
+      {text}
+    </p>
   )
 }

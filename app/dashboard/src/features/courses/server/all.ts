@@ -20,7 +20,14 @@ export { getCoursePricing, saveCoursePricing } from './courses.pricing'
 export { archiveCourse, deleteCourse, duplicateCourse, publishCourse } from './courses.lifecycle'
 export { getImageReadUrl, getImageUploadUrl } from './courses.storage'
 export { getQuizForLesson, saveQuiz } from './courses.quiz'
-export { getLessonForEdit, saveLesson, submitLessonForReview } from './courses.lessons'
+export {
+  exportLessonMarkdown,
+  getLessonForEdit,
+  migrateLessonBodyToMarkdown,
+  saveLesson,
+  submitLessonForReview,
+  validateLessonMarkdown,
+} from './courses.lessons'
 export { duplicateLesson } from './courses.duplication'
 export { getUnlockRules, saveUnlockRules } from './courses.unlock-rules'
 export {

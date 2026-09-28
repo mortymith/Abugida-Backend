@@ -85,17 +85,20 @@ The specification is split into one file per module, exactly as listed in the
 sitemap table above. Screen-ID links (e.g. `[S-2.6]`) jump straight to the
 definition inside the owning file.
 
-| Part | File                                                                       | Module (per sitemap table)                                                                       | Screens        |
-| ---- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | -------------- |
-| 00   | `00-Overview-and-Sitemap.md`                                               | Introduction, scope & sitemap                                                                    | — (this file)  |
-| 01   | [01-Authentication-and-Onboarding.md](01-Authentication-and-Onboarding.md) | 0. Authentication & Onboarding                                                                   | S-0.1 – S-0.3  |
-| 02   | [02-Global-Navigation.md](02-Global-Navigation.md)                         | A. Global Navigation                                                                             | S-A.1          |
-| 03   | [03-Dashboard.md](03-Dashboard.md)                                         | 1. Dashboard                                                                                     | S-1.1 – S-1.4  |
-| 04   | [04-Courses.md](04-Courses.md)                                             | 2. Courses (Primary)                                                                             | S-2.1 – S-2.16 |
-| 05   | [05-Content-Library.md](05-Content-Library.md)                             | 3. Content Library                                                                               | S-3.1 – S-3.6  |
-| 06   | [06-Students.md](06-Students.md)                                           | 4. Students                                                                                      | S-4.1 – S-4.8  |
-| 07   | [07-Analytics.md](07-Analytics.md)                                         | 5. Analytics                                                                                     | S-5.1 – S-5.5  |
-| 08   | [08-Settings.md](08-Settings.md)                                           | 6. Settings                                                                                      | S-6.1 – S-6.10 |
-| 09   | [09-Shared-Components.md](09-Shared-Components.md)                         | 7. Shared Components                                                                             | S-7.1 – S-7.7  |
-| 10   | [10-Marketing-and-Growth.md](10-Marketing-and-Growth.md)                   | 8. Marketing & Growth                                                                            | S-8.1 – S-8.5  |
-| 11   | [11-Global-Standards.md](11-Global-Standards.md)                           | Cross-cutting UX, roles & permissions, design system, responsive, accessibility, navigation flow | —              |
+| Part | File                                                                         | Module (per sitemap table)                                                                                  | Screens         |
+| ---- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------- |
+| 00   | `00-Overview-and-Sitemap.md`                                                 | Introduction, scope & sitemap                                                                               | — (this file)   |
+| 01   | [01-Authentication-and-Onboarding.md](01-Authentication-and-Onboarding.md)   | 0. Authentication & Onboarding                                                                              | S-0.1 – S-0.3   |
+| 02   | [02-Global-Navigation.md](02-Global-Navigation.md)                           | A. Global Navigation                                                                                        | S-A.1           |
+| 03   | [03-Dashboard.md](03-Dashboard.md)                                           | 1. Dashboard                                                                                                | S-1.1 – S-1.4   |
+| 04   | [04-Courses.md](04-Courses.md)                                               | 2. Courses (Primary)                                                                                        | S-2.1 – S-2.16  |
+| 05   | [05-Content-Library.md](05-Content-Library.md)                               | 3. Content Library                                                                                          | S-3.1 – S-3.6   |
+| 06   | [06-Students.md](06-Students.md)                                             | 4. Students                                                                                                 | S-4.1 – S-4.8   |
+| 07   | [07-Analytics.md](07-Analytics.md)                                           | 5. Analytics                                                                                                | S-5.1 – S-5.5   |
+| 08   | [08-Settings.md](08-Settings.md)                                             | 6. Settings                                                                                                 | S-6.1 – S-6.10  |
+| 09   | [09-Shared-Components.md](09-Shared-Components.md)                           | 7. Shared Components                                                                                        | S-7.1 – S-7.7   |
+| 10   | [10-Marketing-and-Growth.md](10-Marketing-and-Growth.md)                     | 8. Marketing & Growth                                                                                       | S-8.1 – S-8.5   |
+| 11   | [11-Global-Standards.md](11-Global-Standards.md)                             | Cross-cutting UX, roles & permissions, design system, responsive, accessibility, navigation flow            | —               |
+| 12   | [12-Course-Editor-Markdown-Lessons.md](12-Course-Editor-Markdown-Lessons.md) | **Companion doc.** Course Editor — Markdown lesson authoring with Tiptap: content model, storage, migration | S-2.7 (extends) |
+
+> **Note on Part 12:** it is a _companion_ engineering specification rather than a twelfth UX module, and it does not renumber Parts 01–11. It extends [S-2.7](04-Courses.md#scr-2-7), which remains the authoritative definition of the Lesson Editor's layout, states, and navigation.

@@ -50,6 +50,15 @@ export const lessonReviewStatusPgEnum = pgEnum('lesson_review_status', [
   'changes_requested',
   'approved',
 ])
+/**
+ * Serialization format of `lessons.body` (spec 12: Course Editor — Markdown
+ * Lesson Authoring). Legacy rows hold HTML produced by `editor.getHTML()`;
+ * the Markdown migration flips them to 'markdown'. Defaults to 'html' so that
+ * every pre-existing row is correctly described by the new column.
+ */
+export const lessonBodyFormatEnum = z.enum(['html', 'markdown'])
+export type LessonBodyFormat = z.infer<typeof lessonBodyFormatEnum>
+export const lessonBodyFormatPgEnum = pgEnum('lesson_body_format', ['html', 'markdown'])
 export const lessons = pgTable(
   'lessons',
   {
@@ -80,6 +89,7 @@ export const lessons = pgTable(
     description: text('description'),
     contentType: contentTypePgEnum(),
     body: text('body'),
+    bodyFormat: lessonBodyFormatPgEnum().notNull().default('html'),
     tags: jsonb('tags').notNull().default([]),
     videoUrl: varchar('video_url', { length: 500 }),
     sortOrder: smallint('sort_order').notNull().default(0),
@@ -169,6 +179,7 @@ export const insertLessonSchema = createInsertSchema(lessons, {
 }).omit({
   publicId: true,
   searchVector: true,
+  bodyFormat: true,
 })
 export const selectLessonSchema = createSelectSchema(lessons)
 export const updateLessonSchema = insertLessonSchema.partial()

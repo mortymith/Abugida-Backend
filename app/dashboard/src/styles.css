@@ -209,3 +209,95 @@
     @apply font-heading;
   }
 }
+
+/*
+ * Lesson Editor (spec 12, D-9). The editor previously rendered with unstyled
+ * default ProseMirror output. These rules give the canvas predictable spacing
+ * for the node types the lesson schema can produce, and keep the placeholder and
+ * selection affordances visible in both colour schemes.
+ */
+@layer components {
+  .ProseMirror {
+    @apply min-h-64 outline-none;
+  }
+  .ProseMirror > * + * {
+    @apply mt-2;
+  }
+  .ProseMirror h1 {
+    @apply mt-4 font-heading text-2xl font-bold;
+  }
+  .ProseMirror h2 {
+    @apply mt-4 font-heading text-xl font-semibold;
+  }
+  .ProseMirror h3 {
+    @apply mt-3 font-heading text-lg font-semibold;
+  }
+  .ProseMirror ul {
+    @apply list-disc pl-6;
+  }
+  .ProseMirror ol {
+    @apply list-decimal pl-6;
+  }
+  .ProseMirror li > p {
+    @apply my-0;
+  }
+  .ProseMirror ul[data-type='taskList'] {
+    @apply list-none pl-1;
+  }
+  .ProseMirror ul[data-type='taskList'] li {
+    @apply flex items-start gap-2;
+  }
+  .ProseMirror ul[data-type='taskList'] li > label {
+    @apply mt-0.5 flex-none;
+  }
+  .ProseMirror ul[data-type='taskList'] li > div {
+    @apply flex-1;
+  }
+  .ProseMirror blockquote {
+    @apply border-s-2 border-border ps-4 italic text-muted-foreground;
+  }
+  .ProseMirror pre {
+    @apply overflow-x-auto rounded-lg bg-muted p-3 font-mono text-xs leading-relaxed;
+  }
+  .ProseMirror code {
+    @apply rounded bg-muted px-1 py-0.5 font-mono text-[0.85em];
+  }
+  .ProseMirror pre code {
+    @apply bg-transparent p-0;
+  }
+  .ProseMirror hr {
+    @apply my-4 border-t;
+  }
+  .ProseMirror a {
+    @apply text-primary underline underline-offset-4;
+  }
+  .ProseMirror img {
+    @apply my-2 max-h-96 rounded-lg border object-contain;
+  }
+  .ProseMirror table {
+    @apply my-3 w-full border-collapse text-sm;
+  }
+  .ProseMirror th,
+  .ProseMirror td {
+    @apply border px-2 py-1 text-left align-top;
+  }
+  .ProseMirror th {
+    @apply bg-muted font-semibold;
+  }
+  .ProseMirror th p,
+  .ProseMirror td p {
+    @apply my-0;
+  }
+  /* Placeholder extension renders this attribute on the empty document. */
+  .ProseMirror p.is-editor-empty:first-child::before {
+    @apply pointer-events-none float-left h-0 text-muted-foreground;
+    content: attr(data-placeholder);
+  }
+  .ProseMirror-selectednode {
+    @apply outline-2 outline-primary;
+  }
+  /* Read-only rendering of a locked (in_review) lesson. */
+  .ProseMirror[aria-readonly='true'] {
+    @apply text-muted-foreground;
+  }
+}
