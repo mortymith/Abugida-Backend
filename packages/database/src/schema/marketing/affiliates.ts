@@ -81,6 +81,9 @@ export const affiliates = pgTable(
   },
   (table) => [
     uniqueIndex('idx_affiliates_public').on(table.publicId),
+    // One application per email: `inviteAffiliateImpl` relies on this to
+    // reject a duplicate invite instead of stacking applications.
+    uniqueIndex('idx_affiliates_email').on(sql`lower(${table.email})`),
     index('idx_affiliates_status').on(table.status),
     index('idx_affiliates_user').on(table.userId),
     check('affiliates_email_check', sql`${table.email} <> ''`),

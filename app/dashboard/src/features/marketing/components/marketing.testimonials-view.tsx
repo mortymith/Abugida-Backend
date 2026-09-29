@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { MessageSquareQuoteIcon, StarIcon } from 'lucide-react'
+import { MailCheckIcon, MessageSquareQuoteIcon, StarIcon } from 'lucide-react'
 import { ConfirmDialog } from '#/components/common/confirm-dialog'
 import { EmptyState } from '#/components/common/empty-state'
 import { RetryErrorState } from '#/components/common/retry-error-state'
@@ -23,6 +23,7 @@ import { Textarea } from '#/components/ui/textarea'
 import { useRole } from '#/features/auth'
 import {
   testimonialCourseOptionsQueryOptions,
+  testimonialRequestsQueryOptions,
   testimonialSettingsQueryOptions,
   testimonialsQueryOptions,
 } from '../hooks/marketing.queries'
@@ -34,7 +35,7 @@ import {
 } from '../hooks/marketing.mutations'
 import { QUOTE_MAX_LENGTH, QUOTE_MIN_LENGTH } from '../marketing.testimonial-rules'
 import type { TestimonialQueryInput } from '../schemas/marketing.schema'
-import type { TestimonialRow } from '../marketing.types'
+import type { TestimonialRequestRow, TestimonialRow } from '../marketing.types'
 
 /**
  * S-8.5 Student Testimonials: consent-first moderation queue (approve,
@@ -50,10 +51,15 @@ export function TestimonialsView({
   onQueryChange: (query: TestimonialQueryInput) => void
 }) {
   const role = useRole()
+  // Mirrors the server gates: moderation is admin/editor/support, while
+  // collecting and the trigger/display settings are admin/editor only. Showing
+  // a control the server rejects with FORBIDDEN reads as a broken tab.
   const canModerate = role === 'admin' || role === 'editor' || role === 'support'
+  const canWrite = role === 'admin' || role === 'editor'
 
   const testimonialsQuery = useQuery(testimonialsQueryOptions(query))
   const settingsQuery = useQuery(testimonialSettingsQueryOptions())
+  const requestsQuery = useQuery(testimonialRequestsQueryOptions())
   const [collectOpen, setCollectOpen] = useState(false)
 
   const items = testimonialsQuery.data?.items ?? []
@@ -68,7 +74,7 @@ export function TestimonialsView({
             Collect, moderate, and display student testimonials on course landing pages.
           </p>
         </div>
-        {canModerate && <Button onClick={() => setCollectOpen(true)}>Collect Manually</Button>}
+        {canWrite && <Button onClick={() => setCollectOpen(true)}>Collect Manually</Button>}
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -87,7 +93,9 @@ export function TestimonialsView({
         />
       </div>
 
-      {settingsQuery.data && isQueue ? <TriggerSettingsCard /> : null}
+      {settingsQuery.data && isQueue ? <TriggerSettingsCard canWrite={canWrite} /> : null}
+
+      {isQueue ? <CollectionRequests requests={requestsQuery.data?.items ?? []} /> : null}
 
       {testimonialsQuery.isLoading ? (
         <div className="space-y-3" aria-busy="true">
@@ -161,7 +169,7 @@ function CourseFilter({
   )
 }
 
-function TriggerSettingsCard() {
+function TriggerSettingsCard({ canWrite }: { canWrite: boolean }) {
   const settingsQuery = useQuery(testimonialSettingsQueryOptions())
   const save = useSaveTestimonialSettings()
   const settings = settingsQuery.data?.settings
@@ -172,12 +180,18 @@ function TriggerSettingsCard() {
     <Card className="mb-4">
       <CardHeader>
         <CardTitle className="text-sm">Collection trigger</CardTitle>
+        {!canWrite ? (
+          <p className="text-xs text-muted-foreground">
+            Read-only — changing collection triggers requires the Admin or Editor role.
+          </p>
+        ) : null}
       </CardHeader>
       <CardContent className="flex flex-wrap gap-6">
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={settings.onCompletion}
+            disabled={!canWrite || save.isPending}
             onChange={(event) =>
               void save.mutateAsync({ ...settings, onCompletion: event.target.checked })
             }
@@ -189,6 +203,7 @@ function TriggerSettingsCard() {
           <input
             type="checkbox"
             checked={settings.onFiveStar}
+            disabled={!canWrite || save.isPending}
             onChange={(event) =>
               void save.mutateAsync({ ...settings, onFiveStar: event.target.checked })
             }
@@ -200,8 +215,9 @@ function TriggerSettingsCard() {
           <span className="text-muted-foreground">Display:</span>
           <select
             aria-label="Display format"
-            className="border-input bg-background flex h-8 w-40 rounded-md border px-2 text-sm"
+            className="border-input bg-background flex h-8 w-40 rounded-md border px-2 text-sm disabled:opacity-60"
             value={settings.displayFormat}
+            disabled={!canWrite || save.isPending}
             onChange={(event) =>
               void save.mutateAsync({
                 ...settings,
@@ -216,6 +232,50 @@ function TriggerSettingsCard() {
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+const TRIGGER_LABELS: Record<TestimonialRequestRow['trigger'], string> = {
+  completion: 'Course completed',
+  five_star_rating: '5-star rating',
+  manual: 'Requested manually',
+}
+
+/**
+ * Open collection requests created by the automated triggers. Without this the
+ * requests `requestTestimonialImpl` writes are invisible — the student is
+ * asked for a quote and staff never see that it is outstanding.
+ */
+function CollectionRequests({ requests }: { requests: TestimonialRequestRow[] }) {
+  const open = requests.filter((request) => request.status === 'open')
+  if (open.length === 0) return null
+
+  return (
+    <section aria-label="Outstanding collection requests" className="mb-4">
+      <h2 className="mb-2 text-sm font-semibold">
+        Awaiting a quote: {open.length} open request{open.length === 1 ? '' : 's'}
+      </h2>
+      <ul className="divide-y rounded-lg border">
+        {open.map((request) => (
+          <li
+            key={request.publicId}
+            className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm"
+          >
+            <span className="min-w-0">
+              <span className="font-medium">{request.studentName}</span>
+              <span className="text-muted-foreground"> · {request.courseTitle}</span>
+            </span>
+            <span className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <MailCheckIcon className="size-3.5" aria-hidden />
+                {TRIGGER_LABELS[request.trigger]}
+              </span>
+              <span>{format(new Date(request.requestedAt), 'MMM d, yyyy')}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 

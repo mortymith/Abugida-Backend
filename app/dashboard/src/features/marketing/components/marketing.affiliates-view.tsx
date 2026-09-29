@@ -30,16 +30,27 @@ import {
   affiliateProgramQueryOptions,
   affiliatesQueryOptions,
   pendingPayoutsQueryOptions,
+  testimonialCourseOptionsQueryOptions,
 } from '../hooks/marketing.queries'
 import {
   useDecideAffiliate,
   useFlagAffiliateFraud,
+  useGenerateAffiliateLink,
   useInviteAffiliate,
   useRunPayouts,
   useSaveProgramSettings,
+  useUpdateAffiliateStatus,
 } from '../hooks/marketing.mutations'
 import { MarketingStatusBadge } from './marketing.status-badge'
 import type { AffiliateRow } from '../marketing.types'
+
+const AFFILIATE_STATUS_FILTERS = [
+  { value: 'all', label: 'All affiliates' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'suspended', label: 'Suspended' },
+  { value: 'declined', label: 'Declined' },
+] as const
 
 /**
  * S-8.4 Affiliate Program: program settings (admin) with commission, cookie
@@ -47,7 +58,13 @@ import type { AffiliateRow } from '../marketing.types'
  * clicks/sales/revenue/owed; fraud flags with commission holds; payout runs
  * behind an S-7.1 confirmation with failing rows listed.
  */
-export function AffiliatesView({ status = 'all' }: { status?: string }) {
+export function AffiliatesView({
+  status = 'all',
+  onStatusChange,
+}: {
+  status?: string
+  onStatusChange?: (status: string) => void
+}) {
   const role = useRole()
   const canWrite = role === 'admin' || role === 'editor'
   const canPayout = role === 'admin'
@@ -75,6 +92,20 @@ export function AffiliatesView({ status = 'all' }: { status?: string }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {onStatusChange ? (
+            <select
+              aria-label="Status filter"
+              className="border-input bg-background h-9 w-44 rounded-md border px-3 text-sm"
+              value={status}
+              onChange={(event) => onStatusChange(event.target.value)}
+            >
+              {AFFILIATE_STATUS_FILTERS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
           {canPayout && (
             <Button variant="outline" onClick={() => setSettingsOpen(true)}>
               Program Settings
@@ -480,6 +511,16 @@ function AffiliateDetailDialog({
   const role = useRole()
   const canWrite = role === 'admin' || role === 'editor'
   const flagFraud = useFlagAffiliateFraud()
+  const setStatus = useUpdateAffiliateStatus()
+  const generateLink = useGenerateAffiliateLink()
+  const [linkCourse, setLinkCourse] = useState('')
+  const coursesQuery = useQuery({
+    ...testimonialCourseOptionsQueryOptions(),
+    enabled: affiliate != null,
+  })
+
+  // Links are per course or generic; suspended links stay visible but inert.
+  const canGenerateLink = affiliate != null && affiliate.status === 'approved'
 
   return (
     <Dialog open={affiliate != null} onOpenChange={onOpenChange}>
@@ -507,9 +548,11 @@ function AffiliateDetailDialog({
             </div>
 
             <div>
-              <h4 className="mb-1 text-xs font-semibold uppercase text-muted-foreground">
-                Referral links
-              </h4>
+              <div className="mb-1 flex items-center justify-between">
+                <h4 className="text-xs font-semibold uppercase text-muted-foreground">
+                  Referral links
+                </h4>
+              </div>
               <ul className="space-y-1">
                 {affiliate.links.length === 0 ? (
                   <li className="text-sm text-muted-foreground">No links generated yet.</li>
@@ -527,6 +570,46 @@ function AffiliateDetailDialog({
                   ))
                 )}
               </ul>
+
+              {canWrite ? (
+                canGenerateLink ? (
+                  <div className="mt-2 flex flex-wrap items-end gap-2">
+                    <div className="grid gap-1">
+                      <Label htmlFor="affiliate-link-course">Scope</Label>
+                      <select
+                        id="affiliate-link-course"
+                        aria-label="Referral link scope"
+                        className="border-input bg-background h-9 w-56 rounded-md border px-2 text-sm"
+                        value={linkCourse}
+                        onChange={(event) => setLinkCourse(event.target.value)}
+                      >
+                        <option value="">Any course (generic link)</option>
+                        {(coursesQuery.data ?? []).map((option) => (
+                          <option key={option.publicId} value={option.publicId}>
+                            {option.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <Button
+                      variant="outline"
+                      disabled={generateLink.isPending}
+                      onClick={() =>
+                        void generateLink.mutateAsync({
+                          affiliatePublicId: affiliate.publicId,
+                          coursePublicId: linkCourse || undefined,
+                        })
+                      }
+                    >
+                      <PlusIcon aria-hidden /> Generate link
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Approve this application before generating referral links.
+                  </p>
+                )
+              ) : null}
             </div>
 
             {affiliate.fraudEvidence ? (
@@ -566,6 +649,40 @@ function AffiliateDetailDialog({
                     disabled={flagFraud.isPending}
                   >
                     <BanIcon aria-hidden /> Hold commissions
+                  </Button>
+                )}
+
+                {/* Suspending keeps the history but freezes pending commissions
+                    and makes the referral links inert at checkout. */}
+                {affiliate.status === 'suspended' ? (
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      void setStatus
+                        .mutateAsync({
+                          affiliatePublicId: affiliate.publicId,
+                          status: 'approved',
+                        })
+                        .then(() => onOpenChange(false))
+                    }
+                    disabled={setStatus.isPending}
+                  >
+                    <CheckIcon aria-hidden /> Reinstate
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      void setStatus
+                        .mutateAsync({
+                          affiliatePublicId: affiliate.publicId,
+                          status: 'suspended',
+                        })
+                        .then(() => onOpenChange(false))
+                    }
+                    disabled={setStatus.isPending}
+                  >
+                    <BanIcon aria-hidden /> Suspend
                   </Button>
                 )}
               </div>

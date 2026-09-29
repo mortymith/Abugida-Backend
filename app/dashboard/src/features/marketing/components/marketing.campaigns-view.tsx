@@ -16,10 +16,20 @@ import {
 import { formatInteger, formatPercent } from '#/lib/format'
 import { useRole } from '#/features/auth'
 import { campaignsQueryOptions } from '../hooks/marketing.queries'
+import { isMetricsUpdating } from '../marketing.campaign-states'
 import { MarketingStatusBadge } from './marketing.status-badge'
 import { CampaignComposeDialog } from './marketing.campaign-compose-dialog'
 import { CampaignDetailSheet } from './marketing.campaign-detail-sheet'
 import type { CampaignsQueryInput } from '../schemas/marketing.schema'
+
+const CAMPAIGN_STATUS_FILTERS: Array<{ value: CampaignsQueryInput['status']; label: string }> = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'sending', label: 'Sending' },
+  { value: 'sent', label: 'Sent' },
+  { value: 'cancelled', label: 'Cancelled' },
+]
 
 /**
  * S-8.1 Email Campaigns: campaign list with audience, status, sent, open and
@@ -30,9 +40,11 @@ import type { CampaignsQueryInput } from '../schemas/marketing.schema'
 export function CampaignsView({
   query,
   prefillCohort,
+  onQueryChange,
 }: {
   query: CampaignsQueryInput
   prefillCohort?: string
+  onQueryChange?: (query: CampaignsQueryInput) => void
 }) {
   const role = useRole()
   const canWrite = role === 'admin' || role === 'editor'
@@ -42,7 +54,7 @@ export function CampaignsView({
   const [detailId, setDetailId] = useState<string | null>(null)
 
   const items = campaignsQuery.data?.items ?? []
-  const isEmpty = !campaignsQuery.isLoading && items.length === 0 && query.status === 'all'
+  const isEmpty = !campaignsQuery.isLoading && items.length === 0
 
   return (
     <div>
@@ -54,11 +66,32 @@ export function CampaignsView({
             segments.
           </p>
         </div>
-        {canWrite && (
-          <Button onClick={() => setComposeOpen(true)}>
-            <PlusIcon aria-hidden /> New Campaign
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {onQueryChange ? (
+            <select
+              aria-label="Status filter"
+              className="border-input bg-background flex h-9 w-44 rounded-md border px-3 text-sm"
+              value={query.status}
+              onChange={(event) =>
+                onQueryChange({
+                  ...query,
+                  status: event.target.value as CampaignsQueryInput['status'],
+                })
+              }
+            >
+              {CAMPAIGN_STATUS_FILTERS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          {canWrite && (
+            <Button onClick={() => setComposeOpen(true)}>
+              <PlusIcon aria-hidden /> New Campaign
+            </Button>
+          )}
+        </div>
       </div>
 
       {campaignsQuery.isLoading ? (
@@ -72,10 +105,14 @@ export function CampaignsView({
       ) : isEmpty ? (
         <EmptyState
           icon={<RocketIcon className="size-10 text-muted-foreground" aria-hidden />}
-          title="No campaigns yet"
-          description="Create your first campaign to reach a student segment with a template."
+          title={query.status === 'all' ? 'No campaigns yet' : `No ${query.status} campaigns`}
+          description={
+            query.status === 'all'
+              ? 'Create your first campaign to reach a student segment with a template.'
+              : 'Try a different status filter to see the rest of your campaigns.'
+          }
           action={
-            canWrite ? (
+            canWrite && query.status === 'all' ? (
               <Button onClick={() => setComposeOpen(true)}>
                 <PlusIcon aria-hidden /> New Campaign
               </Button>
@@ -120,10 +157,10 @@ export function CampaignsView({
                       : '—'}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    <RateCell rate={campaign.openRate} />
+                    <RateCell rate={campaign.openRate} sentAt={campaign.sentAt} />
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    <RateCell rate={campaign.clickRate} />
+                    <RateCell rate={campaign.clickRate} sentAt={campaign.sentAt} />
                   </TableCell>
                 </TableRow>
               ))}
@@ -148,8 +185,13 @@ export function CampaignsView({
 /**
  * Open/click cells render the spec's "metrics updating" shimmer while the
  * first-hour window runs (S-8.1 metrics-lag state), then the real rate.
+ * A campaign that was never sent has no metrics at all — that is a dash, not
+ * a permanent shimmer.
  */
-function RateCell({ rate }: { rate: number | null }) {
-  if (rate == null) return <Skeleton className="ml-auto h-4 w-10" aria-label="Metrics updating" />
-  return formatPercent(rate)
+function RateCell({ rate, sentAt }: { rate: number | null; sentAt: string | null }) {
+  if (rate != null) return formatPercent(rate)
+  if (isMetricsUpdating(sentAt)) {
+    return <Skeleton className="ml-auto h-4 w-10" aria-label="Metrics updating" />
+  }
+  return <span className="text-muted-foreground">—</span>
 }

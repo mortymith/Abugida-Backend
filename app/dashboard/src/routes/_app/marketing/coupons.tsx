@@ -14,5 +14,13 @@ export const Route = createFileRoute('/_app/marketing/coupons')({
 
 function CouponsPage() {
   const search = Route.useSearch()
-  return <CouponsView status={search.status} />
+  const navigate = Route.useNavigate()
+  return (
+    <CouponsView
+      status={search.status}
+      onStatusChange={(status) =>
+        void navigate({ search: (prev) => ({ ...prev, status: status as typeof prev.status }) })
+      }
+    />
+  )
 }

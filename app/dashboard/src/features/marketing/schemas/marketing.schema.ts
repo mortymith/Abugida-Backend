@@ -130,24 +130,31 @@ export type TemplateTestSampleInput = z.infer<typeof templateTestSampleSchema>
 
 // ── S-8.3 Coupons ────────────────────────────────────────────────────────────
 
-export const couponCreateSchema = z
-  .object({
-    /** Explicit code; when omitted a batch of one is generated. */
-    code: z
-      .string()
-      .trim()
-      .min(3)
-      .max(40)
-      .regex(/^[A-Za-z0-9_-]+$/, 'Use letters, numbers, hyphens or underscores only')
-      .optional(),
-    kind: z.enum(['percentage', 'fixed', 'full_access']),
-    value: z.number().min(0).optional(),
-    scopeCoursePublicIds: z.array(uuidSchema).max(100).default([]),
-    /** Null/undefined = unlimited multi-use. */
-    maxRedemptions: z.number().int().min(1).max(1_000_000).optional(),
-    expiresAt: z.string().datetime({ offset: true }).optional(),
-    stackable: z.boolean().default(false),
-  })
+/**
+ * Shared coupon shape. The refinements live on `couponCreateSchema` rather
+ * than here because Zod v4 forbids `.omit()`/`.extend()` on a schema that
+ * already carries refinements — and `couponBatchSchema` needs exactly that to
+ * drop `code`/`maxRedemptions`. Keep this one unrefined.
+ */
+const couponBaseSchema = z.object({
+  /** Explicit code; when omitted a batch of one is generated. */
+  code: z
+    .string()
+    .trim()
+    .min(3)
+    .max(40)
+    .regex(/^[A-Za-z0-9_-]+$/, 'Use letters, numbers, hyphens or underscores only')
+    .optional(),
+  kind: z.enum(['percentage', 'fixed', 'full_access']),
+  value: z.number().min(0).optional(),
+  scopeCoursePublicIds: z.array(uuidSchema).max(100).default([]),
+  /** Null/undefined = unlimited multi-use. */
+  maxRedemptions: z.number().int().min(1).max(1_000_000).optional(),
+  expiresAt: z.string().datetime({ offset: true }).optional(),
+  stackable: z.boolean().default(false),
+})
+
+export const couponCreateSchema = couponBaseSchema
   .refine((data) => data.kind === 'full_access' || (data.value != null && data.value > 0), {
     message: 'Discount value is required',
     path: ['value'],
@@ -162,7 +169,7 @@ export const couponCreateSchema = z
   )
 export type CouponCreateInput = z.infer<typeof couponCreateSchema>
 
-export const couponBatchSchema = couponCreateSchema
+export const couponBatchSchema = couponBaseSchema
   .omit({ code: true, maxRedemptions: true })
   .extend({
     count: z.number().int().min(1).max(1_000),

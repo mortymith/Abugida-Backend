@@ -15,7 +15,7 @@ import { Textarea } from '#/components/ui/textarea'
 import { useRole } from '#/features/auth'
 import { templateDetailQueryOptions } from '../hooks/marketing.queries'
 import { useSaveTemplate, useSendTestTemplate } from '../hooks/marketing.mutations'
-import { renderTemplateDocument } from '../marketing.email-render'
+import { renderTemplateDocument, MAX_TEMPLATE_BLOCKS } from '../marketing.email-render'
 import { MERGE_TAGS, validateMergeTags } from '../marketing.merge-tags'
 import type { MergeTagData } from '../marketing.merge-tags'
 import type { TemplateBlockInput, TemplateSaveInput } from '../schemas/marketing.schema'
@@ -31,7 +31,12 @@ export function TemplateEditorView({ templateId }: { templateId: string }) {
   const canWrite = role === 'admin' || role === 'editor'
   const isNew = templateId === 'new'
 
-  const detailQuery = useQuery(templateDetailQueryOptions(isNew ? '__none__' : templateId))
+  // The editor is mounted for `new` too, so the lookup must be disabled there —
+  // the server fn validates the id as a UUID and rejects a placeholder.
+  const detailQuery = useQuery({
+    ...templateDetailQueryOptions(isNew ? '' : templateId),
+    enabled: !isNew,
+  })
   const navigate = useNavigate()
 
   const [name, setName] = useState('')
@@ -41,6 +46,14 @@ export function TemplateEditorView({ templateId }: { templateId: string }) {
   const [blocks, setBlocks] = useState<TemplateBlockInput[]>([])
   const [loaded, setLoaded] = useState(false)
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false)
+  /**
+   * Public id of the row this editor owns. A blank canvas has none until its
+   * first save, so it is adopted from the mutation response — otherwise every
+   * "Save Draft" would INSERT another template instead of updating this one.
+   */
+  const [savedTemplateId, setSavedTemplateId] = useState<string | null>(null)
+
+  const effectiveId = isNew ? savedTemplateId : templateId
 
   const saveTemplate = useSaveTemplate()
   const sendTest = useSendTestTemplate()
@@ -90,8 +103,25 @@ export function TemplateEditorView({ templateId }: { templateId: string }) {
     [blocks, sampleData],
   )
 
+  /**
+   * Mirrors the server's document schema (one hero, capped block count) so an
+   * over-built canvas fails with a readable message instead of an opaque
+   * validation error from the server function.
+   */
+  const addBlock = (block: TemplateBlockInput) => {
+    if (blocks.length >= MAX_TEMPLATE_BLOCKS) {
+      toast.warning(`A template holds at most ${MAX_TEMPLATE_BLOCKS} blocks.`)
+      return
+    }
+    if (block.type === 'hero' && blocks.some((existing) => existing.type === 'hero')) {
+      toast.warning('This template already has a hero block — edit it instead of adding another.')
+      return
+    }
+    setBlocks((current) => [...current, block])
+  }
+
   const currentInput = () => ({
-    templatePublicId: isNew ? undefined : templateId,
+    templatePublicId: effectiveId ?? undefined,
     name: name.trim() || 'Untitled template',
     kind,
     subject: subject.trim(),
@@ -109,15 +139,27 @@ export function TemplateEditorView({ templateId }: { templateId: string }) {
       toast.warning('A subject is required.')
       return
     }
-    if (publish && tagIssues.length > 0) {
+    if (tagIssues.length > 0) {
       toast.error(
         `Unresolved merge tags: ${tagIssues.map((issue) => `{{${issue.tag}}}`).join(', ')}`,
       )
       return
     }
     const result = await saveTemplate.mutateAsync({ ...currentInput(), publish })
+
+    // Adopt the id of a freshly created draft and swap the URL so a reload
+    // resumes the same template instead of starting another blank canvas.
+    if (isNew) {
+      setSavedTemplateId(result.templatePublicId)
+      void navigate({
+        to: '/marketing/templates/$templateId',
+        params: { templateId: result.templatePublicId },
+        replace: true,
+      })
+    }
+
     if (publish) {
-      toast.success(`Published as version ${result.version}.`)
+      // The publish toast comes from the mutation hook; don't double it here.
       void navigate({ to: '/marketing/templates' })
     } else {
       toast.success('Draft saved.')
@@ -151,10 +193,11 @@ export function TemplateEditorView({ templateId }: { templateId: string }) {
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              onClick={() =>
-                void sendTest.mutateAsync({ templatePublicId: templateId }).catch(() => undefined)
-              }
-              disabled={isNew || sendTest.isPending}
+              onClick={() => {
+                if (!effectiveId) return
+                void sendTest.mutateAsync({ templatePublicId: effectiveId }).catch(() => undefined)
+              }}
+              disabled={!effectiveId || sendTest.isPending}
             >
               <EyeIcon aria-hidden /> Send Test
             </Button>
@@ -247,10 +290,15 @@ export function TemplateEditorView({ templateId }: { templateId: string }) {
               <div className="flex items-center justify-between">
                 <Label>Blocks</Label>
                 <BlockTypePicker
-                  onAdd={(block) => setBlocks((current) => [...current, block])}
-                  disabled={!canWrite}
+                  onAdd={addBlock}
+                  disabled={!canWrite || blocks.length >= MAX_TEMPLATE_BLOCKS}
                 />
               </div>
+              {blocks.length >= MAX_TEMPLATE_BLOCKS ? (
+                <p className="text-xs text-muted-foreground">
+                  A template holds at most {MAX_TEMPLATE_BLOCKS} blocks. Remove one to add another.
+                </p>
+              ) : null}
 
               {blocks.map((block, index) => (
                 <div key={index} className="rounded-lg border p-3">

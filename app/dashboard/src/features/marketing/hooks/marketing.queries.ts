@@ -18,18 +18,36 @@ import {
 } from '../server/all'
 import type { TestimonialQueryInput } from '../schemas/marketing.schema'
 
+/**
+ * Query keys. Every list/detail factory is nested under a shared "scope" key
+ * so mutations can invalidate the whole scope with a prefix match:
+ * `invalidateQueries({ queryKey: ['marketing', 'campaigns'] })` matches
+ * `['marketing', 'campaigns', 'draft']` and `['marketing', 'campaigns', 'sent']`
+ * alike. Invalidating a single leaf (`...('all')`) would silently miss every
+ * other active filter, which is why the scope factories below exist.
+ */
 export const marketingQueryKeys = {
+  /** Matches every Marketing query — used by cross-cutting mutations. */
+  root: () => ['marketing'] as const,
+
+  campaignsRoot: () => ['marketing', 'campaigns'] as const,
   campaigns: (status: string) => ['marketing', 'campaigns', status] as const,
+  campaignRoot: () => ['marketing', 'campaign'] as const,
   campaign: (publicId: string) => ['marketing', 'campaign', publicId] as const,
   composerReference: () => ['marketing', 'composer-reference'] as const,
   templates: () => ['marketing', 'templates'] as const,
+  templateRoot: () => ['marketing', 'template'] as const,
   template: (publicId: string) => ['marketing', 'template', publicId] as const,
+  couponsRoot: () => ['marketing', 'coupons'] as const,
   coupons: (status: string) => ['marketing', 'coupons', status] as const,
+  couponRedemptionsRoot: () => ['marketing', 'coupon-redemptions'] as const,
   couponRedemptions: (publicId: string) => ['marketing', 'coupon-redemptions', publicId] as const,
   affiliateProgram: () => ['marketing', 'affiliate-program'] as const,
+  affiliatesRoot: () => ['marketing', 'affiliates'] as const,
   affiliates: (status: string) => ['marketing', 'affiliates', status] as const,
   pendingPayouts: () => ['marketing', 'pending-payouts'] as const,
   payoutHistory: () => ['marketing', 'payout-history'] as const,
+  testimonialsRoot: () => ['marketing', 'testimonials'] as const,
   testimonials: (query: TestimonialQueryInput) => ['marketing', 'testimonials', query] as const,
   testimonialRequests: () => ['marketing', 'testimonial-requests'] as const,
   testimonialSettings: () => ['marketing', 'testimonial-settings'] as const,

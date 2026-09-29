@@ -36,13 +36,27 @@ import { CouponGeneratorDialog } from './marketing.coupon-generate-dialog'
 import { countRecentRedemptions } from '../server/all'
 import type { CouponRow } from '../marketing.types'
 
+const COUPON_STATUS_FILTERS = [
+  { value: 'all', label: 'All codes' },
+  { value: 'active', label: 'Active' },
+  { value: 'expired', label: 'Expired' },
+  { value: 'deactivated', label: 'Deactivated' },
+  { value: 'exhausted', label: 'Exhausted' },
+] as const
+
 /**
  * S-8.3 Discount & Coupon Codes: generate single/multi-use codes with scope,
  * limits, and expiry; batch generation with immediate CSV export; deactivate
  * (with the recent-redemption warning) or extend; per-code revenue influence
  * and redemption history.
  */
-export function CouponsView({ status = 'all' }: { status?: string }) {
+export function CouponsView({
+  status = 'all',
+  onStatusChange,
+}: {
+  status?: string
+  onStatusChange?: (status: string) => void
+}) {
   const role = useRole()
   const canWrite = role === 'admin' || role === 'editor'
 
@@ -85,11 +99,27 @@ export function CouponsView({ status = 'all' }: { status?: string }) {
             revenue attribution.
           </p>
         </div>
-        {canWrite && (
-          <Button onClick={() => setGenerateOpen(true)}>
-            <PlusIcon aria-hidden /> Generate Codes
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {onStatusChange ? (
+            <select
+              aria-label="Status filter"
+              className="border-input bg-background flex h-9 w-44 rounded-md border px-3 text-sm"
+              value={status}
+              onChange={(event) => onStatusChange(event.target.value)}
+            >
+              {COUPON_STATUS_FILTERS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          {canWrite && (
+            <Button onClick={() => setGenerateOpen(true)}>
+              <PlusIcon aria-hidden /> Generate Codes
+            </Button>
+          )}
+        </div>
       </div>
 
       {couponsQuery.isLoading ? (

@@ -96,13 +96,11 @@ export interface ResolvedRecipient {
 }
 
 /**
- * Resolve a segment into recipients. Public entry point used by audience
- * preview, test sends, and the send pipeline itself.
+ * Consent-, suppression- and segment-aware predicates for one audience. Shared
+ * by the recipient query and the count query so the composer's "N recipients"
+ * and the sample rows can never disagree.
  */
-export async function resolveAudienceRecipients(
-  audience: CampaignAudience,
-  limit?: number,
-): Promise<ResolvedRecipient[]> {
+async function audienceFilters(audience: CampaignAudience) {
   const consent = latestMarketingConsent()
   const staffIds = await staffUserIds()
 
@@ -143,6 +141,21 @@ export async function resolveAudienceRecipients(
       break
   }
 
+  return filters
+}
+
+/**
+ * Resolve a segment into recipients. Public entry point used by audience
+ * preview, test sends, and the send pipeline itself. Pass `limit` whenever the
+ * caller only needs a page of the segment — a consented audience can be large.
+ */
+export async function resolveAudienceRecipients(
+  audience: CampaignAudience,
+  limit?: number,
+): Promise<ResolvedRecipient[]> {
+  const consent = latestMarketingConsent()
+  const filters = await audienceFilters(audience)
+
   let statement = db
     .select({
       userId: users.id,
@@ -160,14 +173,29 @@ export async function resolveAudienceRecipients(
   return statement
 }
 
+/** Final deliverable count for a segment, without materialising the rows. */
+export async function countAudienceRecipients(audience: CampaignAudience): Promise<number> {
+  const consent = latestMarketingConsent()
+  const filters = await audienceFilters(audience)
+
+  const rows = await db
+    .select({ count: sql<number>`COUNT(*)::int` })
+    .from(users)
+    .innerJoin(consent, and(eq(consent.userId, users.id), eq(consent.isGranted, true)))
+    .where(and(...filters))
+
+  return Number(rows.at(0)?.count ?? 0)
+}
+
 /**
  * Audience preview for the composer (S-8.1): the final deliverable count
  * after consent/suppression filtering, the matched population before it so
  * the difference is visible, and a small sample for a sanity check.
  */
 export async function previewAudienceImpl(audience: CampaignAudience): Promise<AudiencePreview> {
-  const recipients = await resolveAudienceRecipients(audience)
-  const sample = recipients.slice(0, PREVIEW_LIMIT).map((recipient) => ({
+  // Only a handful of sample rows are ever shown, so the segment is capped
+  // here rather than loading every consented contact into memory.
+  const sample = (await resolveAudienceRecipients(audience, PREVIEW_LIMIT)).map((recipient) => ({
     id: recipient.userId,
     name: recipient.name,
     email: recipient.email,
@@ -190,7 +218,7 @@ export async function previewAudienceImpl(audience: CampaignAudience): Promise<A
     .where(and(...matchedFilters))
 
   return {
-    count: recipients.length,
+    count: await countAudienceRecipients(audience),
     matched: Number(matchedRows.at(0)?.count ?? 0),
     sample,
   }

@@ -76,9 +76,19 @@ export function TemplatesView() {
               ].map((entry) => (
                 <DropdownMenuItem
                   key={entry.key}
-                  onSelect={() =>
-                    void createFromPrebuilt.mutateAsync({ key: entry.key }).catch(() => undefined)
-                  }
+                  onSelect={() => {
+                    // Each pre-built entry starts an editable copy — take the
+                    // user straight into the editor for it.
+                    void createFromPrebuilt
+                      .mutateAsync({ key: entry.key })
+                      .then((result) =>
+                        navigate({
+                          to: '/marketing/templates/$templateId',
+                          params: { templateId: result.templatePublicId },
+                        }),
+                      )
+                      .catch(() => undefined)
+                  }}
                 >
                   {entry.name}
                 </DropdownMenuItem>

@@ -18,6 +18,7 @@ import { formatInteger, formatPercent } from '#/lib/format'
 import { useRole } from '#/features/auth'
 import { campaignDetailQueryOptions } from '../hooks/marketing.queries'
 import { useCancelScheduledCampaign, useDuplicateCampaign } from '../hooks/marketing.mutations'
+import { isDuplicatable } from '../marketing.campaign-states'
 import { MarketingStatusBadge } from './marketing.status-badge'
 import type { CampaignFunnel } from '../marketing.types'
 
@@ -36,7 +37,13 @@ export function CampaignDetailSheet({
   const role = useRole()
   const canWrite = role === 'admin' || role === 'editor'
 
-  const detailQuery = useQuery(campaignDetailQueryOptions(campaignPublicId ?? '__none__'))
+  // `enabled` matters: the sheet is mounted with a null id whenever the list is
+  // showing, and the server fn validates the id as a UUID — firing with a
+  // placeholder would queue a failing request on every page load.
+  const detailQuery = useQuery({
+    ...campaignDetailQueryOptions(campaignPublicId ?? ''),
+    enabled: campaignPublicId != null,
+  })
   const duplicate = useDuplicateCampaign()
   const cancel = useCancelScheduledCampaign()
   const [cancelOpen, setCancelOpen] = useState(false)
@@ -92,11 +99,7 @@ export function CampaignDetailSheet({
               )}
             </section>
 
-            {canWrite &&
-            (detail.status === 'scheduled' ||
-              detail.status === 'sent' ||
-              detail.status === 'cancelled' ||
-              detail.status === 'draft') ? (
+            {canWrite && isDuplicatable(detail.status) ? (
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
@@ -164,13 +167,19 @@ function FunnelBars({ funnel }: { funnel: CampaignFunnel }) {
       {FUNNEL_STEPS.map((step) => {
         const value = funnel[step.key]
         if (value == null) {
+          // Only shimmer inside the spec's first-hour metrics-lag window; an
+          // unsent campaign has nothing to report and shows a dash.
           return (
             <div
               key={step.key}
               className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
             >
               <span>{step.label}</span>
-              <Skeleton className="h-4 w-12" aria-label="Metrics updating" />
+              {funnel.metricsUpdating ? (
+                <Skeleton className="h-4 w-12" aria-label="Metrics updating" />
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
             </div>
           )
         }

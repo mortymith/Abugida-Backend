@@ -213,6 +213,8 @@ export async function inviteAffiliateImpl(
       audience: input.audience ?? null,
       channels: input.channels ?? null,
     })
+    // The email is unique case-insensitively (idx_affiliates_email), so a
+    // duplicate invite returns no row instead of stacking applications.
     .onConflictDoNothing()
     .returning({ publicId: affiliates.publicId })
 

@@ -18,5 +18,12 @@ export const Route = createFileRoute('/_app/marketing/campaigns')({
 
 function CampaignsPage() {
   const search = Route.useSearch()
-  return <CampaignsView query={{ status: search.status }} prefillCohort={search.cohort} />
+  const navigate = Route.useNavigate()
+  return (
+    <CampaignsView
+      query={{ status: search.status }}
+      prefillCohort={search.cohort}
+      onQueryChange={(query) => void navigate({ search: (prev) => ({ ...prev, ...query }) })}
+    />
+  )
 }

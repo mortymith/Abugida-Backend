@@ -3,6 +3,15 @@ import type { MergeTagData } from './marketing.merge-tags'
 import type { TemplateBlockView } from './marketing.types'
 
 /**
+ * Structural limits for an editable template body, mirroring
+ * `templateBlocksSchema` in `@abugida/database`. Duplicated here so the editor
+ * can refuse an over-built canvas with a readable message instead of letting
+ * the server function reject it.
+ */
+export const MAX_TEMPLATE_BLOCKS = 25
+export const MAX_HERO_BLOCKS = 1
+
+/**
  * Render a template document (blocks + locked unsubscribe footer) into a
  * plain, client-safe HTML email body. Pure so the preview, the test send,
  * and the real campaign pipeline all produce identical output.

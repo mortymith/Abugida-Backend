@@ -90,10 +90,20 @@ export function useMarketingMutation<TInput, TOutput>(options: {
 
 // ── S-8.1 Campaigns ──────────────────────────────────────────────────────────
 
+/**
+ * Campaigns live in two key scopes: the filtered list and the per-campaign
+ * detail sheet. A state change invalidates both, otherwise a sheet reopened
+ * within `STALE.details` still offers actions the campaign no longer allows.
+ */
+const CAMPAIGN_SCOPES = [
+  marketingQueryKeys.campaignsRoot(),
+  marketingQueryKeys.campaignRoot(),
+] as const
+
 export function useCreateCampaign() {
   return useMarketingMutation<CampaignCreateInput, { campaignPublicId: string }>({
     mutationFn: (input) => createCampaign({ data: input }),
-    invalidate: [marketingQueryKeys.campaigns('all')],
+    invalidate: [...CAMPAIGN_SCOPES],
     successToast: 'Campaign drafted.',
   })
 }
@@ -101,15 +111,17 @@ export function useCreateCampaign() {
 export function useUpdateCampaign() {
   return useMarketingMutation<CampaignUpdateInput, { ok: true }>({
     mutationFn: (input) => updateCampaign({ data: input }),
-    invalidate: [marketingQueryKeys.campaigns('all')],
-    successToast: 'Campaign updated.',
+    invalidate: [...CAMPAIGN_SCOPES],
+    // No success toast: the composer calls this on every "Check audience" /
+    // "Send Now", where a toast per save would be noise. Callers that need
+    // confirmation own their messaging.
   })
 }
 
 export function useScheduleCampaign() {
   return useMarketingMutation<CampaignScheduleInput, { ok: true }>({
     mutationFn: (input) => scheduleCampaign({ data: input }),
-    invalidate: [marketingQueryKeys.campaigns('all')],
+    invalidate: [...CAMPAIGN_SCOPES],
     successToast: 'Campaign scheduled.',
   })
 }
@@ -117,7 +129,7 @@ export function useScheduleCampaign() {
 export function useCancelScheduledCampaign() {
   return useMarketingMutation<CampaignPublicIdInput, { ok: true }>({
     mutationFn: (input) => cancelScheduledCampaign({ data: input }),
-    invalidate: [marketingQueryKeys.campaigns('all')],
+    invalidate: [...CAMPAIGN_SCOPES],
     successToast: 'Scheduled send cancelled.',
   })
 }
@@ -125,7 +137,7 @@ export function useCancelScheduledCampaign() {
 export function useDuplicateCampaign() {
   return useMarketingMutation<CampaignPublicIdInput, { campaignPublicId: string }>({
     mutationFn: (input) => duplicateCampaign({ data: input }),
-    invalidate: [marketingQueryKeys.campaigns('all')],
+    invalidate: [...CAMPAIGN_SCOPES],
     successToast: 'Campaign duplicated as a draft.',
   })
 }
@@ -133,7 +145,7 @@ export function useDuplicateCampaign() {
 export function useSendCampaignNow() {
   return useMarketingMutation<CampaignPublicIdInput, { recipientCount: number }>({
     mutationFn: (input) => sendCampaignNow({ data: input }),
-    invalidate: [marketingQueryKeys.campaigns('all')],
+    invalidate: [...CAMPAIGN_SCOPES],
     onSuccess: (output) => {
       toast.success(`Campaign sent to ${output.recipientCount} recipients.`)
     },
@@ -170,7 +182,11 @@ export function useSaveTemplate() {
     { templatePublicId: string; version: number | null }
   >({
     mutationFn: (input) => saveTemplate({ data: input }),
-    invalidate: [marketingQueryKeys.templates(), marketingQueryKeys.composerReference()],
+    invalidate: [
+      marketingQueryKeys.templates(),
+      marketingQueryKeys.templateRoot(),
+      marketingQueryKeys.composerReference(),
+    ],
     onSuccess: (output) => {
       if (output.version != null) toast.success(`Template published as version ${output.version}.`)
     },
@@ -195,10 +211,16 @@ export function useSendTestTemplate() {
 
 // ── S-8.3 Coupons ────────────────────────────────────────────────────────────
 
+/** A code change also changes its redemption log and any campaign totals. */
+const COUPON_SCOPES = [
+  marketingQueryKeys.couponsRoot(),
+  marketingQueryKeys.couponRedemptionsRoot(),
+] as const
+
 export function useCreateCoupon() {
   return useMarketingMutation<CouponCreateInput, { couponPublicIds: string[]; codes: string[] }>({
     mutationFn: (input) => createCoupon({ data: input }),
-    invalidate: [marketingQueryKeys.coupons('all')],
+    invalidate: [...COUPON_SCOPES],
     successToast: 'Code created.',
   })
 }
@@ -209,7 +231,7 @@ export function useGenerateCouponBatch() {
     { codes: string[]; couponPublicIds: string[]; expiresAt: string | null }
   >({
     mutationFn: (input) => generateCouponBatch({ data: input }),
-    invalidate: [marketingQueryKeys.coupons('all')],
+    invalidate: [...COUPON_SCOPES],
     successToast: 'Batch generated.',
   })
 }
@@ -217,7 +239,7 @@ export function useGenerateCouponBatch() {
 export function useUpdateCoupon() {
   return useMarketingMutation<CouponUpdateInput, { ok: true }>({
     mutationFn: (input) => updateCoupon({ data: input }),
-    invalidate: [marketingQueryKeys.coupons('all')],
+    invalidate: [...COUPON_SCOPES],
     onSuccess: (_output, input) => {
       if (input.isActive === false) toast.success('Code deactivated.')
       else if (input.isActive === true) toast.success('Code reactivated.')
@@ -227,10 +249,17 @@ export function useUpdateCoupon() {
 
 // ── S-8.4 Affiliates ─────────────────────────────────────────────────────────
 
+const AFFILIATE_SCOPES = [
+  marketingQueryKeys.affiliatesRoot(),
+  marketingQueryKeys.affiliateProgram(),
+  marketingQueryKeys.pendingPayouts(),
+  marketingQueryKeys.payoutHistory(),
+] as const
+
 export function useSaveProgramSettings() {
   return useMarketingMutation<ProgramSettingsInput, { ok: true }>({
     mutationFn: (input) => saveProgramSettings({ data: input }),
-    invalidate: [marketingQueryKeys.affiliateProgram()],
+    invalidate: [...AFFILIATE_SCOPES],
     successToast: 'Program settings saved.',
   })
 }
@@ -238,7 +267,7 @@ export function useSaveProgramSettings() {
 export function useInviteAffiliate() {
   return useMarketingMutation<AffiliateInviteInput, { affiliatePublicId: string }>({
     mutationFn: (input) => inviteAffiliate({ data: input }),
-    invalidate: [marketingQueryKeys.affiliates('all'), marketingQueryKeys.affiliateProgram()],
+    invalidate: [...AFFILIATE_SCOPES],
     successToast: 'Invitation saved as a pending application.',
   })
 }
@@ -246,7 +275,7 @@ export function useInviteAffiliate() {
 export function useDecideAffiliate() {
   return useMarketingMutation<AffiliateDecisionInput, { ok: true }>({
     mutationFn: (input) => decideAffiliate({ data: input }),
-    invalidate: [marketingQueryKeys.affiliates('all'), marketingQueryKeys.affiliateProgram()],
+    invalidate: [...AFFILIATE_SCOPES],
     onSuccess: (_output, input) => {
       toast.success(
         input.decision === 'approve'
@@ -260,7 +289,7 @@ export function useDecideAffiliate() {
 export function useUpdateAffiliateStatus() {
   return useMarketingMutation<AffiliateStatusChangeInput, { ok: true }>({
     mutationFn: (input) => updateAffiliateStatus({ data: input }),
-    invalidate: [marketingQueryKeys.affiliates('all')],
+    invalidate: [...AFFILIATE_SCOPES],
     successToast: 'Affiliate status updated.',
   })
 }
@@ -268,7 +297,7 @@ export function useUpdateAffiliateStatus() {
 export function useFlagAffiliateFraud() {
   return useMarketingMutation<AffiliateFraudInput, { ok: true }>({
     mutationFn: (input) => flagAffiliateFraud({ data: input }),
-    invalidate: [marketingQueryKeys.affiliates('all')],
+    invalidate: [...AFFILIATE_SCOPES],
     onSuccess: (_output, input) => {
       toast.success(input.hold ? 'Commissions held for review.' : 'Commissions released.')
     },
@@ -278,7 +307,7 @@ export function useFlagAffiliateFraud() {
 export function useGenerateAffiliateLink() {
   return useMarketingMutation<AffiliateLinkInput, { code: string }>({
     mutationFn: (input) => generateAffiliateLink({ data: input }),
-    invalidate: [marketingQueryKeys.affiliates('all')],
+    invalidate: [...AFFILIATE_SCOPES],
     onSuccess: (output) => {
       toast.success(`Referral code ${output.code} created.`)
     },
@@ -296,12 +325,7 @@ export function useRunPayouts() {
     }
   >({
     mutationFn: () => runPayouts(),
-    invalidate: [
-      marketingQueryKeys.affiliates('all'),
-      marketingQueryKeys.pendingPayouts(),
-      marketingQueryKeys.payoutHistory(),
-      marketingQueryKeys.affiliateProgram(),
-    ],
+    invalidate: [...AFFILIATE_SCOPES],
     onSuccess: (output) => {
       if (output.paidCount === 0) {
         toast.warning('No affiliates met the payout requirements.')
@@ -316,13 +340,16 @@ export function useRunPayouts() {
 
 // ── S-8.5 Testimonials ───────────────────────────────────────────────────────
 
+/** Queue state feeds both the moderation list and the collection requests. */
+const TESTIMONIAL_SCOPES = [
+  marketingQueryKeys.testimonialsRoot(),
+  marketingQueryKeys.testimonialRequests(),
+] as const
+
 export function useDecideTestimonial() {
   return useMarketingMutation<TestimonialDecisionInput, { ok: true; heavyEdit: boolean }>({
     mutationFn: (input) => decideTestimonial({ data: input }),
-    invalidate: [
-      marketingQueryKeys.testimonials({ status: 'pending', course: 'all' }),
-      marketingQueryKeys.testimonials({ status: 'published', course: 'all' }),
-    ],
+    invalidate: [...TESTIMONIAL_SCOPES],
     onSuccess: (output, input) => {
       if (input.decision === 'approve') toast.success('Testimonial published.')
       else if (input.decision === 'edit') toast.success('Quote edited.')
@@ -337,10 +364,7 @@ export function useDecideTestimonial() {
 export function useSetTestimonialFeatured() {
   return useMarketingMutation<TestimonialFeatureInput, { ok: true }>({
     mutationFn: (input) => setTestimonialFeatured({ data: input }),
-    invalidate: [
-      marketingQueryKeys.testimonials({ status: 'pending', course: 'all' }),
-      marketingQueryKeys.testimonials({ status: 'published', course: 'all' }),
-    ],
+    invalidate: [...TESTIMONIAL_SCOPES],
     onSuccess: (_output, input) => {
       toast.success(input.featured ? 'Featured on the landing page.' : 'Removed from featured.')
     },
@@ -350,7 +374,7 @@ export function useSetTestimonialFeatured() {
 export function useCollectTestimonialManually() {
   return useMarketingMutation<TestimonialCollectInput, { testimonialPublicId: string }>({
     mutationFn: (input) => collectTestimonialManually({ data: input }),
-    invalidate: [marketingQueryKeys.testimonials({ status: 'pending', course: 'all' })],
+    invalidate: [...TESTIMONIAL_SCOPES],
     successToast: 'Testimonial added to the moderation queue.',
   })
 }

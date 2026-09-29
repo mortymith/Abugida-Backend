@@ -22,6 +22,7 @@ import {
   useScheduleCampaign,
   useSendCampaignNow,
   useSendTestCampaign,
+  useUpdateCampaign,
 } from '../hooks/marketing.mutations'
 import { LARGE_SEND_THRESHOLD, requiresLargeSendConfirmation } from '../marketing.campaign-states'
 import type { CampaignAudience } from '@abugida/database/marketing'
@@ -69,6 +70,7 @@ export function CampaignComposeDialog({
   )
 
   const createCampaign = useCreateCampaign()
+  const updateCampaign = useUpdateCampaign()
   const previewAudience = usePreviewAudience()
   const sendNow = useSendCampaignNow()
   const schedule = useScheduleCampaign()
@@ -94,24 +96,33 @@ export function CampaignComposeDialog({
     setDraftId(null)
   }
 
-  /** Create the draft once, reuse it for subsequent checks/sends. */
+  /**
+   * Create the draft on first use, then keep it in sync: without the update the
+   * user could keep editing after "Check audience" and press "Send Now", which
+   * would send the *original* draft and silently drop their changes.
+   */
   const handlePreview = async (): Promise<string | undefined> => {
     if (!canSave) {
       toast.warning('A campaign name and subject are required.')
       return undefined
     }
+    const fields = {
+      name: name.trim(),
+      subject: subject.trim(),
+      preheader: preheader.trim() || undefined,
+      templatePublicId: templatePublicId || undefined,
+      audience,
+    }
+
     let campaignPublicId = draftId ?? undefined
     if (!campaignPublicId) {
-      const result = await createCampaign.mutateAsync({
-        name,
-        subject,
-        preheader: preheader || undefined,
-        templatePublicId: templatePublicId || undefined,
-        audience,
-      })
+      const result = await createCampaign.mutateAsync(fields)
       campaignPublicId = result.campaignPublicId
       setDraftId(campaignPublicId)
+    } else {
+      await updateCampaign.mutateAsync({ ...fields, campaignPublicId })
     }
+
     const count = await previewAudience.mutateAsync({ audience })
     setPreview({ count: count.count, matched: count.matched })
     return campaignPublicId
@@ -161,7 +172,11 @@ export function CampaignComposeDialog({
 
   const reference = referenceQuery.data
   const pending =
-    createCampaign.isPending || previewAudience.isPending || sendNow.isPending || schedule.isPending
+    createCampaign.isPending ||
+    updateCampaign.isPending ||
+    previewAudience.isPending ||
+    sendNow.isPending ||
+    schedule.isPending
 
   return (
     <>
