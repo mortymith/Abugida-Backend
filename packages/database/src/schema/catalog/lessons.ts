@@ -112,6 +112,11 @@ export const lessons = pgTable(
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
+    /**
+     * Set when the lesson is archived. Distinct from `deletedAt`: archive is a
+     * reversible hide (spec 04 S-2.17), delete is not.
+     */
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (table) => [
@@ -174,6 +179,7 @@ export const insertLessonSchema = createInsertSchema(lessons, {
   durationSeconds: z.number().int().min(0).nullable().optional(),
   pageCount: z.number().int().positive().nullable().optional(),
   isDownloadable: z.boolean().default(true),
+  archivedAt: z.date().nullable().optional(),
   downloadSizeLimitBytes: z.number().int().min(0).default(524288000),
   rowVersion: z.number().int().min(1).default(1),
 }).omit({

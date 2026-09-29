@@ -59,7 +59,7 @@ describe('pgEnum definitions', () => {
 
   describe('catalog enums', () => {
     it('courseStatusEnum has correct values', () => {
-      expect(courseStatusEnum.options).toEqual(['draft', 'published', 'archived'])
+      expect(courseStatusEnum.options).toEqual(['draft', 'in_review', 'published', 'archived'])
     })
 
     it('bundleStatusEnum has correct values', () => {

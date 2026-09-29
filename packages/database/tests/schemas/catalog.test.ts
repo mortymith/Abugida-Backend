@@ -141,6 +141,30 @@ describe('catalog schemas', () => {
       })
       expect(result.success).toBe(true)
     })
+
+    it('exposes in_review between draft and published', () => {
+      expect(courseStatusEnum.options).toEqual(['draft', 'in_review', 'published', 'archived'])
+    })
+
+    it('accepts review lifecycle timestamps', () => {
+      const at = new Date('2026-01-01T00:00:00.000Z')
+      const result = insertCourseSchema.safeParse({
+        ...validCourse,
+        status: 'in_review',
+        reviewRequestedAt: at,
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('treats archivedAt as optional', () => {
+      expect(insertCourseSchema.safeParse({ ...validCourse, archivedAt: null }).success).toBe(true)
+    })
+
+    it('validates archivedAt is a date', () => {
+      expect(insertCourseSchema.safeParse({ ...validCourse, archivedAt: 'nope' }).success).toBe(
+        false,
+      )
+    })
   })
 
   describe('modules', () => {
@@ -156,6 +180,11 @@ describe('catalog schemas', () => {
     it('accepts valid module insert', () => {
       const result = insertModuleSchema.safeParse(validModule)
       expect(result.success).toBe(true)
+    })
+
+    it('treats archivedAt as optional and distinct from deletedAt', () => {
+      expect(insertModuleSchema.safeParse({ ...validModule, archivedAt: null }).success).toBe(true)
+      expect(insertModuleSchema.parse({ ...validModule }).archivedAt).toBeUndefined()
     })
 
     it('requires courseId', () => {
@@ -202,6 +231,11 @@ describe('catalog schemas', () => {
     it('accepts valid lesson insert', () => {
       const result = insertLessonSchema.safeParse(validLesson)
       expect(result.success).toBe(true)
+    })
+
+    it('treats archivedAt as optional and distinct from deletedAt', () => {
+      expect(insertLessonSchema.safeParse({ ...validLesson, archivedAt: null }).success).toBe(true)
+      expect(insertLessonSchema.parse({ ...validLesson }).archivedAt).toBeUndefined()
     })
 
     it('requires moduleId and courseId', () => {

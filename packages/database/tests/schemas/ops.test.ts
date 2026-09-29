@@ -18,6 +18,9 @@ import {
   outboxEventStatusEnum,
   webhookEventStatusEnum,
   principalTypeEnum,
+  insertReviewRequestSchema,
+  reviewEntityTypeEnum,
+  reviewStateEnum,
 } from '../../src/schema/ops'
 
 describe('ops schemas', () => {
@@ -444,6 +447,82 @@ describe('ops schemas', () => {
         displayName: 'x'.repeat(151),
       })
       expect(result.success).toBe(false)
+    })
+  })
+
+  describe('review requests', () => {
+    const validRequest = {
+      courseId: 1,
+      lessonId: 10,
+      requestedBy: 'user_1',
+      state: 'pending' as const,
+    }
+
+    it('accepts an item-level request with a lessonId', () => {
+      const result = insertReviewRequestSchema.safeParse(validRequest)
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts a course-level request without a lessonId', () => {
+      const result = insertReviewRequestSchema.safeParse({
+        courseId: 1,
+        requestedBy: 'user_1',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts an explicit null lessonId for course-level requests', () => {
+      const result = insertReviewRequestSchema.safeParse({
+        courseId: 1,
+        lessonId: null,
+        entityType: 'course',
+        requestedBy: 'user_1',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('defaults entityType to item', () => {
+      const result = insertReviewRequestSchema.parse(validRequest)
+      expect(result.entityType).toBe('item')
+    })
+
+    it('requires courseId', () => {
+      const result = insertReviewRequestSchema.safeParse({ requestedBy: 'user_1' })
+      expect(result.success).toBe(false)
+    })
+
+    it('requires requestedBy', () => {
+      const result = insertReviewRequestSchema.safeParse({ courseId: 1 })
+      expect(result.success).toBe(false)
+    })
+
+    it('validates lessonId positive when provided', () => {
+      expect(insertReviewRequestSchema.safeParse({ ...validRequest, lessonId: 0 }).success).toBe(
+        false,
+      )
+    })
+
+    it('accepts all entity types', () => {
+      for (const entityType of reviewEntityTypeEnum.options) {
+        const result = insertReviewRequestSchema.safeParse({
+          courseId: 1,
+          lessonId: entityType === 'item' ? 10 : null,
+          entityType,
+          requestedBy: 'user_1',
+        })
+        expect(result.success).toBe(true)
+      }
+    })
+
+    it('rejects unknown entity types', () => {
+      expect(reviewEntityTypeEnum.safeParse('module').success).toBe(false)
+    })
+
+    it('accepts all review states', () => {
+      for (const state of reviewStateEnum.options) {
+        const result = insertReviewRequestSchema.safeParse({ ...validRequest, state })
+        expect(result.success).toBe(true)
+      }
     })
   })
 })

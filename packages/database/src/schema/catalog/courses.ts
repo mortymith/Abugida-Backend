@@ -32,9 +32,19 @@ import { bundleCourses } from './bundle-courses'
 import { purchaseOptions } from '../finance/purchase-options'
 import { purchases } from '../finance/purchases'
 import { auditLogs } from '../ops/audit-logs'
-export const courseStatusEnum = z.enum(['draft', 'published', 'archived'])
+/**
+ * Course lifecycle (spec 00 §2.6). `in_review` sits between `draft` and
+ * `published` so the enum order mirrors the real progression; Postgres preserves
+ * enum ordering, so the migration must use `ALTER TYPE ... ADD VALUE ... AFTER`.
+ */
+export const courseStatusEnum = z.enum(['draft', 'in_review', 'published', 'archived'])
 export type CourseStatus = z.infer<typeof courseStatusEnum>
-export const courseStatusPgEnum = pgEnum('course_status', ['draft', 'published', 'archived'])
+export const courseStatusPgEnum = pgEnum('course_status', [
+  'draft',
+  'in_review',
+  'published',
+  'archived',
+])
 export const courseTypeEnum = z.enum(['self_paced', 'instructor_led', 'hybrid'])
 export type CourseType = z.infer<typeof courseTypeEnum>
 export const courseTypePgEnum = pgEnum('course_type', ['self_paced', 'instructor_led', 'hybrid'])
@@ -81,6 +91,15 @@ export const courses = pgTable(
     /** Max active enrollments; null = unlimited (waitlists/rules honor this). */
     capacity: integer('capacity'),
     scheduledPublishAt: timestamp('scheduled_publish_at', { withTimezone: true }),
+    /**
+     * Set when the course is archived. Distinct from `deletedAt`: archive is a
+     * reversible hide (spec 04 S-2.17), delete is not.
+     */
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    /** When this course entered the review queue (mirrors status = 'in_review'). */
+    reviewRequestedAt: timestamp('review_requested_at', { withTimezone: true }),
+    /** When a reviewer approved or rejected the course; cleared on resubmission. */
+    reviewDecidedAt: timestamp('review_decided_at', { withTimezone: true }),
     version: integer('version').notNull().default(1),
     rowVersion: integer('row_version').notNull().default(1),
     sortOrder: smallint('sort_order').notNull().default(0),
@@ -168,6 +187,9 @@ export const insertCourseSchema = createInsertSchema(courses, {
   capacity: z.number().int().min(1).nullable().optional(),
   requiresApproval: z.boolean().default(false),
   scheduledPublishAt: z.date().nullable().optional(),
+  archivedAt: z.date().nullable().optional(),
+  reviewRequestedAt: z.date().nullable().optional(),
+  reviewDecidedAt: z.date().nullable().optional(),
   version: z.number().int().min(1).default(1),
   rowVersion: z.number().int().min(1).default(1),
   sortOrder: z.number().int().min(0).default(0),

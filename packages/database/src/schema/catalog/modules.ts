@@ -46,6 +46,11 @@ export const modules = pgTable(
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
+    /**
+     * Set when the module is archived. Distinct from `deletedAt`: archive is a
+     * reversible hide (spec 04 S-2.17), delete is not.
+     */
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (table) => [
@@ -87,6 +92,7 @@ export const insertModuleSchema = createInsertSchema(modules, {
   sortOrder: z.number().int().min(0),
   estimatedDurationMinutes: z.number().int().positive().nullable().optional(),
   isPreviewAvailable: z.boolean().default(false),
+  archivedAt: z.date().nullable().optional(),
   rowVersion: z.number().int().min(1).default(1),
 }).omit({
   publicId: true,
