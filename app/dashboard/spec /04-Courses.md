@@ -2,6 +2,19 @@
 
 > **Abugida Academy — UX Design Specification** · Part 04 of 11 · [↑ Overview & Sitemap](00-Overview-and-Sitemap.md) · [← Dashboard](03-Dashboard.md) · [Content Library →](05-Content-Library.md)
 
+## What changed in Part 04 (Revision 3)
+
+- **The lifecycle gains a fifth state.** `Draft → In Review → Approved → Published → Archived`, with `courses.approved_at` and a course-level **Approved** status. The Approval Status Stepper, the [state diagram](#course-lifecycle), the S-2.1 status filters, and the S-2.22 state list all carry it.
+- **Items have their own visibility.** `lessons.visibility: draft | published | scheduled`, a **Publish item / Unpublish item** action, and a per-item `Unpublished` pill. _"The published set"_ is now defined, so `RC-3`/`RC-4` stop pointing at an undefined term.
+- **`RC-4` is split per kind** — `RC-4a` lesson, `RC-4b` quiz, `RC-4c` assignment — because a flat "≥ 50 characters of prose" made a quiz and a video-only lesson unpublishable.
+- **Permission rendering is one rule, three cases.** Out of capability → **absent**; capable but blocked by state → **disabled with a reason**; locked surface → **replaced by an explanation**. Support reaches the workspace and sees the **Students tab only**; `assignment.grade` is Admin **and** Editor.
+- **Save semantics are explicit.** A new [Save Semantics](#save-semantics) table, and the explicit save buttons are renamed **`Flush now`** — disabled with `aria-describedby` "No unsaved changes" when the buffer is clean.
+- **Ten screens now ship `Resilience` blocks** (403/404/offline/reconnected/session-expired/conflict/partial-failure/server-error) and five ship `Instrumentation & acceptance`, per [Part 11](11-Global-Standards.md#resilience-states).
+- **Conflict is no longer a dead end.** Reload is replaced by a two-column Markdown diff with **Keep mine (default) / Take theirs / Compare**.
+- **Delivery, not "and email".** In-app always, Telegram by default, email optional and disabled-with-reason, plus a delivery-failure state.
+- **Analytics metrics are defined** — a Metric Definitions table with window, timezone, inclusion rule, an `n < 5` suppression rule, and a `?atab=` URL param.
+- **New coverage:** version history with restore-as-a-new-draft, a 30-day **Recently deleted** view, Ge'ez 2-syllable n-gram search, course `content_language` + per-item **Translations**, a **Field Lock** table, bulk-publish readiness pre-evaluation, and a shared "Name this course" pre-step for AI/template creation.
+
 ## What changed in Part 04 (Revision 2)
 
 Part 04 is the centre of the Revision 2 redesign. Everything in it now hangs off one surface: the **Course Workspace**.
@@ -16,6 +29,16 @@ Part 04 is the centre of the Revision 2 redesign. Everything in it now hangs off
 
 This section is the shared vocabulary for every screen in Part 04. Screen definitions reference it rather than restating it.
 
+> **Text direction.** `dir="ltr"` is the document default. Ge'ez is left-to-right and no RTL work is planned. No Ethiopic text anywhere in Part 04 uses letter-spacing or a fixed-px line clamp; see [Localization & Formatting](11-Global-Standards.md#localization--formatting).
+
+> **Permission rendering — the three cases, not interchangeable** ([Part 11](11-Global-Standards.md#global-validation-and-feedback-patterns)):
+>
+> 1. **Out of capability** → the control is **absent entirely** (Support, Viewer, Reviewer never see authoring controls).
+> 2. **Capable but blocked by current state** (review lock, archived course, first item, single-section course, seat capacity) → **disabled with a reason**, in a tooltip _and_ in `aria-describedby`. Never a silent no-op.
+> 3. **Whole surface locked** → replaced with an explanation of what locked it and how to unlock it.
+>
+> "Read-only" is case 3, and only when the _entire_ surface is locked. A mixed screen does not collapse to read-only: it drops case-1 controls and keeps case-2 controls visible but disabled-with-a-reason.
+
 ### Workspace Anatomy
 
 A course is edited in one **workspace**: a persistent shell plus exactly one active tab.
@@ -23,7 +46,7 @@ A course is edited in one **workspace**: a persistent shell plus exactly one act
 ```text
 ┌──────────────────────────────────────────────────────────────────────────┐
 │  Identity Header (sticky, 64px)                                         │
-│  ‹ Courses / TOEFL Complete Course     🟠 Draft · v3   [Preview] [⋯]   │
+│  ‹ Courses / TOEFL Complete Course     ● Draft · v3   [Preview] [⋯]   │
 │  Course title (inline-editable) · TOEFL · Advanced · Instructor           │
 ├──────────────────────────────────────────────────────────────────────────┤
 │  Workspace Nav:  Overview · Curriculum · Students · Analytics · Settings  │
@@ -58,72 +81,174 @@ An item's **kind** is derived from its `contentType`, so no new column is introd
 
 **Kind is fixed at creation** and changing it prompts a confirmation that explains what is lost (an item promoted from Quiz to Lesson keeps its body but stops being a graded activity; demoting a Quiz to Lesson leaves the question set orphaned and requires an explicit choice). A single item may have **both** a rich body and an attached quiz — that combination is expressed as a Lesson item with an attached quiz, not as a separate kind.
 
+#### Item visibility
+
+`lessons.visibility: 'draft' | 'published' | 'scheduled'` is a **per-item** field, independent of the course lifecycle. It is what lets a live course grow one item at a time without publishing the whole draft, and it is the field `RC-3`/`RC-4` and completion rules read.
+
+| Value       | Student view                                                                                | Counts toward completion | Readiness                                  |
+| ----------- | ------------------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------ |
+| `draft`     | Hidden. A `◌ Unpublished` pill sits on the tree row and the pane header.                    | No                       | Yes — must pass `RC-4x` before it can move |
+| `scheduled` | Hidden until `scheduled_publish_at` (per-item, nullable). Badge reads `◌ Scheduled {date}`. | No                       | Yes — as `draft`                           |
+| `published` | Visible in the learner view, subject to unlock rules.                                       | Yes                      | Out of the published set                   |
+
+> **"The published set" (used by `RC-3`, `RC-4`, and the completion rule)** is: items of the course where `visibility = 'published'` and `archived_at IS NULL` and `deleted_at IS NULL`. It is a **subset of the curriculum**, not a synonym for it. Unpublishing an item removes it from the published set immediately; students already holding a completion for it keep that completion, and the course's `published_items` count drops.
+
 ### Course Lifecycle
 
-`Draft → In Review → Published → Archived`, visualised by the [Lifecycle Stepper](11-Global-Standards.md#reusable-component-library) in the identity header.
+`Draft → In Review → Approved → Published → Archived`, visualised by the [Lifecycle Stepper](11-Global-Standards.md#reusable-component-library) in the identity header.
+
+**Approved is a course-level status**, not only a per-item review state: `courses.approved_at` is set by an approval decision and is cleared on withdrawal, on any subsequent edit, and on unpublish. It is what lets a reviewed course sit _between_ review and publication — the state [S-2.22](04-Courses.md#scr-2-22) already required and Revision 2 had no way to represent.
+
+> **Derived Approved pill.** A course with an open approved review request and status `draft` shows the `In review` pill with an **"Approved, awaiting publish"** secondary line. The catalog's **Approved** filter matches exactly `review_requests.entity_type = 'course' AND decision = 'approved' AND courses.status = 'draft'`.
 
 ```mermaid
 stateDiagram-v2
     [*] --> Draft
     Draft --> InReview: Submit for review (requiresApproval)
-    Draft --> Published: Publish (gated courses only)
+    Draft --> Published: Publish (Editor, ungated)
     InReview --> Draft: Withdraw / Changes requested
-    InReview --> Published: Approve then publish
+    InReview --> Approved: Approve (no publish on approval)
+    Approved --> Draft: Withdraw / edit clears approval
+    InReview --> Published: Approve and publish
+    Approved --> Published: Publish
+    Draft --> Published: Publish (Admin, gated)
     Published --> Draft: Unpublish
     Published --> Archived: Archive
     Archived --> Draft: Restore
-    Published --> [*]
 ```
 
-| From        | To        | Who can                                          | Guard                                                                                                       |
-| ----------- | --------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| _(created)_ | Draft     | Author                                           | Every course is created as a Draft.                                                                         |
-| Draft       | In Review | Editor                                           | Course readiness ([S-2.22](04-Courses.md#scr-2-22)) passes. Only when `requiresApproval` is on.             |
-| Draft       | Published | Editor (ungated) / Admin (gated)                 | All readiness checks pass. When `requiresApproval` is on, an Editor cannot self-approve.                    |
-| In Review   | Draft     | Editor (withdraw) / Reviewer (changes requested) | Withdrawal keeps every edit. Requesting changes requires a comment.                                         |
-| In Review   | Published | Reviewer (approve) or Admin                      | Reviewer decision plus every readiness check. Publishing increments `courses.version`.                      |
-| Published   | Draft     | Admin                                            | Unpublish warns about enrolled students; they lose access immediately unless an access grace period is set. |
-| Published   | Archived  | Admin                                            | Enrollment closes; the course leaves the catalog. Students keep earned certificates and progress.           |
-| Archived    | Draft     | Admin                                            | Restore returns the course to Draft — never straight to Published.                                          |
+| From        | To        | Who can                                          | Guard                                                                                                                  |
+| ----------- | --------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| _(created)_ | Draft     | Author                                           | Every course is created as a Draft.                                                                                    |
+| Draft       | In Review | Editor                                           | Course readiness ([S-2.22](04-Courses.md#scr-2-22)) passes. Only when `requiresApproval` is on.                        |
+| Draft       | Published | Editor (ungated) / Admin (gated)                 | All readiness checks pass. When `requiresApproval` is on, an Editor cannot self-approve.                               |
+| In Review   | Draft     | Editor (withdraw) / Reviewer (changes requested) | Withdrawal keeps every edit. Requesting changes requires a comment.                                                    |
+| In Review   | Approved  | Reviewer                                         | Reviewer decision, comment optional, preview opened. Sets `approved_at`.                                               |
+| Approved    | Draft     | Editor                                           | Any edit clears `approved_at`; the course returns to Draft.                                                            |
+| In Review   | Published | Reviewer (approve) or Admin                      | Reviewer decision **with** _publish on approval_, plus every readiness check. Publishing increments `courses.version`. |
+| Approved    | Published | Editor / Admin                                   | Every readiness check re-evaluated. Publishing increments `courses.version`.                                           |
+| Published   | Draft     | Admin                                            | Unpublish keeps enrolled students' access for the grace period; new enrolment stops immediately.                       |
+| Published   | Archived  | Admin                                            | Enrollment closes; the course leaves the catalog. Students keep earned certificates and progress.                      |
+| Archived    | Draft     | Admin                                            | Restore returns the course to Draft — never straight to Published.                                                     |
+
+**Published is not terminal.** It has two exits — **Unpublish** and **Archive** — so the diagram has no `Published --> [*]` edge. An archived course that is deleted does terminate, and that is a hard delete behind the [S-7.1](09-Shared-Components.md#scr-7-1) confirmation.
 
 ### Routing Contract
 
-| Route                                                        | Renders                                                                                           |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| `/_app/courses`                                              | [S-2.1](04-Courses.md#scr-2-1) Catalog                                                            |
-| `/_app/courses/new`                                          | [S-2.2](04-Courses.md#scr-2-2) New Course dialog → creates a Draft and navigates to the workspace |
-| `/_app/courses/$courseId?tab=overview`                       | [S-2.6](04-Courses.md#scr-2-6) Overview (default)                                                 |
-| `/_app/courses/$courseId?tab=curriculum`                     | [S-2.17](04-Courses.md#scr-2-17) Curriculum with the item tree; no item selected                  |
-| `/_app/courses/$courseId?tab=curriculum&item=<itemPublicId>` | Curriculum with that item's pane open and the item selected in the tree                           |
-| `/_app/courses/$courseId?tab=students`                       | [S-2.18](04-Courses.md#scr-2-18)                                                                  |
-| `/_app/courses/$courseId?tab=analytics`                      | [S-2.19](04-Courses.md#scr-2-19)                                                                  |
-| `/_app/courses/$courseId?tab=settings`                       | [S-2.20](04-Courses.md#scr-2-20)                                                                  |
-| `/_app/courses/$courseId/lessons/$lessonId`                  | **Alias** → redirects to `?tab=curriculum&item=$lessonId`. Same component, no second editor.      |
+| Route                                                                               | Renders                                                                                           |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `/_app/courses`                                                                     | [S-2.1](04-Courses.md#scr-2-1) Catalog                                                            |
+| `/_app/courses/new`                                                                 | [S-2.2](04-Courses.md#scr-2-2) New Course dialog → creates a Draft and navigates to the workspace |
+| `/_app/courses/$courseId?tab=overview`                                              | [S-2.6](04-Courses.md#scr-2-6) Overview (default)                                                 |
+| `/_app/courses/$courseId?tab=curriculum`                                            | [S-2.17](04-Courses.md#scr-2-17) Curriculum with the item tree; no item selected                  |
+| `/_app/courses/$courseId?tab=curriculum&item=<itemPublicId>`                        | Curriculum with that item's pane open and the item selected in the tree                           |
+| `/_app/courses/$courseId?tab=students`                                              | [S-2.18](04-Courses.md#scr-2-18)                                                                  |
+| `/_app/courses/$courseId?tab=analytics`                                             | [S-2.19](04-Courses.md#scr-2-19)                                                                  |
+| `/_app/courses/$courseId?tab=analytics&atab=<performance\|dropoff\|quizzes\|items>` | The named analytics sub-tab; `performance` is the default and an unknown value falls back to it   |
+| `/_app/courses/$courseId?tab=settings`                                              | [S-2.20](04-Courses.md#scr-2-20)                                                                  |
+| `/_app/courses/$courseId?lessons/$lessonId`                                         | **Alias** → redirects to `?tab=curriculum&item=$lessonId`. Same component, no second editor.      |
 
-- `tab` defaults to `overview`; `item` is ignored outside the `curriculum` tab.
+- `tab` defaults to `overview`; `item` is ignored outside the `curriculum` tab; `atab` is ignored outside the `analytics` tab.
 - The alias route exists so that search results, notifications, and the Content Library "Used in" list keep working. It must not host a second editor implementation.
-- The workspace route allows `admin`, `editor`, `reviewer`, `viewer`. Authoring affordances inside it are permission-filtered, not route-filtered, so a Reviewer can open the same item the Editor sees and act on the review.
+- The workspace route allows `admin`, `editor`, `reviewer`, `viewer`, and `support`. Authoring affordances inside it are permission-filtered, not route-filtered, so a Reviewer can open the same item the Editor sees and act on the review. **Support is a special case:** their workspace nav renders the **Students tab only** — Overview, Curriculum, Analytics, and Settings are absent entirely (case 1 of the three-case rule above), per the [Support grant in Part 11](11-Global-Standards.md#roles--permissions-matrix). The route is the same; the destinations are not.
 
 ### Item Action Matrix
 
 What each action does to the tree, the learner view, and analytics. Used by the sidebar `⋯` menu ([S-7.10](09-Shared-Components.md#scr-7-10)) and the item pane.
 
-| Action    | Tree effect                                 | Learner view                                     | Analytics                                     | Reversible                 |
-| --------- | ------------------------------------------- | ------------------------------------------------ | --------------------------------------------- | -------------------------- |
-| Add       | New item appended to a section              | Hidden until the item is published               | Not counted                                   | Yes — delete               |
-| Rename    | In-place title change                       | Unchanged                                        | Unchanged (identity follows the title)        | n/a                        |
-| Duplicate | Copy inserted after the source              | Hidden until published                           | Counted separately — never merged with source | Yes — delete               |
-| Move      | Reposition within or across sections        | Order changes for unpublished courses only       | Unchanged                                     | n/a                        |
-| Archive   | Item leaves the active tree into `Archived` | Removed immediately, even from published courses | Excluded from progress and drop-off           | Yes — Restore              |
-| Delete    | Soft-deleted (`deleted_at`), hidden         | Removed, and purged after the retention window   | Historical records retained for the audit log | Within 30 days, then purge |
+| Action         | Tree effect                                           | Learner view                                                                             | Analytics                                         | Reversible                 |
+| -------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- | -------------------------- |
+| Add            | New item appended to a section, `visibility='draft'`  | Hidden until the item is published                                                       | Not counted                                       | Yes — delete               |
+| Rename         | In-place title change                                 | Unchanged                                                                                | Unchanged (identity follows the title)            | n/a                        |
+| Publish item   | `visibility: draft → published`; pill clears          | Item enters the learner view and the published set                                       | Begins counting toward reach and completion       | Yes — Unpublish item       |
+| Unpublish item | `visibility: published → draft`; `◌ Unpublished` pill | Item leaves the published set immediately; students keep progress already recorded on it | Excluded from the published set; history retained | Yes — Publish item         |
+| Duplicate      | Copy inserted after the source, `visibility='draft'`  | Hidden until published                                                                   | Counted separately — never merged with source     | Yes — delete               |
+| Move           | Reposition within or across sections                  | Order changes immediately in a published course                                          | Unchanged                                         | n/a                        |
+| Archive        | Item leaves the active tree into `Archived`           | Removed immediately, even from published courses                                         | Excluded from progress and drop-off               | Yes — Restore              |
+| Delete         | Soft-deleted (`deleted_at`), hidden                   | Removed, and purged after the retention window                                           | Historical records retained for the audit log     | Within 30 days, then purge |
+
+**What Duplicate copies, and what it never copies.** Duplication is a structure copy, not a data copy.
+
+| Copied                                                     | Never copied                                                       |
+| ---------------------------------------------------------- | ------------------------------------------------------------------ |
+| Sections, items, item bodies, attached quizzes and rubrics | Enrolments                                                         |
+| Unlock / prerequisite rules                                | Progress, `lesson_completions`, item-position progress             |
+| Course settings, pricing, discounts                        | Quiz attempts and grades, assignment submissions                   |
+| Completion rules and certificate config                    | Issued certificates, waitlist, enrolment requests                  |
+| The `source: template` flag                                | Analytics / `course_stats` history, review requests                |
+|                                                            | AI provenance tags (`source: ai`) — the copy is **not** AI-drafted |
+
+A duplicate always lands as `status: 'draft'` with every item `visibility: 'draft'`, never inherits `published_at`, and never carries a `requiresApproval` bypass.
+
+#### Item actions menu order
+
+The single `⋯` menu ([S-7.10](09-Shared-Components.md#scr-7-10)) opens in exactly this order on an item row and on the pane header. **Every reversible action sits above the destructive zone**; the destructive zone is always last and always separated by a rule.
+
+| #   | Entry                                   | Availability                                                                                                          |
+| --- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Publish item** / **Unpublish item**   | Items only. Absent for sections. `visibility` toggle; disabled-with-reason in a Review, Approved, or Archived course. |
+| 2   | Rename                                  |                                                                                                                       |
+| 3   | Duplicate…                              | Opens [S-7.7](09-Shared-Components.md#scr-7-7)                                                                        |
+| 4   | Move up · Move down · Move to section ▸ | Keyboard parity for drag                                                                                              |
+| 5   | Unlock rules                            | → [S-2.15](04-Courses.md#scr-2-15)                                                                                    |
+| 6   | Captions & transcript                   | Video items only                                                                                                      |
+| 7   | ✨ AI Quiz                              |                                                                                                                       |
+| 8   | Translations                            | → the item pane's **Translations** sub-tab                                                                            |
+| 9   | View analytics · Copy Markdown          |                                                                                                                       |
+| --- | **— destructive zone —**                |                                                                                                                       |
+| 10  | **Archive** (reversible)                | Offered first, labelled "Hidden from students, reversible"                                                            |
+| 11  | **Delete…**                             | Marked destructive; never the default                                                                                 |
+
+Sections use the same menu minus 1, 6, and 8. `Publish item` is **not** available while the course is In Review, because the [Field Lock table](#field-lock-table) makes `visibility` absent in that state.
+
+### Field Lock Table
+
+The single source of truth for what is editable in which course state. Every screen's prose about editability must agree with this table; where a screen and this table disagree, this table wins.
+
+| Field                                                                      | Draft                                        | In Review                                                 | Approved                                                        | Published                                                           | Archived   |
+| -------------------------------------------------------------------------- | -------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------- | ---------- |
+| **Course** title                                                           | editable                                     | editable                                                  | **locked-with-reason** "Approved — editing clears the approval" | editable-with-confirm                                               | read-only  |
+| **Course** slug                                                            | editable                                     | **locked-with-reason** "Slugs are frozen while in review" | locked-with-reason                                              | read-only (frozen at first publish)                                 | read-only  |
+| **Course** description, exam, level, tags, thumbnail                       | editable                                     | editable                                                  | editable                                                        | editable                                                            | read-only  |
+| **Course** content language                                                | editable                                     | editable                                                  | editable                                                        | editable-with-confirm                                               | read-only  |
+| **Course** pricing                                                         | editable                                     | editable                                                  | editable                                                        | editable-with-confirm "Students who already paid keep their access" | read-only  |
+| **Course** `requiresApproval`                                              | Admin only                                   | Admin only                                                | Admin only                                                      | Admin only                                                          | read-only  |
+| **Section** title, description, duration, preview flag                     | editable                                     | editable                                                  | editable                                                        | editable                                                            | read-only  |
+| **Item** title                                                             | editable                                     | **locked-with-reason** "In review — withdraw to edit"     | **locked-with-reason** "Approved — editing clears the approval" | editable-with-confirm                                               | read-only  |
+| **Item** body, media, captions                                             | editable                                     | locked-with-reason (same)                                 | locked-with-reason (same)                                       | editable-with-confirm "This changes a live lesson"                  | read-only  |
+| **Item** unlock rules                                                      | editable                                     | locked-with-reason (same)                                 | locked-with-reason (same)                                       | editable-with-confirm                                               | read-only  |
+| **Item** `visibility`                                                      | editable                                     | **absent** — the lifecycle owns it                        | editable                                                        | editable-with-confirm                                               | read-only  |
+| **Lifecycle transition** (`Publish` / `Unpublish` / `Archive` / `Restore`) | per the [lifecycle table](#course-lifecycle) | —                                                         | —                                                               | Admin only                                                          | Admin only |
+
+- _Locked-with-reason_ renders the control **disabled**, with the reason in a tooltip **and** in `aria-describedby`. Never a silent no-op, never a hidden field.
+- _Editable-with-confirm_ is an editable field behind a [S-7.1](09-Shared-Components.md#scr-7-1) confirmation that states the student-visible effect.
+- _Absent_ means the control does not render for that state at all.
+- **Reordering and moving items in a published course** applies immediately and reorders the live course on the next student page load. Enrolled students are notified **only when the move changes a prerequisite chain** — a plain reorder is silent; a move that alters what unlocks what sends an in-app + Telegram notice naming the affected items. This is the single rule S-2.6, S-2.17, and S-2.20 all restate.
 
 ### Save-State Contract
 
 Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared-Components.md#scr-7-8) indicator and follows the [Part 11](11-Global-Standards.md#global-validation-and-feedback-patterns) autosave policy:
 
-- **Structural changes** (add, rename, reorder, move, duplicate, archive, settings forms) save **immediately** on commit and roll back with an error toast on failure.
+- **Structural changes** (add, rename, reorder, move, duplicate, archive, publish/unpublish item, settings toggles) save **immediately** on commit and roll back with an error toast on failure.
 - **Content editing** (the [S-2.7](04-Courses.md#scr-2-7) item pane body, the [S-2.8](04-Courses.md#scr-2-8) quiz, the [S-2.23](04-Courses.md#scr-2-23) assignment, course settings text fields) autosaves on a **60s idle timer** and flushes on `Ctrl/⌘+S`.
-- Switching items or tabs **flushes** a dirty buffer first. If the flush fails, navigation is blocked by a [S-7.1](09-Shared-Components.md#scr-7-1) dialog offering **Retry / Discard / Stay** — the buffer is never discarded silently.
+- Switching items, tabs, or settings sections **flushes** a dirty buffer first. If the flush fails, navigation is blocked by a [S-7.1](09-Shared-Components.md#scr-7-1) dialog offering **Retry / Discard / Stay** — the buffer is never discarded silently.
+
+#### Save Semantics
+
+The 60s idle timer and an explicit button are **not** two competing save systems. The button exists only to force a flush early; the timer remains the automatic path.
+
+| Surface                                                                                    | Trigger                                                      | Explicit control                           | Behaviour when clean                                  | Dirty-exit behaviour                                                                             |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Item editor body ([S-2.7](#scr-2-7), [S-2.8](#scr-2-8), [S-2.23](#scr-2-23))               | 60s idle · `Ctrl/⌘+S` · blur · item/tab switch               | **`Flush now`** (`⌘S`)                     | Disabled, `aria-describedby` **"No unsaved changes"** | `beforeunload` guard; item switch flushes, and on failure blocks with **Retry / Discard / Stay** |
+| Course Settings text fields ([S-2.20](#scr-2-20))                                          | 60s idle per section                                         | **`Flush now`**                            | Disabled, "No unsaved changes"                        | Section switch flushes; `beforeunload` guard                                                     |
+| Quiz Builder ([S-2.8](#scr-2-8))                                                           | 60s idle                                                     | **`Flush now`**                            | Disabled, "No unsaved changes"                        | Same as the item editor                                                                          |
+| Completion & certificates ([S-2.10](#scr-2-10))                                            | Immediate on toggle; 60s idle while a field is open          | **`Flush now`**                            | Disabled, "No unsaved changes"                        | Section switch flushes                                                                           |
+| Unlock rules ([S-2.15](#scr-2-15))                                                         | Immediate on toggle; 60s idle while editing the lock message | **`Flush now`**                            | Disabled, "No unsaved changes"                        | Closing the sheet flushes; on failure the sheet stays open with the buffer intact                |
+| Curriculum tree structure (rename, reorder, move, publish/unpublish item, archive, delete) | Immediate on commit                                          | none                                       | n/a — there is no buffer                              | Optimistic UI; failure rolls back with an error toast and **Undo** where reversible              |
+| New Course dialog ([S-2.2](#scr-2-2))                                                      | Immediate on submit                                          | **Create course** (an action, not a flush) | Disabled until the required fields are valid          | Closing with a typed title asks [S-7.1](09-Shared-Components.md#scr-7-1) before discarding       |
+
+- A flush that fails leaves the buffer intact and moves [S-7.8](09-Shared-Components.md#scr-7-8) to `error`; **the word "Saved" never appears before the server confirms.**
+- The explicit control is always `Flush now`, never "Save", so it is unambiguous that autosave is already running. Short, structural flows name the action itself instead.
 
 ---
 
@@ -140,19 +265,21 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   │                                        [+ New Course ▾]                 │
   ├──────────────────────────────────────────────────────────────────────────┤
   │ Status pills (single-select):                                           │
-  │ [All 24] [Draft 6] [In Review 2] [Published 15] [Archived 1]            │
+  │ [All 24] [Draft 6] [In Review 2] [Approved 1] [Scheduled 1]             │
+  │ [Published 15] [Archived 1]                                             │
   │ Type: [All ▾]  Sort: [Recently updated ▾]                               │
   ├──────────────────────────────────────────────────────────────────────────┤
   │ Results: "Showing 24 courses"                                           │
   │ +----------------------+ +----------------------+ +--------------------+ │
   │ | [Thumbnail 160px]    | | [Thumbnail 160px]    | | [Thumbnail 160px]  | │
-  │ | 🟠 In Review         | | 🟣 Published         | | 🟠 Draft           | │
+  │ | ● In Review          | | ● Published          | | ● Draft              | │
   │ | TOEFL Complete       | | IELTS Advanced       | | Grammar Basics    | │
-  │ | 2-line description  | | 2-line description  | | 2-line description| │
+  │ | description wraps,   | | description wraps,   | | description wraps  | │
+  │ | never clamped        | | never clamped        | | never clamped     | │
   │ |─────────────────────| |─────────────────────| |────────────────────| │
-  │ | 4 sections · 24 items| | 3 sections · 18 items| | ⚠ 2 items need    | │
+  │ | 4 sections · 24 items| | 3 sections · 18 items| | ⚠ 3 items need    | │
   │ | 234 students · 82%   | | 189 students · 52%  | | content            | │
-  │ | ✎ Ready to review   | | 🟣 Live             | | 🟠 Not started    | │
+  │ | ✔ Ready to publish   | | ● Live               | | ○ Not started        | │
   │ | [Open workspace]    | | [Open workspace]    | | [Open workspace]  | │
   │ +----------------------+ +----------------------+ +--------------------+ │
   └──────────────────────────────────────────────────────────────────────────┘
@@ -165,19 +292,49 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   5. Quick actions via card hover: Open workspace, Duplicate, Archive.
 - **Data Displayed/Modified:** Reads `courses` joined with `course_stats` and aggregated `modules`/`lessons` counts. Read-only.
 - **States:**
-  - **Default (Populated):** Full grid of cards; the status pill reflects the [course lifecycle](04-Courses.md#course-lifecycle).
-  - **In Review:** Indigo pill + "In review" line; a Reviewer's card shows the pending decision count.
+  - **Default (Populated):** Full grid of cards; the status pill reflects the [course lifecycle](04-Courses.md#course-lifecycle). Every pill is the [fill/text/tint triple](11-Global-Standards.md#status-colour-mapping) with a label and an icon — never colour alone.
+  - **Status pills and filters:** `All · Draft · In Review · Approved · Scheduled · Published · Archived`. **Approved** matches `review_requests.entity_type='course' AND decision='approved' AND courses.status='draft'`; **Scheduled** matches any course with a future `scheduled_publish_at`.
+  - **In Review:** Indigo pill + "In review" line; a Reviewer's card shows the pending decision count. The derived-Approved case adds a secondary line _"Approved, awaiting publish."_
   - **Empty State (No Courses):** [S-7.3](09-Shared-Components.md#scr-7-3) Empty State: "No courses yet. Create your first course!" with a prominent **New Course** CTA and a link to the [Content Library](05-Content-Library.md#scr-3-1).
   - **Loading:** 6–9 skeleton cards with 160px placeholder thumbnails.
   - **Filtered (No Results):** "No courses match your filters." + **Clear filters** — deliberately _not_ the [S-7.3](09-Shared-Components.md#scr-7-3) creation CTA, per [Part 11](11-Global-Standards.md#global-validation-and-feedback-patterns).
-  - **Error:** "Unable to load courses. Retry?" with a Retry button.
-  - **Authoring Health (new):** A card shows the single most useful next action for its state — `✎ Ready to review` (all items approved, awaiting publish), `⚠ N items need content` (items without a body, blocking publish), `🟠 Not started` (no items yet). The line is a link straight to the screen that resolves it.
-  - **Selection Mode:** Checkboxes for Admin bulk actions (Publish, Archive, Delete) with a bulk confirmation.
+  - **Error:** "Unable to load courses. Retry?" with a Retry button and a request ID.
+  - **Authoring Health:** A card shows the single most useful next action for its state, and the line is a link straight to the screen that resolves it. **Every count below is read from one source** — the server-side authoring-health projection that also backs `RC-3`/`RC-4` in [S-2.22](#scr-2-22) — so the catalog can never disagree with the readiness checklist.
+
+    | Variant                          | Condition                                                       |
+    | -------------------------------- | --------------------------------------------------------------- |
+    | `○ Not started`                  | No items exist                                                  |
+    | `⚠ N items need content`         | ≥ 1 item in the published set fails `RC-4a` / `RC-4b` / `RC-4c` |
+    | `N items awaiting review`        | ≥ 1 item with `review_status = 'in_review'`                     |
+    | `↻ Changes requested on M items` | ≥ 1 item with `review_status = 'changes_requested'`             |
+    | `✎ Ready to review`              | All items approved, course not yet submitted                    |
+    | `✔ Ready to publish` (ungated)   | Every `RC-1…RC-8` passes and the course needs no approval       |
+    | `📅 Scheduled for {date}`        | Future `scheduled_publish_at`                                   |
+
+  - **Selection Mode:** Checkboxes for Admin bulk actions (Publish, Archive, Delete) with a bulk confirmation. Support and Viewer see no checkboxes at all — the capability is absent, not disabled.
   - **Hover State:** Card lifts; quick actions appear.
 - **Validation & Feedback:**
   - **Delete Confirmation:** [S-7.1](09-Shared-Components.md#scr-7-1): "Delete 'TOEFL Complete'? This cannot be undone. 234 enrollments and 84 earned certificates are affected." Certificates block deletion until exported.
   - **Archive Success:** Toast "Course archived successfully." The card moves to the `Archived` filter.
   - **Publish Success:** Toast "Course published successfully." + deep link to the workspace Overview.
+  - **Bulk Publish pre-evaluates readiness.** Bulk Publish calls `getPublishReadiness` for **every selected course** before it commits anything. Courses with blocking failures are **excluded** and listed in the confirmation as _"Cannot publish: {name} — {failing RC ids}"_, with a **Fix** deep link each. The remaining courses publish, and the result toast reports both counts: _"3 published · 1 couldn't publish (2 failing checks)."_ Bulk Publish never publishes a course it did not verify.
+- **Resilience:**
+  - **403:** "You don't have access to this workspace." naming the course, with a request ID and **Ask an Admin for access**. Support never sees this screen's authoring affordances at all.
+  - **404:** "This course was deleted, or you followed an old link." + **Back to Courses** + request ID.
+  - **Offline:** A persistent banner, not a toast. The grid renders read-only from cache with _"You're offline — showing the last loaded catalog."_ Filters and sort still work locally.
+  - **Reconnected:** Queued writes flush in order; a queued archive whose `rowVersion` went stale resolves to a conflict prompt, never a silent overwrite.
+  - **Session expired:** The 2-minute warning modal names the unsaved-work surfaces (none on this screen, stated explicitly); on return the user lands on the same filter and page.
+  - **Conflict / partial failure:** Bulk Publish and Archive report per-course results — _"47 archived · 3 failed — Retry failures"_ — never one success/failure toast for a mixed batch.
+  - **Server error:** "We couldn't load your courses — nothing you did was lost." with Retry and a request ID.
+- **Instrumentation & acceptance:**
+  - **Events:** `course_catalog_viewed` `{filter, sort, page, resultCount}` · `course_filter_changed` `{statusFilter, resultCount}` · `course_workspace_opened` `{courseId, entryPoint}` · `course_bulk_publish_requested` `{selectedCount, excludedCount}` · `course_bulk_publish_completed` `{publishedCount, failedCount, failingRcIds[]}`. IDs and counts only — no titles, no PII.
+  - **Acceptance:**
+    1. A card's authoring-health line reports the same item counts as the `RC-3` / `RC-4` failures on [S-2.22](#scr-2-22) for the same course.
+    2. The **Approved** filter returns exactly the courses with an approved course review request and `status = 'draft'`.
+    3. Bulk Publish never publishes a course with a blocking `RC` failure, and the confirmation names each excluded course with a Fix link.
+    4. The bulk-publish result toast reports published and failed counts separately, with a **Retry failures** action.
+    5. Every status pill carries a text label and an icon and is legible in grayscale.
+  - **Budgets:** 25-row pages; server-side sort past 100 rows; first paint < 1.5 s; filter re-query < 400 ms; no layout shift when 9 cards paint.
 - **Navigation:**
   - Card click / **Open workspace** → [S-2.6](04-Courses.md#scr-2-6) Course Workspace · Overview
   - Authoring-health line → [S-2.17](04-Courses.md#scr-2-17) Curriculum (or [S-2.22](04-Courses.md#scr-2-22) Readiness)
@@ -231,6 +388,14 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   - **Instructor:** required; defaults to the signed-in user when they hold the Instructor assignment, otherwise to the workspace default.
   - **Thumbnail:** optional, 160×90, PNG/JPG/WebP, ≤ 2 MB. Uploading shows inline progress and does not block creation.
   - **Description:** _not_ collected here. It is edited in [S-2.20](04-Courses.md#scr-2-20) and is only required at publish time.
+- **Resilience:**
+  - **403:** "You don't have access to create courses in this workspace." with a request ID and **Ask an Admin for access**. Reviewer, Viewer, and Support never reach this dialog — **+ New Course** is absent for them, not disabled.
+  - **404:** The dialog is only reachable from a route, so an invalid `?from=` returns to [S-2.1](#scr-2-1) with the dialog closed and a request ID.
+  - **Offline:** The dialog opens read-only with a persistent banner: _"You're offline — creating a course is paused."_ Typed values are kept in the local draft mirror so nothing typed is lost.
+  - **Reconnected:** The dialog re-enables and the typed values are still present; nothing is auto-submitted.
+  - **Session expired:** On return the dialog reopens with the typed title restored from the local draft mirror and the create action available.
+  - **Conflict / partial failure:** Not applicable — creation is a single atomic insert. A slug collision re-suffixes silently and reports the chosen slug in the success toast.
+  - **Server error:** "We couldn't create your course — nothing was saved." with Retry and a request ID.
 - **Navigation:**
   - **Create course** → [S-2.6](04-Courses.md#scr-2-6) Course Workspace · Overview, with a first-run hint pointing at [S-2.17](04-Courses.md#scr-2-17) Curriculum
   - **Cancel / X** → [S-2.1](04-Courses.md#scr-2-1) Catalog
@@ -277,13 +442,13 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
 ##### Screen Name: S-2.6 Course Workspace — Overview 🔄 CHANGED
 
 - **Purpose:** The persistent shell for everything about one course, and its landing tab. Gives an author or reviewer a single answer to "what state is this course in, what is blocking it, and what do I do next" before any editing begins. Replaces the Revision 1 "Course Detail / Curriculum Builder" screen.
-- **User Role(s):** Admin, Editor, Reviewer, Viewer (Support: no course access)
+- **User Role(s):** Admin, Editor, Reviewer, Viewer. **Support: the route resolves, the nav shows the Students tab only** — Overview, Curriculum, Analytics, and Settings are absent.
 - **Wireframe Layout (Text-Based):**
   ```
   ┌──────────────────────────────────────────────────────────────────────────┐
-  │ ‹ Courses / TOEFL Complete Course                      🟠 Draft · v3    │
+  │ ‹ Courses / TOEFL Complete Course                      ● Draft · v3    │
   │ TOEFL Complete Course  ·  TOEFL · Advanced · Jane Smith   [Preview] [⋯] │
-  │ ●━━━━━━━○━━━━━━━━━━○━━━━━━━━━○        [ Submit for review ]  ← lifecycle  │
+  │ ●━━━○━━━○━━○━━━○        [ Submit for review ]  ← 5-node lifecycle       │
   │ ┌────────────────────────────────────────────────────────────────────┐   │
   │ │ ● Overview   ○ Curriculum (24)   ○ Students (234)  ○ Analytics  │   │
   │ │ ○ Settings                                                       │   │
@@ -299,21 +464,20 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   │ | Complete  | | Sections  |   │ │ ▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░  Section 2  72%│ │
   │ | (16/24)   | | published |   │ │ ▓▓▓▓▓▓░░░░░░░░░░░░░░░░░  Section 3  45%│ │
   │ +-----------+ +-----------+   │ │ [Full analytics →]                     │ │
-  │ | ⚠ 2 items | | 4.8 ★     |   │ └───────────────────────────────────────┘ │
+  │ | ⚠ 3 items | | 4.8 ★     |   │ └───────────────────────────────────────┘ │
   │ | need      | | 234 rating │   ├───────────────────────────────────────────┤
   │ | content   | | (18)      |   │ Recent activity                          │
   │ +-----------+ +-----------+   │ ✎ Jane edited "Skimming Basics"      2h  │
   │                                │ 🔁 Reordered Section 2               5h  │
   │ Publishing                    │ 📨 Submitted for review             1d  │
-  │ Visibility: Draft (invisible)  ├───────────────────────────────────────────┤
-  │ Enrollment window: —            │ Course                                  │
-  │ [Review & publish →]           │ 4 sections · 24 items · 5 quizzes       │
+  │ Status: Unlisted               ├───────────────────────────────────────────┤
+  │ 234 keep access · enrolment off│ Course                                    │
   │                                │ 3h 40m estimated · Updated 2h ago       │
   │                                │ [Edit details] · [Duplicate] · [Archive]│
   └──────────────────────────────┴───────────────────────────────────────────┘
   ```
 - **Primary Actions:**
-  1. Move between the five workspace tabs.
+  1. Move between the five workspace tabs (Support: one tab).
   2. Edit the course title inline in the identity header (autosaves; `Enter` or blur commits, `Esc` reverts).
   3. Open the [S-2.21](04-Courses.md#scr-2-21) Learner Preview.
   4. Run the lifecycle action: Submit for review, Publish, Unpublish, or Restore.
@@ -321,24 +485,46 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   6. Duplicate, save as template, or archive from the `⋯` course menu.
   7. Read course-scoped health, activity, and headline metrics without leaving the tab.
 - **Data Displayed/Modified:** Reads `courses`, `course_stats`, `course_stats_history`, `modules`, `lessons`, `enrollments`, `review_requests`, `audit_logs`. Title edits write `courses.title` (and regenerate `slug` only while the course is a Draft).
+- **The "N items need content" count** quoted on the readiness banner, on the Course health card, and as the `RC-4a` failure in [S-2.22](#scr-2-22) is **the same number from the same source** — the `RC-4a` failing-item count returned by `getPublishReadiness`. The three places that display it are not three separate calculations, so they cannot disagree. Revision 2 quoted 3, 2, and 3 for the same course; all three now read 3 because there is only one value.
 - **States:**
   - **Default (Draft):** Readiness banner visible; lifecycle CTA reads `Submit for review` when `requiresApproval` is on, otherwise `Publish`.
   - **In Review:** Identity header shows the indigo pill and "Submitted 2h ago by Jane"; the lifecycle CTA becomes `Withdraw`; the readiness banner is replaced by a review-progress block linking to [S-2.22](04-Courses.md#scr-2-22). Editing stays enabled.
   - **Published:** Green "Live since …" line; the CTA becomes `Unpublish`; the header shows a live learner link.
+  - **Approved:** Green "Approved by Alex Johnson · ready to publish" line; the stepper's fourth node fills; the CTA reads `Publish`. Item and course-title edits are **disabled with the reason** _"Approved — editing clears the approval"_ in a tooltip and in `aria-describedby`, per the [Field Lock table](#field-lock-table).
+  - **Scheduled:** "Scheduled for 2026-09-15 09:00 EAT" with Edit / Cancel; the course stays a Draft until the job runs.
   - **Archived:** Whole workspace renders read-only behind a grey banner: "This course is archived. Restore it to make changes." Only `Restore` and `Duplicate` remain actionable.
-  - **Reviewer role:** No authoring controls. The `⋯` menu is reduced to Preview and Review; the readiness block is replaced by a **Review** action opening the decision panel in [S-2.22](04-Courses.md#scr-2-22).
-  - **Viewer role:** Read-only everywhere; every authoring control is hidden rather than disabled, per [Part 11](11-Global-Standards.md#global-validation-and-feedback-patterns).
+  - **Reviewer role (out of capability → absent):** Authoring controls are **absent** — the `⋯` menu is reduced to Preview and Review, the inline title editor does not render, and the readiness block is replaced by a **Review** action opening the decision panel in [S-2.22](04-Courses.md#scr-2-22). Case 1 of the three-case rule, not a disabled edit field.
+  - **Viewer role (out of capability → absent):** the same treatment; no authoring control renders at all.
+  - **Blocked by state, not by role:** while the course is In Review or Approved, a Reviewer _could_ edit an item body but must not, so the editor is **case 2** — present, `aria-disabled`, with the reason _"In review — withdraw to edit"_ / _"Approved — editing clears the approval"_ in a tooltip and in `aria-describedby`. It is never collapsed into a read-only pane.
   - **Title Editing:** Inline input replaces the heading; invalid input reverts with a toast; the workspace nav and tree stay mounted so layout does not shift.
   - **Nothing Published Yet:** "Where students are" shows an explanatory empty state: "No students yet — your course is invisible until you publish." with a link to [S-2.22](04-Courses.md#scr-2-22).
   - **Loading:** Skeleton for each card and chart region; the identity header renders as early as the course row resolves.
-  - **Error:** "Unable to load this course. Retry?" with Retry; the shell chrome stays visible so navigation is not lost.
-  - **Course Deleted Mid-Session (new):** A concurrent delete surfaces a blocking "This course was deleted by {user}" state with a link back to [S-2.1](04-Courses.md#scr-2-1).
+  - **Error:** "Unable to load this course. Retry?" with Retry and a request ID; the shell chrome stays visible so navigation is not lost.
+  - **Course Deleted Mid-Session:** A concurrent delete surfaces a blocking "This course was deleted by {user}" state with a link back to [S-2.1](04-Courses.md#scr-2-1).
 - **Validation & Feedback:**
-  - **Title inline edit:** 3–300 characters; `Enter` commits, `Esc` reverts, blur commits if valid. Uses [S-7.8](09-Shared-Components.md#scr-7-8) state reporting.
-  - **Slug:** regenerated only while `status = 'draft'`; once published the slug is frozen and changing the title cannot break inbound links.
+  - **Title inline edit:** 3–300 characters measured in **grapheme clusters**; `Enter` commits, `Esc` reverts, blur commits if valid. Uses [S-7.8](09-Shared-Components.md#scr-7-8) state reporting. The heading is **not** single-line-clamped — a 300-character Amharic title wraps to ~3 lines and the header row grows rather than clipping.
+  - **Slug:** regenerated only while `status = 'draft'`; once published the slug is frozen and changing the title cannot break inbound links. See the [Field Lock table](#field-lock-table).
   - **Archive:** [S-7.1](09-Shared-Components.md#scr-7-1) confirmation naming the enrolled-student count.
   - **Unpublish:** typed confirmation is **not** required, but the dialog must state the student-visible consequence and offer a scheduled unpublish.
+  - **Reordering in a published course:** the live order updates immediately; enrolled students are notified **only when a prerequisite chain changed**.
   - **Every action in the header is audit-logged** (`course.status_changed`, `course.title_changed`) and appears in [S-6.8](08-Settings.md#scr-6-8).
+- **Resilience:**
+  - **403:** "You don't have access to {course}." with a request ID and **Ask an Admin for access**. For Support, whose nav shows only Students, the absent tabs are case 1 and never produce a 403.
+  - **404:** "This course was deleted, or you followed an old link." + **Back to Courses** + request ID.
+  - **Offline:** Persistent banner; the tab renders read-only from cache with _"3 changes waiting to sync."_ A pending title edit is queued and shown as queued in the save indicator.
+  - **Reconnected:** Queued writes flush in order; a stale `rowVersion` on the title resolves to the conflict diff, never a silent overwrite.
+  - **Session expired:** The 2-minute modal names the dirty surfaces (here, the identity-header title input). On expiry the buffer is preserved and the user returns to the same tab.
+  - **Conflict:** `rowVersion` mismatch on the title → "Changed by {actor} {N} minutes ago." with **Review changes / Keep mine / Take theirs**. Never Reload-only.
+  - **Server error:** "We couldn't load this course — your work is safe." with Retry and a request ID.
+- **Instrumentation & acceptance:**
+  - **Events:** `workspace_opened` `{courseId, tab, role}` · `workspace_tab_changed` `{courseId, from, to}` · `course_title_inline_edited` `{courseId, lengthBucket}` · `readiness_banner_acted_on` `{courseId, action, failingCount}` · `lifecycle_cta_clicked` `{courseId, fromState, toState}`. IDs and counts only.
+  - **Acceptance:**
+    1. The stepper renders five nodes and the fourth is filled and labelled for a course in the Approved state.
+    2. The readiness banner's item count is identical to the `RC-4` failure count in [S-2.22](#scr-2-22) for the same course.
+    3. A Reviewer sees no inline title editor and no `⋯` authoring entries.
+    4. A 300-character Amharic title expands the header to ~3 lines, is fully readable, and uses no `-webkit-line-clamp`.
+    5. Switching tabs with a dirty title buffer flushes first, and a failed flush blocks navigation.
+  - **Budgets:** Shell chrome paints < 800 ms; tab switch < 300 ms; title commit round-trip < 500 ms; no layout shift when the identity header grows.
 - **Navigation:**
   - Workspace nav → [S-2.6](#scr-2-6) Overview · [S-2.17](#scr-2-17) Curriculum · [S-2.18](#scr-2-18) Students · [S-2.19](#scr-2-19) Analytics · [S-2.20](#scr-2-20) Settings
   - **Preview** → [S-2.21](04-Courses.md#scr-2-21) Learner Preview
@@ -363,9 +549,9 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
 - **Wireframe Layout (Text-Based):**
   ```
   ┌──────────────────────────────────────────────────────────────────────────────────┐
-  │ ‹ Courses / TOEFL Complete Course / Curriculum          🟠 Draft · v3  [⋯]    │
+  │ ‹ Courses / TOEFL Complete Course / Curriculum          ● Draft · v3  [⋯]    │
   │ TOEFL Complete Course · TOEFL · Advanced      [＋Section] [⇪ Import] [Preview] │
-  │ ●━━━━━━○━━━━━━━━━━○━━━━━━━━━○   [ Submit for review ]                          │
+  │ ●━━━○━━━○━━○━━━○   [ Submit for review ]                                  │
   │ ● Overview  ● Curriculum (24)  ○ Students (234) ○ Analytics  ○ Settings      │
   ├──────────────────────────────┬───────────────────────────────────────────────────┤
   │ CURRICULUM SIDEBAR (320px)   │ ITEM PANE                                         │
@@ -374,7 +560,7 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   │                             │ [✎ Essay draft — due 12 Sep]         [⋯] [Preview] │
   │ ▾ ⠿ S1 Foundations   3 · ⋯  │ ───────────────────────────────────────────────── │
   │    📄 What is TOEFL?   ✓ 12 ⋯│  [Overview] [Content] [Settings]  ← item sub-tabs  │
-  │    🎥 Test format      ◐  9 ⋯│ ┌─────────────────────────────────────────────┐  │
+  │    🎥 Test format  ◐ 9 ◌unp ⋯│ ┌─────────────────────────────────────────────┐  │
   │    ✎ Reading assignment ⧗ 4 ⋯│ │ Overview                                     │  │
   │ ▾ ⠿ S2 Reading Skills 2 · ⋯ │ │  Type: Assignment   Status: Draft  ⧗ Due 12  │  │
   │    📄 Overview          ✓ 11 ⋯│ │  Brief: 120 words   Attachments: 1          │  │
@@ -386,11 +572,11 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   │          ✎ assignment        │   editor, quiz builder, unlock rules, media,      │
   │          ✓ approved ◐ in     │   captions, tags — see S-2.7 / S-2.8 / S-2.23)   │
   │          review ⚠ needs      │                                                   │
-  │          content  · archived │  ⌁ All changes saved 14:02      [Save now ⌘S]     │
+  │          content ◌unp  ·archi│  ⌁ All changes saved 14:02     [Flush now ⌘S]     │
   │ ──────────────────────────── │                                                   │
   │ ＋ Add item ▾ (Lesson/Quiz/  │                                                   │
   │   Assignment)                │                                                   │
-  │ 🗄 Archived (3)   [+ Add]    │                                                   │
+  │ 🗄 Archived (3)  🗑 Recently deleted (2)                          │
   └──────────────────────────────┴───────────────────────────────────────────────────┘
   ```
 - **Primary Actions:**
@@ -400,12 +586,13 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   4. **Reorder and move** by drag-and-drop: sections among sections, items within a section, and items **across** sections. Keyboard equivalents for every gesture.
   5. **Duplicate** a section or an item — in place, after, or into another course ([S-7.7](09-Shared-Components.md#scr-7-7)).
   6. **Archive / Restore** an item or section, reversibly, via the Archived filter.
-  7. **Delete** an item or section (soft delete, purge after the retention window).
-  8. **Filter** the tree: All / Needs content / In review / Approved / Archived / by kind; plus a title search.
-  9. **Collapse / expand** sections; state persists per user in `localStorage`.
-  10. **Bulk select** items with a checkbox or `Shift`-click to archive, move, or reorder many at once.
-  11. Open a **section settings** popover: description, estimated duration, free-preview toggle, section-level sequential ordering.
-  12. Import from the [Content Library](05-Content-Library.md#scr-3-1) or run a bulk import ([S-2.13](#scr-2-13)) directly into this course.
+  7. **Delete** an item or section (soft delete, purge after 30 days), or restore / permanently delete it from the **Recently deleted** view.
+  8. **Publish / Unpublish an item** from the row `⋯` menu or the pane header, changing only that item's `visibility` — never the course.
+  9. **Filter** the tree: All / Needs content / In review / Approved / Unpublished / Archived / by kind; plus a title search.
+  10. **Collapse / expand** sections; state persists per user in `localStorage`.
+  11. **Bulk select** items with a checkbox or `Shift`-click to archive, move, or reorder many at once.
+  12. Open a **section settings** popover: description, estimated duration, free-preview toggle, section-level sequential ordering.
+  13. Import from the [Content Library](05-Content-Library.md#scr-3-1) or run a bulk import ([S-2.13](#scr-2-13)) directly into this course.
 - **Data Displayed/Modified:**
   - Reads `getCurriculum` → `CurriculumDTO` (sections with their items, per-item `reviewStatus`, `hasBody`, `hasQuiz`, `hasUnlockRules`, `studentCount`, plus section totals).
   - Writes through dedicated server functions, each atomic, each `rowVersion`-guarded, each audit-logged:
@@ -418,9 +605,13 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
     | `saveCurriculumOrder`                             | Whole-tree write used by drag-and-drop, replacing the incremental path |
     | `duplicateCurriculumItem`                         | Copy a section or item, in place or cross-course                       |
     | `archiveCurriculumItem` / `restoreCurriculumItem` | Reversible hide/unhide                                                 |
+    | `setItemVisibility`                               | `draft ⇄ published ⇄ scheduled` for one item                           |
+    | `restoreDeletedItem` / `purgeDeletedItem`         | Undo a soft delete, or delete permanently inside the 30-day window     |
     | `deleteCurriculumItem`                            | Soft delete with a 30-day purge                                        |
 
   - `moveCurriculumItem` and `saveCurriculumOrder` rewrite `sort_order` for the affected sections in one transaction and bump `rowVersion` on every touched row, so two authors cannot interleave a reorder into a corrupt order.
+  - **Reordering or moving an item in a published course takes effect immediately** in the learner view. Enrolled students are notified **only when the move changes a prerequisite chain** — a plain reorder is silent, a move that alters what unlocks what sends an in-app + Telegram notice naming the affected items. See the [Field Lock table](#field-lock-table).
+  - `getCurriculum` returns each item's `visibility` and a purge countdown for soft-deleted items, so the sidebar can render both the `◌ Unpublished` pill and the `purges in N days` line without a second fetch.
 - **States:**
   - **Empty Course:** [S-7.3](09-Shared-Components.md#scr-7-3) Empty State in the sidebar: "No sections yet. A course needs at least one section with one item to be published." Primary CTA `＋ Create your first section`; secondary links: `Start from a template` ([S-2.12](#scr-2-12)), `✨ Generate an outline` ([S-2.11](#scr-2-11)), `Import` ([S-2.13](#scr-2-13)). The item pane shows a "select an item" illustration rather than an error.
   - **Section Selected:** The pane shows section summary, item count, total duration, completion %, section settings, and bulk actions for its items.
@@ -429,24 +620,51 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   - **Auto-Expanded on Drag:** Hovering a collapsed section for 600ms expands it, so cross-section drops are always possible.
   - **New Item Inline Form:** A row appears in place with a focused title input and a kind selector; `Enter` commits, `Esc` cancels. Creation is optimistic — the row appears immediately with a `saving` dot and is removed if the call fails.
   - **New Section:** Same pattern; the new section is expanded and focused.
-  - **Renaming:** Single-line inline input inside the row. Duplicate titles inside one section are allowed and flagged with a caption "Another item in this section has this title" (not blocked — authors legitimately repeat titles across sections).
-  - **Archived Items (new):** Hidden from the active tree; visible in the `🗄 Archived (n)` view with Restore and Delete. Archived items keep their content and history and do **not** count toward publish readiness or student progress.
-  - **Conflict:** If another author changed the same subtree, the move reverts and a toast offers Reload. Never silently merge.
-  - **Archived Course:** Tree renders greyed and non-interactive with the archived banner from [S-2.6](#scr-2-6).
-  - **Reviewer / Viewer:** Drag handles, add buttons, and inline rename are not rendered. The tree remains fully navigable and the pane is read-only.
+  - **Renaming:** An inline input inside the row, **at least 60% of the 320px sidebar width** (≈ 200px minimum), which **expands to the full sidebar width as the author types** and **wraps to as many lines as the title needs** — a 300-character Amharic title grows the row to ~3 lines. There is no `-webkit-line-clamp` and no single-line ellipsis on a title; the full value is the accessible name. Duplicate titles inside one section are allowed and flagged with a caption "Another item in this section has this title" (not blocked — authors legitimately repeat titles across sections).
+  - **Item visibility pill:** Every row and every pane header carries one `◌ Unpublished` / `📅 Scheduled {date}` / (nothing when published) pill from the [status mapping](11-Global-Standards.md#status-colour-mapping), paired with an icon so it survives grayscale.
+  - **Archived Items:** Hidden from the active tree; visible in the `🗄 Archived (n)` view with Restore and Delete. Archived items keep their content and history and do **not** count toward publish readiness or student progress.
+  - **Recently Deleted (new):** A `🗑 Recently deleted (n)` view sits **beside** `Archived` in the sidebar footer and is reachable from the tree filters. It lists soft-deleted items with kind, deleting actor, and a live countdown — _"purges in 27 days"_ — plus **Restore** and **Delete permanently**. `Delete permanently` requires a typed confirmation of the item title and states the purge is immediate and irreversible. The 10s toast **Undo** is a convenience, not the only route: an item deleted more than 10 seconds ago is still reachable here for the full 30 days.
+  - **Conflict:** If another author changed the same subtree, the optimistic move reverts and a conflict panel opens with a **two-column Markdown diff** — _Yours_ on the left, _Theirs_ on the right, changed lines highlighted. Actions: **Keep mine (default) / Take theirs / Compare**. `Take theirs` is the renamed Reload, and it is **never the only option**; there is no Reload-only path anywhere in Part 04. Nothing is silently merged.
+  - **Archived Course:** The tree renders greyed with the archived banner from [S-2.6](#scr-2-6). Controls that a capable Admin would otherwise use are **disabled with the reason** _"Archived — restore the course to make changes"_ in a tooltip and `aria-describedby`, rather than disappearing, so the state is legible.
+  - **Reviewer / Viewer (out of capability → absent):** Drag handles, add buttons, checkboxes, and inline rename are **not rendered at all**; the tree stays fully navigable and the pane renders read-only. This is case 1 of the three-case rule.
+  - **In Review / Approved course (blocked by state → disabled with a reason):** the same author _would_ be capable of moving and renaming, so those controls render **disabled** with _"In review — withdraw to edit"_ / _"Approved — editing clears the approval"_ in a tooltip and `aria-describedby`. They are not hidden.
   - **Loading:** Sidebar skeleton of 4 section blocks; pane skeleton. **The shell must not blank** — the identity header and workspace nav stay visible so the user can switch tabs.
-  - **Item Counts on Rows:** Each row shows the kind icon, its review state, and one contextual metric — students reached for published items, ⚠ "needs content" for empty ones, or nothing for untouched drafts. Metric choice is fixed per kind to keep the sidebar scannable.
-  - **Search / Filter Active:** Matching rows are highlighted; non-matching sections collapse to a `⋯ n hidden` affordance rather than vanishing, so structure is never lost.
+  - **Item Counts on Rows:** Each row shows the kind icon, its review state, its visibility pill, and one contextual metric — students reached for published items, ⚠ "needs content" for empty ones, or nothing for untouched drafts. Metric choice is fixed per kind to keep the sidebar scannable.
+  - **Search / Filter Active:** Matching rows are highlighted; non-matching sections collapse to a `⋯ n hidden` affordance rather than vanishing, so structure is never lost. **Ge'ez search tokenizes as 2-syllable n-grams** per [Part 11](11-Global-Standards.md#localization--formatting), so `እንግሊዝ` matches `እንግሊዝኛ`; the matching syllable groups are highlighted inside the row, not just the whole row.
+- **Bulk Selection:** Defined, never implicit.
+  - **Scope is always stated.** Selecting via the header checkbox selects **everything currently in view** — the label reads _"Select all 24 in this course"_ when unfiltered, and _"Select all 104 matching the filter"_ when a filter is active. The confirm dialog for any bulk destructive action restates the exact number.
+  - **The header checkbox is tri-state:** unchecked → `aria-checked="false"`; partially selected → `aria-checked="mixed"` and a horizontal rule; fully selected → checked.
+  - **A 50-item cap applies to bulk archive and bulk delete.** Selecting more than 50 offers _"Select all 104 matching the filter"_ as the escape, which selects the whole filtered set in one server-side call rather than by paging selections.
+  - **Bulk move / reorder targets are deterministic**, never "wherever it looks right": items move into the target section **in the order they appear in the tree**, inserted at the end of the target section, and the server renormalises `sort_order` and returns the authoritative order, which the client adopts.
+  - **Results are reported per outcome, not as one toast:** _"47 archived · 3 failed — Retry failures"_, where **Retry failures** resubmits only the failed subset.
 - **Validation & Feedback:**
-  - **Section title:** required, 3–300 characters. **Item title:** required, 3–300 characters.
-  - **First publishable structure:** at least one section containing at least one non-archived item — enforced as readiness check `RC-3` in [S-2.22](#scr-2-22), not as a creation-time block, so exploration is never punished.
+  - **Section title:** required, 3–300 characters. **Item title:** required, 3–300 characters — **counted in grapheme clusters**, so an Amharic title of 300 characters is 300 characters regardless of how many code points its syllabary uses.
+  - **First publishable structure:** at least one section containing at least one non-archived item in the [published set](#item-visibility) — enforced as readiness check `RC-3` in [S-2.22](#scr-2-22), not as a creation-time block, so exploration is never punished.
   - **Order uniqueness:** `sort_order` stays contiguous per section; the server renormalises and returns the authoritative tree, and the client adopts it rather than assuming.
   - **Move across sections:** the item keeps its `courseId`; cross-section moves are re-validated for unlock rules ([S-2.15](#scr-2-15)) — a rule referencing an item that moved into a different section is flagged, not broken.
   - **Delete section:** [S-7.1](09-Shared-Components.md#scr-7-1) naming the item count and stating that students keep progress records.
   - **Delete item with an attached quiz:** the dialog states that the quiz copy is deleted with it, and offers Archive as the reversible alternative.
   - **Archive vs Delete:** Archive is offered first in the menu and is labelled "Hidden from students, reversible"; Delete is marked destructive and is never the default.
   - **Keyboard parity (mandatory):** every drag gesture has a menu equivalent — `Move up`, `Move down`, `Move to section ▸`. This is a WCAG requirement, not a fallback ([Part 11](11-Global-Standards.md#accessibility-specification)).
-  - **Undo affordance:** destructive tree operations (delete, bulk archive) raise a toast with a 10s **Undo** action before the purge window closes.
+  - **Undo affordance:** destructive tree operations (delete, bulk archive) raise a toast with a 10s **Undo** action. Undo is a shortcut, never the only way back — the **Recently deleted** view holds every soft-deleted item for 30 days.
+- **Resilience:**
+  - **403:** "You don't have access to {course}." with a request ID and **Ask an Admin for access**. A Reviewer is not in this state — the tree renders for them.
+  - **404:** "This course was deleted, or you followed an old link." + **Back to Courses** + request ID. A deleted _item_ deep-linked through `?item=` lands on the tree with "That item was deleted" and a **Recently deleted** link.
+  - **Offline:** A persistent banner, not a toast. The tree renders read-only from cache; structural writes queue and the banner reads _"3 changes waiting to sync."_ Filter, search, and selection still work locally.
+  - **Reconnected:** Queued writes flush in order; a queued move whose `rowVersion` went stale resolves to the conflict diff, never a silent overwrite.
+  - **Session expired:** The 2-minute modal lists the surfaces with unsaved work — here, the open item pane. On expiry the buffer and the IndexedDB draft mirror are preserved and the user returns to the same item.
+  - **Conflict:** `rowVersion` mismatch → "Changed by {actor} {N} minutes ago." with the two-column diff and **Review changes / Keep mine / Take theirs**. Never Reload-only.
+  - **Partial failure:** a bulk operation reports _"47 archived · 3 failed — Retry failures"_ with the failed rows named.
+  - **Server error:** "We couldn't load this curriculum — nothing you changed was lost." with Retry and a request ID; the previously loaded tree stays on screen behind it.
+- **Instrumentation & acceptance:**
+  - **Events:** `curriculum_tree_loaded` `{courseId, sectionCount, itemCount, durationMs}` · `curriculum_item_selected` `{courseId, itemId, kind}` · `curriculum_item_moved` `{courseId, itemId, fromSection, toSection, method: drag|keyboard|menu}` · `curriculum_item_visibility_set` `{courseId, itemId, from, to}` · `curriculum_bulk_action` `{action, selectedCount, targetCount, successCount, failureCount}` · `curriculum_conflict_resolved` `{strategy: keepMine|takeTheirs, surface}`. IDs and counts only — no item titles.
+  - **Acceptance:**
+    1. Every drag gesture has a working menu and keyboard equivalent, and the applied order equals the order the server returns.
+    2. A bulk move inserts selected items into the target section in tree order and renumbers `sort_order` contiguously.
+    3. The header checkbox exposes `aria-checked="mixed"` when a subset is selected, and the select-all label states the exact scope.
+    4. An item deleted more than 10 seconds ago is restorable from `🗑 Recently deleted`, and each row shows a purge countdown.
+    5. A `rowVersion` conflict opens the diff with **Keep mine** preselected; no path offers Reload alone.
+  - **Budgets:** 200 items interactive in < 500 ms; a keyboard move applies in < 200 ms; the tree does not re-fetch on selection; the item pane keeps its scroll position across a rename.
 - **Navigation:**
   - Item selection → item pane (S-2.7 / S-2.8 / S-2.23) in the same screen
   - `＋ Add item ▾ → Quiz` → creates and opens [S-2.8](#scr-2-8) in the pane
@@ -462,6 +680,9 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   - **Preview** (header) → [S-2.21](#scr-2-21) Learner Preview
   - **Submit for review** (header) → [S-2.22](#scr-2-22)
   - "N hidden" → expands the filter rather than navigating away
+  - `🗄 Archived (n)` / `🗑 Recently deleted (n)` → a filter view in the same sidebar; **Restore** and **Delete permanently** act on the selected row without leaving the workspace
+  - `⋯ → Publish item / Unpublish item` → `setItemVisibility`; the row pill flips to `◌ Unpublished` and the item leaves the [published set](#item-visibility)
+  - `⋯ → Translations` → the item pane's **Translations** sub-tab
   - **Open in new tab** (item `⋯`) → the alias route, which re-opens this same screen in a second tab
 
 ---
@@ -475,7 +696,7 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
 - **Wireframe Layout (Text-Based):**
   ```
   ┌──────────────────────────────────────────────────────────────────────────┐
-  │ ‹ Courses / TOEFL Complete Course / Students        🟠 Draft · v3  [⋯] │
+  │ ‹ Courses / TOEFL Complete Course / Students        ● Draft · v3  [⋯] │
   │ TOEFL Complete Course · TOEFL · Advanced                                 │
   │ ● Overview  ○ Curriculum  ● Students (234)  ○ Analytics  ○ Settings      │
   ├──────────────────────────────────────────────────────────────────────────┤
@@ -503,7 +724,7 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
 - **Data Displayed/Modified:** Reads `enrollments`, `users`, `lesson_completions`, `quiz_attempts`, `enrollment_requests`, `waitlists` — all scoped by `courseId`. Writes `enrollments`, `enrollment_requests`; every write is audit-logged and mirrored in the global directory.
 - **States:**
   - **Default:** Roster table with a pinned context chip: "Showing students enrolled in **TOEFL Complete Course**" + **View all students** → [S-4.1](06-Students.md#scr-4-1).
-  - **Course Not Published (new):** Because the course is a Draft, the roster is empty by definition. The state says so explicitly: "Students can't be enrolled while this course is unpublished." with a single CTA **Publish the course** → [S-2.22](#scr-2-22) — and, for a scheduled or free-preview course, **Enrol as preview student** for internal QA.
+  - **Course Not Published:** _"This course is unpublished. N enrolled students keep access and their progress; new enrolment is disabled."_ With **View [S-2.22](#scr-2-22) publish status** as the only CTA, plus, for a free-preview or scheduled course, **Enrol as preview student** for internal QA. Existing students keep their completions, their certificates, and their 14-day **access grace period** counted from the moment of unpublish; after the grace period expires, course content locks and progress is retained but not extendable. **Unpublish never revokes an earned certificate.**
   - **Enrolling:** Row-level spinner; failures isolate to the affected student and offer retry.
   - **At Capacity:** Enrolment actions are replaced by "Add to waitlist" and the header shows `234 / 234`.
   - **Bulk Selection:** The same selection bar as [S-4.1](06-Students.md#scr-4-1), with course-appropriate actions.
@@ -514,7 +735,26 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   - **Unenrol** is reversible for 24 hours (re-enrol restores progress).
   - **Bulk enrol** above 25 students requires [S-7.1](09-Shared-Components.md#scr-7-1) confirmation with the exact count.
   - **Enrolment into a paid course** warns when it grants paid access at no charge — same rule as [S-4.8](06-Students.md#scr-4-8).
-  - **Support role** can view and message but not enrol or unenrol.
+  - **Support role** can view and message but not enrol or unenrol — the Enrol and Unenrol controls are **absent** for them, not disabled.
+  - **Notification delivery:** enrolment invitations, unenrolment notices, and session reminders follow [Notification Delivery](11-Global-Standards.md#notification-delivery) — in-app always, Telegram by default, email only where a verified address exists and **disabled-with-reason** otherwise. A recipient with no verified address sees _"Alemayehu K. has no email on file — sent in-app and via Telegram."_ A channel that fails after send reports a **delivery-failure** state on the bulk bar: _"3 of 24 not reached on Telegram — Retry delivery"_, and never blocks the enrolment itself.
+- **Resilience:**
+  - **403:** "You don't have access to the roster for {course}." with a request ID and **Ask an Admin for access**. Support **is** granted this tab, so they never see it; a Viewer with only course-read does.
+  - **404:** "This course was deleted, or you followed an old link." + **Back to Courses** + request ID.
+  - **Offline:** Persistent banner; the table renders read-only from cache with the last-known row count and _"You're offline — roster actions are paused."_
+  - **Reconnected:** The table re-fetches; any enrolment queued while offline is submitted first and the affected rows show a `syncing` dot until confirmed.
+  - **Session expired:** The 2-minute modal names the surfaces with unsaved work (none here — a table has no buffer), and the user returns to the same filter, sort, and page.
+  - **Conflict:** a concurrent unenrol by another Admin resolves to "Changed by {actor} {N} minutes ago." with **Review changes / Keep mine / Take theirs** on the affected rows.
+  - **Partial failure:** bulk enrol reports _"21 enrolled · 3 failed — Retry failures"_; a partial-fee case flags only the affected student.
+  - **Server error:** "We couldn't load the roster — nothing was changed." with Retry and a request ID.
+- **Instrumentation & acceptance:**
+  - **Events:** `course_roster_viewed` `{courseId, filterCount, pageSize}` · `roster_student_opened` `{courseId, studentId}` · `bulk_enrol_requested` `{courseId, count, channel: inapp|telegram|email}` · `bulk_enrol_completed` `{successCount, failureCount, undeliveredCount}` · `unenrol_performed` `{courseId, studentId, reversibleForHours}`.
+  - **Acceptance:**
+    1. For an unpublished course the tab states the real access position and never claims the roster is empty when it is not.
+    2. A Support user sees no Enrol or Unenrol control anywhere on the screen.
+    3. Bulk enrol sends in-app to every recipient, Telegram to every linked handle, and email only to verified addresses — with the count of recipients who have no email stated.
+    4. A delivery failure is reported separately from an enrolment failure.
+    5. Unenrol offers a 24-hour re-enrol that restores progress.
+  - **Budgets:** roster first paint < 1.5 s; row interaction < 100 ms; CSV export of 1,000 rows < 5 s; no layout shift when the selection bar appears.
 - **Navigation:**
   - Student row → [S-4.2](06-Students.md#scr-4-2) Student Profile (this course highlighted)
   - `⋯ → View progress` → [S-4.3](06-Students.md#scr-4-3) scoped to this course
@@ -524,7 +764,7 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   - **Requests (3)** → [S-4.6](06-Students.md#scr-4-6) filtered to this course
   - **Export CSV** → [S-5.4](07-Analytics.md#scr-5-4) Export Reports
   - **View all students** → [S-4.1](06-Students.md#scr-4-1) with the course filter applied
-  - **Publish the course** → [S-2.22](#scr-2-22)
+  - **View publish status** → [S-2.22](#scr-2-22)
 
 ---
 
@@ -537,15 +777,16 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
 - **Wireframe Layout (Text-Based):**
   ```
   ┌──────────────────────────────────────────────────────────────────────────┐
-  │ ‹ Courses / TOEFL Complete Course / Analytics         🟠 Draft · v3  [⋯] │
-  │ TOEFL Complete Course · TOEFL · Advanced            [Last 30 days ▾] [⇩] │
+  │ ‹ Courses / TOEFL Complete Course / Analytics         ● Draft · v3  [⋯] │
+  │ TOEFL Complete Course · TOEFL · Advanced     [Last 30 days ▾] [⇩] [⋯]    │
   │ ● Overview  ○ Curriculum  ○ Students  ● Analytics   ○ Settings           │
   ├──────────────────────────────────────────────────────────────────────────┤
-  │ [Performance] [Drop-off] [Quizzes] [Items]                               │
+  │ [Performance] [Drop-off] [Quizzes] [Items]   ?atab=performance          │
   ├──────────────────────────────────────────────────────────────────────────┤
   │ +----------+ +----------+ +----------+ +----------+                    │
   │ | 234      | | 68%      | | 12.4 hrs | | 4.8 ★    |                    │
   │ | Students | | Complete | | Avg time | | Rating   |                    │
+  │ | enrolled | | 16/24    | | per item | | n=18     |                    │
   │ +----------+ +----------+ +----------+ +----------+                    │
   │ ┌────────────────────────────┐ ┌────────────────────────────┐            │
   │ │ 📈 Completion over time    │ │ 📊 Activity by weekday     │            │
@@ -562,25 +803,61 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   └──────────────────────────────────────────────────────────────────────────┘
   ```
 - **Primary Actions:**
-  1. Switch between **Performance** ([S-5.1](07-Analytics.md#scr-5-1)), **Drop-off** ([S-5.3](07-Analytics.md#scr-5-3)), **Quizzes** ([S-5.2](07-Analytics.md#scr-5-2)), and **Items** (per-item engagement).
+  1. Switch between **Performance** ([S-5.1](07-Analytics.md#scr-5-1)), **Drop-off** ([S-5.3](07-Analytics.md#scr-5-3)), **Quizzes** ([S-5.2](07-Analytics.md#scr-5-2)), and **Items** (per-item engagement). The active sub-tab is mirrored in the URL as `?atab=performance|dropoff|quizzes|items`, so a view is linkable and the back button works.
   2. Change the date range; the course filter is fixed and shown as a non-removable chip.
   3. Sort items by any engagement column; filter to a section.
   4. Act on an insight: **Edit item** opens the item pane in the Curriculum tab; **Preview as student** opens [S-2.21](#scr-2-21) at that item.
   5. Export the scoped report ([S-5.4](07-Analytics.md#scr-5-4)).
 - **Data Displayed/Modified:** Reads `course_stats`, `course_stats_history`, `lesson_progress`, `lesson_completions`, `quiz_attempts`, `enrollments`. Read-only.
+- **Date range and comparison:** The range picker offers **Today · Last 7 days · Last 30 days · Last 90 days · This year · Custom**, resolved as a **half-open interval `[start, end)` in `Africa/Addis_Ababa`**, inclusive of today. `Last 30 days` therefore means the current day plus the 29 preceding days, ending at the next local midnight — not "30 × 24 hours ago". Every range shows its resolved boundaries as a caption under the control: _"12 Aug – 10 Sep 2026 EAT"_. Each metric carries a **comparison** against the immediately preceding window of the same length, rendered as a delta with an up/down icon and a percentage, and as **"vs previous 30 days"** in the card's accessible name. A range shorter than 7 days is allowed but labelled **"Short window — treat deltas as noise."**
+- **Metric Definitions:** Every number on this screen is defined here and nowhere else. A metric with no definition does not ship.
+
+  | Metric         | Numerator                                                                                                             | Denominator                                                    | Window        | Timezone | Inclusion rule                                                                                       |
+  | -------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------- | -------- | ---------------------------------------------------------------------------------------------------- |
+  | **Students**   | distinct `enrollments.student_id`                                                                                     | —                                                              | Range         | EAT      | Enrollment `created_at` in range; cancelled/unenrolled rows excluded                                 |
+  | **Active 7d**  | distinct students with ≥ 1 `lesson_completions` row, or a session-join, or a quiz attempt, in the 7 days ending today | Enrolled students as of today                                  | 7d            | EAT      | Any of the three activity events counts; a bare page view does not                                   |
+  | **Complete %** | distinct students with ≥ 1 completion on ≥ 80% of the published set                                                   | Students enrolled on the course's `published_at`               | Lifetime      | EAT      | Denominator freezes at the enrollment cohort on publish date; `Add cohort` recomputes it explicitly  |
+  | **Avg time**   | Σ (per-student time-on-item, summed across the published set)                                                         | Students with ≥ 1 completion in the published set              | Range         | EAT      | Per-student time capped at 4 h per item per day; ids with no activity are excluded, not counted as 0 |
+  | **Reached**    | distinct students who opened the item at or past its unlock point                                                     | Students who reached the item's preceding item (or 100% of S1) | Range         | EAT      | Locked items still count as reached once the learner is at that position                             |
+  | **Completed**  | distinct students with a completion row on that item                                                                  | **Reached** on that item                                       | Range         | EAT      | Excludes `unpublished` and archived items entirely                                                   |
+  | **At risk**    | enrolled students whose last activity is > 7 days old and who are < 50% complete                                      | Students enrolled ≥ 14 days ago                                | Point-in-time | EAT      | Excludes students who have already completed the course or hold an approved extension                |
+  | **Rating**     | Σ star ratings                                                                                                        | distinct raters                                                | Lifetime      | EAT      | `n` is always displayed next to the average; below `n=5` the card is suppressed, not averaged        |
+  - **Sample-size rule:** every insight and every rate displays its `n`. **Any insight or card whose `n < 5` is suppressed entirely** — never rendered as `0%` and never rendered at all, which is how it differs from a genuine zero.
+  - **"0 completions" vs "not published":** an item with `Reached > 0` and `Completed = 0` is labelled **"0 completions"**; an item with `Reached = 0` because it is `draft`/`unpublished` is labelled **"not published"** and is excluded from every average.
+
 - **States:**
   - **Default:** Summary cards, two charts, item table, insights.
-  - **Items Tab (new):** One row per non-archived item, ordered as the curriculum is, with reach, completion, average time-on-item, and quiz average where applicable. Archived items are excluded but available behind a filter.
-  - **Unpublished Course:** Cards and charts are replaced by a single explanatory panel: "Analytics appear once the course is published and students start learning." with **Preview as a student** → [S-2.21](#scr-2-21).
+  - **Items Tab:** One row per item in the curriculum, ordered as the tree is, with reach, completion, average time-on-item, and quiz average where applicable. Archived and unpublished items are excluded from every metric but are reachable behind the `All items` filter, labelled _not published_.
+  - **Unpublished Course:** Cards and charts are replaced by a single explanatory panel: "Analytics appear once the course is published and students start learning." with **Preview as a student** → [S-2.21](#scr-2-21). This is the state for a genuinely never-published course; a course that was published and then unpublished keeps its history and shows it normally.
   - **No Data Yet:** "Not enough data yet — check back once more students progress." (per [Part 11](11-Global-Standards.md#global-validation-and-feedback-patterns) — distinct from the zero-result case, which offers **Clear filters**).
   - **Zero Results After Filter:** Lighter "No items match this filter" + **Clear filters**, never a CTA.
-  - **Insight Severity:** High drop-off (>20 points step decline) or a published item with <40% completion raises an actionable insight with an inline edit affordance. Insights are derived, explainable, and never auto-applied.
-  - **Chart Accessibility:** Every chart exposes the underlying table, per [Part 11](11-Global-Standards.md#accessibility-specification).
-  - **Loading / Error:** Skeleton cards + skeleton charts; "Unable to load analytics. Retry?"
+  - **Deep Link with an Unknown `atab`:** falls back to `performance` and rewrites the URL, rather than rendering an empty tab.
+  - **Insight Severity:** High drop-off (>20 points step decline) or a published item with <40% completion raises an actionable insight with an inline edit affordance. Insights are derived, explainable, and never auto-applied, and each states its evidence: item, metric, cohort size, window, and the comparison period.
+  - **Sample too small:** a card or insight below `n=5` is not rendered; the row that would have carried it shows a _"Not enough students to report"_ caption in the data table so the omission is explained.
+  - **Chart Accessibility:** Every chart exposes the underlying table on demand, per [Part 11](11-Global-Standards.md#accessibility-specification). Maximum 6 series then "Other"; pie only for ≤ 4 slices.
+  - **Loading / Error:** Skeleton cards + skeleton charts; "We couldn't load analytics — nothing was changed." with Retry and a request ID.
 - **Validation & Feedback:**
   - Insights must state the evidence, not just the verdict: item name, metric, cohort size, and window.
-  - Insights below a 5-student sample are suppressed as noise.
+  - Insights below a 5-student sample are suppressed as noise, and a card with `n < 5` is not rendered at all.
   - **Items with 0 students and no completions** are labelled "not published" rather than "0% completion" — the difference matters.
+- **Resilience:**
+  - **403:** "You don't have access to analytics for {course}." with a request ID and **Ask an Admin for access**. Support is absent from this tab entirely — they see only Students.
+  - **404:** "This course was deleted, or you followed an old link." + **Back to Courses** + request ID.
+  - **Offline:** Persistent banner; the screen renders read-only from the last cached aggregation with the range labelled _"as of {timestamp}"_. Filters, sorting, and sub-tab switching still work.
+  - **Reconnected:** The tab re-aggregates and the `as of` timestamp updates; a partial re-fetch shows a per-card `stale` marker rather than mixing old and new numbers silently.
+  - **Session expired:** The 2-minute modal names the dirty surfaces (none — this screen is read-only, stated explicitly); the user returns to the same `?atab=` and range.
+  - **Conflict:** not applicable — the screen writes nothing. A stale cache is shown with its `as of` time rather than resolved as a conflict.
+  - **Partial failure:** if one of the four sub-tabs fails, it renders its own retry while the other three stay live — the tab never blanks as a unit.
+  - **Server error:** "We couldn't load analytics — your work is safe." with Retry and a request ID.
+- **Instrumentation & acceptance:**
+  - **Events:** `course_analytics_viewed` `{courseId, atab, rangePreset, rangeStart, rangeEnd}` · `analytics_range_changed` `{courseId, from, to, preset}` · `analytics_item_sorted` `{courseId, column, direction}` · `insight_acted_on` `{insightId, action, sampleSize}` · `analytics_exported` `{courseId, atab, format, rowCount}`. No student names, no authored content.
+  - **Acceptance:**
+    1. `Last 30 days` resolves to a half-open interval in `Africa/Addis_Ababa` whose caption shows the exact first and last date.
+    2. Each metric card shows its comparison window in text, not only as a coloured arrow.
+    3. A card or insight with `n < 5` is not rendered, and its table row explains why.
+    4. An item with `Reached = 0` because it is unpublished is labelled _not published_ and excluded from averages.
+    5. Switching sub-tabs updates `?atab=`; an invalid value falls back to `performance` and rewrites the URL.
+  - **Budgets:** LCP < 2.5 s; sub-tab switch < 300 ms; the accessible data table renders on demand, not on load; an item of 500 rows renders in < 1 s.
 - **Navigation:**
   - Item row / **Edit item** → [S-2.17](#scr-2-17) Curriculum with that item's pane open
   - **Preview as student** → [S-2.21](#scr-2-21) at that item
@@ -596,11 +873,11 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
 ##### Screen Name: S-2.20 Course Workspace — Settings 🆕 NEW
 
 - **Purpose:** Every course-level configuration surface, in one tab. This is the home of what used to be spread across the wizard steps and the old Course Detail settings tab: details, pricing and enrollment, live sessions, completion and certificates, the approval gate, and the danger zone.
-- **User Role(s):** Admin, Editor (pricing, details, sessions, completion) · Reviewer (approval gate read-only) · Viewer (read-only)
+- **User Role(s):** Admin, Editor (pricing, details, sessions, completion) · Reviewer (approval gate read-only) · Viewer (read-only). Support: this tab is **absent** from their nav.
 - **Wireframe Layout (Text-Based):**
   ```
   ┌──────────────────────────────────────────────────────────────────────────┐
-  │ ‹ Courses / TOEFL Complete Course / Settings           🟠 Draft · v3  [⋯] │
+  │ ‹ Courses / TOEFL Complete Course / Settings           ● Draft · v3  [⋯] │
   │ TOEFL Complete Course · TOEFL · Advanced          [Preview] [Submit…]    │
   │ ● Overview  ○ Curriculum  ○ Students  ○ Analytics  ● Settings           │
   ├──────────────────────────────────────────────────────────────────────────┤
@@ -610,6 +887,7 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   │ │ ○ Curriculum defaults       │ │ Description [Markdown, 2-3 lines  ]  │ │
   │ │ ○ Live sessions             │ │ Exam [TOEFL ▾]  Level [Advanced ▾]  │ │
   │ │ ○ Completion & certificates │ │ Instructor [Jane Smith ▾]          │ │
+  │ │ ○ Danger zone               │ │ Content lang [English ▾]         │ │
   │ │ ○ Review & approval         │ │ Thumbnail [img] [Replace] [Remove]  │ │
   │ │ ○ Danger zone               │ │ Tags [TOEFL] [Intermediate] [+]    │ │
   │ │                             │ │ ⌁ Saved 14:02                      │ │
@@ -619,41 +897,56 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   ```
 - **Sections:**
 
-  | Section                       | Contents                                                                                                                                                                                                                                                                                   |
-  | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-  | **Details**                   | Title, slug, description (Markdown), exam/category, level, instructor, thumbnail, tags. Writes `courses`. The description is Markdown via the same editor component as the lesson body ([Part 12 § 6.1](12-Course-Editor-Markdown-Lessons.md#61-the-extension-list)).                      |
-  | **Pricing & enrollment**      | Free / one-time / subscription, price and currency, billing interval, early-bird and bulk discounts, enrollment window, capacity, and the payment gateways enabled for this course. Replaces retired [S-2.4](#retired-s-2-4). Coupons stay in [S-8.3](10-Marketing-and-Growth.md#scr-8-3). |
-  | **Curriculum defaults**       | New-item defaults for the course (default kind, default duration, auto-slug section titles), sequential ordering default, and the default behaviour for new items (**Draft** vs **Published** — published-by-default is forbidden when `requiresApproval` is on).                          |
-  | **Live sessions**             | [S-2.9](#scr-2-9) for this course, inline. Shown only when `course_type` is `instructor_led` or `hybrid`.                                                                                                                                                                                  |
-  | **Completion & certificates** | [S-2.10](#scr-2-10) completion rule, certificate template, signature, and auto-issue toggle.                                                                                                                                                                                               |
-  | **Review & approval**         | The course-level approval gate (`requiresApproval`), which reviewers are submitted to, whether a course-level decision covers all items, and the auto-approve rule for minor edits. Relates to [S-2.14](#scr-2-14) and [S-2.22](#scr-2-22).                                                |
-  | **Danger zone**               | Duplicate course, save as template, export syllabus, archive, restore, and delete — each with its own confirmation. Archive/restore/delete behaviour is defined by the [lifecycle](#course-lifecycle).                                                                                     |
+  | Section                       | Contents                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+  | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | **Details**                   | Title, slug, description (Markdown), exam/category, level, instructor, thumbnail, tags, and **content language**. Writes `courses`. The description is Markdown via the same editor component as the lesson body ([Part 12 § 6.1](12-Course-Editor-Markdown-Lessons.md#61-the-extension-list)).                                                                                                                                                                                             |
+  | **Content language**          | `courses.content_language` — the default language for this course's authored content, `en` \| `am` \| `ti` \| `gez`. Set here, **overridable per item**. Drives the `:lang()`-derived line-height class (1.6 for `am`/`ti`/`gez`), the default `lang` attribute on new content, and the **Translations** sub-tab's variant list. Changing it does **not** rewrite existing items; it changes the default for the next item created and the order in which untranslated variants are listed. |
+  | **Pricing & enrollment**      | Free / one-time / subscription, price and currency, billing interval, early-bird and bulk discounts, enrollment window, capacity, and the payment gateways enabled for this course. Replaces retired [S-2.4](#retired-s-2-4). Coupons stay in [S-8.3](10-Marketing-and-Growth.md#scr-8-3).                                                                                                                                                                                                  |
+  | **Curriculum defaults**       | New-item defaults for the course (default kind, default duration, auto-slug section titles), sequential ordering default, and the default behaviour for new items (**Draft** vs **Published** — published-by-default is forbidden when `requiresApproval` is on).                                                                                                                                                                                                                           |
+  | **Live sessions**             | [S-2.9](#scr-2-9) for this course, inline. Shown only when `course_type` is `instructor_led` or `hybrid`.                                                                                                                                                                                                                                                                                                                                                                                   |
+  | **Completion & certificates** | [S-2.10](#scr-2-10) completion rule, certificate template, signature, and auto-issue toggle.                                                                                                                                                                                                                                                                                                                                                                                                |
+  | **Review & approval**         | The course-level approval gate (`requiresApproval`), which reviewers are submitted to, whether a course-level decision covers all items, and the auto-approve rule for minor edits. Relates to [S-2.14](#scr-2-14) and [S-2.22](#scr-2-22).                                                                                                                                                                                                                                                 |
+  | **Danger zone**               | Duplicate course, save as template, export syllabus, archive, restore, and delete — each with its own confirmation. Archive/restore/delete behaviour is defined by the [lifecycle](#course-lifecycle).                                                                                                                                                                                                                                                                                      |
 
 - **Primary Actions:**
-  1. Edit any section's fields; all text fields autosave on the 60s idle timer, structural toggles save immediately.
+  1. Edit any section's fields; all text fields autosave on the 60s idle timer with a **`Flush now`** control, structural toggles save immediately.
   2. Configure pricing, enrollment window, and capacity.
   3. Schedule, edit, or cancel live sessions.
   4. Define the completion rule and certificate.
   5. Toggle the course-level approval gate (Admin only).
-  6. Duplicate, template, export, archive, restore, or delete the course.
-- **Data Displayed/Modified:** Writes `courses`, `course_pricing`-equivalent columns on `courses` (`is_free`, `price_amount`, `pricing_model`, `enrollment_start_at`, `enrollment_end_at`, `capacity`), `course_discounts`, `payment_gateway_settings`, `live_sessions`, `session_attendance`, `completion_rules`, `certificate_templates`.
+  6. Set the course **content language** and open the **Translations** sub-tab for any item.
+  7. Duplicate, template, export, archive, restore, or delete the course.
+- **Data Displayed/Modified:** Writes `courses` (including `content_language`), `course_pricing`-equivalent columns on `courses` (`is_free`, `price_amount`, `pricing_model`, `enrollment_start_at`, `enrollment_end_at`, `capacity`), `course_discounts`, `payment_gateway_settings`, `live_sessions`, `session_attendance`, `completion_rules`, `certificate_templates`, and `lessons.language` / `lesson_variants` from the Translations sub-tab.
 - **States:**
   - **Dirty Section:** [S-7.8](09-Shared-Components.md#scr-7-8) indicator per section, not per page — authors often work in one section at a time.
   - **Invalid Price:** Inline error; the field keeps the typed value; the readiness check turns red and links back to this section.
   - **Price Changed While Published:** Confirmation: "Students who already paid keep their access. New enrolments use the new price from now on." with an optional, dated price change recorded in the audit log.
-  - **Unpublish Required (new):** Editing `title` (before publish), `course_type`, or the slug of a **published** course prompts an inline notice with **Unpublish to change** → [S-2.22](#scr-2-22). These fields change the public identity or the fulfilment model.
+  - **Unpublish Required:** Editing `title` (before publish), `course_type`, or the slug of a **published** course prompts an inline notice with **Unpublish to change** → [S-2.22](#scr-2-22). These fields change the public identity or the fulfilment model. This is the same [Field Lock table](#field-lock-table) row as S-2.6 states; neither screen may say otherwise.
   - **Approval Gate On:** Banner: "Lessons in this course are reviewed before publishing." linking to [S-2.14](#scr-2-14).
-  - **Archived Course:** Every section is read-only; only Restore and Duplicate remain available.
+  - **In Review / Approved Course:** capable-but-blocked, so the fields render **disabled with a reason** — _"In review — withdraw to edit"_ / _"Approved — editing clears the approval"_ — in a tooltip and in `aria-describedby`, per the [Field Lock table](#field-lock-table). They are not removed.
+  - **Archived Course (case 3):** the whole tab is replaced by the archived banner from [S-2.6](#scr-2-6) plus **Restore** and **Duplicate**. This is the one place "read-only" is correct, because the _entire surface_ is locked.
+  - **Reviewer / Viewer (out of capability → absent):** sections they may not configure do not appear in the left rail; the Reviewer's only entry is **Review & approval**, read-only.
   - **Loading / Error:** Section skeleton; per-section retry so one failed section does not blank the tab.
   - **Danger Zone:** Visually separated, always last, never inside a collapsible that hides the delete action by default.
 - **Validation & Feedback:**
-  - **Price:** required unless free; > 0; currency is a 3-letter uppercase code.
-  - **End date** must be after the start date; both are timezone-aware and stored in UTC.
-  - **Capacity** must be ≥ 1; reaching it routes new enrolments to the waitlist ([S-4.6](06-Students.md#scr-4-6)).
-  - **Description** is required at publish time (`RC-2`) but not at creation — 100–500 characters when publishing.
+  - **Price:** required unless free; > 0; currency is a 3-letter uppercase code, always displayed with the amount (`ETB 1,240.00`) per [Localization & Formatting](11-Global-Standards.md#localization--formatting).
+  - **End date** must be after the start date; both are timezone-aware, shown in `Africa/Addis_Ababa` with the UTC offset in a tooltip, and stored in UTC.
+  - **Capacity** must be ≥ 1; reaching it routes new enrolments to the waitlist ([S-4.6](06-Students.md#scr-4-6)) and the control is disabled-with-reason at capacity, not absent.
+  - **Description** is required at publish time (`RC-2`) but not at creation — 100–500 characters, measured in grapheme clusters, when publishing.
+  - **Content language** is required and must be one of `en | am | ti | gez`; a missing per-item `lang` is an **advisory** readiness check, never a save error.
   - **Delete:** typed confirmation including the course slug, and blocked while issued certificates exist unless the user exports them first.
   - **Archive:** confirmation naming enrolled students and stating that the course leaves the catalog.
-  - **Section switching with a dirty field** flushes the buffer first, exactly as item switching does in [S-2.17](#scr-2-17).
+  - **Section switching with a dirty field** flushes the buffer first, exactly as item switching does in [S-2.17](#scr-2-17); `beforeunload` is guarded while any section is dirty.
+  - **Reordering or moving an item in a published course** applies immediately and notifies enrolled students only when a prerequisite chain changed.
+- **Resilience:**
+  - **403:** "You don't have access to settings for {course}." with a request ID and **Ask an Admin for access**. Support is absent from this tab, so they never see it.
+  - **404:** "This course was deleted, or you followed an old link." + **Back to Courses** + request ID.
+  - **Offline:** Persistent banner; sections render read-only from cache and each dirty section's `Flush now` becomes **"Queued — will sync"**. Toggles that would have been structural become disabled-with-reason rather than silently dropped.
+  - **Reconnected:** Queued writes flush per section, in the order they were made; a stale `rowVersion` resolves to the conflict diff, never a silent overwrite.
+  - **Session expired:** The 2-minute modal **names each dirty section by name** — "Details and Pricing have unsaved changes" — because this screen deliberately has seven independent buffers. On expiry each buffer is preserved and the user returns to the same section.
+  - **Conflict:** "Changed by {actor} {N} minutes ago." with **Review changes / Keep mine / Take theirs**, per field. Never Reload-only.
+  - **Partial failure:** "Saved 8 of 9 fields. Discount limit was rejected — see below." The rest of the section stays saved and the rejected field keeps the typed value.
+  - **Server error:** "We couldn't load these settings — nothing was changed." with Retry and a request ID; other sections stay usable.
 - **Navigation:**
   - Section rail → same tab, no navigation
   - **Live sessions** → [S-2.9](#scr-2-9) · **Completion & certificates** → [S-2.10](#scr-2-10)
@@ -694,7 +987,7 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   │ │ - [ ] Read the syllabus        |  A test score is valid for 2 yrs  │ │
   │ └─────────────────────────────────────────────────────────────────────┘ │
   │        412 words · 1m 20s read · 3 media · ⌁ All changes saved 14:02    │
-  │                                        [Save now ⌘S]   [Preview item]  │
+  │                                      [Flush now ⌘S]    [Preview item]  │
   └─────────────────────────────────────────────────────────────────────────┘
   ```
 - **Primary Actions:**
@@ -707,28 +1000,77 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   7. Draft a quiz from the content with AI ([S-2.16](#scr-2-16)).
   8. Preview just this item as a student ([S-2.21](#scr-2-21)).
   9. Submit the item for review, or act on reviewer feedback ([S-2.14](#scr-2-14)).
-  10. Duplicate, move, archive, or delete the item ([S-7.10](09-Shared-Components.md#scr-7-10)).
-- **Data Displayed/Modified:** Reads `getLessonForEdit`; writes `lessons` (title, `body` + `body_format`, `content_type`, `video_url`, `asset_id`, `duration_seconds`, `tags`), `lessons.review_status`, and `quizzes` for attach/detach.
+  10. Duplicate, move, **publish / unpublish the item**, archive, or delete the item ([S-7.10](09-Shared-Components.md#scr-7-10)).
+  11. Set the item's **language** and manage its **Translations** from the pane's sub-tabs.
+- **Data Displayed/Modified:** Reads `getLessonForEdit`; writes `lessons` (title, `body` + `body_format`, `content_type`, `video_url`, `asset_id`, `duration_seconds`, `tags`, `language`, `visibility`), `lessons.review_status`, `lesson_variants` for translations, and `quizzes` for attach/detach.
+- **Local draft mirror (IndexedDB):** the item body is mirrored to IndexedDB so a crash, a closed tab, or an expired session never loses typed work. This is the mechanism behind every session-expiry and reload guarantee below.
+
+  | Property          | Value                                                                                                                                                                                                                                                |
+  | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | Store / key       | `draft:item:<itemPublicId>:<rowVersion>` — the `rowVersion` in the key means a stale draft can never silently overwrite a newer server row                                                                                                           |
+  | Write cadence     | **1000 ms debounce** after the last keystroke, independent of the 60s server autosave                                                                                                                                                                |
+  | Payload           | `{ body, title, updatedAt, rowVersion }` — no media bytes, no student data                                                                                                                                                                           |
+  | Cleared on        | A **confirmed** server save only. A failed save leaves the mirror intact, because the work is not yet safe.                                                                                                                                          |
+  | Restored on mount | On opening an item, a mirror whose `rowVersion` is **at least the server's** raises a restore prompt: _"You have unsaved changes to this lesson from {timestamp}. Restore them? / Discard them."_ The prompt is never silent and never auto-applied. |
+  | `beforeunload`    | While the buffer is dirty or a flush is in flight, `beforeunload` returns a confirmation: _"You have unsaved changes to 'What is TOEFL?'."_ — the 60s autosave is not a reason to skip this.                                                         |
+
+  **Which mirror is restorable.** The two comparisons resolve differently, and conflating them would either lose work or overwrite a newer row:
+
+  | Mirror `rowVersion` vs server | Result                                                                                                                      |
+  | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+  | **≥ the server's**            | The draft is at least as new as the row — **restore prompt**, Restore or Discard                                            |
+  | **< the server's**            | Based on an older row; applying it would lose the server's changes — **Conflict** (two-column diff), never a silent restore |
+  | **equal**                     | Redundant with a fresh save — discarded silently rather than prompting the author about a decision with no consequence      |
+
+  Mirroring and the 60s autosave are independent: the mirror is the recovery path for a closed tab or a dead device, and the prompt is the cheap warning. Both are governed in detail by [Part 12 § 8.1.1](12-Course-Editor-Markdown-Lessons.md#811-draft-mirroring-and-the-unload-guard), which implements this table.
+
 - **States:**
+  - **No content yet:** the canvas is empty with a single CTA, **Start writing** (or **✨ Draft with AI** as the named `multi-action` variant). A first-time item states the failure of `RC-4a` in the pane, not only in readiness.
   - **Default:** Item data loaded; the tree keeps its selection; the pane scrolls independently.
-  - **In Review:** `editor.setEditable(false)`; every toolbar control is disabled **with an explanatory tooltip** (never a silent no-op, per [Part 11](11-Global-Standards.md#global-validation-and-feedback-patterns)); autosave suspended; the reviewer checklist is visible; `Re-submit for review` appears once changes are possible again.
+  - **In Review / Approved (blocked by state → disabled with a reason):** the author is capable of editing but the review lock forbids it, so the canvas stays present with `editor.setEditable(false)` and **every** toolbar control renders **disabled** with _"In review — withdraw to edit"_ / _"Approved — editing clears the approval"_ in a tooltip **and** in `aria-describedby`, per the [Field Lock table](#field-lock-table). Autosave is suspended; the reviewer checklist is visible; `Re-submit for review` appears once changes are possible again. It is never collapsed into a read-only pane.
   - **Changes Requested:** Reviewer comments render inline above the canvas, anchored to the item; a comment count badge appears on the sidebar row; editing resumes.
-  - **Approved:** Read-only badge "Approved — ready to publish" until an Admin resets review.
+  - **Approved:** Green "Approved — ready to publish" badge until an Admin resets review.
+  - **Unpublished Item:** A `◌ Unpublished` pill in the pane header, with **Publish item** in the `⋯` menu. The content is still fully editable — unpublished is not a lock.
   - **Legacy HTML Body:** The `courses.legacy-body-notice.tsx` banner explains that the body is still in HTML and is converted to Markdown on first save ([Part 12 § 5](12-Course-Editor-Markdown-Lessons.md#5-storage-model)).
-  - **Needs Content:** The Overview sub-tab shows a prominent warning and the Publish button remains blocked by `RC-4`.
-  - **Unsaved Buffer + Item Switch (new):** Switching items flushes first. On failure a [S-7.1](09-Shared-Components.md#scr-7-1) dialog offers **Retry / Discard / Stay**; the tree does not change selection until the author chooses.
-  - **Row Conflict:** `This item was updated elsewhere` with **Reload**; no automatic Markdown merge, per [Part 12 § 8.2](12-Course-Editor-Markdown-Lessons.md#82-concurrency).
-  - **Save Failed:** [S-7.8](09-Shared-Components.md#scr-7-8) error state plus a toast; the buffer is retained.
-  - **Viewer / Reviewer:** Sub-tabs render read-only; the toolbar is replaced by a static formatting hint.
+  - **Needs Content:** The Overview sub-tab shows a prominent warning and the Publish button remains blocked by `RC-4a`.
+  - **Unsaved Buffer + Item Switch:** Switching items flushes first. On failure a [S-7.1](09-Shared-Components.md#scr-7-1) dialog offers **Retry / Discard / Stay**; the tree does not change selection until the author chooses, and **Discard** is never the default.
+  - **Row Conflict:** a `rowVersion` mismatch opens a **two-column Markdown diff** — _Yours_ on the left, _Theirs_ on the right, changed lines highlighted and both sides collapsible to a context window. Actions: **Keep mine (default) / Take theirs / Compare** (opens the two bodies side by side in a full-width overlay). _Take theirs_ is the renamed Reload and is **never the only option**. There is no automatic Markdown merge, per [Part 12 § 8.2](12-Course-Editor-Markdown-Lessons.md#82-concurrency).
+  - **Save Failed:** [S-7.8](09-Shared-Components.md#scr-7-8) error state plus a toast in the pattern _"We couldn't save your changes — they're still here."_; the buffer **and the IndexedDB mirror** are both retained.
+  - **Viewer / Reviewer (out of capability → absent):** the inline title editor, the `⋯` authoring entries, and the media controls do not render at all. The formatting toolbar is replaced by a static hint. This is case 1.
+  - **Archived Item (case 3):** the editor is replaced by a banner — "This item was archived." — with **Restore** and **View archived**, because the entire surface is locked.
   - **Loading:** The pane shows a skeleton while the item loads, **the tree does not blank** — selection and scroll position survive.
-  - **Item Archived While Open (new):** A banner replaces the editor: "This item was archived." with Restore / View archived.
 - **Validation & Feedback:**
-  - **Title:** required, 3–300 characters.
-  - **Content:** required at publish time, minimum 50 characters of **prose** (measured by parsing to a doc and concatenating `textContent`, so Markdown punctuation does not count) — `RC-4` in [S-2.22](#scr-2-22).
+  - **Title:** required, 3–300 characters, measured in **grapheme clusters**. It is **not** clamped: a 300-character Amharic title wraps to ~3 lines and the pane keeps its scroll.
+  - **Content:** required at publish time, minimum 50 characters of **prose OR a resolvable media asset** — `RC-4a` in [S-2.22](#scr-2-22). Prose length is measured by parsing to a doc and concatenating `textContent`, so Markdown punctuation does not count.
   - **Video URL:** must be a valid YouTube/Vimeo URL, enforced at the boundary.
   - **Duration:** numeric > 0; derived from the media length when known, then editable.
+  - **Language:** a per-item `language` overrides the course `content_language` for this item; a missing `lang` on a text run is an **advisory** check, never a save error ([Part 11](11-Global-Standards.md#localization--formatting)).
   - **Markdown validity:** server-side construct audit with a machine-readable code, a human message, and a line number surfaced as a click-to-jump in the source pane ([Part 12 § 9.3](12-Course-Editor-Markdown-Lessons.md#93-server-side-validation)).
   - **Round-trip safety:** images, tables, and task lists are structurally supported by the registered extension set; the fixture corpus fails loudly if one is ever removed ([Part 12 § 10.2](12-Course-Editor-Markdown-Lessons.md#102-round-trip-invariants)).
+- **Translations (sub-tab):** a fourth item sub-tab alongside Overview / Content / Settings.
+  - Each item has a **base variant** in `courses.content_language` and zero or more **translation variants** (e.g. an `am` variant of an `en` lesson). A variant is a full body, not a string-diff: `lesson_variants { lessonId, language, body, body_format, title, updatedAt, updatedBy }`.
+  - A **language switcher** sits at the top of the sub-tab: `[ English ▾ ]` listing every variant plus `+ Add translation`. Switching variants keeps the same item selected in the tree and never navigates.
+  - An **untranslated flag** marks a language the course declares but has no variant for: the switcher shows `አማርኛ — not translated`, and the item pane header carries a `⚠ 1 language untranslated` pill linking straight here. It is a **hint, not a block**.
+  - **`RC-4` exemption:** `RC-4a`/`RC-4b`/`RC-4c` apply to the **base variant only**. A translation variant may be published with content that fails the prose minimum; it is reported as an **advisory**, never a blocking check. Translating a lesson therefore cannot un-publish a course.
+  - **Search follows the base variant's language.** Catalog, tree, and global search tokenize Ge'ez as **2-syllable n-grams** per [Part 11](11-Global-Standards.md#localization--formatting), so `እንግሊዝ` matches `እንግሊዝኛ`; the matching syllable groups are highlighted in the card title and in the tree row, not just the whole string.
+- **Resilience:**
+  - **403:** "You don't have access to {course}." with a request ID and **Ask an Admin for access**. A Reviewer is not in this state — they get the disabled-with-a-reason canvas instead.
+  - **404:** "This item was deleted, or you followed an old link." + **Back to Courses** + request ID. An archived item deep-linked through `?item=` opens read-only with its banner rather than 404-ing.
+  - **Offline:** Persistent banner; the canvas stays **editable** and the IndexedDB mirror keeps taking writes every 1000 ms, so offline authoring is safe. The banner reads _"You're offline — 4 changes will sync when you reconnect."_ `Flush now` reads **"Queued — will sync"** rather than erroring.
+  - **Reconnected:** the mirror flushes through the autosave path in write order; a queued write whose `rowVersion` went stale resolves to the **Conflict** diff, never a silent overwrite.
+  - **Session expired:** the 2-minute warning modal names this item by title. On expiry the buffer and the IndexedDB mirror are preserved; on return the user lands on the same item and gets the restore prompt, so no typed character is lost.
+  - **Conflict:** see **Row Conflict** above — a two-column diff with **Keep mine (default) / Take theirs / Compare**. Never Reload-only.
+  - **Partial failure:** a `Flush now` that saves the body but rejects an attached media reference reports _"Saved the text; 1 media attachment was rejected — see below"_ and keeps the rejected reference visible rather than dropping it.
+  - **Server error:** "We couldn't load this lesson — your draft is safe." with Retry and a request ID. If the IndexedDB mirror has content, the pane offers the restore prompt alongside the Retry.
+- **Instrumentation & acceptance:**
+  - **Events:** `item_editor_opened` `{itemId, kind, host: pane|aliasRoute, restoredDraft: bool}` · `item_body_flushed` `{itemId, trigger: idle|manual|blur|unload, durationMs, ok}` · `item_draft_mirrored` `{itemId}` · `item_conflict_shown` `{itemId, strategy}` · `item_publish_toggled` `{itemId, from, to}` · `translation_variant_opened` `{itemId, language}`.
+  - **Acceptance:**
+    1. A 1000 ms debounced mirror write lands in IndexedDB under `draft:item:<id>:<rowVersion>` and survives a hard reload.
+    2. The mirror is cleared **only** after a confirmed server save; a failed save leaves both the buffer and the mirror intact.
+    3. `beforeunload` warns while the buffer is dirty.
+    4. A `rowVersion` conflict opens the two-column diff with **Keep mine** preselected; no path offers Reload alone.
+    5. A 300-character Amharic title wraps to ~3 lines with no `-webkit-line-clamp` anywhere, and the pane retains scroll.
+  - **Budgets:** a 200k-character lesson hydrates in < 1.5 s; Rich→Source sync ≤ 50 ms at 50k; INP < 200 ms; the mirror write never blocks the keystroke.
 - **Navigation:**
   - Item sub-tab **Content** → this pane's canvas; **Settings** → the [S-2.17](#scr-2-17) item settings region (media, prerequisites, tags, availability)
   - **Open Quiz Builder** → [S-2.8](#scr-2-8) in the same pane
@@ -738,8 +1080,9 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   - **📤 Attach media** → [S-3.1](05-Content-Library.md#scr-3-1) in picker mode
   - **Preview item** / **👁** → [S-2.21](#scr-2-21) at this item
   - **Submit for review** → [S-2.14](#scr-2-14) queue; reviewer decision in [S-2.22](#scr-2-22)
-  - **⋯ → Duplicate…** → [S-7.7](09-Shared-Components.md#scr-7-7) · **⋯ → Copy Markdown** → clipboard
-  - **Save now / `⌘S`** → flush; status shown by [S-7.8](09-Shared-Components.md#scr-7-8)
+  - **⋯ → Duplicate…** → [S-7.7](09-Shared-Components.md#scr-7-7) · **⋯ → Copy Markdown** → clipboard · **⋯ → Publish item / Unpublish item**
+  - **Flush now / `⌘S`** → force a flush; disabled with `aria-describedby` **"No unsaved changes"** when the buffer is clean; status shown by [S-7.8](09-Shared-Components.md#scr-7-8)
+  - **Translations** sub-tab → the variant list and language switcher for this item
   - Alias route `/courses/$courseId/lessons/$lessonId` → renders this pane inside the workspace
 
 > **Implementation specification:** the content model, Tiptap extension list, storage format, and the HTML→Markdown migration are specified in [Part 12](12-Course-Editor-Markdown-Lessons.md). Revision 2 adds only the workspace-integration contract — pane hosting, per-item save state, preview reuse, and alias-route equivalence — in [Part 12 § 16](12-Course-Editor-Markdown-Lessons.md#16-revision-2--workspace-integration). The content model is unchanged.
@@ -764,7 +1107,7 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   │  ● A. …   ○ B. …   ○ C. …   ○ D. …            [+ Add option]            │
   │ Points [10]   Explanation [shown after answering…]                      │
   │ ─────────────────────────────────────────────────────────────────────── │
-  │ [+ Add question] [✨ AI Draft]      [Preview as student] [Save quiz]    │
+  │ [+ Add question] [✨ AI Draft]      [Preview as student] [Flush now]    │
   └─────────────────────────────────────────────────────────────────────────┘
   ```
 - **Primary Actions:**
@@ -775,20 +1118,28 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   5. Draft questions with AI ([S-2.16](#scr-2-16)) and review every one before saving.
 - **Data Displayed/Modified:** Writes `quizzes`, `quiz_questions`, `quiz_options`, and the attaching item's `content_type`/`quiz_id` relation; reads `quiz_attempts` for the "first-attempt accuracy" hint beside each question.
 - **States:**
+  - **Loading:** skeleton for the question list; the pane header and the tree keep their selection.
+  - **No questions yet:** the question list is empty with a single CTA, **Add question** (or **✨ Generate with AI** as the named `multi-action` variant, because both are credible starting paths). A quiz with no questions fails `RC-4b` and the failure is stated in the pane, not only in readiness.
   - **Default:** At least one blank question on creation; the item title is the quiz title until renamed.
   - **Validation Error:** "Every question needs a correct answer marked." blocks save and marks the offending question inline.
-  - **Detached Quiz (new):** A quiz can exist before it is placed. The header shows "Not attached to a curriculum item" with **Attach…**; unattached quizzes are excluded from publish readiness and are visible only from the Library/Library picker, never as a curriculum row.
-  - **Saving / Saved / Error:** [S-7.8](09-Shared-Components.md#scr-7-8).
-  - **Locked by Review:** `in_review` items are read-only; the builder is disabled with an explanation and the review checklist is shown instead.
-  - **Item Archived:** The quiz becomes read-only with an "Archived item" banner and a Restore action.
+  - **Detached Quiz:** A quiz can exist before it is placed. The header shows "Not attached to a curriculum item" with **Attach…**; unattached quizzes are excluded from publish readiness and are visible only from the Library/Library picker, never as a curriculum row.
+  - **Saving / Saved / Error:** [S-7.8](09-Shared-Components.md#scr-7-8). The explicit control is **`Flush now`**, disabled with `aria-describedby` "No unsaved changes" when the buffer is clean.
+  - **Locked by Review (blocked by state → disabled with a reason):** the builder renders with every control **disabled**, the reason _"In review — withdraw to edit"_ / _"Approved — editing clears the approval"_ in a tooltip and in `aria-describedby`, and the review checklist shown alongside. It is not replaced by a read-only summary.
+  - **Archived Item (case 3):** the whole surface is replaced by an "Archived item" banner and a **Restore** action.
   - **AI Draft Received:** Questions arrive labeled ✨ and marked unreviewed; the builder must not attach an unreviewed AI question to a published item without an explicit confirmation.
 - **Validation & Feedback:**
   - Multiple choice requires exactly one correct option; multi-select requires ≥ 1.
   - Passing score 1–100%; time limit 0–600 minutes; attempts 1–10.
+  - **Publishability** is `RC-4b`: a quiz needs **≥ 1 question, each with a keyed correct answer**. The item body is an optional short Markdown intro and is never the reason a quiz fails readiness.
   - A quiz attached to a **published** course is a live change: confirm explicitly, and record it in the audit log.
   - Deleting a quiz asks whether to keep the historical attempts; attempts are never deleted.
+- **Resilience:**
+  - **Forbidden / locked:** a Reviewer or Viewer opening a quiz in a locked course sees the editor replaced by the explanation, not a disabled toolbar.
+  - **Offline:** edits keep buffering; the `rowVersion` they were based on is held, so a reconnect resolves to Conflict rather than overwriting.
+  - **Conflict:** a question edited in two tabs shows the two versions side by side with **Keep mine / Take theirs**.
+  - **Server error:** _"We couldn't save this quiz — your questions are still here."_ with Retry and a request ID.
 - **Navigation:**
-  - **Save quiz** → returns to the item pane ([S-2.7](#scr-2-7) or [S-2.23](#scr-2-23)) with the quiz attached
+  - **Flush now** → forces a flush of the dirty buffer, then returns to the item pane ([S-2.7](#scr-2-7) or [S-2.23](#scr-2-23)) with the quiz attached
   - **Preview as student** → [S-2.21](#scr-2-21) at this quiz
   - **✨ AI Draft** → [S-2.16](#scr-2-16); the reviewed draft returns here
   - Results roll into [S-5.2](07-Analytics.md#scr-5-2) Quiz Analytics and the **Quizzes** tab of [S-2.19](#scr-2-19)
@@ -821,7 +1172,7 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   │   Grade by: (● Points  ○ Rubric score  ○ Pass/fail)   Points: [20]      │
   │   Feedback: ☐ Release immediately  ☐ Release after due date            │
   │   Tags: [Writing] [+]                                                   │
-  │                                          [Save]   [Preview as student] │
+  │                                        [Flush now]  [Preview as student] │
   └─────────────────────────────────────────────────────────────────────────┘
   ```
 - **Primary Actions:**
@@ -834,25 +1185,32 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   7. Preview the item as a student ([S-2.21](#scr-2-21)).
 - **Data Displayed/Modified:** Writes `lessons` with `content_type: 'exercise'` and an assignment configuration object; the brief uses the same `body` + `body_format` contract as any other item. Rubrics and submissions are read for grading views in [S-4.3](06-Students.md#scr-4-3).
 - **States:**
+  - **Loading:** skeleton for the brief and rubric; the submission-channel list resolves separately so a slow settings read does not block the author from writing the brief.
   - **Default:** A new assignment starts with a stub brief and no rubric; the Overview sub-tab flags "Needs content" until a brief and at least one submission channel exist.
   - **No Attachment:** Allowed; the attach slot shows the empty state and links to the [Content Library](05-Content-Library.md#scr-3-1).
   - **Due Date in the Past:** Allowed for an already-published assignment; the warning explains the effect on new submissions only.
   - **Grading Mode Changed:** Switching to rubric grading requires at least one criterion; switching to points requires a value > 0.
-  - **Grading Actions (Admin only, published items):** Review submissions, score, release feedback, and export. Grading is a student-facing-adjacent capability and is permission-filtered per [Part 11](11-Global-Standards.md#roles--permissions-matrix).
-  - **Archived / In Review / Approved:** Same lock semantics as [S-2.7](#scr-2-7) — one shared implementation of the review gate.
+  - **Grading Actions (Admin and Editor, published items):** review submissions, score, release feedback, and export. This is the `assignment.grade` capability, granted to **Admin and Editor** per [Part 11](11-Global-Standards.md#course-lifecycle-capabilities) — it is not Admin-only. For Reviewer, Viewer, and Support the grading controls are **absent entirely** (case 1), not disabled.
+  - **Grading Actions While Archived / In Review / Approved (blocked by state → disabled with a reason):** an Admin or Editor still sees the grading controls, disabled, with _"Archived — restore the course to grade"_ / _"In review — withdraw to grade"_ in a tooltip and `aria-describedby`. Archived is not a read-only collapse here, because grading is one region of a larger surface.
+  - **Archived / In Review / Approved:** the authoring lock semantics are the single implementation shared with [S-2.7](#scr-2-7), per the [Field Lock table](#field-lock-table).
 - **Validation & Feedback:**
-  - **Brief:** required at publish time, ≥ 50 characters of prose (`RC-4`).
+  - **Brief:** required at publish time — **`RC-4c`: ≥ 50 characters of prose _and_ ≥ 1 submission channel.** A brief alone is not enough, because a student with no way to submit the work cannot complete it.
   - **Due date:** must be in the future when first set on an unpublished item.
   - **Rubric:** at least one criterion; criterion weights must total 100% for weighted rubrics.
   - **Attempts:** 1–10; unlimited only with an explicit acknowledgement.
   - Deleting an assignment with submissions requires **Archive** instead, or an explicit confirmation that submissions are discarded.
+- **Resilience:**
+  - **Forbidden / locked:** grading is absent without `assignment.grade`; a Reviewer sees the submission list without the score field.
+  - **Offline:** the rubric and brief keep buffering; the submission channel is unaffected because uploads queue independently.
+  - **Conflict:** two graders scoring the same submission shows **Keep mine / Take theirs** and records which rubric version each used.
+  - **Partial failure:** a bulk release of feedback saves the released rows and names the failed ones.
 - **Navigation:**
   - **Attach** → [S-3.1](05-Content-Library.md#scr-3-1) picker
   - **🔒 Rules** → [S-2.15](#scr-2-15)
   - **Preview as student** → [S-2.21](#scr-2-21) at this item
   - **Edit rubric / grade submissions** → rubric editor; submissions list (may live behind this pane in a future revision — out of scope here)
-  - Item `⋯` menu → [S-7.10](09-Shared-Components.md#scr-7-10) (duplicate, move, archive, delete)
-  - **Save** → [S-7.8](09-Shared-Components.md#scr-7-8) status
+  - Item `⋯` menu → [S-7.10](09-Shared-Components.md#scr-7-10) (publish/unpublish, duplicate, move, archive, delete)
+  - **Flush now** → forces a flush of the dirty buffer; disabled with `aria-describedby` "No unsaved changes" when clean; status shown by [S-7.8](09-Shared-Components.md#scr-7-8)
 
 ---
 
@@ -898,8 +1256,11 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
 
 - **Data Displayed/Modified:** Reads `courses`, `modules`, `lessons`, `quizzes`, `lesson_unlock_rules`, `enrollments`, `lesson_completions`. Preview is strictly read-only; every write attempted from a preview control is blocked server-side, not merely hidden.
 - **States:**
+  - **Loading:** the Preview Frame renders its chrome immediately and a skeleton inside it, so the frame never resizes when the render arrives.
   - **Draft Watermark (new):** A "Draft preview" ribbon and a subtle diagonal watermark label the frame. Draft content is unmistakably not live, which is the failure mode the old external-preview link had.
-  - **Unpublished Item:** Renders as a student would see it **if** it were published, and is badged "unpublished" in preview-only chrome.
+  - **Unpublished Item:** renders as a student would see it **if** it were published, badged `◌ Unpublished` in preview-only chrome. An item with `visibility = 'draft'` is previewable — that is the point of the frame — but it is never counted in the [published set](#item-visibility), never in completion, and never in analytics.
+  - **Scheduled Item:** badged `📅 Scheduled — publishes 15 Sep` with the same treatment.
+  - **Translation Variant Missing:** if the preview identity is a student whose language has no variant, the frame shows the base variant with a preview-only note _"No አማርኛ version yet."_ — visible to the author, never to a student.
   - **Locked Item:** Renders the exact lock message from [S-2.15](#scr-2-15) and the unmet requirement count.
   - **Missing Media:** A visible "media unavailable" placeholder with the asset id, not a broken player — this is a publishing blocker surfaced early.
   - **Empty Course:** "There is nothing to preview yet — add a section and an item."
@@ -912,6 +1273,12 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   - **Publishing blockers are surfaced here too**, as a checklist summary, linking to [S-2.22](#scr-2-22).
   - Preview identity selection persists per user so "New student" is not chosen by accident for a whole review session.
   - **Accessibility:** the frame is a labelled region; keyboard navigation inside the preview is real (not a screenshot), and focus does not leak into the workspace behind it.
+  - **Copying a preview link** follows [Notification Delivery](11-Global-Standards.md#notification-delivery): the link is posted in-app, and where the recipient has a linked Telegram handle the author can also send it there. **Email is disabled-with-reason** for anyone without a verified address, and the copy is stated as _"1 recipient — 1 in-app · 1 Telegram · 0 email (1 has no verified email)."_ A send that fails on a channel reports a **delivery-failure** state with **Retry**, and never blocks the copy itself.
+- **Resilience:**
+  - **403:** a preview identity the user may not impersonate is refused with _"You can't preview this course."_ and a request ID.
+  - **404:** a preview of a deleted item shows the learner's 404 view, not an editor error.
+  - **Offline:** a preview already loaded keeps rendering from cache with a banner; a preview not yet loaded is not fetched.
+  - **Server error:** _"The preview couldn't be built. Your course is unchanged."_ with Retry.
 - **Navigation:**
   - Opened from the workspace header **Preview** on any tab, from an item pane **Preview item**, from [S-2.19](#scr-2-19) **Preview as student**, from [S-5.3](07-Analytics.md#scr-5-3) funnel steps, and from [S-2.14](#scr-2-14) when a reviewer opens a submission
   - **‹ Back to workspace** → returns to the same tab and, if it came from an item, with the same item selected
@@ -930,13 +1297,13 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
 - **Wireframe Layout (Text-Based):**
   ```
   ┌──────────────────────────────────────────────────────────────────────────┐
-  │ Publish Readiness — TOEFL Complete Course            🟠 Draft · v3     │
+  │ Publish Readiness — TOEFL Complete Course            ● Draft · v3     │
   │ ┌───────────────────────────────┐ ┌─────────────────────────────────────┐ │
-  │ │ CHECKLIST                     │ │ LIFECYCLE                           │ │
-  │ │ ✅ RC-1 Title & thumbnail     │ │  ●━━━━━○━━━━━━━━━━○━━━━━━━━○        │ │
-  │ │ ✅ RC-2 Description 100–500   │ │  Draft  In review  Published  Arch. │ │
+  │ │ CHECKLIST                     │ │ LIFECYCLE  5 nodes                 │ │
+  │ │ ✅ RC-1 Title & thumbnail     │ │  ●━━○━━○━━○━━○                    │ │
+  │ │ ✅ RC-2 Description 100–500   │ │  Draft In review Approved Pub. Arch.│ │
   │ │ ❌ RC-3 ≥1 section, ≥1 item   │ │                                      │ │
-  │ │ ❌ RC-4 3 items have no       │ │ RELEASE                             │ │
+  │ │ ❌ RC-4a 3 lessons have no    │ │ RELEASE                             │ │
   │ │      content      [Fix →]     │ │  (● Immediately  ○ Schedule date)   │ │
   │ │ ❌ RC-5 1 video URL invalid   │ │ │ 2026-09-15 09:00 EAT               │ │
   │ │      [Fix →]                 │ │  ☐ Notify enrolled students         │ │
@@ -945,23 +1312,30 @@ Every editing surface in Part 04 reports state with the shared [S-7.8](09-Shared
   │ │ ⛔ RC-8 Review: 2 items await │ │  [ Submit for review ]              │ │
   │ │      approval  [Queue →]     │ │  (blocked until RC-1..RC-7 pass)    │ │
   │ └───────────────────────────────┘ └─────────────────────────────────────┘ │
-  │ [Preview as student]      4 of 8 checks pass — 4 remaining                │
+  │ [Preview as student]  [Version history ▾]  4 of 8 checks pass — 4 remain  │
   └──────────────────────────────────────────────────────────────────────────┘
   ```
-- <a id="readiness-checks"></a>
 
-**Readiness Checks**
+<a id="readiness-checks"></a>
 
-| ID   | Check                                                                                       | Blocked on | Fix location                                                            |
-| ---- | ------------------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------- |
-| RC-1 | Title ≥ 3 characters, exam/category and instructor set, thumbnail present                   | Publish    | [S-2.20](#scr-2-20) Details                                             |
-| RC-2 | Description present, 100–500 characters                                                     | Publish    | [S-2.20](#scr-2-20) Details                                             |
-| RC-3 | At least one section with at least one non-archived item                                    | Publish    | [S-2.17](#scr-2-17) Curriculum                                          |
-| RC-4 | Every item in the published set has a title and ≥ 50 characters of prose                    | Publish    | item pane ([S-2.7](#scr-2-7) / [S-2.8](#scr-2-8) / [S-2.23](#scr-2-23)) |
-| RC-5 | All media URLs valid; no missing library assets; captions present for video items           | Publish    | item **Overview** sub-tab                                               |
-| RC-6 | Pricing consistent (free, or price > 0 with currency), at least one payment gateway enabled | Publish    | [S-2.20](#scr-2-20) Pricing                                             |
-| RC-7 | Completion rule chosen; certificate configured when the rule awards one                     | Publish    | [S-2.20](#scr-2-20) Completion                                          |
-| RC-8 | When `requiresApproval` is on: all items approved, or the course-level review approved      | Publish    | [S-2.14](#scr-2-14) queue                                               |
+#### Readiness Checks
+
+| ID    | Check                                                                                                                                                                                               | Blocked on | Fix location                   |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------ |
+| RC-1  | Title ≥ 3 characters (grapheme clusters), exam/category and instructor set, thumbnail present                                                                                                       | Publish    | [S-2.20](#scr-2-20) Details    |
+| RC-2  | Description present, 100–500 characters                                                                                                                                                             | Publish    | [S-2.20](#scr-2-20) Details    |
+| RC-3  | At least one section containing at least one item in the [published set](#item-visibility)                                                                                                          | Publish    | [S-2.17](#scr-2-17) Curriculum |
+| RC-4a | **Every Lesson in the published set** has a title and **either ≥ 50 characters of prose _or_ a resolvable media asset** (a library asset, a valid video/PDF URL, or an embed)                       | Publish    | item pane — [S-2.7](#scr-2-7)  |
+| RC-4b | **Every Quiz in the published set** has **≥ 1 question, and every question has a keyed correct answer**. The item body is an optional short Markdown intro and is **never** the reason a quiz fails | Publish    | [S-2.8](#scr-2-8)              |
+| RC-4c | **Every Assignment in the published set** has a brief of **≥ 50 characters of prose** _and_ **≥ 1 enabled submission channel**                                                                      | Publish    | [S-2.23](#scr-2-23)            |
+| RC-5  | All media URLs valid; no missing library assets; captions present for video items                                                                                                                   | Publish    | item **Overview** sub-tab      |
+| RC-6  | Pricing consistent (free, or price > 0 with currency), at least one payment gateway enabled                                                                                                         | Publish    | [S-2.20](#scr-2-20) Pricing    |
+| RC-7  | Completion rule chosen; certificate configured when the rule awards one                                                                                                                             | Publish    | [S-2.20](#scr-2-20) Completion |
+| RC-8  | When `requiresApproval` is on: all items approved, or the course-level review approved                                                                                                              | Publish    | [S-2.14](#scr-2-14) queue      |
+
+`RC-4` is a **family of three checks**, one per item kind, so a quiz is never failed for lacking 50 characters of prose and a video-only lesson is never failed for lacking a body. Anything that references "RC-4" without a suffix means the family: a course passes `RC-4` when `RC-4a`, `RC-4b`, and `RC-4c` all pass. The family is evaluated only over the [published set](#item-visibility) — an unpublished item is neither checked nor blocking, and publishing it later re-runs its own check.
+
+**Exemptions from RC-4, all advisory and never blocking:** untranslated **translation variants** (only the base variant is checked — see [S-2.7](#scr-2-7) Translations); free-preview items; and items excluded from the completion rule by [S-2.10](#scr-2-10).
 
 Every check renders with **Fix** — a deep link into the exact field, on the exact tab, with the offending field focused. A checklist the author cannot act on is a report, not a gate.
 
@@ -972,20 +1346,35 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   4. **Withdraw** a pending submission.
   5. As a Reviewer/Admin: **Approve**, **Request changes**, or **Reject** the course, with a required comment for the last two.
   6. **Publish now** or **Schedule**; **Unpublish** with a scheduled option; **Archive** from here or in [S-2.20](#scr-2-20) Danger zone.
-  7. Preview as a student before committing ([S-2.21](#scr-2-21)).
+  7. Open the **Version history** panel and **Restore as a new draft version**.
+  8. Preview as a student before committing ([S-2.21](#scr-2-21)).
+- **Version History:** a slide-over panel opened from the header, listing every version of this course.
+
+  | Column                 | Content                                                                                                                       |
+  | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+  | **Version**            | `v1`, `v2`, `v3`… monotonic and never reused. The current unpublished version is marked `current`.                            |
+  | **Actor**              | Who created the version.                                                                                                      |
+  | **Timestamp**          | Absolute ISO-8601 with offset — never relative time, per [Part 11](11-Global-Standards.md#localization--formatting).          |
+  | **Readiness snapshot** | The `RC-1…RC-8` pass/fail state **as it was at that version**, so a reviewer can see what that version would have shipped as. |
+  | **Item deltas**        | `+2 −0 ~1` against the previous version: added, removed, and modified items.                                                  |
+  - Selecting a version opens a **read-only line diff** of that version against its predecessor: added lines green, removed red, both sides collapsible to a context window. It is a viewer, never an editor — history is not editable in place.
+  - **Restore as a new draft version** takes any version's content and writes it forward as **`v(n+1)`** on the current draft. It **never deletes or rewrites history**; the confirmation says so plainly: _"Restoring v2 will create v5. v3 and v4 are kept."_
+  - **A stale submission cannot be approved.** If the course changed after the review request was submitted, **Approve** is disabled with the reason **"Re-review the current version"** and a **Re-submit for review** action that opens a fresh request. A reviewer never approves a version different from the one on screen, and a decision always records **the version it decided on** — never the current one, which may have moved on.
+
 - **Data Displayed/Modified:**
   - Reads `getPublishReadiness(coursePublicId)` → the eight checks with `{ id, passed, blocking, targets[] }`, plus `courses.status`, `review_requests` (course-scoped), and per-item `review_status`.
-  - Writes `courses.status`, `courses.published_at`, `courses.scheduled_publish_at`, `courses.review_requested_at`, `courses.review_decided_at`, `review_requests` (`entity_type: 'course'`), and fires `course.published` / `course.unpublished` outbox events and the `course.status_changed` audit entry.
+  - Writes `courses.status`, `courses.version`, `courses.approved_at`, `courses.published_at`, `courses.scheduled_publish_at`, `courses.review_requested_at`, `courses.review_decided_at`, `review_requests` (`entity_type: 'course'`), `course_versions`, and fires `course.published` / `course.unpublished` outbox events and the `course.status_changed` audit entry.
 
-  | Function                          | Purpose                                                             |
-  | --------------------------------- | ------------------------------------------------------------------- |
-  | `getPublishReadiness`             | Evaluate RC-1…RC-8 server-side; never trust a client-computed state |
-  | `submitCourseForReview`           | Draft → In Review, creating a course-scoped review request          |
-  | `withdrawCourseReview`            | In Review → Draft, closing the open request as withdrawn            |
-  | `decideCourseReview`              | Reviewer decision with comment                                      |
-  | `publishCourse`                   | Draft/In Review → Published (now or scheduled); re-evaluates checks |
-  | `unpublishCourse`                 | Published → Draft, immediately or at a future time                  |
-  | `archiveCourse` / `restoreCourse` | Lifecycle edges                                                     |
+  | Function                                      | Purpose                                                                                                    |
+  | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+  | `getPublishReadiness`                         | Evaluate RC-1…RC-8 server-side; never trust a client-computed state                                        |
+  | `submitCourseForReview`                       | Draft → In Review, creating a course-scoped review request                                                 |
+  | `withdrawCourseReview`                        | In Review → Draft, closing the open request as withdrawn                                                   |
+  | `decideCourseReview`                          | Reviewer decision with comment; records the **version decided on** and refuses a stale version             |
+  | `publishCourse`                               | Draft/Approved/In Review → Published (now or scheduled); re-evaluates checks, increments `courses.version` |
+  | `unpublishCourse`                             | Published → Draft, immediately or at a future time; clears `approved_at`                                   |
+  | `archiveCourse` / `restoreCourse`             | Lifecycle edges                                                                                            |
+  | `getCourseVersions` / `restoreVersionAsDraft` | Versions with readiness snapshots and item deltas; a restore writes a **new** version, never a deletion    |
 
 - **States:**
   - **All Checks Pass:** The lifecycle CTA becomes available; a summary line states exactly what will happen on publish ("18 items, 3 quizzes, 234 students will keep access").
@@ -993,21 +1382,42 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   - **Requires Approval, Not Submitted:** Primary CTA is `Submit for review`; `Publish` is not offered to an Editor.
   - **Requires Approval, Submitted:** Status "In review since 2h ago · Jane Smith"; `Withdraw` available; checklist stays visible and read-only.
   - **Changes Requested:** The reviewer's comment is pinned above the checklist; the affected checks are highlighted; the author edits and re-submits.
-  - **Approved, Not Yet Published:** "Approved by Alex Johnson · ready to publish" with `Publish now` and `Schedule`.
-  - **Scheduled:** "Scheduled for 2026-09-15 09:00 EAT" with Edit / Cancel schedule. The course stays a Draft until the job runs.
-  - **Publishing:** Full-width progress; the screen is not dismissible while the transaction runs.
+  - **Approved, Not Yet Published:** the fifth lifecycle state. "Approved by Alex Johnson · 2h ago · ready to publish" with `Publish now` and `Schedule`. The course remains `draft`, which is exactly what the [S-2.1](#scr-2-1) **Approved** filter matches.
+  - **Stale Submission:** the author edited after submitting — **Approve** is disabled with **"Re-review the current version"**, and the panel lists what changed since the submitted version.
+  - **Scheduled:** "Scheduled for 2026-09-15 09:00 EAT" with Edit / Cancel schedule. The course stays a Draft until the job runs and carries a `📅 Scheduled` badge in the catalog and the workspace header.
+  - **Publishing:** full-width progress showing the step it is on. The transaction is **server-side and idempotent**, so the UI is released after a **60-second soft timeout**: the screen becomes dismissible and reads **"Publishing in background — we'll notify you when it's live."** The user may leave, switch tabs, or start something else; the outcome arrives as an in-app + Telegram notification and the status pill flips when the job resolves. A publish is never abandoned behind a modal the user cannot escape.
   - **Publish Failure:** Every check is re-evaluated and re-rendered; the failure is stated in the author's terms ("3 items lost their content since the check ran").
   - **Published Course:** This screen becomes the change-control surface — "Publish an update" (increments `version`, notifies), `Unpublish`, `Archive`.
   - **Archived:** Read-only history of the last publication.
-  - **Viewer:** Checklist visible read-only; all actions hidden.
-  - **Loading / Error:** Skeleton for both columns; "Unable to evaluate readiness. Retry?" — the screen must never guess a state.
+  - **Viewer (out of capability → absent):** the checklist is visible read-only and every action control is **absent**, not disabled.
+  - **Loading / Error:** Skeleton for both columns; "We couldn't evaluate readiness — nothing was changed." with Retry and a request ID — the screen must never guess a state.
 - **Validation & Feedback:**
   - **Publish is re-validated server-side** at the moment of publishing; the client checklist is a convenience, not the gate.
   - **Scheduled publish** is timezone-explicit and shown in the workspace timezone with the raw UTC value in a tooltip.
-  - **Unpublish** confirmation states the student-visible effect, offers a scheduled unpublish, and offers "keep existing students enrolled" (the default) versus full access removal.
-  - **Changes requested / rejected** require a non-empty comment; it is delivered to the author via [S-1.4](03-Dashboard.md#scr-1-4) and email.
-  - **Every transition** writes an audit entry with actor, from-state, to-state, and the readiness snapshot.
+  - **Unpublish:** the confirmation states the student-visible effect and offers a scheduled unpublish. **Unpublish returns the course to Draft and disables new enrolment immediately; the 234 already-enrolled students keep access to the content and their progress for a 14-day access grace period**, after which the content locks while progress, completions, and earned certificates are retained permanently. **Unpublish never revokes an earned certificate.** Full access removal is a separate, non-default choice: _"Remove access for all 234 enrolled students now"_, behind a typed confirmation naming the count.
+  - **Notification delivery** follows [Notification Delivery](11-Global-Standards.md#notification-delivery) and never assumes an email address. The publish result, the review decision, and the scheduled-publish reminder go **in-app** always and **Telegram** by default; **email** only where a verified address exists, with the control **disabled with the reason** _"No verified email on this account"_ where it does not. A channel failure is reported as **its own** state, never as a failed publish: _"Published, but 12 of 234 couldn't be reached on Telegram — Retry delivery."_
+  - **Changes requested / rejected** require a non-empty comment; it is delivered to the author in-app and via Telegram.
+  - **Every transition** writes an audit entry with actor, from-state, to-state, the **version**, and the readiness snapshot.
   - **AI-generated courses** are labelled ✨ and are never publishable while any item carries the `needs content` flag from [S-2.11](#scr-2-11).
+- **Resilience:**
+  - **403:** "You don't have access to publish {course}." with a request ID and **Ask an Admin for access**. A Viewer does not see this — their actions are absent, so no 403 is produced.
+  - **404:** "This course was deleted, or you followed an old link." + **Back to Courses** + request ID.
+  - **Offline:** Persistent banner; the checklist renders read-only from the last evaluation, stamped _"evaluated 3 minutes ago"_, and every transition control is disabled-with-reason _"You're offline — publishing is paused"_ rather than failing on click.
+  - **Reconnected:** readiness is **re-evaluated on reconnect** and never trusted from the offline cache; any verdict change streams into the list with a live-region announcement, so an author learns a check flipped while they were away.
+  - **Session expired:** the 2-minute modal names any unsaved surface (the submission note, the schedule form); on return the same course and checklist are shown.
+  - **Conflict:** a concurrent decision or publish by another Admin → "Changed by {actor} {N} minutes ago." with **Review changes / Keep mine / Take theirs** over the readiness snapshot. Never Reload-only. Two admins cannot both publish: the second receives the conflict, not a duplicate version.
+  - **Partial failure:** in a bulk publish, excluded courses are listed with their failing RC ids and a **Fix** link each, and the toast reports both counts.
+  - **Server error:** "We couldn't evaluate readiness — your work is safe." with Retry and a request ID. A publish that fails server-side is retried by the job, not by the user clicking again.
+- **Instrumentation & acceptance:**
+  - **Events:** `publish_readiness_viewed` `{courseId, status, version, passCount, blockCount}` · `readiness_check_fixed` `{courseId, rcId}` · `course_submitted_for_review` `{courseId, version}` · `review_decided` `{courseId, decision, versionDecidedOn, staleRejected, durationHours}` · `course_published` `{courseId, version, scheduled, itemCount, durationMs}` · `course_unpublished` `{courseId, enrolledCount, graceDays}` · `version_restored` `{courseId, fromVersion, toVersion}`. No titles, no comments, no PII.
+  - **Acceptance:**
+    1. `RC-4a` passes for a video-only lesson with a resolvable asset and no prose; `RC-4b` passes for a quiz whose body is one sentence; `RC-4c` fails an assignment that has a brief but no submission channel.
+    2. Only items in the published set are evaluated by `RC-3` and the `RC-4` family.
+    3. An untranslated translation variant is advisory-only and never blocks publish.
+    4. **Approve** is disabled with "Re-review the current version" when the course changed after submission, and a decision records the version it decided on.
+    5. **Restore as a new draft version** creates `v(n+1)` and leaves every prior version intact and listed.
+    6. Publish releases the UI after 60s with the "Publishing in background" state, and the outcome arrives in-app and via Telegram.
+  - **Budgets:** readiness evaluated server-side in < 1 s; a re-check streams each verdict change rather than re-rendering the panel; the version panel opens in < 300 ms with 50 versions loaded.
 - **Navigation:**
   - Opened from the workspace header lifecycle CTA, the Overview readiness banner ([S-2.6](#scr-2-6)), the curriculum toolbar (**Submit for review**), the [S-2.14](#scr-2-14) queue (**Review course**), and notifications in [S-1.4](03-Dashboard.md#scr-1-4)
   - **Fix →** → the owning screen and field
@@ -1034,7 +1444,8 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   │ | Reading Clinic     | Sep 14, 4:00 PM EAT| Alex | 22 / 24   | Edit ⋯   |  │
   │ History (collapsed): 6 past sessions                                     │
   │ Provider (● Zoom ○ Google Meet ○ Custom URL)                             │
-  │ ☐ Auto-record and attach to the linked item                              │
+  │ ☑ Auto-record and attach to the linked item  ⓘ Recording is on —        │
+  │   attendees are told when they join. Turn off                            │
   │ Reminders: [☑ 24h before] [☑ 1h before]                                  │
   └─────────────────────────────────────────────────────────────────────────┘
   ```
@@ -1042,18 +1453,32 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   1. Schedule, edit, or cancel a live session; link it to a curriculum item.
   2. Choose a conferencing provider and generate the join link.
   3. Enable auto-recording and attach the recording to an item when it is ready.
-  4. Set reminder emails.
+  4. Set reminders, delivered in-app and via Telegram by default (see [Notification Delivery](11-Global-Standards.md#notification-delivery)).
 - **Data Displayed/Modified:** Writes `live_sessions`, `session_attendance`; reads `enrollments` for the attendee count.
 - **States:**
   - **Default:** Upcoming list chronologically; past sessions collapsed under History.
   - **Not Applicable:** For `self_paced` courses the section is hidden entirely rather than shown disabled.
+  - **Provider Not Connected (new):** no Zoom / Google Meet credential is configured for the workspace. The provider radio group renders with a single disabled option and an inline **"Connect {provider}"** action → [S-6.3](08-Settings.md#scr-6-3) Integrations. Choosing **Custom URL** is _not_ blocked — it is the escape, and it is offered as a real, usable option rather than a consolation.
+  - **Meeting Creation Failed (new):** the provider authenticated but the meeting could not be created. The session is kept as a **draft row** rather than lost, with an inline error _"We couldn't create the meeting — your session details are saved."_ and three actions: **Retry**, **Paste a custom join URL**, and **Save without a meeting link**. The paste field validates as a URL and stores it as `join_url_override`; the session then behaves normally, and the screen states plainly that attendance tracking and recording are unavailable for an overridden URL.
+  - **Attendance Unavailable (new):** the provider has not returned attendance (no webhook yet, or the provider does not support it). The **Attendees** column shows `—` with **"Mark attendance manually"**, which opens a roster of enrolled students with per-student Present / Late / Absent toggles. Manual marks are labelled as such wherever the count is shown, and are never silently merged with provider data: the column header states its source.
+  - **No-Show / Mark Attended (new):** from the attendee count or a past session's `⋯`, **Mark attended** opens the same manual list pre-ticking the students who joined. Unchecking someone who actually attended requires a reason, because it changes a learner's record.
+  - **Reschedule (new):** changing the start time on an existing session re-checks host conflicts, and the dialog states who is being notified and on which channels before confirming. A reschedule **inside 1 hour** of the original start additionally warns that the original link may already have been shared.
+  - **Cancelled (new):** cancelling keeps the session row in History, struck through and badged `Cancelled`, with the reason and the actor. Attendees are notified through [Notification Delivery](11-Global-Standards.md#notification-delivery); the session's notification panel records the per-channel outcome, and a channel failure is its own state — _"Cancelled and notified in-app + Telegram; 4 of 24 have no verified email."_
   - **Host Conflict:** Warns when a session overlaps another for the same host and offers the nearest free slot.
-  - **Cancelling:** [S-7.1](09-Shared-Components.md#scr-7-1) with an option to notify attendees.
+  - **Recording Consent Notice (new):** auto-record is **on by default** for a session, which means the provider records enrolled students without an explicit per-session opt-in. A notice is shown on the scheduling form and again on the session detail: **"Recording is on. Attendees are told when they join. Turn off"**, with the recorded artefact linked to the session and visible to the host. Where a workspace has a recording-consent policy set, auto-record defaults to **off** instead and the toggle reads **disabled-with-reason** naming the policy.
   - **Recording Ready:** Banner "Recording ready — attach to an item?" with a target picker.
-  - **Archived Course:** Read-only.
+  - **Archived Course:** Read-only behind the [S-2.6](#scr-2-6) banner; scheduling controls are disabled-with-reason _"Archived — restore the course to schedule sessions"_.
 - **Validation & Feedback:**
-  - Start must be in the future; end must be after start.
-  - Attendance is recorded from the provider webhook, not from self-reporting.
+  - Start must be in the future; end must be after start. Both display in `Africa/Addis_Ababa` with the UTC offset in a tooltip.
+  - Attendance is recorded from the provider webhook, not from self-reporting; manual marks are an explicit, labelled fallback and are stored with `source: 'manual'`.
+  - The join URL is required before a session can be marked **Ready**; a session without one is `Draft` and does not appear to students.
+  - Session reminders follow [Notification Delivery](11-Global-Standards.md#notification-delivery) — in-app always, Telegram by default, email disabled-with-reason for anyone without a verified address. The scheduling form shows the resulting breakdown before confirming: _"24 enrolled — 24 in-app · 21 Telegram · 9 email (15 have no verified email)."_
+  - A reminder that fails to deliver reports a **delivery-failure** line under the session, with **Retry delivery**, and never blocks the session itself.
+- **Resilience:**
+  - **403 / 404:** an unconfigured or removed provider routes to [S-6.3](08-Settings.md#scr-6-3) rather than a dead control.
+  - **Offline:** sessions already scheduled are unaffected; creating or editing one is blocked with _"You're offline — this needs a connection."_
+  - **Conflict:** two people rescheduling the same session shows **Keep mine / Take theirs**, and the enrolled students are notified exactly once.
+  - **Server error:** a failed meeting creation keeps the draft session and offers **Retry** or a custom join URL.
 - **Navigation:**
   - **Attach to item** → [S-2.17](#scr-2-17) Curriculum with the target item's pane open
   - Attendee count → [S-2.18](#scr-2-18) Workspace · Students filtered to enrolled
@@ -1079,7 +1504,7 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   │ │  [Certificate preview]      │  Fields: Name · Course · Date · ID     │
   │ │   Certificate of Completion│  Signature: [upload PNG]                │
   │ └────────────────────────────┘  ☐ Issue automatically on completion    │
-  │ [Save rules]        [Preview certificate]  [Export issued (84)]         │
+  │ [Flush now]       [Preview certificate]  [Export issued (84)]         │
   └─────────────────────────────────────────────────────────────────────────┘
   ```
 - **Primary Actions:**
@@ -1089,6 +1514,8 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   4. Export the list of issued certificates (required before a course can be deleted).
 - **Data Displayed/Modified:** Writes `completion_rules`, `certificate_templates`; reads `issued_certificates`.
 - **States:**
+  - **Loading:** skeleton rows for issued certificates; the completion rule keeps its last-rendered state so the form stays usable.
+  - **Empty:** "No certificates issued yet. A certificate is issued when a student meets the completion rule below." with **Configure completion** as the single CTA, since the rule is what produces them. **Zero-result:** "No certificates match this filter." with **Clear filters**.
   - **Default:** 100%-of-items rule pre-selected.
   - **Rule Change on a Published Course:** Confirmation stating that students who already earned a certificate keep it and that partial completers are re-evaluated.
   - **Preview:** Renders a sample certificate with placeholder data.
@@ -1097,8 +1524,13 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
 - **Validation & Feedback:**
   - At least one item kind must count.
   - A threshold rule requires a percentage and, if referenced, a final quiz that exists.
+- **Resilience:**
+  - **403:** issued certificates are read-only for everyone; only the completion rule is editable, and only with `course.edit_details`.
+  - **Offline:** rule edits buffer; already-issued certificates are never re-rendered or revoked offline.
+  - **Conflict:** a rule edited in two places shows **Keep mine / Take theirs**, and states that students already issued under the previous rule keep it.
+  - **Partial failure:** a bulk re-issue reports _"312 re-issued · 4 failed — Retry failures."_
 - **Navigation:**
-  - **Save rules** → [S-2.20](#scr-2-20) Settings
+  - **Flush now** → forces a flush of any dirty field, disabled with `aria-describedby` "No unsaved changes" when clean, then returns to [S-2.20](#scr-2-20) Settings
   - Issued certificates appear on the student's [S-4.3](06-Students.md#scr-4-3) Progress Dashboard
   - Readiness link `RC-7` → this section
 
@@ -1108,14 +1540,32 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
 
 ##### Screen Name: S-2.11 AI Course Generator 🔄 CHANGED
 
-- **Purpose:** Generate a complete course draft — outline, sections, items, descriptions, and quiz seeds — from one prompt. Unchanged in behaviour. In Revision 2 the accepted draft is deposited **directly into the Curriculum tab** of a new draft course, where it is edited in place, rather than into a "Course Detail" tab.
+- **Purpose:** Generate a complete course draft — outline, sections, items, descriptions, and quiz seeds — from one prompt. Unchanged in behaviour. In Revision 2 the accepted draft is deposited **directly into the Curriculum tab** of a new draft course, where it is edited in place, rather than into a "Course Detail" tab. In Revision 3 the generator no longer creates an unnamed course: it collects the same three fields [S-2.2](#scr-2-2) collects, through the shared **Name this course** pre-step.
 - **User Role(s):** Admin, Editor
+- **Name this course (shared pre-step):** the first step of this modal and of [S-2.12](#scr-2-12). It exists because `RC-1` requires a title, an exam/category, and an instructor — a course created with none of them is undiagnosable and cannot be identified in a confirmation.
+
+  ```text
+  ┌─── STEP 1 · "Name this course" (shared with S-2.12) ────────────────────┐
+  │ 1 Name this course ─────── 2 Generate ─────── 3 Review                 │
+  │ Course title *     [ TOEFL Complete Course   ]  (prefilled from prompt)│
+  │ Exam / category *  [ TOEFL ▾]        Level [Advanced ▾]                │
+  │ Instructor *       [ Jane Smith ▾]                                     │
+  │                                          [Cancel]  [Continue →]       │
+  └────────────────────────────────────────────────────────────────────────┘
+  ```
+
+  - The **same three [S-2.2](#scr-2-2) rules** block Continue: title 3–300 characters in grapheme clusters, exam/category required, instructor required. The messages, the disabled-until-valid behaviour, and the slug de-duplication are the same implementation, not a copy that can drift.
+  - **Level and Instructor are prefilled from the generator's own metadata** — the prompt's stated level, and the instructor the outline names. Both stay editable. With no signal, both fall back to the **[S-6.1](08-Settings.md#scr-6-1) workspace default**, and the field shows a _"workspace default"_ hint so the author knows where the value came from.
+  - The title is prefilled from the prompt's first line and remains editable — a generated title is a suggestion, not a decision.
+  - **No course row is written until Continue.** Cancelling at step 1 has created nothing, which is why this is a pre-step and not a post-hoc rename.
+
 - **Wireframe Layout (Text-Based):**
   ```
   ┌─── MODAL (over the Catalog) ────────────────────────────────────────────┐
-  │ ✨ AI Course Generator                                        [X]       │
+  │ ✨ AI Course Generator — step 2 of 3 · Generate              [X]       │
   │ Prompt [ Create a 12-week TOEFL preparation course for intermediate…  ]│
   │ Audience [Adult ▾] Level [Intermediate ▾] Language [English ▾]         │
+  │ ⌁ Title, exam, level, instructor set in step 1 — [Change]            │
   │ Scale [~8 sections ▾] [~3 items each]  ☑ Include quiz seeds             │
   │                                              [✨ Generate outline]     │
   │ ── Review the draft ─────────────────────────────────────────────────── │
@@ -1132,7 +1582,7 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   2. Generate the outline and watch it stream in section by section.
   3. Edit any generated title inline, regenerate a single section, or expand a section with more items.
   4. Deselect items, then create the course from what is accepted.
-- **Data Displayed/Modified:** Writes `ai_generation_jobs`; on accept writes a Draft course plus its sections and items through the same curriculum server functions the workspace uses, each item tagged `source: ai` and flagged **needs content**.
+- **Data Displayed/Modified:** Writes `ai_generation_jobs`; on accept writes a Draft course — created in step 1 with `status: 'draft'` and the step-1 title, exam, level, and instructor — plus its sections and items through the same curriculum server functions the workspace uses, each item tagged `source: ai` and flagged **needs content**. The generator's `Language` control writes `courses.content_language`.
 - **States:**
   - **Default:** Generate disabled until the prompt is ≥ 10 characters.
   - **Generating:** Skeleton outline streams in; Cancel aborts and discards the partial draft.
@@ -1145,8 +1595,14 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   - Generated items with empty bodies are flagged ⚠️ **needs content** and block publish via `RC-4` until filled.
   - AI output is always ✨-labelled and never applied without an explicit **Create course** confirmation.
   - Generated section and item titles follow the same 3–300 character rules as manual ones, so renames behave identically.
+- **Resilience:**
+  - **403:** generation is absent without `course.create`; the screen is not reachable at all.
+  - **Offline:** generation is unavailable and the prompt is preserved, so the author loses nothing by losing connectivity mid-run.
+  - **Cancelled:** cancelling a stream leaves any already-received draft in the editable state, labelled ✨, never auto-accepted.
+  - **Server error:** _"Generation failed — nothing was created. Try again."_ with Retry and a request ID. A partial tree is never committed.
 - **Navigation:**
   - Opened from [S-2.1](#scr-2-1) ("+ New Course ▾ → Generate with ✨ AI"), the [S-7.5](09-Shared-Components.md#scr-7-5) Command Palette, and the empty Curriculum state in [S-2.17](#scr-2-17)
+  - **Continue →** (step 1) → step 2, the generator. **Change** returns to step 1 with the values intact.
   - **Create course** → [S-2.17](#scr-2-17) Curriculum with the generated tree
   - **X** → [S-7.1](09-Shared-Components.md#scr-7-1) if a generation is running or a draft is unaccepted
 
@@ -1156,8 +1612,9 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
 
 ##### Screen Name: S-2.12 Template Library _(retained)_
 
-- **Purpose:** Browse, preview, and import pre-built course templates — **12-Week TOEFL Prep**, **2-Day Workshop** — then customise the imported copy. Unchanged; "Use" now lands in the Curriculum tab.
+- **Purpose:** Browse, preview, and import pre-built course templates — **12-Week TOEFL Prep**, **2-Day Workshop** — then customise the imported copy. Unchanged; "Use" now lands in the Curriculum tab, and in Revision 3 "Use" goes through the same shared **Name this course** pre-step as [S-2.11](#scr-2-11).
 - **User Role(s):** Admin, Editor
+- **Name this course (shared pre-step):** identical to the [S-2.11](#scr-2-11) pre-step and blocked by the same three [S-2.2](#scr-2-2) rules — title 3–300 characters in grapheme clusters, exam/category, instructor. The title is prefilled as _"Copy of {template name}"_ and stays editable; **Level and Instructor are prefilled from the template's own metadata**, falling back to the [S-6.1](08-Settings.md#scr-6-1) workspace default with a _"workspace default"_ hint. Nothing is written until Continue, so cancelling creates no course.
 - **Wireframe Layout (Text-Based):**
   ```
   ┌─── Settings ▸ / MODAL ───────────────────────────────────────────────────┐
@@ -1177,18 +1634,25 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
 - **Primary Actions:**
   1. Search and filter templates by category.
   2. Preview a template's full structure (sections, items, sample quizzes) read-only.
-  3. **Use** a template — creates a Draft course pre-filled with that curriculum, ready to customise.
+  3. **Use** a template — a Draft course pre-filled with that curriculum, named through the shared pre-step and ready to customise.
   4. Save a course as a workspace template from the workspace `⋯` menu.
 - **Data Displayed/Modified:** Reads `course_templates`; on import writes a Draft course with sections, items, and sample quizzes tagged `source: template` through the standard curriculum functions.
 - **States:**
+  - **Loading:** skeleton cards; browsing stays interactive.
+  - **Empty:** only reachable when a workspace has published no templates — the gallery is the default view, so the empty copy reads "No published templates in this workspace. Start from the gallery."
   - **Default:** Featured templates first; categories filter the gallery.
   - **Preview:** Full-screen read-only curriculum viewer with "Use this template".
   - **Importing:** Progress overlay: "Copying 12 sections and 48 items…".
   - **Success:** Toast "Template imported." → [S-2.17](#scr-2-17) Curriculum with the structure ready to edit.
   - **Empty:** [S-7.3](09-Shared-Components.md#scr-7-3) "No templates in this category yet."
+- **Resilience:**
+  - **403:** applying a template is absent without `course.create`; browsing is available to all authoring roles.
+  - **Offline:** the library renders from cache; applying a template is blocked with _"You're offline — this needs a connection."_
+  - **Not found:** a retired template shows _"This template is no longer available."_ with a link to the template gallery.
+  - **Server error:** _"The template couldn't be applied — your course is unchanged."_ with Retry.
 - **Navigation:**
   - Opened from [S-2.1](#scr-2-1) ("+ New Course ▾ → From template"), the [S-7.5](09-Shared-Components.md#scr-7-5) Command Palette, the [S-0.2](01-Authentication-and-Onboarding.md#scr-0-2) onboarding checklist, and the Curriculum empty state in [S-2.17](#scr-2-17)
-  - **Use** → [S-2.17](#scr-2-17) Curriculum (draft pre-filled)
+  - **Use** → the shared **Name this course** pre-step, then [S-2.17](#scr-2-17) Curriculum (draft pre-filled)
   - **Save as template** → this screen, from the workspace `⋯` menu
 
 ---
@@ -1222,18 +1686,28 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   4. Import, then download the run report and undo the whole import within 30 minutes.
 - **Data Displayed/Modified:** Writes `import_jobs` (file, mapping, row stats, undo window); on success writes sections/items tagged `source: import` via the standard curriculum functions, so the resulting tree is indistinguishable from a hand-built one.
 - **States:**
+  - **Empty:** the drop zone is the surface, so "empty" is the default state — the wizard opens on the drop target with a supported-format list and a sample file link.
   - **Uploading:** Progress bar; file ≤ 20 MB.
   - **Mapping:** Auto-map applied; unmapped columns listed as "Ignored".
   - **Validation Errors:** Rows with blocking issues are excluded and listed; the import proceeds with valid rows only after confirmation.
   - **Importing:** Progress with per-section counts; closing the wizard does not cancel the job.
   - **Success:** "8 sections and 104 items created." → the Curriculum tree with the new structure in place, and a 30-minute **Undo import** banner.
   - **Undo:** [S-7.1](09-Shared-Components.md#scr-7-1) Confirmation → removes only objects created by this import.
-  - **Archived Course:** Import is blocked with an explanation and a **Restore course** action.
+  - **Archived Course:** Import is blocked with an explanation and a **Restore course** action — blocked _by state_, so the reason is stated and the control is disabled-with-reason rather than the file picker refusing the drop silently.
 - **Validation & Feedback:**
   - Item title required per row; duplicate titles within a section get " (2)" suffixes.
   - Video URLs must be valid YouTube/Vimeo links; invalid rows are flagged, not blocked.
-  - Content ≤ 50,000 characters per row.
+  - Content ≤ 50,000 characters per row, counted in grapheme clusters.
   - Imported bodies are normalised through the Markdown pipeline ([Part 12 § 10.1](12-Course-Editor-Markdown-Lessons.md#101-normalization)) so an imported document round-trips like a hand-authored one.
+- **Resilience:**
+  - **403:** "You don't have access to import into {course}." with a request ID and **Ask an Admin for access**.
+  - **404:** An unknown `courseId` or `moduleId` in the target selector returns to the Curriculum tab with a request ID rather than importing into nothing.
+  - **Offline:** The wizard opens read-only with a persistent banner — _"You're offline — upload and import are paused."_ Mapped columns and prior step state stay visible.
+  - **Reconnected:** the wizard re-enables with the uploaded file and mapping intact; nothing re-uploads without the author asking.
+  - **Session expired:** a long import survives — the job is server-side, so on return the wizard shows the job's real status rather than restarting.
+  - **Conflict:** the wizard reports a concurrent curriculum change — _"Section order changed while this wizard was open"_ — with **Review changes / Keep mine / Take theirs** on the target positions, before the import commits. Never Reload-only.
+  - **Partial failure:** the run report is the primary output — _"8 sections and 104 items created · 3 rows skipped"_ with every skipped row named and its reason, downloadable as CSV.
+  - **Server error:** "We couldn't read that file — try a different export." with Retry and a request ID; the mapping is preserved.
 - **Navigation:**
   - Opened from [S-2.1](#scr-2-1) ("+ New Course ▾ → Bulk import") and the Curriculum toolbar `⇪ Import` in [S-2.17](#scr-2-17)
   - **Import** → [S-2.17](#scr-2-17) Curriculum with the imported structure
@@ -1284,15 +1758,20 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   - **Reviewer Decision:** Decision buttons are disabled until the preview has been opened; Approve/Request changes/Reject with an empty comment box require confirmation via [S-7.1](09-Shared-Components.md#scr-7-1).
   - **Changes Requested:** The item returns to the author in a comment state with one-click re-submit; the course returns to Draft with the comment pinned in [S-2.22](#scr-2-22).
   - **Approved:** The author sees "Approved — ready to publish" in the item pane; the course shows "Approved by {reviewer}".
-  - **Stale Submission (new):** If the author edited the item after submitting, the row shows "Edited 10m after submission — re-review before approving." and the preview defaults to the current version.
-  - **Notification:** Submission and decisions notify the counterpart via [S-1.4](03-Dashboard.md#scr-1-4) and email.
+  - **Stale Submission:** if the author edited the item — or the **course** — after submitting, the row shows _"Edited 10m after submission — re-review before approving."_ and the preview is pinned to **the submitted version**, with a **Compare** toggle that reveals what has changed since. **Approve is disabled with the reason "Re-review the current version"** and a **Re-submit for review** action; a decision always records the **version it decided on**, never the current one. Revision 2's "the preview defaults to the current version" is the bug this fixes — a reviewer must approve what they were shown.
+  - **Notification:** submissions and decisions notify the counterpart in-app and via Telegram by default, with email only where a verified address exists and **disabled-with-reason** otherwise. A delivery failure is reported separately: _"Decision sent in-app + Telegram · Alex has no verified email."_
   - **Reviewer's Own Work:** A reviewer cannot approve their own submission; the row shows "Yours — awaiting another reviewer" and offers **Reassign**.
   - **Loading / Error:** Skeleton rows; per-row retry on failure.
 - **Validation & Feedback:**
-  - A decision always records actor, timestamp, comment, and the reviewed version.
+  - A decision always records actor, timestamp, comment, and **the version that was reviewed and approved** — not the current version, which may have moved on.
   - Approving an item does not publish it to students unless the course is live; the wording in the confirm says which it is.
   - Course approval re-evaluates `RC-1…RC-8` at decision time; a course whose items lost content while in review cannot be approved until the checks pass.
   - Every decision is audit-logged and appears in [S-6.8](08-Settings.md#scr-6-8).
+- **Resilience:**
+  - **403:** without `course.review` the queue is absent, and a Reviewer sees only submissions assigned to them.
+  - **Offline:** the queue renders from cache read-only; decisions are blocked rather than queued, because a decision cannot be reversed.
+  - **Conflict:** a submission decided in another session shows the decision already taken, with **View what changed** — the decision is never silently re-applied.
+  - **Server error:** _"We couldn't record your decision. The submission is untouched — try again."_ with a request ID.
 - **Navigation:**
   - Reached from the Courses nav badge in [S-A.1](02-Global-Navigation.md#scr-a-1) (pending items **+** courses), the workspace header, and notifications in [S-1.4](03-Dashboard.md#scr-1-4)
   - **[Review] (item)** → [S-2.21](#scr-2-21) preview; the item pane in [S-2.17](#scr-2-17) opens read-only with the decision panel
@@ -1320,7 +1799,7 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   │ Lock message (auto, editable): "Complete the previous items to unlock." │
   │ 🔎 Student preview: "2 of 3 requirements met"   [Preview as student →]  │
   │ ⚠️ Circular dependency: none detected                                  │
-  │ [Save rules]                                                            │
+  │ [Flush now] (disabled — "No unsaved changes")                           │
   └─────────────────────────────────────────────────────────────────────────┘
   ```
 - **Primary Actions:**
@@ -1331,6 +1810,8 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   5. Preview the exact student-facing lock state.
 - **Data Displayed/Modified:** Writes `lesson_unlock_rules`; student access checks read them at item-open time.
 - **States:**
+  - **Loading:** skeleton list while the prerequisite graph resolves; the section tree keeps its selection.
+  - **Empty:** "No unlock rules. Items are in order by default." with **Add rule** as the single CTA, and the copy states the default so the user knows nothing is broken.
   - **No Rules:** Toggle off — the item is freely accessible (the default).
   - **Circular Dependency:** A rule chain that loops back on itself is blocked, with the offending cycle highlighted in the tree.
   - **Quiz Unavailable:** A requirement referencing a deleted quiz is flagged and must be re-pointed before save.
@@ -1342,10 +1823,15 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   - At least one requirement when the toggle is on; quiz thresholds 1–100%.
   - Changing rules never re-locks an item a student has already unlocked.
   - Sequential defaults are applied prospectively only; existing completions are untouched.
+- **Resilience:**
+  - **403:** the rule editor is absent without `course.manage_curriculum`.
+  - **Offline:** rule edits buffer on the 60s timer; unlocking is a server-side evaluation, so no student is affected by a stale local rule.
+  - **Conflict:** concurrent rule edits show **Keep mine / Take theirs**, and state which rule version students are currently evaluated against.
+  - **Partial failure:** a rule applied to a batch reports _"4 sections updated · 1 failed — Retry."_ with the failed section named.
 - **Navigation:**
   - Opened from the sidebar item `⋯` → **Unlock rules** in [S-2.17](#scr-2-17), from the item pane, and from the section `⋯` → **Complete in order**
   - **Preview as student** → [S-2.21](#scr-2-21) at this item
-  - **X / Save** → returns to the Curriculum tab; the tree keeps its selection
+  - **X / Flush now** → returns to the Curriculum tab; the tree keeps its selection
 
 ---
 
@@ -1375,6 +1861,8 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   3. Send the reviewed draft into the Quiz Builder for scoring and attachment.
 - **Data Displayed/Modified:** Writes `ai_generation_jobs`; on accept, writes `quizzes`/`quiz_questions`/`quiz_options` in **Draft** via [S-2.8](#scr-2-8).
 - **States:**
+  - **Loading:** the generation panel shows progress with a cancel; the target quiz stays visible read-only.
+  - **No questions yet:** reachable only for a quiz with zero questions; states it and links to **Add question** as the manual path.
   - **No Source Content:** "This item needs at least 200 words of content to generate a quiz." with a link to the item pane — now an in-pane link rather than a page navigation.
   - **Generating:** Shimmer for N questions; Cancel aborts cleanly.
   - **Generated:** Editable question cards; per-question Regenerate leaves the rest untouched.
@@ -1383,6 +1871,11 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
 - **Validation & Feedback:**
   - Every generated question must keep exactly one marked correct answer before it can be saved.
   - Drafts are labelled "✨ AI-drafted, reviewed by {author}" for the audit trail ([S-6.8](08-Settings.md#scr-6-8)).
+- **Resilience:**
+  - **403:** generation is absent without `course.manage_curriculum`.
+  - **Offline:** generation is unavailable and the prompt is preserved.
+  - **Cancelled:** cancelling a stream leaves any received questions in the editable draft, labelled ✨, never auto-accepted.
+  - **Server error:** _"Generation failed — no questions were added. Try again."_ with Retry; the existing quiz is untouched.
 - **Navigation:**
   - Opened from the item pane ("✨ AI Quiz"), the [S-2.8](#scr-2-8) Quiz Builder ("✨ AI Draft"), and the sidebar item `⋯` menu
   - **Open in Quiz Builder** → [S-2.8](#scr-2-8) in the same pane

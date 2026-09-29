@@ -8,7 +8,26 @@
 
 **Revision 2 (Course Workspace):** the content model, storage contract, extension list, and round-trip invariants in this document are **unchanged**. Revision 2 adds one section — [§16](#16-revision-2--workspace-integration) — describing how this editor is hosted inside the Course Workspace's curriculum pane, and it updates [§8.1](#81-autosave) and [§15](#15-open-questions) where the surrounding UX moved.
 
+**Revision 3 (Editor completeness):** closes the behaviours this document had delegated to a sibling spec or simply omitted — draft durability, split-mode conflict resolution, offline save states, three-option conflict handling, image upload and alt text, paste sanitisation, find/replace and read time, table and code-block keyboard paths, the preview parity table, a reference audit, minimal version history, bounded in-editor AI drafts, heading rules, per-block `lang`, and instrumentation. **The content model, storage contract, and RT1–RT5 are unchanged.**
+
 **Relationship to the UX specification:** [Part 04 § S-2.7](04-Courses.md#scr-2-7) remains the authoritative definition of the Lesson Editor's _layout, states, validation, and navigation_. This document does **not** restate or replace it. It specifies the **content model and editor implementation** behind the item pane's content canvas, and the persistence contract that the rest of Section 2 depends on.
+
+---
+
+## What changed in Part 12 (Revision 3)
+
+- **The unload guard was delegated, never specified.** §8.1 defined a 60s _no-typing_ timer, so a user who typed and closed the tab lost everything. [§8.1.1](#811-draft-mirroring-and-the-unload-guard) now implements the IndexedDB mirror [Part 04 S-2.7](04-Courses.md#scr-2-7) declares, with a restore prompt before hydration and `beforeunload` guarding `dirty`.
+- **Split-mode sync had an undefined data-loss edge.** §7.1 now carries a `{rich changed, source changed} × {round-trip ok, fails}` state table: the unedited pane is authoritative, both-changed resolves to Rich with a timed Undo, and a round-trip failure freezes the source pane rather than mutating the editor.
+- **Offline was an undefined save state.** [§8.1.2](#812-the-autosave-matrix) gives the full matrix (`dirty × online|offline × saving|failed × locked|editable`) and §13 gains the matching risk row. A stale queued write resolves to **conflict**, never a silent overwrite.
+- **Conflict offered only Reload**, which destroys up to 60s of typing. [§8.2](#82-concurrency) now specifies the two-column Markdown diff with **Keep mine / Take theirs / Compare**, matching Part 04's Row Conflict. Merge stays out of scope; discarding the user's work does not.
+- **Media, paste, find, tables, and code blocks were named but unspecified.** New [§7.5](#75-image-insertion) – [§7.9](#79-headings-and-the-outline) cover drop/paste upload, progress, required alt text, `transformPastedHTML`, find/replace with word count and read time, the table keyboard contract, and the heading rules the round-trip invariants already implied.
+- **Version history was deferred, which breaks the reviewer's job.** [§14.1](#141-version-history-minimal-not-git) adds a `lessons.body_revisions` append-only table and a minimal diff — enough to review a _change_ without building Git.
+- **Preview parity was asserted and then stopped.** [§16.3.1](#1631-preview-parity) now carries a nine-row parity table, including the rule that Preview renders inside the S-2.21 Preview Frame and Rich/Split never resize the workspace behind them.
+- **AI was disclaimed then referenced as if it existed.** [§11.1](#111-ai-authored-body-content-explicitly-bounded) bounds it: dashed `--color-ai-tint` `AIDraftBlock` ranges, literal **"AI draft"** label, explicit scoped Regenerate, human Accept, and `<!-- ai-draft:unaccepted -->` in the source pane.
+- **Localization, type rules, and instrumentation are now normative.** Per-block `lang` and `dir="auto"` ([§7.4](#74-accessibility)), the Part 11 Noto Sans Ethiopic / `line-height: 1.6` / no-line-clamp rules on `.ProseMirror`, the script-aware read-time formula, a broken-link/image-404 reference audit ([§9.4](#94-reference-audit)), and budgets + acceptance criteria + events ([§12.2](#122-success-criteria--instrumentation)).
+- **The implementation plan was not reversible as claimed.** Step 5 is now gated behind a `markdownWritesEnabled` workspace flag, so rollback is flag-off rather than deploy-revert ([§12.0](#120-the-rollout-gate-step-55)).
+
+[§5](#5-storage-model), [§10](#10-normalization--invariants), and RT1–RT5 are **unchanged by this revision**, as [§16.5](#165-unchanged-by-this-revision) already declared for Revision 2. Revision 3 **reconciles** rather than restates: where [Part 04 S-2.7](04-Courses.md#scr-2-7) already governs a behaviour — the IndexedDB key, the offline banner, the conflict options, `content_language`, the `RC-4` base-variant rule, the budget figures — this document implements Part 04's version and says so, including in the two places where Part 04 was ambiguous.
 
 ---
 
@@ -30,7 +49,7 @@
 - **Not a redesign of the Lesson Editor layout** (owned by S-2.7) — but Revision 2 does relocate it into the workspace item pane, which is a hosting change only; see [§16](#16-revision-2--workspace-integration).
 - Not collaborative/multi-user editing or CRDT merge — out of scope; the `rowVersion` guard remains the concurrency control.
 - Not a general-purpose Markdown IDE. No file tree, no multi-file vault, no Git-style diffing.
-- Not an AI authoring surface. The ✨ AI generators ([S-2.11](04-Courses.md#scr-2-11), [S-2.16](04-Courses.md#scr-2-16)) consume lesson text as _input_; making them emit Markdown is a separate spec.
+- Not an **autonomous** AI authoring surface. The ✨ AI generators ([S-2.11](04-Courses.md#scr-2-11), [S-2.16](04-Courses.md#scr-2-16)) consume lesson text as _input_ and never write to `lessons.body` on their own. **Revision 3:** the one narrow exception is explicit, human-accepted insertion of generated **body** text, which is specified in [§11.1](#111-ai-authored-body-content-explicitly-bounded) and is bounded by the same human-in-the-loop rule.
 - Not a replacement for [S-3.6](05-Content-Library.md#scr-3-6) transcription; the editor links to it, it does not embed it.
 
 ---
@@ -133,17 +152,17 @@ StarterKit.configure({
 
 ## 4. Decisions
 
-| ID  | Decision                                                                                                                            | Rationale                                                                                                                                                                            | Status   |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
-| D-1 | Add `@tiptap/markdown@3.31.3` as a direct dashboard dependency.                                                                     | Only version-matched, first-party Markdown runtime. Peer deps already satisfied. No Tiptap upgrade.                                                                                  | Accepted |
-| D-2 | Also add `@tiptap/extension-image`, `-table`, `-table-row`, `-table-cell`, `-table-header`, `-task-list`, `-task-item` at `3.31.3`. | Without these, images/tables/task-lists are silently destroyed on save ([§3.3](#33-lossy-construct-audit-the-decisive-finding)). Images and checklists are core to lesson authoring. | Accepted |
-| D-3 | Markdown is the **sole** persisted format. No dual HTML column.                                                                     | Dual formats guarantee drift. A single source of truth ([G-5](#11-goals)).                                                                                                           | Accepted |
-| D-4 | Add a `body_format` discriminator to `lessons`; migrate existing rows.                                                              | Required to read legacy rows correctly. Sniffing for `<` is unreliable.                                                                                                              | Accepted |
-| D-5 | Remove the duplicate `LinkExtension`; configure link through StarterKit.                                                            | Fixes [§3.5](#35-pre-existing-defect-to-fix-in-passing).                                                                                                                             | Accepted |
-| D-6 | Register `Markdown` **last** in the extension array.                                                                                | It overrides `setContent`/`insertContent`; it must win command resolution.                                                                                                           | Accepted |
-| D-7 | Migration runs **server-side** using `MarkdownManager.serialize()` over a constrained HTML→doc converter.                           | Legacy HTML was produced by a known, fixed schema; a constrained converter is safer than requiring every author to reopen every lesson.                                              | Accepted |
-| D-8 | Editor is client-only (`immediatelyRender: false`).                                                                                 | [§3.4](#34-ssr-hazard).                                                                                                                                                              | Accepted |
-| D-9 | Tiptap/ProseMirror base styles added to `src/styles.css`.                                                                           | Currently unstyled ([§2](#2-as-built-inventory-verified)); the Markdown split/preview surface depends on a predictable `.ProseMirror` box.                                           | Accepted |
+| ID  | Decision                                                                                                                            | Rationale                                                                                                                                                                                                                                                                                            | Status   |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| D-1 | Add `@tiptap/markdown@3.31.3` as a direct dashboard dependency.                                                                     | Only version-matched, first-party Markdown runtime. Peer deps already satisfied. No Tiptap upgrade.                                                                                                                                                                                                  | Accepted |
+| D-2 | Also add `@tiptap/extension-image`, `-table`, `-table-row`, `-table-cell`, `-table-header`, `-task-list`, `-task-item` at `3.31.3`. | Without these, images/tables/task-lists are silently destroyed on save ([§3.3](#33-lossy-construct-audit-the-decisive-finding)). Images and checklists are core to lesson authoring.                                                                                                                 | Accepted |
+| D-3 | Markdown is the **sole** persisted format. No dual HTML column.                                                                     | Dual formats guarantee drift. A single source of truth ([G-5](#11-goals)).                                                                                                                                                                                                                           | Accepted |
+| D-4 | Add a `body_format` discriminator to `lessons`; migrate existing rows.                                                              | Required to read legacy rows correctly. Sniffing for `<` is unreliable.                                                                                                                                                                                                                              | Accepted |
+| D-5 | Remove the duplicate `LinkExtension`; configure link through StarterKit.                                                            | Fixes [§3.5](#35-pre-existing-defect-to-fix-in-passing).                                                                                                                                                                                                                                             | Accepted |
+| D-6 | Register `Markdown` **last** in the extension array.                                                                                | It overrides `setContent`/`insertContent`; it must win command resolution.                                                                                                                                                                                                                           | Accepted |
+| D-7 | Migration runs **server-side** using `MarkdownManager.serialize()` over a constrained HTML→doc converter.                           | Legacy HTML was produced by a known, fixed schema; a constrained converter is safer than requiring every author to reopen every lesson.                                                                                                                                                              | Accepted |
+| D-8 | Editor is client-only (`immediatelyRender: false`).                                                                                 | [§3.4](#34-ssr-hazard).                                                                                                                                                                                                                                                                              | Accepted |
+| D-9 | Tiptap/ProseMirror base styles added to `src/styles.css`.                                                                           | Currently unstyled ([§2](#2-as-built-inventory-verified)); the Markdown split/preview surface depends on a predictable `.ProseMirror` box. Type rules are fixed by [Part 11 § Localization & Formatting](11-Global-Standards.md#localization--formatting) and restated in [§7.4](#74-accessibility). | Accepted |
 
 **Rejected alternatives:**
 
@@ -339,7 +358,7 @@ export const LESSON_EDITOR_EXTENSIONS = [
 
 Notes:
 
-- `Image.configure({ allowBase64: false })` prevents pasted base64 blobs from reaching `lessons.body`. Images are served from the Content Library ([S-3.1](05-Content-Library.md#scr-3-1)); the existing "Add Media" affordance remains the supported path.
+- `Image.configure({ allowBase64: false })` keeps pasted base64 blobs from reaching `lessons.body`. Images are served from the Content Library ([S-3.1](05-Content-Library.md#scr-3-1)); the picker is one of **four** insertion routes — the others are drag-drop, clipboard paste, and URL — all specified in [§7.5](#75-image-insertion).
 - `Table` imports as a **named** export (`import { Table } from '@tiptap/extension-table'`), not default.
 - `Table` requires its row/header/cell siblings; omitting them throws `No node type or group 'tableRow' found`.
 - `Markdown` must be last (D-6).
@@ -374,7 +393,21 @@ Mode switch is a `role="tablist"` in the editor header, persisted to `localStora
 
 - Rich → Source: on editor `update`, debounce 300ms, then `editor.getMarkdown()` → source pane. The pane is **read-only** while it is being written to, to avoid feedback loops.
 - Source → Rich: on source edit, debounce 300ms, then `editor.commands.setContent(value, { contentType: 'markdown' })`. Undo history resets per the Markdown extension's `setContent` override — **the spec accepts this**, and Split mode is presented as a "precision mode", with Undo behaving at the granularity of the last sync. Rich mode remains the recommended default.
-- Both directions must pass `assertRoundTrip` ([§10.2](#102-round-trip-invariants)); a failure shows a blocking error rather than pushing divergent content.
+- Both directions must pass `assertRoundTrip` ([§10.2](#102-round-trip-invariants)) before the result is committed.
+
+**Concurrent-edit resolution.** A 300ms window in which _both_ panes are edited was undefined, and "a blocking error" did not say what was blocked after the debounce had already overwritten the source. Resolved as follows — the pane **not edited since the last successful sync is authoritative**.
+
+| Rich changed | Source changed | `assertRoundTrip` | Resolution                                                                                                                                                                                                                           |
+| ------------ | -------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| –            | ✔              | ok                | Source → Rich. Undo history resets per [above](#71-view-modes).                                                                                                                                                                      |
+| ✔            | –              | ok                | Rich → Source.                                                                                                                                                                                                                       |
+| ✔            | ✔              | ok                | **Rich wins.** The source pane reverts to the last synced string, a toast reads _"Source edits were overwritten by the rich editor"_ with a timed **Undo**, and the mode switches to **Rich** so the conflict cannot recur silently. |
+| –            | ✔              | **fails**         | Editor **not** modified. Source pane freezes **read-only** with an inline error naming the construct, plus **Restore last good source**.                                                                                             |
+| ✔            | ✔              | **fails**         | Editor **not** modified. Both panes freeze **read-only**; the same inline error and **Restore last good source** action, plus **Copy Markdown** so the author's text is never trapped.                                               |
+
+> **Why "Rich wins" and not a merge:** merging prose requires judgement, and a silent merge is worse than a visible loss with an Undo ([§1.2](#12-non-goals)). Making the losing edit recoverable and naming the overwrite out loud is the contract.
+>
+> **Freeze, do not revert, on round-trip failure:** a non-round-tripping string is exactly the [§3.3](#33-lossy-construct-audit-the-decisive-finding) failure this document exists to prevent. Reverting the pane would destroy the string that revealed the bug, so the pane keeps the text and stops accepting edits until the author resolves it.
 
 ### 7.2 Toolbar
 
@@ -388,24 +421,52 @@ Replaces the current inline `window.prompt`-driven bar. Grouped by role, with `a
 | Insert  | Image (Content Library) · Table (insert 3×2) · Video embed · PDF link | `![…]()`, GFM table, link            |
 | History | Undo · Redo                                                           | —                                    |
 
+**Toolbar keyboard model.** The bar is a **single tab stop**: one `role="toolbar"` container, roving `tabindex` so exactly one control in the whole bar is in the tab order.
+
+| Key               | Action                                                          |
+| ----------------- | --------------------------------------------------------------- |
+| `←` / `→`         | Move within the current group, wrapping at the ends             |
+| `↑` / `↓`         | Move between groups, landing on the same index where one exists |
+| `Home` / `End`    | First / last control **in the current group**                   |
+| `Enter` / `Space` | Activate                                                        |
+| `Esc`             | Return focus to the editor at the last caret position           |
+
+Groups are also separated visually and by an `aria-label` per group (`Blocks`, `Lists`, `Inline`, `Insert`, `History`) so the `↑`/`↓` move is not announced as a jump across unrelated controls.
+
+**Heading controls are H2 and H3 only, and that is a rule, not a gap.** H1 is reserved for the item title and is rejected by the construct audit ([§7.9](#79-headings-and-the-outline)). The RT fixture set in [§10.2](#102-round-trip-invariants) verifies H1–H6 because the _reader_ must round-trip H1–H6 in imported, pasted, and migrated bodies — not because the author can produce them. RT1–RT5 are unchanged. Level-skipping is a no-op with the tooltip _"Cannot skip a heading level."_
+
 **Replacing `window.prompt` is a hard requirement, not a polish item.** `window.prompt` is blocking, unstyled, unscreen-reader-navigable in several contexts, and untestable. Link/embed insertion becomes a small dialog using the existing dialog primitives, which also gives link entry a place for the URL validation that S-2.7 already mandates ("Video URL: Must be valid YouTube/Vimeo URL") and which `saveLessonSchema` already enforces via `VIDEO_URL`.
 
-**Media affordances are unchanged from S-2.7** — "Add Media" opens the Content Library picker (`LibraryAssetPicker`), and "Captions & transcript" navigates to [S-3.6](05-Content-Library.md#scr-3-6). Markdown authoring changes how _text_ is stored, not how library media is attached.
+**Link dialog** ([S-7.1](09-Shared-Components.md#scr-7-1) primitives), in field order:
+
+| Field                       | Rules                                                                                                                                                                                                    |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Link text**               | Prefilled from the current selection; empty means the URL becomes the text. Required.                                                                                                                    |
+| **URL**                     | Validates on **blur** and on **submit**; `Enter` in this field submits. An invalid value shows the error inline, moves focus to the field, and **does not** close the dialog.                            |
+| **Opens in new tab**        | Checkbox, default on for external hosts. Emits `target="_blank" rel="noopener noreferrer"` (D-5).                                                                                                        |
+| **Video embed** _(variant)_ | Replaces **URL** with a single Video URL field. A YouTube/Vimeo URL that fails `VIDEO_URL` shows _"Not a valid YouTube or Vimeo URL"_ **inline**, keeps focus in the field, and never closes the dialog. |
+
+`Esc` closes the dialog and returns focus to the toolbar control that opened it. The dialog is a modal, so focus is trapped and restored per Part 11.
+
+**Media affordances.** "Add Media" opens the Content Library picker (`LibraryAssetPicker`) and "Captions & transcript" navigates to [S-3.6](05-Content-Library.md#scr-3-6) — both unchanged from S-2.7. Revision 3 adds the four insertion routes, upload states, and the alt-text gate in [§7.5](#75-image-insertion); Markdown authoring changes how _text_ is stored, not how library media is attached.
 
 ### 7.3 Keyboard
 
 Per [Part 11 § Global Validation](11-Global-Standards.md#global-validation-and-feedback-patterns):
 
-| Keys                 | Action                                                                                                                             |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `Ctrl/⌘ + S`         | Force save now (bypasses the 60s timer)                                                                                            |
-| `Ctrl/⌘ + Z` / `⇧Z`  | Undo / redo (Tiptap native)                                                                                                        |
-| `Ctrl/⌘ + B / I / U` | Bold / italic / underline (Tiptap native)                                                                                          |
-| `Ctrl/⌘ + K`         | Command Palette ([S-7.5](09-Shared-Components.md#scr-7-5)) — must not be swallowed by the editor                                   |
-| `Tab` / `⇧Tab`       | Standard editor tab behaviour; the toolbar itself is a single tab stop with arrow-key navigation, per the list pattern in Part 11. |
-| `Esc`                | Leave the source pane and return focus to the rich editor                                                                          |
+| Keys                 | Action                                                                                                                                                                                                                |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Ctrl/⌘ + S`         | Force save now (bypasses the 60s timer)                                                                                                                                                                               |
+| `Ctrl/⌘ + Z` / `⇧Z`  | Undo / redo (Tiptap native)                                                                                                                                                                                           |
+| `Ctrl/⌘ + B / I / U` | Bold / italic / underline (Tiptap native)                                                                                                                                                                             |
+| `Ctrl/⌘ + K`         | Command Palette ([S-7.5](09-Shared-Components.md#scr-7-5)) — must not be swallowed by the editor                                                                                                                      |
+| `Ctrl/⌘ + F`         | Find bar ([§7.6](#76-find-replace-word-count-and-read-time)) — must also be intercepted inside the source `<textarea>`                                                                                                |
+| `⇧ + Ctrl/⌘ + H`     | Replace, opening the find bar in replace mode                                                                                                                                                                         |
+| `⇧ + F10`            | Context menu for the block, row, or cell under the caret ([§7.7](#77-tables-and-code-blocks), [§7.9](#79-headings-and-the-outline))                                                                                   |
+| `Tab` / `⇧Tab`       | Standard editor tab behaviour inside prose; **cell-to-cell inside a table** ([§7.7](#77-tables-and-code-blocks)). The toolbar itself is a single tab stop with arrow-key navigation, per the list pattern in Part 11. |
+| `Esc`                | Leave the source pane and return focus to the rich editor; leave a code block's controls and restore the caret to the nearest block ([§7.7](#77-tables-and-code-blocks))                                              |
 
-The `Ctrl/⌘ + K` case matters: inside a ProseMirror surface it can be captured by the editor. The keymap must be registered at the document level with a guard, and covered by a test.
+The `Ctrl/⌘ + K` case matters: inside a ProseMirror surface it can be captured by the editor. The keymap must be registered at the document level with a guard, and covered by a test. `Ctrl/⌘ + F` has the same hazard in the source `<textarea>` and the same remedy.
 
 ### 7.4 Accessibility
 
@@ -415,7 +476,111 @@ Beyond the Part 11 baseline, Markdown-specific obligations:
 - View-mode switch exposes `role="tablist"` / `role="tab"` / `role="tabpanel"` with arrow-key navigation.
 - The source pane is a real `<textarea>` with a programmatically associated label, so screen-reader and plain-keyboard users can author Markdown without touching the canvas.
 - Syntax-support removals (tables without registered extensions, images) are prevented structurally by D-2, not by warning the user after the fact.
-- Validation errors are announced via `aria-live="polite"`, and each message states both what is wrong and how to fix it.
+- Validation errors are announced via `aria-live="assertive"`. This is a correction: Part 11 and [S-7.8](09-Shared-Components.md#scr-7-8) rule 5 reserve `assertive` for error and conflict, and `polite` here would queue an error behind the next keystroke's chatter. Each message states both what is wrong and how to fix it.
+- **Structural-change announcements are the delicate case.** Only changes the author cannot perceive from the caret need announcing; adding a block does not, because the caret landing in the new block _is_ the signal.
+
+**Type rules (D-9, [Part 11 § Localization & Formatting](11-Global-Standards.md#localization--formatting)).** These bind `.ProseMirror` and the preview surface and are not screen-level overrides:
+
+| Rule                | Value                                                                                                                                                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `font-family`       | `var(--font-ui)` → `Inter, "Noto Sans Ethiopic", system-ui, sans-serif`                                                                                                                                               |
+| `line-height`       | **1.6** when the lesson's language is `am` / `ti` / `gez`, 1.5 otherwise — switched by a `:lang()`-derived class set from `courses.content_language` ([Part 04 S-2.20](04-Courses.md#scr-2-20)), overridable per item |
+| `letter-spacing`    | `normal` on every text node. Never `0.01em`-style tracking on Ethiopic                                                                                                                                                |
+| Truncation          | **No `line-clamp`, no fixed height on any text node, and no truncation on the source pane.** Growth of 30–40% must not clip                                                                                           |
+| Source `<textarea>` | `var(--font-mono)` at a size that fits Ge'ez syllabaries at **320px** with no horizontal scroll; the textarea grows with content, never scrolls vertically inside a fixed box                                         |
+
+**Per-block `lang`.** A `lang` attribute is a first-class authoring feature, not a global document setting:
+
+- An inline mark run gains a `lang` of `am` / `ti` / `gez` / `en`, set from the context-menu action **"Set language for selection"** ([Part 11 § Accessibility](11-Global-Standards.md#accessibility-specification)).
+- It is stored as `<span lang="am">` in HTML-derived content and is **retained in the DTO** — the DTO's content-language field comes from `courses.content_language` (overridable per item), and the mark's `lang` attribute survives the Markdown round trip via a validated inline-HTML subset. A `lang` the construct audit cannot serialise is an `INLINE_HTML_UNSUPPORTED` advisory, not a silent strip.
+- Mixed-direction runs render inside `dir="auto"`. Ge'ez is LTR, but an author mixing Ge'ez with a Latin-accented term still gets correct caret and punctuation behaviour without a page-level direction change.
+- A **missing or mismatched `lang` is an advisory readiness check, never a save error** — it blocks publish readiness ([S-7.11](09-Shared-Components.md#scr-7-11)) and never autosave.
+
+### 7.5 Image insertion
+
+"Add Media opens the picker" was the whole of Revision 2's media story, which left drag-drop, progress, failure, and alt text undefined. All four insertion routes converge on one path:
+
+| Route               | Behaviour                                                                                                                                                                                    |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Add Media**       | `LibraryAssetPicker` ([S-3.1](05-Content-Library.md#scr-3-1)) — unchanged                                                                                                                    |
+| **Drag-drop**       | Dropped files go through the [S-7.12](09-Shared-Components.md#scr-7-12) drop zone, upload to the Content Library, then insert at the drop position                                           |
+| **Clipboard paste** | A pasted `image/*` file follows the same route; a pasted **base64 data URI is rejected** with _"Paste a file, not image data."_ (`Image.allowBase64: false`, [§6.1](#61-the-extension-list)) |
+| **URL**             | A pasted or typed absolute image URL inserts directly after a HEAD check ([§9.4](#94-reference-audit))                                                                                       |
+
+**Insertion sequence:**
+
+1. The node is committed as a `spinner` placeholder at the caret, carrying `aria-busy="true"` and the label _"Uploading image…"_. It is **not** written to `lessons.body` while uploading.
+2. Upload resolves → the placeholder swaps to the image node, `![alt](assetUrl)` in Markdown. Per-file progress, cancel, retry, and **resume** all come from [S-7.12](09-Shared-Components.md#scr-7-12); progress starts within 1 s of the drop.
+3. Upload **fails** → the node stays in place with **Retry** and **Remove** and an inline error. **It never writes to `lessons.body`.** A failed upload is not a save error and does not raise a conflict.
+
+**Alt text is a gate, not a suggestion.** Before the node is committed, an **Alt text** field opens — `aria-label`d, required, non-empty, ≤ 200 characters, prefilled from the asset's filename and validated as non-whitespace. `validateLessonMarkdown` rejects an empty-alt image as `IMAGE_ALT_MISSING` with a 1-based line number ([§9.3](#93-server-side-validation)), so an image cannot reach students without it — the same guarantee Part 11 § Media Accessibility gives video captions. In Split mode the gate also applies to a hand-typed `![](…)` in the source pane, as an inline construct error with a click-to-jump.
+
+### 7.6 Find, replace, word count, and read time
+
+Absent entirely from Revision 2, which made a 5,000-word lesson unnavigable.
+
+**Find and replace.** `Ctrl/⌘ + F` opens the find bar; `⇧ + Ctrl/⌘ + H` opens it in replace mode. Matches run against the **source string** and are then mapped to document positions, so search semantics are identical in Rich and Split:
+
+| Mode       | On match                                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------------------------ |
+| **Rich**   | The editor scrolls to the match and selects the range                                                        |
+| **Split**  | **Both** panes highlight the same line — source line, and the corresponding rich block                       |
+| **Source** | The native selection moves to the match; the browser's own find UI is intercepted so the bar is the only one |
+
+- Match count announces as **"0 of N matches"** (and "No matches") in an `aria-live="polite"` region, **debounced 300 ms** — announcing per keystroke floods a screen reader at typing speed.
+- `Enter` / `⇧Enter` cycle matches and wrap; `Replace` and `Replace all` operate on the source string and re-sync through the [§7.1](#71-view-modes) contract.
+- **`Ctrl/⌘ + F` must not be swallowed by the browser inside the source `<textarea>`.** ProseMirror captures it; the keymap is registered at document level with the same guard as `Ctrl/⌘ + K` ([§7.3](#73-keyboard)) and covered by `courses.markdown.keymap.test.ts`.
+
+**Word count and read time** compute from the **same `textContent`** used for the S-2.7 `min 50 chars` rule ([§9.3](#93-server-side-validation)) — never from the Markdown string, so `**#**` counts as one character of prose. Both are **debounced 1000 ms** and render in the **pane footer beside the media count**, using the Part 11 script-aware formula: `ceil(wordCount / 180)` for `am`/`ti`/`gez`, `/ 220` otherwise. Both are `aria-label`d with the full sentence (_"1,240 words · about 7 minutes to read"_) so the abbreviation is not the only form.
+
+### 7.7 Tables and code blocks
+
+`Table.configure({ resizable: false })` ([§6.1](#61-the-extension-list)) is exactly what makes a keyboard path mandatory: with no drag handle, a mouse user and a keyboard user must reach every cell the same way.
+
+**Tables:**
+
+| Key                            | Action                                                                                                                                               |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Tab`                          | Next cell; **exiting the last cell creates a new row** and moves into it                                                                             |
+| `⇧Tab`                         | Previous cell; from the first cell leaves the table into the preceding block                                                                         |
+| `⇧F10` (or the visible handle) | Opens the row/column context menu: Insert row above/below · Insert column left/right · Delete row · Delete column · Delete table · Toggle header row |
+
+- The table is a **single `role="grid"` composite**, not a stop per cell. `aria-rowcount` and `aria-colcount` are announced on entry: _"Table, 4 rows by 3 columns."_ `Delete row` / `Delete column` on a one-row table is **disabled with a reason** (_"A table needs at least one row and one column"_), never a silent no-op.
+- With `resizable: false` there is **no** resize drag. A table wider than the pane **scrolls horizontally inside a `tabindex="0"` region with a visible scrollbar** and an `aria-label` of _"Table content, scrollable"_, so the scroll region itself is keyboard-reachable. No `aria-hidden` scrolling container, and no fixed height.
+
+**Code blocks** get a language `<select>` (the languages `saveLessonSchema` accepts, plus **Plain text**), a **Copy code** button ([S-7.12](09-Shared-Components.md#scr-7-12) `CopyButton`, with the Undo-free success state per that primitive), and `Escape` returning the caret to the nearest block start so the author is not trapped in the block controls. Changing the language rewrites the fence info string only.
+
+**No syntax highlighting in v1.** This is a deliberate build-flag decision, not a missing dependency: highlighting a ProseMirror code block requires either a decoration layer that fights the caret or a separate editor instance, and neither is worth the round-trip risk in the same release that introduces Markdown. Highlighting is a **flag, not a dependency** — the extension list in [§6.1](#61-the-extension-list) is unchanged and a highlight layer is additive.
+
+### 7.8 Paste sanitisation
+
+`transformPastedHTML` — a single hook on the editor, pure and unit-testable in `courses.markdown.ts` — is the only path clipboard HTML takes. Revision 2 said nothing, so a paste from Word or Google Docs imported a page of `mso-` markup and inline styles into the body.
+
+| Rule                                                                                                                                                                                                                                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Strip `style`, `class`, `id`, and every `mso-*` / `Mso*` attribute unconditionally — the editor's stylesheet is the only styling.                                                                                                                                                                                                         |
+| Remove `<o:p>` and Office XML namespace nodes entirely.                                                                                                                                                                                                                                                                                   |
+| `<b>` / `<strong>` → **bold** mark; `<i>` / `<em>` → **italic** mark. A `<b>`/`<i>` wrapper carrying **no semantic weight** (empty, whitespace-only, or nested inside another `<b>`/`<i>`) is unwrapped, not converted — this is what stops Word's double-wrapping from producing `***bold***`.                                           |
+| `div` and `span` unwrap to their text content.                                                                                                                                                                                                                                                                                            |
+| Two or more consecutive **empty** paragraphs collapse to one — a paste never introduces a run of blank blocks.                                                                                                                                                                                                                            |
+| A pasted **`<table>`** converts to a GFM table **only for spreadsheet TSV** (the `text/html` clipboard flavour of a range copied from Sheets/Excel). An arbitrary web table pastes as its cell **text**, one row per paragraph — a general HTML→GFM table converter is a data-loss surface and is out of scope ([§14](#14-out-of-scope)). |
+| A pasted **image** follows [§7.5](#75-image-insertion) and never lands as a data URI.                                                                                                                                                                                                                                                     |
+
+**Undo on first rich paste.** The **first** rich-mode paste in a session raises a toast ([S-7.2](09-Shared-Components.md#scr-7-2)): _"Pasted content cleaned up"_ with a timed **Undo** that restores the raw selection. Every subsequent paste is silent — an Undo affordance on every keystroke-level action is noise, and `Ctrl/⌘ + Z` always works regardless. A paste that changed anything also fires `lesson_editor_paste_sanitized` ([§12.2](#122-success-criteria--instrumentation)) with the rule that fired, never the content.
+
+### 7.9 Headings and the outline
+
+The toolbar offers H2 and H3 while the construct audit verifies H1–H6 ([§10.2](#102-round-trip-invariants)) — an apparent contradiction that is actually a writer/reader split, now stated:
+
+| Rule                           | Behaviour                                                                                                                                                                                                                                                                              |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **H1 is reserved**             | H1 is the item title and is set in the pane header, not the body. An H1 in the body — typed, pasted, or imported — is rejected by the construct audit as `HEADING_H1_RESERVED`, with a line number and the message _"Level 1 is the lesson title. Use level 2 for the first section."_ |
+| **No skipped levels**          | Converting H3 → H4 when the preceding block is an H2 is a **no-op** with the tooltip _"Cannot skip a heading level."_ The same applies to the toolbar buttons and to the outline's level control. H2 may follow H2; H4 may follow H3.                                                  |
+| **No skipped levels on paste** | A paste that would produce `## … #### …` is normalised down to the legal level rather than rejected — a pasted document is not the author's error, and a hard failure would make Word paste unusable.                                                                                  |
+
+**Headings outline** — a dropdown in the canvas header, above the toolbar, listing every heading in document order with its level shown as a literal `H2`/`H3` prefix (never colour alone). Selecting an entry **moves the caret to that heading's start** and closes the dropdown. It is a single tab stop with `↑`/`↓` between entries, `Home`/`End` to the ends, `Enter` to jump, and `Esc` to close and return focus to the trigger. An empty lesson shows **"No headings yet"** ([S-7.3](09-Shared-Components.md#scr-7-3) variant), not an empty dropdown.
+
+This is the **only** heading-navigation surface in v1: no outline sidebar, no collapsible section rail. A 40-heading lesson is navigable through the dropdown and `Ctrl/⌘ + F` ([§7.6](#76-find-replace-word-count-and-read-time)); a persistent outline is a Part 13 conversation, not a Revision 3 one.
 
 ---
 
@@ -428,14 +593,73 @@ Beyond the Part 11 baseline, Markdown-specific obligations:
 - **Timer:** 60s of _no typing_, not 60s wall-clock. A trailing debounce avoids saving mid-sentence.
 - **Manual:** `Ctrl/⌘ + S` flushes immediately.
 - **Dirty tracking:** derived from `editor.on('update')` _and_ the settings-pane `onChange`s, exactly as today — but `update` now also fires when Markdown and the rich doc diverge, so the same `dirty` flag covers both modes.
-- **Save status indicator:** the shared [S-7.8](09-Shared-Components.md#scr-7-8) component, in its full variant in the pane footer and its compact variant in the pane header. It is an `aria-live="polite"` region cycling `All changes saved` → `Saving…` → `All changes saved at HH:MM`, and `Save failed — Retry` on error. Errors raise a toast ([S-7.2](09-Shared-Components.md#scr-7-2)) **and** leave the indicator in the failed state; the unsaved buffer is never discarded on failure. **Revision 2:** this document no longer specifies the indicator's appearance or its vocabulary — [S-7.8](09-Shared-Components.md#scr-7-8) is the single source for both, and `SaveStatus` maps onto it one-to-one.
+- **Save status indicator:** the shared [S-7.8](09-Shared-Components.md#scr-7-8) component, in its full variant in the pane footer and its compact variant in the pane header. Errors raise a toast ([S-7.2](09-Shared-Components.md#scr-7-2)) **and** leave the indicator in the failed state; the unsaved buffer is never discarded on failure. **Revision 2:** this document no longer specifies the indicator's appearance or its vocabulary — [S-7.8](09-Shared-Components.md#scr-7-8) is the single source for both, and `SaveStatus` maps onto it one-to-one.
+  - **Correction (Revision 3).** Revision 2 described the indicator as a region "cycling `All changes saved` → `Saving…` → `All changes saved at HH:MM`". That is a **sequence, not a state machine**, and cycling it would double-announce every save. The indicator is now **one** live region owned by [S-7.8](09-Shared-Components.md#scr-7-8): `aria-live="polite"` for `idle` / `dirty` / `saving` / `saved`, `aria-live="assertive"` for `error` / `conflict` / `offline`. **Part 12 does not re-announce it** and must not render a second live region with the same text.
+  - **What else this document announces,** so nothing is silent and nothing is doubled: a mode change announces _"Split view, source pane editable"_ on `polite`; removing a block announces _"Removed heading level 2: 'Introduction'"_ on `assertive` and moves focus to the **nearest surviving block's start position**, never to `document.body`; **adding a block announces nothing** — the caret position is the signal.
 - **Context switching (new in Revision 2):** selecting another item, switching workspace tab, or navigating away **flushes first** ([S-7.8](09-Shared-Components.md#scr-7-8) rule 3). On failure the switch is blocked with Retry / Discard / Stay. This is the most important new behaviour for the workspace: the editor is now a pane inside a long-lived screen, so an unflushed buffer can survive many more navigations than it could when the editor was a page of its own.
 - **Autosave is skipped** when the lesson is `in_review` (editing is locked, per S-2.7) and when the user is a Viewer/Reviewer (permission-aware UI, Part 11). The indicator shows _Autosave paused_ rather than disappearing, so the reason there is no save is visible.
 - **On unmount / navigation:** the existing [S-7.1](09-Shared-Components.md#scr-7-1) confirmation dialog covers the unsaved case; Markdown does not change that behaviour.
 
+#### 8.1.1 Draft mirroring and the unload guard
+
+**The gap:** a 60s _no-typing_ timer means an author who types for 40 seconds and closes the tab has an **in-memory-only buffer**. [S-7.1](09-Shared-Components.md#scr-7-1) was _delegated_ for the unmount case but never specified for a closed tab, a crashed tab, or a device that dies. Three rules close it, and they implement the mirror [Part 04 S-2.7](04-Courses.md#scr-2-7) declares as the mechanism behind every session-expiry and reload guarantee:
+
+1. **The unsaved body is mirrored to `IndexedDB`** on **every** `editor.update`, **debounced 1000 ms**, and **cleared on a confirmed save** — never on a failed or conflicted one. The mirror is the same Markdown string that would be sent, so restore is a `setContent(value, { contentType: 'markdown' })` and inherits the identical parse path ([D-8](#4-decisions), [§3.4](#34-ssr-hazard)).
+2. **On mount**, if a local draft exists, the pane shows an [S-7.1](09-Shared-Components.md#scr-7-1) prompt — _"You have unsaved changes to this lesson from {time}. Restore them?"_ / **Discard** — **before hydrating**. The prompt is never silent and never auto-applied.
+3. **`beforeunload` sets `preventDefault` whenever `dirty === true`**, regardless of the IndexedDB mirror. The mirror is the recovery path; the prompt is the cheap warning. `dirty` is false the moment a save is confirmed, so a saved lesson never prompts.
+
+| Property        | Value                                                                                                                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Store / key** | `draft:item:<itemPublicId>:<rowVersion>` — identical to [Part 04 S-2.7](04-Courses.md#scr-2-7). The `rowVersion` in the key is what makes a stale draft impossible to confuse with a current one |
+| **Payload**     | `{ body, title, updatedAt, rowVersion }` — no media bytes, no student data                                                                                                                       |
+| **Cadence**     | **1000 ms debounce**, independent of the 60s server autosave                                                                                                                                     |
+| **Cleared on**  | A **confirmed** server save only. A failed save leaves the mirror intact, because the work is not yet safe.                                                                                      |
+
+> **Reconciled with Part 04's `rowVersion` clause.** Part 04 says both that a mirror whose `rowVersion` is _older_ than the server's raises the restore prompt, and that a key that no longer matches produces **Conflict** rather than a restore. Those two cannot both hold. The rule implemented here satisfies both intents:
+>
+> | Mirror `rowVersion` vs server | Result                                                                                                                           |
+> | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+> | **≥ the server's**            | The draft is at least as new as the row — **restore prompt**, Restore or Discard                                                 |
+> | **< the server's**            | The draft was based on an older row and cannot be applied without loss — **Conflict** ([§8.2](#82-concurrency)), never a restore |
+> | **equal**                     | Redundant with a fresh save — discarded silently rather than prompting the author about a decision that has no consequence       |
+
+#### 8.1.2 The autosave matrix
+
+[Part 09 S-7.8](09-Shared-Components.md#scr-7-8) defines `offline` and Part 11 requires queued writes; Revision 2 listed every autosave condition and never mentioned either. The full matrix:
+
+| `dirty` | Network | Locked?                                 | Save action                                                                                                                                                                                                                                                                                                                                                                                            | Indicator                                   | `expectedRowVersion`                         |
+| ------- | ------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- | -------------------------------------------- |
+| `false` | online  | any                                     | none. `saved` timestamp retained; IndexedDB draft already cleared on the confirmed save that set it                                                                                                                                                                                                                                                                                                    | `idle` / `saved`                            | —                                            |
+| `false` | offline | any                                     | none                                                                                                                                                                                                                                                                                                                                                                                                   | `offline` (banner persists)                 | —                                            |
+| `true`  | online  | no, not in flight                       | flush at 60s idle, or immediately on `Ctrl/⌘ + S`                                                                                                                                                                                                                                                                                                                                                      | `dirty` → `saving` → `saved`                | **sent** — stamped from the last server read |
+| `true`  | online  | no, save in flight                      | in flight; further edits re-arm the 60s timer and set `dirty` again                                                                                                                                                                                                                                                                                                                                    | `saving`                                    | sent, once                                   |
+| `true`  | online  | no, last save failed                    | **no** auto-retry after a `4xx` or a conflict — the user resolves it. Transient `5xx` retries with backoff (1s / 4s / 15s), then stops                                                                                                                                                                                                                                                                 | `error` — _Save failed — Retry_             | **held** — not re-stamped on retry           |
+| `true`  | online  | **yes** (`in_review`, Viewer, Reviewer) | **no save at all.** The buffer is mirrored to IndexedDB and left there; autosave is suspended, not discarded                                                                                                                                                                                                                                                                                           | `suspended` — _Autosave paused (in review)_ | **held** — never sent while locked           |
+| `true`  | offline | no                                      | **enqueue** `{ body, bodyFormat, expectedRowVersion, queuedAt }`, in order. **The canvas stays editable** — [Part 04 S-2.7](04-Courses.md#scr-2-7) is explicit that offline authoring is safe, because the mirror keeps taking writes every 1000 ms. The banner reads _"You're offline — 4 changes will sync when you reconnect."_ and `Flush now` reads **"Queued — will sync"** rather than erroring | `offline`                                   | **held**, and **carried in the queue**       |
+| `true`  | offline | **yes**                                 | mirror to IndexedDB only; **not** enqueued (a locked row has no server to accept it)                                                                                                                                                                                                                                                                                                                   | `offline` + _Autosave paused_               | held                                         |
+
+> **Offline is editable here, unlike most surfaces.** [Part 11 § Resilience](11-Global-Standards.md#resilience-states) renders an offline surface read-only, but the item pane is the documented exception ([Part 04 S-2.7](04-Courses.md#scr-2-7)): because the body is a local buffer with a 1000 ms mirror, locking the author out would protect nothing and cost the whole session. What is suspended offline is the **server write path**, not the editor.
+
+**Queue semantics on reconnect:** queued writes flush **in order**. A queued write whose `rowVersion` is now stale resolves to **conflict** ([§8.2](#82-concurrency)) — **never a silent overwrite** ([Part 11 § Resilience](11-Global-Standards.md#resilience-states)). Subsequent queued writes for the same lesson are **not** discarded: they are held behind the conflict resolution and re-stamped by whichever option the author picks, so _"Keep mine"_ recovers the whole queue rather than only its head.
+
+**Advisory checks never block autosave.** A reference-audit advisory ([§9.4](#94-reference-audit)) or a `lang` advisory ([§7.4](#74-accessibility)) surfaces in readiness and **not** in the save path. Only `ValidationError` from the construct audit ([§9.3](#93-server-side-validation)) and a `409` stop a write.
+
 ### 8.2 Concurrency
 
-Unchanged and re-stated so the Markdown work does not regress it: `expectedRowVersion` is sent on every write; a mismatch is rejected server-side. On a `409`/version conflict the editor shows `This lesson was updated elsewhere. Reload to continue.` with a Reload action — it must **not** silently overwrite, and must not attempt an automatic Markdown merge. A diff-and-merge UI is explicitly out of scope ([§1.2](#12-non-goals)).
+Unchanged and re-stated so the Markdown work does not regress it: `expectedRowVersion` is sent on every write; a mismatch is rejected server-side. On a `409`/version conflict the editor **must not** silently overwrite and **must not** attempt an automatic Markdown merge.
+
+**Revision 3 — Reload is no longer the only option.** Offering only Reload destroys up to 60s of unsaved typing and contradicts `DESIGN.md` §12; "Reload" is a destructive action wearing a neutral label. The conflict surface is [S-7.1](09-Shared-Components.md#scr-7-1) with the Part 11 conflict vocabulary, and it matches the **Row Conflict** state in [Part 04 S-2.7](04-Courses.md#scr-2-7) exactly:
+
+| Option                                                       | Behaviour                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **The two-column Markdown diff** — the dialog's default view | _Yours_ on the left, _Theirs_ on the right, changed lines highlighted, **both sides collapsible to a context window**. Read-only: no merge, no edit, no save. This is what makes the other two options safe.                                           |
+| **Keep mine** _(default)_                                    | Re-fetch the server row, **re-stamp `expectedRowVersion` to the server value**, retry the save **once**, and log the override (actor, lesson, both `rowVersion`s, timestamp) to the audit log. A second `409` re-opens the dialog rather than looping. |
+| **Take theirs**                                              | Discard the local buffer, hydrate the server body, and clear the IndexedDB draft ([§8.1.1](#811-draft-mirroring-and-the-unload-guard)). This is the **renamed Reload**; destructive, so it is the **last** option and requires confirmation.           |
+| **Compare**                                                  | Opens the two bodies side by side in a **full-width overlay** — the same content as the default diff, at a size where a 5,000-word change is actually reviewable.                                                                                      |
+
+**Merge remains out of scope** ([§1.2](#12-non-goals)) — an automatic three-way Markdown merge is a separate and much larger piece of work. **Discarding the author's work is not**: the author's buffer is always reachable, either through **Compare** before deciding or through the `body_revisions` table after the fact ([§14.1](#141-version-history-minimal-not-git)).
+
+**In the workspace, a conflict additionally re-renders the curriculum tree row** ([§16.4](#164-save-state-and-concurrency)) so the author can see the item moved, changed status, or was archived by someone else. The queued-offline-write case resolves here too, on the same three options ([§8.1.2](#812-the-autosave-matrix)).
 
 ---
 
@@ -476,6 +700,24 @@ Because `MarkdownManager.parse()` is DOM-free ([§3.4](#34-ssr-hazard)), validat
 - The audit runs on **every** save, including legacy HTML-hydrated lessons, so a lesson is never silently rewritten into a lossy shape.
 
 Failure shape: `ValidationError` with a machine-readable `code`, a human message stating what is wrong **and** how to fix it, and — where meaningful — a 1-based line number in the Markdown source, surfaced as a click-to-jump in the source pane.
+
+### 9.4 Reference audit
+
+[§9.3](#93-server-side-validation) checks whether a construct is **representable**. It says nothing about whether the construct still **resolves** — an image whose library asset was deleted, or a link to a page that 404s, passes every construct check and reaches students broken. Revision 2 had no detection at all; discovery was a support ticket.
+
+| Reference type | Check                                                                                                                   | Cache / cost                                                                                                | Code               |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------ |
+| **Image URL**  | `HEAD` against the **library asset table** (a DB lookup, not the CDN) — a 200 in the asset table means the asset exists | No network call. One indexed query per distinct asset id                                                    | `ASSET_MISSING`    |
+| **Link host**  | `HEAD` against the origin, cached per host + path-prefix                                                                | **24h TTL** per host. Negative results cached for **1h** so a dead host is not re-probed on every keystroke | `LINK_UNREACHABLE` |
+
+Both are **advisory** [S-7.11](09-Shared-Components.md#scr-7-11) rows, never `ValidationError`:
+
+- They are emitted as rows in the **readiness checklist**, grouped under advisory, with a **Fix** deep link that **selects the node and focuses the relevant dialog** — the link dialog for `LINK_UNREACHABLE`, the image's alt-text/asset field for `ASSET_MISSING` — per Part 11's rule that a `Fix` link moves focus to the offending field.
+- An advisory **never blocks autosave** ([§8.1.2](#812-the-autosave-matrix)) and never produces a `409`. It **does** block publish readiness, because a broken image in a Published lesson is a student-facing defect.
+- A **Content Library** asset that is merely archived is `ASSET_MISSING` with the message _"This image is in the library's archive — restore it or choose another."_, and a **Fix** action that opens the asset. An asset that is present in the table but failing its CDN `HEAD` is a distinct message so the author knows it is a delivery problem, not a missing file.
+- The audit runs on **flush** (`Ctrl/⌘ + S`, context switch, and the 60s idle timer) and on **publish-readiness re-check** — never per keystroke. The 24h link cache is what makes this affordable.
+
+> **Skipped checks, and why.** `RC-4a` / `RC-4b` / `RC-4c` apply to the **base variant only**, per [Part 04 S-2.7](04-Courses.md#scr-2-7). A **translation variant with no source text yet** — a translation the course declares in `content_language` but has not authored — is reported as an **advisory**, never a blocking check, and the checklist row states the skip rather than showing a pass: _"RC-4 skipped — no source text for this translation."_ A readiness check that reports a pass it did not perform is worse than a visible skip. Translating a lesson must never un-publish a course.
 
 ---
 
@@ -522,6 +764,30 @@ The Markdown change must not disturb the approval gate ([S-2.14](04-Courses.md#s
 
 AI-generated quiz drafting ([S-2.16](04-Courses.md#scr-2-16)) consumes lesson text. Because `stripMarkdown()` already handles both HTML and Markdown, and the body is now always Markdown, that path is _simplified_ — but the ✨ labelling and explicit-accept rules in Part 11 are unchanged.
 
+### 11.1 AI-authored body content (explicitly bounded)
+
+[§1.2](#12-non-goals) disclaimed an AI authoring surface while this document still referred to the ✨ rules as though they applied. The boundary is now explicit and narrow: **AI may propose body text at the author's request; it may never write it.**
+
+**Presentation.** Generated content arrives as an **`AIDraftBlock` range** — a contiguous span of the doc carrying:
+
+| Element    | Value                                                                              |
+| ---------- | ---------------------------------------------------------------------------------- |
+| Border     | **1px dashed** `--color-ai-text` — dashed, so it is distinguishable without colour |
+| Background | `--color-ai-tint`                                                                  |
+| Icon       | ✨ (hugeicons, never an emoji)                                                     |
+| Label      | The literal text **"AI draft"** — never hue alone                                  |
+| Actions    | **Accept all** · **Accept selection** · **Discard**                                |
+
+**The rules that make it safe:**
+
+- **Accept is what writes into `lessons.body`.** Generation output lives in **local state only** and is **never autosaved** — an unaccepted draft cannot be flushed by the 60s timer, by `Ctrl/⌘ + S`, by a context switch, or by the IndexedDB mirror ([§8.1.1](#811-draft-mirroring-and-the-unload-guard)). A draft is not content; it is a proposal.
+- **Accept all** converts the whole `AIDraftBlock` to normal nodes. **Accept selection** converts only the selected range to normal nodes and leaves the remainder a draft, so partial acceptance is the normal case rather than an edge case. **Discard** removes the range and is reversible with `Ctrl/⌘ + Z`.
+- **Regenerate is explicitly scoped**, and the scope is in the **button label** — never implied by a menu's current state: _Regenerate this block_ · _Regenerate this section_ · _Regenerate whole lesson_. A whole-lesson regeneration replaces the current draft and requires confirmation, because it is the one scope that can discard accepted-looking work.
+- **On Accept, a `body_revisions` row is written with reason `ai_accept`** ([§14.1](#141-version-history-minimal-not-git)), so AI-accepted text is reviewable after the fact and distinguishable from hand-written text. The `AIDraftBlock` metadata does **not** survive into `lessons.body` — the persisted body is plain authored Markdown.
+- **The source pane never shows AI-accepted text as hand-written.** An unaccepted draft renders in the source pane as the literal marker `<!-- ai-draft:unaccepted -->` at the draft's position, so switching to Source or Split is never a way to launder generated text into something that looks authored. On **Accept**, the marker is replaced by the real Markdown.
+
+> **Why the source pane is the last line of defence.** A rich-only marker disappears the moment the author switches panes, and Markdown that looks hand-written in Source is the exact failure `DESIGN.md`'s human-in-the-loop principle exists to prevent. The comment costs one line of Markdown, is inert to the renderer (`streamdown` with HTML disabled), and survives a copy-paste out of the pane.
+
 ---
 
 ## 12. Implementation Plan
@@ -535,12 +801,27 @@ Ordered so each step is independently shippable and reversible.
 | 3    | Add `courses.markdown.ts` (pure) + tests for RT1–RT4.                                                                             | `bun test` green; invariants proven on the supported subset.   |
 | 4    | Schema: `body_format` column + `db:generate` + `db:migrate`.                                                                      | Migration applies cleanly; `db:generate` output reviewed.      |
 | 5    | Write path: `bodyFormat: 'markdown'`, switch `getHTML()` → `getMarkdown()`.                                                       | Round-trip proven end-to-end in a real lesson.                 |
+| 5.5  | **Rollout gate.**                                                                                                                 | See below.                                                     |
 | 6    | Read path: `bodyFormat` on the DTO + dual hydration in the editor.                                                                | Legacy HTML lessons still open and save unchanged.             |
 | 7    | `courses.legacy-html.ts` + migration script + run report.                                                                         | Report produced; unconvertible rows listed, not guessed.       |
 | 8    | Autosave hook, view modes, toolbar rewrite, keyboard map, `validateLessonMarkdown`.                                               | A11y checks pass; `Ctrl/⌘+K` unblocked.                        |
 | 9    | Migrate production data; re-run report until `skipped (unconvertible): 0` or every remainder is triaged.                          | Zero unexplained skips.                                        |
 
 Steps 4–6 ship **before** 7, so a rollback never leaves a schema without a reader.
+
+### 12.0 The rollout gate (step 5.5)
+
+> **Correction (Revision 3).** The header claimed "each step is independently shippable and reversible", but step 5 makes Markdown the **write** format while step 7 is what makes the **data** Markdown. A deploy-revert between 5 and 7 leaves rows stamped `body_format = 'markdown'` that the old reader would have to sniff — and [D-4](#4-decisions) already established that sniffing is unreliable. So the plan's reversibility claim was false in exactly the window that matters.
+>
+> **Step 5 is gated behind a `markdownWritesEnabled` workspace flag.** Rollback is **flag-off, not deploy-revert**, so a partial rollout never leaves rows the reader cannot parse: with the flag off, `saveLesson` stamps the legacy format and dual hydration ([§5.2](#52-read-path)) keeps every row readable regardless of which side of step 5/7 the workspace is on. The flag is read server-side from the workspace record, defaults **off**, and is enabled per workspace so a pilot can run for a week before the fleet moves.
+
+**Flag-state matrix:**
+
+| `markdownWritesEnabled`  | Data state                     | Reader                                 | Writer            | Rollback                                                                                                                                             |
+| ------------------------ | ------------------------------ | -------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `off` (default)          | any mix of `html` / `markdown` | dual hydration ([§5.2](#52-read-path)) | writes `html`     | no-op                                                                                                                                                |
+| `on`, step 7 not yet run | mostly `html`                  | dual hydration                         | writes `markdown` | **flag off** → rows revert to being read as HTML; no migration is un-done                                                                            |
+| `on`, step 7 run         | mostly `markdown`              | Markdown path                          | writes `markdown` | **flag off** → writes `html` again, which the [§5.3](#53-migration) table can convert back losslessly; `body_format` keeps the row honest either way |
 
 ### 12.1 Testing
 
@@ -557,18 +838,66 @@ The round-trip fixtures double as the **regression net for the D-2 extensions**:
 
 Pure-logic tests need no DOM; the Editor-construction tests (RT5) run against the browser-only path and are covered by the E2E/manual pass rather than `bun test`.
 
+### 12.2 Success Criteria & Instrumentation
+
+Added in Revision 3 to match the [Part 11 § Success Criteria & Instrumentation](11-Global-Standards.md#success-criteria--instrumentation) format every screen now carries.
+
+**Performance budgets:**
+
+| Budget                               | Target                                                                                                                 |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Hydration of a 200k-character lesson | parse → doc → first paint **< 1.5 s** on a mid-tier laptop over 4G                                                     |
+| Rich → Source sync                   | **≤ 50 ms** at 50k characters                                                                                          |
+| Keystroke                            | **never blocks the main thread > 16 ms** — a single frame budget, asserted with a long-task observer                   |
+| Find/replace over a 200k body        | first match in **< 100 ms** after the 300 ms announce debounce                                                         |
+| Editor bundle                        | **route-level code-split** — Tiptap is not in the workspace shell's chunk and is not fetched until an item pane mounts |
+
+These are the **implementation-side** budgets. [Part 04 S-2.7](04-Courses.md#scr-2-7) states the same three figures as the screen budget; they are one set of numbers recorded in two places, not two targets.
+
+**Acceptance criteria** (binary; a tester can fail each one):
+
+1. `axe` reports **zero** violations on Rich, Split, and Source, including at 200% zoom.
+2. A complete keyboard path — tree → item pane → type → `Ctrl/⌘+S` → switch mode → back to the tree — completes with **no mouse**, and the tree's selection and scroll position are intact on return.
+3. **NVDA and VoiceOver** pass on all three modes: the toolbar reports group and pressed state, the source textarea is labelled, find reports _"n of N matches"_, and a conflict is announced `assertive`.
+4. At **200% zoom** and at a **320px** viewport, the editor reflows with **no horizontal page scroll**; a table wider than the pane scrolls inside its own labelled region.
+5. A **10-minute Ge'ez lesson** renders with **zero fixed-height truncation** — no `line-clamp`, no clipped glyph at `line-height: 1.6`, and no truncation on the source pane.
+6. Closing the tab with unsaved changes, then reopening the same lesson, presents the **"Restore unsaved draft from {time}?"** prompt with a working Discard ([§8.1.1](#811-draft-mirroring-and-the-unload-guard)).
+7. Going offline, editing, and reconnecting with a server-side change in between resolves to the **three-option conflict dialog** — never a silent overwrite ([§8.2](#82-concurrency)).
+
+**Events.** Every property is an ID, a count, or an enum. **No body content, no prompt text, no PII** — including no URLs and no filenames.
+
+| Event                                  | Properties                                                                                                                                     |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lesson_editor_mode_switched`          | `{ courseId, lessonId, bodyFormat, mode }`                                                                                                     |
+| `lesson_editor_sync_failed`            | `{ courseId, lessonId, bodyFormat, direction, code }` — `direction` ∈ `rich→source` \| `source→rich`; `code` is the audit code, never the text |
+| `lesson_editor_construct_audit_failed` | `{ courseId, lessonId, bodyFormat, code, count }`                                                                                              |
+| `lesson_editor_paste_sanitized`        | `{ courseId, lessonId, bodyFormat, rule, count }` — `rule` names which [§7.8](#78-paste-sanitisation) rule fired                               |
+| `lesson_editor_conflict_shown`         | `{ courseId, lessonId, bodyFormat, resolution }` — `resolution` ∈ `compare` \| `keep_mine` \| `take_theirs`                                    |
+| `lesson_editor_ai_block_accepted`      | `{ courseId, lessonId, bodyFormat, scope, characters }` — `scope` ∈ `block` \| `selection` \| `all`                                            |
+| `lesson_editor_export`                 | `{ courseId, lessonId, bodyFormat, format }`                                                                                                   |
+| `lesson_editor_draft_restored`         | `{ courseId, lessonId, bodyFormat, source }` — `source` ∈ `idb` \| `undo`; **no** draft content                                                |
+
+> **Reconciled with [Part 04 S-2.7](04-Courses.md#scr-2-7)'s event set**, which already fires `item_editor_opened`, `item_body_flushed`, `item_draft_mirrored`, `item_conflict_shown`, `item_publish_toggled`, and `translation_variant_opened`. Three overlaps, resolved so nothing is counted twice:
+>
+> | Overlap                                                  | Resolution                                                                                                                                                   |
+> | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+> | `lesson_editor_draft_restored` vs `item_draft_mirrored`  | **Two different facts.** `item_draft_mirrored` is the 1000 ms write; `lesson_editor_draft_restored` is the author choosing Restore. Keep both.               |
+> | `lesson_editor_conflict_shown` vs `item_conflict_shown`  | **One event.** The Part 04 name wins; `{ itemId, strategy }` is extended with `{ courseId, bodyFormat }`. `lesson_editor_conflict_shown` is **not** emitted. |
+> | `lesson_editor_mode_switched` vs `workspace_tab_changed` | Unrelated surfaces. Both stand.                                                                                                                              |
+
 ---
 
 ## 13. Risks & Mitigations
 
-| Risk                                                                         | Impact                             | Mitigation                                                                                                                     |
-| ---------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| An extension is dropped from the list later, silently re-enabling lossiness. | Silent data loss on the next save. | Fixture corpus pinned in `courses.markdown.test.ts` fails loudly on removal.                                                   |
-| HTML injection through raw Markdown.                                         | Stored XSS rendered to students.   | Student render path uses `streamdown` with HTML disabled; the editor never accepts raw HTML nodes; `Image.allowBase64: false`. |
-| Un-migrated lessons edited by a new client write Markdown over HTML rows.    | Mixed formats in one course.       | `bodyFormat` on the DTO plus dual hydration; save path stamps `'markdown'`, making the transition self-completing per row.     |
-| Split mode confuses authors or breaks Undo.                                  | Poor adoption.                     | Rich is the default; Split is opt-in and labelled a precision mode; the Undo caveat is documented in the UI.                   |
-| `marked` behaves differently in future minor bumps.                          | Parse drift.                       | `@tiptap/markdown` pins `marked` internally; round-trip tests fail loudly on drift rather than corrupting silently.            |
-| Dual markdown in the body breaks the 200k cap sooner than HTML.              | Save rejections on large lessons.  | Cap is unchanged at 200k; normalization runs first, and the error message reports actual vs. limit.                            |
+| Risk                                                                         | Impact                                                      | Mitigation                                                                                                                                                                                                                                                                                                                               |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| An extension is dropped from the list later, silently re-enabling lossiness. | Silent data loss on the next save.                          | Fixture corpus pinned in `courses.markdown.test.ts` fails loudly on removal.                                                                                                                                                                                                                                                             |
+| HTML injection through raw Markdown.                                         | Stored XSS rendered to students.                            | Student render path uses `streamdown` with HTML disabled; the editor never accepts raw HTML nodes; `Image.allowBase64: false`.                                                                                                                                                                                                           |
+| Un-migrated lessons edited by a new client write Markdown over HTML rows.    | Mixed formats in one course.                                | `bodyFormat` on the DTO plus dual hydration; save path stamps `'markdown'`, making the transition self-completing per row.                                                                                                                                                                                                               |
+| Split mode confuses authors or breaks Undo.                                  | Poor adoption.                                              | Rich is the default; Split is opt-in and labelled a precision mode; the Undo caveat is documented in the UI.                                                                                                                                                                                                                             |
+| `marked` behaves differently in future minor bumps.                          | Parse drift.                                                | `@tiptap/markdown` pins `marked` internally; round-trip tests fail loudly on drift rather than corrupting silently.                                                                                                                                                                                                                      |
+| Dual markdown in the body breaks the 200k cap sooner than HTML.              | Save rejections on large lessons.                           | Cap is unchanged at 200k; normalization runs first, and the error message reports actual vs. limit.                                                                                                                                                                                                                                      |
+| An author edits offline and reconnects after a server-side change.           | A silent overwrite of a colleague's edit, or a lost buffer. | Writes queue in order carrying the `rowVersion` they were based on; a stale queued write resolves to the **three-option conflict dialog**, never a silent overwrite ([§8.1.2](#812-the-autosave-matrix), [§8.2](#82-concurrency)). The buffer is mirrored to IndexedDB regardless ([§8.1.1](#811-draft-mirroring-and-the-unload-guard)). |
 
 ---
 
@@ -576,12 +905,63 @@ Pure-logic tests need no DOM; the Editor-construction tests (RT5) run against th
 
 Deferred deliberately, with the reason:
 
-- **Collaborative editing / CRDT merge** — the `rowVersion` guard is the current model; a merge UI is a separate, much larger piece of work.
-- **Git-style revision history and diff view** — a future spec. Note that Markdown is a _prerequisite_ for readable diffs, which is part of why D-3 is worth the migration.
-- **AI _generating_ Markdown** — [§1.2](#12-non-goals).
+- **Collaborative editing / CRDT merge** — the `rowVersion` guard is the current model; a merge UI is a separate, much larger piece of work. Note that **Compare** in the conflict dialog ([§8.2](#82-concurrency)) is a read-only diff, not a merge.
+- **Git-style revision history and diff view** — the _full_ feature (branching, commit messages authored by users, blame, arbitrary comparison between any two points) remains deferred; it is a future spec. The **minimum** a reviewer needs to do their job — review a _change_ — is specified in [§14.1](#141-version-history-minimal-not-git), and Markdown is a _prerequisite_ for readable diffs, which is part of why D-3 is worth the migration.
+- **AI _generating_ Markdown autonomously** — [§1.2](#12-non-goals). Explicit, human-accepted insertion is [§11.1](#111-ai-authored-body-content-explicitly-bounded).
 - **LaTeX / math nodes** — common in language courses. Requires a custom node with a `parseMarkdown`/`renderMarkdown` spec; the `@tiptap/core` `markdown` namespace ([§3.1](#31-the-installed-editor-cannot-emit-markdown-out-of-the-box)) exists precisely for that, and it is a good first candidate once this spec lands.
 - **Custom shortcode embeds** (e.g. `{{quiz:abc}}`) — same mechanism, later.
 - **Per-user source-pane syntax highlighting** — the pane is a plain `<textarea>` for accessibility ([§7.4](#74-accessibility)); a CodeMirror instance would replace it and needs its own a11y review.
+- **A general HTML→GFM table converter for pasted web tables** — only spreadsheet TSV converts ([§7.8](#78-paste-sanitisation)). A general converter is a data-loss surface with no round-trip guarantee.
+- **A persistent heading outline / section rail** — the dropdown in [§7.9](#79-headings-and-the-outline) plus find/replace ([§7.6](#76-find-replace-word-count-and-read-time)) are the v1 navigation surface.
+- **Print / PDF export of a lesson body** — out of scope for v1, stated explicitly here and in the preview parity table ([§16.3](#163-preview-reuses-the-render-path-not-the-editor)) so nobody builds a print stylesheet for an editor that never had one.
+
+### 14.1 Version history (minimal, not Git)
+
+[§14](#14-out-of-scope) deferred revision history entirely, which breaks the reviewer's job: [S-2.14](04-Courses.md#scr-2-14) asks a reviewer to judge a change, and with no prior version there is nothing to change _from_. This is the minimum that satisfies `DESIGN.md` §5.10 — **without** building Git.
+
+**Storage** — one append-only table in `packages/database/src/schema/catalog/`:
+
+```ts
+export const lessonBodyRevisionReasonPgEnum = pgEnum('lesson_body_revision_reason', [
+  'save', // explicit Flush now
+  'ai_accept', // §11.1
+  'restore', // §14.1 restore action
+  'migration', // §5.3 HTML → Markdown
+])
+
+export const lessonBodyRevisions = pgTable('lessons_body_revisions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  lessonId: uuid('lesson_id')
+    .notNull()
+    .references(() => lessons.id, { onDelete: 'cascade' }),
+  body: text('body').notNull(),
+  bodyFormat: lessonBodyFormatPgEnum().notNull(),
+  createdBy: uuid('created_by').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  reason: lessonBodyRevisionReasonPgEnum().notNull(),
+})
+```
+
+**When a revision is written — and when it is not:**
+
+| Event                                   | Writes a revision?   | Why                                                                                                                                                                                                                            |
+| --------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Explicit `Flush now`** (`Ctrl/⌘ + S`) | **Yes**, `save`      | The author declared this a save point                                                                                                                                                                                          |
+| **Submit for review**                   | **Yes**, `save`      | The reviewer needs a baseline at exactly the moment of the decision ([S-2.14](04-Courses.md#scr-2-14))                                                                                                                         |
+| **AI Accept**                           | **Yes**, `ai_accept` | [§11.1](#111-ai-authored-body-content-explicitly-bounded)                                                                                                                                                                      |
+| **Restore a previous version**          | **Yes**, `restore`   | Restoring **appends**; it never deletes or truncates history                                                                                                                                                                   |
+| **§5.3 migration**                      | **Yes**, `migration` | Keeps the pre-migration HTML comparable to the Markdown                                                                                                                                                                        |
+| **The 60s autosave timer**              | **No**               | An autosave every 60s would make the history unreadable and unbounded. The autosave path is covered by the [S-7.1](09-Shared-Components.md#scr-7-1) draft mirror instead ([§8.1.1](#811-draft-mirroring-and-the-unload-guard)) |
+| **Context switch / unmount flush**      | **No**               | Same reason — it is a transport event, not a declared save point                                                                                                                                                               |
+
+> **Why the autosave gap is acceptable:** the history answers "what changed for review", and a review happens at submit-for-review, which is a revision. The gap between two revisions is the author's own work in progress, and losing it costs one autosave cycle, not work. Retention is 30 revisions per lesson with a documented prune job; the row count is bounded regardless of how often the buffer flushes.
+
+**The [S-2.14](04-Courses.md#scr-2-14) review panel** lists revisions newest-first with:
+
+- Created-by, timestamp (`Africa/Addis_Ababa` with the offset in a tooltip, per Part 11), and the reason as a pill using the [Part 11 status mapping](11-Global-Standards.md#status-colour-mapping) — `ai_accept` on `--color-ai-text` / `--color-ai-tint` with the ✨ icon, so AI-accepted text is identifiable at a glance.
+- A **line-count delta** per revision (_"+42 / −7"_) so the reviewer sees the shape of the change before opening it.
+- An **optional unified diff view**, rendered **read-only** — no inline editing, no merge, no comment anchors. It is a reading tool.
+- **Restore this version**, which opens [S-7.1](09-Shared-Components.md#scr-7-1) for confirmation and then writes a **new** `restore` revision. History is append-only: there is no delete, no truncate, and no "revert to here and lose the rest".
 
 ---
 
@@ -627,6 +1007,24 @@ Because the pane lives inside a screen that stays mounted while the author switc
 
 [S-2.21 Learner Preview](04-Courses.md#scr-2-21) and the editor's **Preview** view mode must render the same Markdown through the same pipeline (`streamdown`, HTML disabled, [§13](#13-risks--mitigations)), differing only in chrome. Two render paths for the same body is how a preview comes to disagree with production, which defeats the purpose of previewing at all. **Any change to the student-facing renderer must be reflected in both**, and the round-trip fixtures in [§12.1](#121-testing) are the shared guard.
 
+#### 16.3.1 Preview parity
+
+Revision 2 asserted parity and stopped. Parity is a claim about **every** surface difference, so each one is named with its required behaviour:
+
+| Surface                          | Required behaviour in the editor's Preview mode                                                                                                                                                                                                                                                                                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Body Markdown**                | **Identical.** Same `streamdown` render, same HTML-disabled configuration, same normalization ([§10.1](#101-normalization)) as the student view. No editor-only wrapper, no placeholder, no "click to edit" affordance inside the body.                                                                                                                                                    |
+| **Title, duration, tags**        | Rendered from the same fields the student header reads, at student-header styling. The editor's own title field is the source, so a stale header is a visible defect, not a nuance.                                                                                                                                                                                                        |
+| **Attached quiz**                | **Not shown** in the editor preview, with a link reading **"Opens after the lesson body"**. An author cannot answer their own quiz from the body pane, and pretending otherwise invites them to grade against the wrong thing.                                                                                                                                                             |
+| **Media + captions**             | Video and audio render; the **transcript link is visible** ([S-3.6](05-Content-Library.md#scr-3-6)) so the author can confirm captions exist. A video with no captions shows the `RC-5` blocking state, not a silent player.                                                                                                                                                               |
+| **Unlock rules / prerequisites** | A banner: **"Gated — students must complete {X}."** Rules come from [S-2.15](04-Courses.md#scr-2-15), evaluated the same way the player evaluates them. A gated lesson previewed by its own author is the single most common way an author misses a misconfigured prerequisite.                                                                                                            |
+| **Availability window**          | A banner when now is **outside** the window: _"Available {date} – {date}."_ Inside the window, no banner. Times per Part 11: `6:00 PM EAT`, never a bare date.                                                                                                                                                                                                                             |
+| **Tenant branding**              | **Applied** — logo, colours, and fonts resolve to the tenant's values, so an author sees what a student of that workspace sees. Branding still may not override `--color-*-text`, `--color-*-tint`, the focus ring, or `--color-danger-*` (Part 11).                                                                                                                                       |
+| **Device frame**                 | **Preview mode renders inside the [S-2.21 Preview Frame](04-Courses.md#scr-2-21)** — desktop by default, tablet/mobile switchable. The frame is a labelled region, not a resized page. **Rich and Split never resize the workspace behind them**: switching to Rich or Split restores the pane to full width with no leftover frame, no scroll trap, and no reflow of the curriculum tree. |
+| **Print / PDF**                  | **Out of scope for v1**, stated explicitly rather than left ambiguous. No print stylesheet is built for the editor. The audit log and exports still use absolute ISO-8601 with offset (Part 11) — a different requirement, still honoured.                                                                                                                                                 |
+
+> **The frame is the point.** A preview that reflows the workspace behind it cannot be compared against the previous preview, and the author loses the tree they were navigating. The frame is a fixed-width container; the editor's own modes use the pane's full width.
+
 ### 16.4 Save state and concurrency
 
 - The editor's `SaveStatus` maps one-to-one onto the shared [S-7.8](09-Shared-Components.md#scr-7-8) state machine; this document no longer owns the vocabulary.
@@ -642,6 +1040,8 @@ Restated explicitly, because the temptation on a large UX change is to assume th
 - `MarkdownManager` DOM-free usage for server-side validation and migration is untouched ([§9.3](#93-server-side-validation)).
 - The RT1–RT5 invariants and their fixture corpus are untouched — and they now additionally protect the _preview_ renderer, per [§16.3](#163-preview-reuses-the-render-path-not-the-editor).
 - The HTML→Markdown migration plan and its run report are untouched; the curriculum reorganisation does not affect the body of any lesson.
+
+> **Restated for Revision 3**, since the temptation recurs: [§5](#5-storage-model) (`body` + `body_format` as the single source of truth), [§5.4](#54-write-path) (`bodyFormat: z.literal('markdown')` at the boundary), [§10.1](#101-normalization), and **RT1–RT5** are all **unchanged**. Revision 3 adds _around_ the content model — durability, conflict resolution, media handling, keyboard paths, type rules, and instrumentation — and introduces exactly **one** new table (`lessons.body_revisions`, [§14.1](#141-version-history-minimal-not-git)), which is append-only and is never read by the render path.
 
 ---
 
@@ -681,6 +1081,8 @@ console.log(a.version, JSON.stringify(a.peerDependencies));
 
 ## Appendix B — Change Log for This Document
 
-| Date       | Change                                                                                | Author |
-| ---------- | ------------------------------------------------------------------------------------- | ------ |
-| 2026-09-28 | Initial specification. Toolchain findings verified empirically against Tiptap 3.31.3. | —      |
+| Date       | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Author |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| 2026-09-28 | Initial specification. Toolchain findings verified empirically against Tiptap 3.31.3.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | —      |
+| 2026-09-28 | **Revision 2 — Course Workspace.** Adds [§16](#16-revision-2--workspace-integration); updates [§8.1](#81-autosave) and [§15](#15-open-questions). Content model, storage contract, extension list, normalization, and RT1–RT5 **unchanged**.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | —      |
+| 2026-09-29 | **Revision 3 — Editor completeness.** Adds [§7.5](#75-image-insertion)–[§7.9](#79-headings-and-the-outline) (image insertion, find/replace + read time, tables & code blocks, paste sanitisation, headings & outline), [§8.1.1](#811-draft-mirroring-and-the-unload-guard), [§8.1.2](#812-the-autosave-matrix), [§9.4](#94-reference-audit), [§11.1](#111-ai-authored-body-content-explicitly-bounded), [§12.0](#120-the-rollout-gate-step-55), [§12.2](#122-success-criteria--instrumentation), [§14.1](#141-version-history-minimal-not-git), [§16.3.1](#1631-preview-parity); revises [§1.2](#12-non-goals), [§4](#4-decisions) (D-9), [§6.1](#61-the-extension-list), [§7.1](#71-view-modes)–[§7.4](#74-accessibility), [§8.2](#82-concurrency), [§12](#12-implementation-plan), [§13](#13-risks--mitigations), [§14](#14-out-of-scope). **§5 storage model, §10 normalization, and RT1–RT5 unchanged.** | —      |

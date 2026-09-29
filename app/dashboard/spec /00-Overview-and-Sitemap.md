@@ -5,6 +5,61 @@ This document is the authoritative user-experience blueprint for the Abugida Aca
 **Scope:** The admin-facing workspace — authentication, dashboard, courses, content library, students, analytics, marketing, and settings.
 **Convention:** Screens carry stable IDs (`S-x.y`) that are referenced throughout the document; every screen ID in the sitemap links to the module file that holds its full definition.
 
+---
+
+## How to Read This Specification
+
+### Precedence
+
+1. **[Part 11](11-Global-Standards.md)** owns every cross-cutting rule: design tokens, roles, accessibility, formatting, notification delivery, resilience states, and the save-state contract. A screen that contradicts Part 11 is wrong.
+2. **[Part 13](13-Identity-and-Workspaces.md)** owns identity: the workspace model, the two role systems, role capabilities, and what is configurable where. A screen that names a role or a limit defers to Part 13.
+3. **[Part 09](09-Shared-Components.md)** owns shared component behavior. Part 11's component list is an **index**, not a second source of truth.
+4. **[`DESIGN.md`](../DESIGN.md)** owns visual and interaction rules and its §15 conflict register. **Where this specification and a resolved `DESIGN.md` §15 item disagree, the §15 item wins.** Unresolved §15 items are open questions, not decisions.
+5. **The owning module file** owns everything else about its screens.
+
+### The Screen Template
+
+Every screen is defined with these fields. A screen missing a required field is not finished.
+
+| Field                                 | Required | Purpose                                                      |
+| ------------------------------------- | -------- | ------------------------------------------------------------ |
+| `##### Screen Name: S-x.y`            | ✔        | Stable ID plus a status marker                               |
+| `- **Purpose:**`                      | ✔        | What the screen is for, in one line                          |
+| `- **User Role(s):**`                 | ✔        | Referencing the Part 11 role matrix — never a free-text list |
+| `- **Wireframe Layout:**`             | ✔        | Text wireframe                                               |
+| `- **Primary Actions:**`              | ✔        | Numbered, verb-first                                         |
+| `- **Data Displayed/Modified:**`      | ✔        | Schema names that resolve to `packages/database`             |
+| `- **Validation & Feedback:**`        | —        | Required wherever the screen accepts input                   |
+| `- **States:**`                       | ✔        | Including loading, empty, zero-result, and error             |
+| `- **Resilience:**`                   | ✔        | 403, 404, offline, session expiry, conflict — per Part 11    |
+| `- **Keyboard & Focus:**`             | —        | Required wherever the screen is interactive                  |
+| `- **Navigation:**`                   | ✔        | Every outbound link, as a screen ID                          |
+| `- **Instrumentation & acceptance:**` | —        | Events, binary criteria, budgets — per Part 11               |
+
+### Glossary
+
+Terms that were used inconsistently across Revisions 1 and 2, fixed here once.
+
+| Term                  | Means                                                                                       | Never means                                           |
+| --------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| **Section**           | A display label for a `modules` row. The two-level curriculum container.                    | A new tree node, or a scheduling term                 |
+| **Item**              | A display label for a `lessons` row. The leaf of the curriculum.                            | An activity, or a chapter                             |
+| **Item kind**         | `lesson`, `quiz`, or `assignment`.                                                          | A content type (`markdown`, `video`, `pdf`)           |
+| **Course lifecycle**  | `Draft → In Review → Approved → Published → Archived`, plus `Unlisted`.                     | Item review state                                     |
+| **Item review state** | The approval status of one item: Draft, In Review, Changes Requested, Approved.             | The course's lifecycle                                |
+| **Visibility**        | Per-item `draft` / `published` / `scheduled` — whether a student can see it.                | A review state                                        |
+| **Unlisted**          | A course unpublished for new enrolment that keeps access for the students already enrolled. | An archived course, or a `draft` with an empty roster |
+| **Section published** | A section containing at least one item whose `visibility` is `published`.                   | A lifecycle status of the section itself              |
+| **Archive**           | A reversible hide. Reversible until purge.                                                  | Delete                                                |
+| **Delete**            | Soft-delete with a retention window. Irreversible after it.                                 | Archive                                               |
+| **Unpublish**         | Removes student access. Distinct from both of the above.                                    | Archive or delete                                     |
+| **Prose**             | Body text with markdown syntax stripped, excluding headings, tables, and embeds.            | Raw characters, or byte length                        |
+| **Published set**     | Items whose `visibility` is `published`, which RC-3 and RC-4 evaluate.                      | Everything in the course, or only `lesson` kinds      |
+| **Fix**               | A deep link to the exact field, on the exact tab, **with focus moved to it.**               | A link to the containing screen                       |
+| **Blocker**           | A readiness check that prevents publish.                                                    | An advisory                                           |
+
+**Identity terms are defined in [Part 13](13-Identity-and-Workspaces.md)**, the authority for workspaces and roles: **Workspace** (one `organization` row), **Member role** (`member.role`, workspace-wide), **Course role** (`roles` + `course_roles`, per course), **Effective role** (the union, capped by the member role), and **Active workspace** (the `organizationId` in the session).
+
 **Revision 2 — Course Workspace redesign.** This revision reorganises the entire course experience around a persistent **Course Workspace** with a curriculum-first authoring workflow (ClassroomIO-inspired information architecture, Abugida-native UX). It supersedes the previous "Course Detail + 4-step wizard" model. The authoritative list of every changed, retired, and newly proposed requirement is the [Change Register](#revision-2--course-workspace-redesign-change-register) at the end of this file. Screen IDs from Revision 1 are preserved wherever a screen survives; retired IDs are never reused.
 
 ---
@@ -29,6 +84,7 @@ Every screen heading in this specification carries a status marker so that reade
 | **0. Authentication & Onboarding** | Login                                 | [S-0.1](01-Authentication-and-Onboarding.md#scr-0-1) | _(retained)_ |
 |                                    | Organization Sign-Up & Onboarding     | [S-0.2](01-Authentication-and-Onboarding.md#scr-0-2) | _(retained)_ |
 |                                    | Multi-Factor Authentication Challenge | [S-0.3](01-Authentication-and-Onboarding.md#scr-0-3) | _(retained)_ |
+|                                    | Multi-Factor Enrollment               | [S-0.4](01-Authentication-and-Onboarding.md#scr-0-4) | 🆕 NEW       |
 | **A. Global Navigation**           | Main App Shell (Sidebar + Header)     | [S-A.1](02-Global-Navigation.md#scr-a-1)             | 🔄 CHANGED   |
 | **1. Dashboard**                   | Analytics Overview                    | [S-1.1](03-Dashboard.md#scr-1-1)                     | 🔄 CHANGED   |
 |                                    | Revenue Analytics                     | [S-1.2](03-Dashboard.md#scr-1-2)                     | _(retained)_ |
@@ -74,19 +130,23 @@ Every screen heading in this specification carries a status marker so that reade
 |                                    | Export Reports                        | [S-5.4](07-Analytics.md#scr-5-4)                     | _(retained)_ |
 |                                    | Cohort Comparison Report              | [S-5.5](07-Analytics.md#scr-5-5)                     | _(retained)_ |
 | **6. Settings**                    | General Settings                      | [S-6.1](08-Settings.md#scr-6-1)                      | 🔄 CHANGED   |
-|                                    | Team Management                       | [S-6.2](08-Settings.md#scr-6-2)                      | _(retained)_ |
-|                                    | Integrations                          | [S-6.3](08-Settings.md#scr-6-3)                      | _(retained)_ |
-|                                    | Branding                              | [S-6.4](08-Settings.md#scr-6-4)                      | _(retained)_ |
-|                                    | My Profile & Account                  | [S-6.5](08-Settings.md#scr-6-5)                      | _(retained)_ |
-|                                    | Billing & Subscription                | [S-6.6](08-Settings.md#scr-6-6)                      | _(retained)_ |
-|                                    | API & Webhooks                        | [S-6.7](08-Settings.md#scr-6-7)                      | _(retained)_ |
-|                                    | Security & Audit Log                  | [S-6.8](08-Settings.md#scr-6-8)                      | _(retained)_ |
+|                                    | Team Management                       | [S-6.2](08-Settings.md#scr-6-2)                      | 🔄 CHANGED   |
 |                                    | Roles & Permissions                   | [S-6.9](08-Settings.md#scr-6-9)                      | 🔄 CHANGED   |
-|                                    | Privacy & Data Retention              | [S-6.10](08-Settings.md#scr-6-10)                    | _(retained)_ |
-| **7. Shared Components**           | Confirmation Dialog                   | [S-7.1](09-Shared-Components.md#scr-7-1)             | _(retained)_ |
-|                                    | Toast Notifications                   | [S-7.2](09-Shared-Components.md#scr-7-2)             | _(retained)_ |
-|                                    | Empty State Component                 | [S-7.3](09-Shared-Components.md#scr-7-3)             | _(retained)_ |
-|                                    | Help & Support Panel                  | [S-7.4](09-Shared-Components.md#scr-7-4)             | _(retained)_ |
+|                                    | Integrations                          | [S-6.3](08-Settings.md#scr-6-3)                      | _(retained)_ |
+|                                    | Branding                              | [S-6.4](08-Settings.md#scr-6-4)                      | 🔄 CHANGED   |
+|                                    | Billing & Subscription                | [S-6.6](08-Settings.md#scr-6-6)                      | 🔄 CHANGED   |
+|                                    | API & Webhooks                        | [S-6.7](08-Settings.md#scr-6-7)                      | 🔄 CHANGED   |
+|                                    | Security & Audit Log                  | [S-6.8](08-Settings.md#scr-6-8)                      | 🔄 CHANGED   |
+|                                    | My Profile & Account                  | [S-6.5](08-Settings.md#scr-6-5)                      | 🔄 CHANGED   |
+|                                    | Privacy & Data Retention              | [S-6.10](08-Settings.md#scr-6-10)                    | 🔄 CHANGED   |
+|                                    | **Danger Zone**                       | [S-6.11](08-Settings.md#scr-6-11)                    | 🆕 NEW       |
+| **6. Settings (cont.)**            | Workspace Configuration               | [S-13.1](13-Identity-and-Workspaces.md#scr-13-1)     | 🆕 NEW       |
+|                                    | Workspace Switcher                    | [S-13.2](13-Identity-and-Workspaces.md#scr-13-2)     | 🆕 NEW       |
+|                                    | Role Assignment                       | [S-13.3](13-Identity-and-Workspaces.md#scr-13-3)     | 🆕 NEW       |
+| **7. Shared Components**           | Confirmation Dialog                   | [S-7.1](09-Shared-Components.md#scr-7-1)             | 🔄 CHANGED   |
+|                                    | Toast Notifications                   | [S-7.2](09-Shared-Components.md#scr-7-2)             | 🔄 CHANGED   |
+|                                    | Empty State Component                 | [S-7.3](09-Shared-Components.md#scr-7-3)             | 🔄 CHANGED   |
+|                                    | Help & Support Panel                  | [S-7.4](09-Shared-Components.md#scr-7-4)             | 🔄 CHANGED   |
 |                                    | Command Palette                       | [S-7.5](09-Shared-Components.md#scr-7-5)             | 🔄 CHANGED   |
 |                                    | Onboarding Tour                       | [S-7.6](09-Shared-Components.md#scr-7-6)             | 🔄 CHANGED   |
 |                                    | Duplicate Item Modal                  | [S-7.7](09-Shared-Components.md#scr-7-7)             | 🔄 CHANGED   |
@@ -94,6 +154,7 @@ Every screen heading in this specification carries a status marker so that reade
 |                                    | **Curriculum Tree**                   | [S-7.9](09-Shared-Components.md#scr-7-9)             | 🆕 NEW       |
 |                                    | **Curriculum Item Actions Menu**      | [S-7.10](09-Shared-Components.md#scr-7-10)           | 🆕 NEW       |
 |                                    | **Publish Readiness Checklist**       | [S-7.11](09-Shared-Components.md#scr-7-11)           | 🆕 NEW       |
+|                                    | **Form & Data Primitives**            | [S-7.12](09-Shared-Components.md#scr-7-12)           | 🆕 NEW       |
 | **8. Marketing & Growth**          | Email Campaigns                       | [S-8.1](10-Marketing-and-Growth.md#scr-8-1)          | _(retained)_ |
 |                                    | Email Template Editor                 | [S-8.2](10-Marketing-and-Growth.md#scr-8-2)          | _(retained)_ |
 |                                    | Discount & Coupon Codes               | [S-8.3](10-Marketing-and-Growth.md#scr-8-3)          | _(retained)_ |
@@ -116,23 +177,116 @@ These IDs are permanently retired. They are never reused for a different screen.
 
 The specification is split into one file per module, exactly as listed in the sitemap table above. Screen-ID links (e.g. `[S-2.17]`) jump straight to the definition inside the owning file.
 
-| Part | File                                                                         | Module (per sitemap table)                                                                                  | Screens         |
-| ---- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------- |
-| 00   | `00-Overview-and-Sitemap.md`                                                 | Introduction, scope & sitemap, **Revision 2 change register**                                               | — (this file)   |
-| 01   | [01-Authentication-and-Onboarding.md](01-Authentication-and-Onboarding.md)   | 0. Authentication & Onboarding                                                                              | S-0.1 – S-0.3   |
-| 02   | [02-Global-Navigation.md](02-Global-Navigation.md)                           | A. Global Navigation                                                                                        | S-A.1           |
-| 03   | [03-Dashboard.md](03-Dashboard.md)                                           | 1. Dashboard                                                                                                | S-1.1 – S-1.4   |
-| 04   | [04-Courses.md](04-Courses.md)                                               | 2. Courses — **Course Workspace & authoring**                                                               | S-2.1 – S-2.23  |
-| 05   | [05-Content-Library.md](05-Content-Library.md)                               | 3. Content Library                                                                                          | S-3.1 – S-3.6   |
-| 06   | [06-Students.md](06-Students.md)                                             | 4. Students                                                                                                 | S-4.1 – S-4.8   |
-| 07   | [07-Analytics.md](07-Analytics.md)                                           | 5. Analytics                                                                                                | S-5.1 – S-5.5   |
-| 08   | [08-Settings.md](08-Settings.md)                                             | 6. Settings                                                                                                 | S-6.1 – S-6.10  |
-| 09   | [09-Shared-Components.md](09-Shared-Components.md)                           | 7. Shared Components                                                                                        | S-7.1 – S-7.11  |
-| 10   | [10-Marketing-and-Growth.md](10-Marketing-and-Growth.md)                     | 8. Marketing & Growth                                                                                       | S-8.1 – S-8.5   |
-| 11   | [11-Global-Standards.md](11-Global-Standards.md)                             | Cross-cutting UX, roles & permissions, design system, responsive, accessibility, navigation flow            | —               |
-| 12   | [12-Course-Editor-Markdown-Lessons.md](12-Course-Editor-Markdown-Lessons.md) | **Companion doc.** Course Editor — Markdown lesson authoring with Tiptap: content model, storage, migration | S-2.7 (extends) |
+| Part | File                                                                         | Module (per sitemap table)                                                                                                                                | Screens         |
+| ---- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| 00   | `00-Overview-and-Sitemap.md`                                                 | Introduction, scope & sitemap, **Revision 2 change register**                                                                                             | — (this file)   |
+| 01   | [01-Authentication-and-Onboarding.md](01-Authentication-and-Onboarding.md)   | 0. Authentication & Onboarding                                                                                                                            | S-0.1 – S-0.3   |
+| 02   | [02-Global-Navigation.md](02-Global-Navigation.md)                           | A. Global Navigation                                                                                                                                      | S-A.1           |
+| 03   | [03-Dashboard.md](03-Dashboard.md)                                           | 1. Dashboard                                                                                                                                              | S-1.1 – S-1.4   |
+| 04   | [04-Courses.md](04-Courses.md)                                               | 2. Courses — **Course Workspace & authoring**                                                                                                             | S-2.1 – S-2.23  |
+| 05   | [05-Content-Library.md](05-Content-Library.md)                               | 3. Content Library                                                                                                                                        | S-3.1 – S-3.6   |
+| 06   | [06-Students.md](06-Students.md)                                             | 4. Students                                                                                                                                               | S-4.1 – S-4.8   |
+| 07   | [07-Analytics.md](07-Analytics.md)                                           | 5. Analytics                                                                                                                                              | S-5.1 – S-5.5   |
+| 08   | [08-Settings.md](08-Settings.md)                                             | 6. Settings                                                                                                                                               | S-6.1 – S-6.10  |
+| 09   | [09-Shared-Components.md](09-Shared-Components.md)                           | 7. Shared Components                                                                                                                                      | S-7.1 – S-7.11  |
+| 10   | [10-Marketing-and-Growth.md](10-Marketing-and-Growth.md)                     | 8. Marketing & Growth                                                                                                                                     | S-8.1 – S-8.5   |
+| 11   | [11-Global-Standards.md](11-Global-Standards.md)                             | Cross-cutting UX, roles & permissions, design system, responsive, accessibility, navigation flow                                                          | —               |
+| 12   | [12-Course-Editor-Markdown-Lessons.md](12-Course-Editor-Markdown-Lessons.md) | **Companion doc.** Course Editor — Markdown lesson authoring with Tiptap: content model, storage, migration                                               | S-2.7 (extends) |
+| 13   | [13-Identity-and-Workspaces.md](13-Identity-and-Workspaces.md)               | **Identity authority** — Better Auth `organization()` and `twoFactor()`: workspace model, the two role systems, configuration, active-workspace switching | S-13.1 – S-13.3 |
 
-> **Note on Part 12:** it is a _companion_ engineering specification rather than a twelfth UX module, and it does not renumber Parts 01–11. It extends [S-2.7](04-Courses.md#scr-2-7), which remains the authoritative definition of the Lesson Editor's layout, states, and navigation. Revision 2 adds a workspace-integration section to it ([Part 12 § 16](12-Course-Editor-Markdown-Lessons.md#16-revision-2--workspace-integration)) that covers the curriculum-pane host, per-item save state, and preview reuse. The content model, storage contract, and round-trip invariants are **unchanged** by Revision 2.
+> **Note on Part 12:** it is a _companion_ engineering specification rather than a twelfth UX module, and it does not renumber Parts 01–11. It extends [S-2.7](04-Courses.md#scr-2-7), which remains the authoritative definition of the Lesson Editor's layout, states, and navigation. Revision 2 adds a workspace-integration section to it ([Part 12 § 16](12-Course-Editor-Markdown-Lessons.md#16-revision-2--workspace-integration)) that covers the curriculum-pane host, per-item save state, and preview reuse. Revision 3 hardens the authoring interaction — the draft mirror, split-mode sync, offline autosave, conflict resolution, media, and AI — while declaring the content model, storage contract, and round-trip invariants **unchanged**.
+
+---
+
+## Cross-Screen Contract
+
+Rules that hold across every module. A screen that needs to deviate states the deviation explicitly.
+
+### Routing & deep links
+
+| Surface              | Contract                                                                                                                                                                                                   |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **URL is state**     | Every list filter, sort, tab, and selection that changes what is on screen is reflected in the URL, so a link reproduces the view.                                                                         |
+| **Workspace route**  | `/_app/courses/$courseId?tab=overview\|curriculum\|students\|analytics\|settings&item=<publicId>&atab=<analytics sub-tab>`. `tab` defaults to `overview`; `item` and `atab` are ignored outside their tab. |
+| **Focus on arrival** | A deep link moves focus to its target control and announces the destination in a polite live region. A `Fix` link focuses the **offending field**, not the screen containing it.                           |
+| **Back behaviour**   | Browser Back returns to the previous view with scroll position and selection preserved. It never silently discards a dirty buffer.                                                                         |
+| **Stale links**      | A retired or deleted target renders the 404 state with a request ID and a route back to the module — never a blank screen.                                                                                 |
+| **Reachability**     | Every screen is reachable in **≤ 2 navigations** from [S-2.1](04-Courses.md#scr-2-1), and authoring any curriculum item never requires leaving the workspace.                                              |
+
+### Naming, copying, and time
+
+- Screen and field names are **externalized strings**. There is no hardcoded UI copy anywhere.
+- Dates, times, money, names, and search all follow [Part 11 § Localization & Formatting](11-Global-Standards.md#localization--formatting). **No per-screen format exceptions exist.**
+- Every outbound message follows [Part 11 § Notification Delivery](11-Global-Standards.md#notification-delivery). No surface assumes an email address exists.
+
+### Feeds, toasts, and destructive actions
+
+- The in-app feed is the **system of record for notification**; a toast is transient feedback, never the only place an outcome is reported.
+- Errors state **what happened and what to do**, in the product's voice, and offer Retry plus a request ID.
+- A destructive action always offers its reversible counterpart first, per [Part 11](11-Global-Standards.md#global-validation-and-feedback-patterns).
+
+---
+
+## Revision 3 — Specification Hardening (Change Register)
+
+Revision 3 changes **no information architecture, no screen IDs, and no workflows.** It closes the gaps that left parts of this specification unbuildable. The authoritative cross-cutting rules are in [Part 11](11-Global-Standards.md); this register only records where they landed.
+
+### 3.1 Cross-cutting rules added to Part 11
+
+| Rule                                   | What it replaces                                                                                                                                                                                                                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Fill / text / tint status tokens**   | Single hues used as text. Measured: `--color-success` was 2.28:1, `--color-warning` 2.80:1, `--color-archived` 2.56:1, `--color-badge-gold` 2.15:1 — four tokens below the 3:1 UI floor and all ten below 4.5:1. Every `-text` token is now measured and asserted. |
+| **`--color-primary` → `#7c3aed`**      | `#8b5cf6`, where white text measured 4.23:1. Retained as `--color-brand-mark` for the focus ring, large UI, and chart marks.                                                                                                                                       |
+| **Script-aware typography**            | A single `Inter` stack and a fixed 1.5 line height. Now `Inter, "Noto Sans Ethiopic", system-ui`, `line-height: 1.6` for `am`/`ti`/`gez`, `letter-spacing: normal`, and **no fixed-px line clamps anywhere**.                                                      |
+| **Localization & Formatting**          | New normative section. Per-block `lang`, `dir="auto"` for mixed runs, `Intl.NumberFormat` with the currency code always visible, one time format, Ethiopian-calendar toggle, Ge'ez 2-syllable n-gram search, script-aware read time.                               |
+| **Notification Delivery**              | The implicit assumption that an email address exists. In-app always, Telegram default, email optional and disabled-with-reason, plus a delivery-failure copy on every outbound surface.                                                                            |
+| **Resilience States**                  | 403 / 404 / offline / reconnected / session-expiry / conflict / partial-failure / server-error were absent from **73 of 73 screens**. Now a required `- **Resilience:**` block.                                                                                    |
+| **Success Criteria & Instrumentation** | No screen had acceptance criteria, events, or budgets. Now a required optional block, with a cross-cutting performance budget table.                                                                                                                               |
+| **Three-case permission rule**         | Two contradictory rules. Now: out-of-capability → absent · state-blocked → disabled with a reason in a tooltip and `aria-describedby` · surface-locked → replaced with an explanation.                                                                             |
+| **Full Support grant**                 | Support's access was ambiguous on three matrix rows, which is why S-1.1 and S-2.18 contradicted it. Now an explicit grant, plus `finance.view_revenue` **redacted server-side**.                                                                                   |
+
+### 3.2 Per-module changes
+
+| Part | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 00   | This file: precedence rules, the screen template, the glossary, and the cross-screen contract.                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 01   | MFA **enrollment** as its own flow (QR _or_ manual key, verified before the toggle flips, 10 backup codes); admin-lockout recovery; provider-identity errors replace email-mismatch errors.                                                                                                                                                                                                                                                                                                        |
+| 02   | Role list reconciled with the Part 11 matrix; sidebar accessibility contract; conditional **Resume authoring**.                                                                                                                                                                                                                                                                                                                                                                                    |
+| 03   | Revenue **redacted server-side** for Support, Reviewer added; emoji status dots replaced with the status pill; zero-result state; stat-card comparison defined; date range specified.                                                                                                                                                                                                                                                                                                              |
+| 04   | Fifth lifecycle state (**Approved**); item **visibility**; RC-4 split per item kind; the unpublish/roster contradiction; bulk-publish runs readiness; three role contradictions; save semantics table; IndexedDB draft mirror; three-way conflict resolution; **version history**; recently-deleted view; content language and translations; metric definitions and `?atab=`; live-session states; AI/template pre-create step; field lock table; Ethiopic text expansion; tree bulk-select rules. |
+| 05   | **Resumable upload** (progress, cancel, retry, resume, per-file reasons); delete **usage-impact preview**; folder depth and keyboard move; preview-modal accessibility.                                                                                                                                                                                                                                                                                                                            |
+| 06   | Student identity is **Telegram-capable** — a handle column replaces the email column, and Add Student issues a claimable link or code. Messaging gains a channel decision.                                                                                                                                                                                                                                                                                                                         |
+| 07   | **Metric dictionary** — numerator, denominator, window, timezone, inclusion rule for every metric. Insights display `n`. Export is asynchronous and redacts revenue for Support.                                                                                                                                                                                                                                                                                                                   |
+| 08   | Settings IA is a **left sub-nav** (was stated three ways). New **S-6.11 Danger Zone**. GDPR export is in-app behind re-auth, not emailed. Invites are claimable links/codes. Custom CSS is token-only. Full MFA enrollment, admin-lockout prevention, session management, one capability vocabulary, ETB/Telebirr billing, scoped and rotatable API keys.                                                                                                                                          |
+| 09   | New **S-7.12 Form & Data Primitives** — the cross-cutting controls Parts 05, 06, 08, and 10 were rendering without a spec, including the Forbidden and Offline surfaces. S-7.1 gains a props contract and the **Unsaved Changes** variant. S-7.2 uses the tint triples. S-7.9's multi-select is defined. ARIA, responsive, and shortcut tables added.                                                                                                                                              |
+| 10   | The module stops assuming email: **Telegram campaign delivery**, a scoped verified-email audience where appropriate, and a send-failure path. Coupons gain currency and stacking rules.                                                                                                                                                                                                                                                                                                            |
+| 11   | The four cross-cutting sections above. Typography script-aware; the "dark mode" claim corrected; the legacy two-level list entry deleted.                                                                                                                                                                                                                                                                                                                                                          |
+| 12   | IndexedDB draft mirror and `beforeunload` guard; split-mode sync conflict table; the offline autosave matrix; three-way conflict resolution; media with **required alt text**; paste sanitization; find/replace and read time; preview parity table; link/image-404 audit; revision history; the AI draft block contract; heading-level rules; per-block `lang`; corrected live regions; budgets, criteria, and events.                                                                            |
+| 13   | **New part — the identity authority.** Defines organization = workspace; reconciles the **two** role systems (`member.role` workspace-wide vs `course_roles` per course) and the effective-role union; adds the **active-workspace switcher**, **workspace configuration**, and **role assignment** surfaces; and records four blocking implementation gaps against the configured Better Auth `organization()` plugin.                                                                            |
+
+### 3.3 Corrections to prior revisions
+
+These were wrong as written and are now fixed at the source:
+
+| Prior claim                                                                                   | Correction                                                                     |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `Published` pill is purple (03 wireframes)                                                    | Published is **green**; purple is reserved for interaction and brand.          |
+| S-1.1 shows revenue to Support while the matrix denies it                                     | Revenue is **redacted server-side**; the card renders an explanation.          |
+| S-1.1 omits Reviewer; S-A.1 says "single role"                                                | Both reconciled with the Part 11 matrix; roles are per-workspace.              |
+| Lifecycle is four states while the stepper has five                                           | **Five**, plus `Unlisted` for unpublish.                                       |
+| Unpublish defaults to keeping students enrolled, but the roster is then "empty by definition" | Unlisted courses keep access for enrolled learners; new enrolment is disabled. |
+| "Reload" is the only conflict resolution                                                      | **Keep mine / Take theirs / Compare.** Reload is never the only option.        |
+| Inline `Save` buttons coexist with a 60 s autosave                                            | Explicit save is **`Flush now`**, disabled when the buffer is clean.           |
+| S-2.6's own authoring controls are hidden rather than disabled                                | Hidden only when out of capability; disabled-with-reason otherwise.            |
+| Settings is a 4-tab strip, a set of flat routes, and a left sub-nav                           | **Left sub-nav**, one route, deep-linkable sections.                           |
+| Invite mismatch, data export, receipts, and campaigns assume an email address                 | Every one of them ships a Telegram-safe path.                                  |
+
+### 3.4 Explicit non-goals of Revision 3
+
+- **No IA change.** The Course Workspace, its five tabs, and every screen ID stand.
+- **No workflow change.** Nothing in the lifecycle, review, or publish flow moved.
+- **No visual redesign.** Only token values changed, and only to make them legible.
+- **No new module.** S-6.11 and S-7.12 fill gaps inside existing modules.
 
 ---
 

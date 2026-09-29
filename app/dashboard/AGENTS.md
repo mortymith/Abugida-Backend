@@ -4,14 +4,20 @@ TanStack Start admin/instructor app for the Abugida platform (port 3000). Repo-w
 
 ## Sources of truth
 
-| File                                  | Owns                                                                                                             | Read when                               |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `DESIGN.md`                           | Design system of record: tokens, layout, components, roles, a11y, i18n, resilience, spec-conflict register (§15) | Any UI, layout, copy, or state decision |
-| `theme.css`                           | Tailwind v4 implementation of those tokens — **not wired in yet, see below**                                     | Picking a token value                   |
-| `spec /` (trailing space in the name) | Product specs `00`–`12`. Owns **screen behaviour**                                                               | Building or changing a screen           |
-| `.env.example`                        | Env var contract                                                                                                 | Adding a config value                   |
+| File                                  | Owns                                                                                                                                                                                                          | Read when                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `DESIGN.md`                           | Design system of record: tokens, layout, components, roles, a11y, i18n, resilience, spec-conflict register (§15)                                                                                              | Any UI, layout, copy, or state decision     |
+| `theme.css`                           | Tailwind v4 implementation of those tokens — **not wired in yet, see below**                                                                                                                                  | Picking a token value                       |
+| `spec /` (trailing space in the name) | Product specs `00`–`13`. Owns **screen behaviour**. Read `00` § _How to Read This Specification_ first — it holds the precedence rules, the screen template, the glossary, and the Revision 3 change register | Building or changing a screen               |
+| `spec /13-Identity-and-Workspaces.md` | **Identity authority** — workspace model, the two role systems, effective role, what is configurable where. Read before writing any role or permission check                                                  | Touching roles, workspaces, invites, or MFA |
+| `spec /archive/`                      | Superseded snapshots (Rev 1 HTML export). Never a source of truth                                                                                                                                             | Checking what changed across revisions      |
+| `.env.example`                        | Env var contract                                                                                                                                                                                              | Adding a config value                       |
 
-`DESIGN.md` owns visual/interaction rules, `spec /` owns screen behaviour. When they disagree, `DESIGN.md` §15 records the resolution — follow it, don't pick a side and don't edit the spec to match code.
+`DESIGN.md` owns visual/interaction rules, `spec /` owns screen behaviour. When they disagree, `DESIGN.md` §15 records the resolution — follow it, don't pick a side and don't edit the spec to match code. All 20 rows in that register are **Resolved**; rows 21–22 cover the identity model. If you find a new disagreement, add a row rather than silently resolving it in one file.
+
+**The UI ships English and Amharic** (`en-US`, `am-ET`, both LTR). Two independent settings: a per-user choice in [S-6.5](08-Settings.md#scr-6-5) and a workspace default in [S-6.1](08-Settings.md#scr-6-1). A user's explicit choice survives a later change to the workspace default — the default only reaches users who have not chosen. Resolution order, missing-string fallback, and the build gate are in `spec /11` § _UI Language Resolution_. Course **content** language is a separate setting (`courses.content_language`, `en`/`am`/`ti`/`gez`); the two never infer each other.
+
+**Screens follow a required field set** (Purpose, User Roles, Wireframe, Primary Actions, Data, States, **Resilience**, Navigation). `- **Resilience:**` is mandatory on all 76 screens and covers 403, 404, offline, session expiry, and conflict — a screen without it is unfinished. Which of loading/empty/error apply to a given surface type is tabulated in `spec /11-Global-Standards.md` § _Resilience States_; a toast legitimately has no empty state.
 
 ## Layout
 
@@ -95,6 +101,10 @@ Never create a second instance of anything in this table:
 Shared packages: import from `@abugida/{auth,database,queue,storage,observability}`. Subpaths in use are `@abugida/auth/tanstack/{client,guard,server}`, `@abugida/database/{client,auth,catalog,finance,learning,marketing,ops}`, and `@abugida/queue/tanstack`. Never reimplement their logic locally.
 
 Auth is Google + Telegram only, via the `twoFactor` and `organization` plugins. Never add password, email, or password-reset UI. Any flow that assumes an email address (invites, receipts, notifications) needs a Telegram-safe path — a claimable link or code.
+
+**Roles are enforced by capability, not by the role string.** There are two independent systems: `member.role` (workspace-wide, one text value) and `course_roles` (per course, grantable and revocable). The **effective role** is the union of both, **capped by** the member role — a course role never grants what the member role denies. Because `member.role` is a bare text column, **Reviewer and Support are not member roles**; they are capability-shaped and come from course roles or member flags. `spec /13-Identity-and-Workspaces.md` § _The Two Role Systems_ is the authority, and `Part 11` § _Course Lifecycle Capabilities_ is the enforcement table. Permission checks stay server-side; the UI role badge is context, never a gate.
+
+**Four gaps block parts of the spec** and are recorded in `spec /13` § _Implementation Gaps_. The critical one: **`invitation.email` is `notNull()`**, so the claimable-link invite the Telegram-safe delivery rule requires cannot be stored — make it nullable and add `handle` + `token` before building any invite flow in Parts 01, 06, 08, 10, or 13. The auth client also lacks `organizationClient()`, so workspace switching cannot be built until it is added.
 
 ## Server / client boundary
 
