@@ -179,6 +179,18 @@ export async function decideReviewImpl(input: ReviewDecisionInput): Promise<{ ok
   if (!request) throw new Error('REVIEW_NOT_FOUND')
   if (request.state !== 'pending') throw new Error('REVIEW_ALREADY_DECIDED')
 
+  /**
+   * Revision 2 widened `review_requests` to serve BOTH whole courses and
+   * individual curriculum items (spec 00 §2.6). `lessonId` is now nullable and
+   * `entityType` discriminates the two: a `course` request has no lesson. This
+   * path decides a curriculum item's review, so it must reject a course-level
+   * request outright — `eq(lessons.id, null)` never matches and would otherwise
+   * surface as a misleading LESSON_NOT_FOUND.
+   */
+  if (request.entityType !== 'item' || request.lessonId === null) {
+    throw new Error('REVIEW_NOT_A_CURRICULUM_ITEM')
+  }
+
   const lessonRows = await db
     .select()
     .from(lessons)

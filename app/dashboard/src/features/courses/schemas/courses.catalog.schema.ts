@@ -1,7 +1,12 @@
 import { z } from 'zod'
+import { COURSE_LIFECYCLE_STATES } from '../courses.workspace'
 
-/** S-2.1 filter pills: status pills + course-type pills, plus search/sort. */
-export const catalogStatusSchema = z.enum(['all', 'draft', 'published', 'archived'])
+/**
+ * S-2.1 filter pills: status pills + course-type pills, plus search/sort.
+ * Derived from the Revision 2 lifecycle so `In Review` is a filter and adding a
+ * lifecycle state cannot silently fall out of the catalog (spec 00 §2.4).
+ */
+export const catalogStatusSchema = z.enum(['all', ...COURSE_LIFECYCLE_STATES])
 export type CatalogStatus = z.infer<typeof catalogStatusSchema>
 
 export const catalogTypeSchema = z.enum(['all', 'self_paced', 'instructor_led', 'hybrid'])

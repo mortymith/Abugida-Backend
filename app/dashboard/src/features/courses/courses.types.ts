@@ -1,5 +1,11 @@
 import type { QuestionType } from './schemas/courses.learning.schema'
 import type { ReviewState } from './schemas/courses.workflow.schema'
+/**
+ * Course status is the 4-state Revision 2 lifecycle (spec 00 §2.6), owned by
+ * `courses.workspace.ts` so there is one definition. It must stay assignable
+ * from `courseStatusEnum` in @abugida/database, which gained `in_review`.
+ */
+import type { CourseLifecycleState } from './courses.workspace'
 
 /** Shared DTOs between server functions and UI components (spec 04). */
 
@@ -8,7 +14,7 @@ export interface CourseCatalogItem {
   title: string
   description: string | null
   thumbnailObjectKey: string | null
-  status: 'draft' | 'published' | 'archived'
+  status: CourseLifecycleState
   courseType: 'self_paced' | 'instructor_led' | 'hybrid'
   level: 'beginner' | 'intermediate' | 'advanced' | null
   isFree: boolean
@@ -81,7 +87,7 @@ export interface CourseDetailsDTO {
   courseType: 'self_paced' | 'instructor_led' | 'hybrid'
   level: 'beginner' | 'intermediate' | 'advanced' | null
   thumbnailObjectKey: string | null
-  status: 'draft' | 'published' | 'archived'
+  status: CourseLifecycleState
   slug: string
   requiresApproval: boolean
   scheduledPublishAt: string | null
