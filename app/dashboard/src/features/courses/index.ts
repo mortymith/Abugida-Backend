@@ -21,6 +21,49 @@ export {
   summarizeMarkdown,
 } from './courses.markdown'
 export { convertLegacyHtmlToMarkdown } from './courses.legacy-html'
+export {
+  CURRICULUM_ITEM_CONTENT_TYPES,
+  CURRICULUM_ITEM_KIND_LABELS,
+  CURRICULUM_ITEM_KIND_SCREENS,
+  CURRICULUM_ITEM_KINDS,
+  CURRICULUM_TAB,
+  COURSE_LIFECYCLE_LABELS,
+  COURSE_LIFECYCLE_ORDER,
+  COURSE_LIFECYCLE_STATES,
+  COURSE_LIFECYCLE_TRANSITIONS,
+  DEFAULT_WORKSPACE_TAB,
+  SAVE_STATE_EXTENSIONS,
+  SAVE_STATE_EXTENSION_LABELS,
+  SAVE_STATE_LABELS,
+  SAVE_STATES,
+  WORKSPACE_TAB_LABELS,
+  WORKSPACE_TABS,
+  buildCourseWorkspaceHref,
+  buildLessonAliasHref,
+  canTransitionCourseLifecycle,
+  deriveCurriculumItemKind,
+  isCourseLifecycleState,
+  isCourseVisibleToStudents,
+  isCourseWorkspaceTab,
+  isCurriculumItemKind,
+  isSaveState,
+  isUnresolvedSaveState,
+  normalizeItemPublicId,
+  parseCourseWorkspaceSearch,
+  saveStateBlocksNavigation,
+  serializeCourseWorkspaceSearch,
+} from './courses.workspace'
+export type {
+  AnySaveState,
+  CourseLifecycleState,
+  CourseWorkspaceSearchInput,
+  CourseWorkspaceSearchParams,
+  CourseWorkspaceTab,
+  CurriculumItemKind,
+  RawCourseWorkspaceSearch,
+  SaveState,
+  SaveStateExtension,
+} from './courses.workspace'
 export { validateLessonMarkdown } from './schemas/courses.markdown.schema'
 export type { AiQuizQuestionDraft } from './courses.types'
 export type { MarkdownIssue, MarkdownSummary } from './courses.markdown'
