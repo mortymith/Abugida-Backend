@@ -64,7 +64,13 @@ export const reviewRequests = pgTable(
       onDelete: 'restrict',
       onUpdate: 'cascade',
     }),
-    entityType: reviewEntityTypePgEnum().notNull().default('item'),
+    /**
+     * Explicit column name: without the `'entity_type'` argument drizzle names
+     * the column after the property (`"entityType"`), which breaks the
+     * snake_case convention used by every sibling column and desynchronises the
+     * schema from the `entity_type` column created by migration 0022.
+     */
+    entityType: reviewEntityTypePgEnum('entity_type').notNull().default('item'),
     requestedBy: text('requested_by')
       .notNull()
       .references(() => users.id, {

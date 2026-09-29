@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "idx_affiliates_email" ON "affiliates" USING btree (lower("email"));

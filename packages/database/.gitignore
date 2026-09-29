@@ -4,8 +4,15 @@ node_modules
 # build output
 dist
 
-# drizzle-kit migration output
-drizzle
+# NOTE: `drizzle/` was previously ignored here, which meant the migration
+# history and drizzle/meta/_journal.json existed only on one developer's
+# machine. Fresh clones could not run `drizzle-kit generate` or `migrate`
+# (no journal), and `migrate` additionally aborted because the journal
+# referenced 0015, whose SQL file was never committed. Migrations and their
+# snapshots are now versioned on purpose: they are the schema's history.
+# Local-only artefacts that may still be ignored in future:
+#   drizzle/meta/          (only if a team decides to regenerate snapshots)
+#   drizzle/*_journal.json (never — this is what `migrate` reads)
 
 # turbo
 .turbo
