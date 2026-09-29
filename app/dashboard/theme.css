@@ -1,9 +1,18 @@
 /* ==========================================================================
    Abugida Academy — theme.css  (Tailwind CSS v4)
-   Generated from DESIGN.md v2. Import once, after Tailwind:
+   Generated from DESIGN.md v2. This is the LIVE design system. It is imported
+   once, by src/styles.css, after Tailwind and after the shadcn token source:
 
-     @import "tailwindcss";
-     @import "./theme.css";
+     @import 'tailwindcss';
+     @import 'shadcn/tailwind.css';
+     @import '../theme.css';   ← this file, last (from src/styles.css)
+
+   ORDER IS LOAD-BEARING. A @import must precede every other rule, so
+   src/styles.css is always emitted *after* this file. With equal specificity
+   the later declaration wins, so this file owns its 18 contested names purely
+   because src/styles.css no longer declares them. Anything added here that
+   src/styles.css also declares will be silently overridden — check
+   src/styles.css's PRECEDENCE comment before renaming a token.
 
    Structure
      1. @theme          → static tokens that generate utilities
