@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import QRCode from 'qrcode'
+import { Link } from '@tanstack/react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowLeft01Icon, Cancel01Icon, Key01Icon } from '@hugeicons/core-free-icons'
 import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
@@ -16,7 +16,6 @@ import {
   DialogTitle,
 } from '#/components/ui/dialog'
 import { Input } from '#/components/ui/input'
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '#/components/ui/input-otp'
 import { Label } from '#/components/ui/label'
 import { Skeleton } from '#/components/ui/skeleton'
 import {
@@ -37,10 +36,8 @@ import {
   useMarkAvatarUploaded,
   useRevokeOtherSessions,
   useRevokeSession,
-  useStartMfaEnrollment,
   useUnlinkAccount,
   useUpdateProfile,
-  useVerifyMfaEnrollment,
 } from '../hooks/settings.mutations'
 import { getAvatarUploadUrl } from '../server/all'
 import { SaveBar } from './settings.setting-controls'
@@ -241,43 +238,16 @@ function SecurityCard() {
   const link = useAccountLinkUrl()
   const revokeSession = useRevokeSession()
   const revokeOthers = useRevokeOtherSessions()
-  const startMfa = useStartMfaEnrollment()
-  const verifyMfa = useVerifyMfaEnrollment()
-  const disableMfa = useDisableMfa()
   const changePassword = useChangePassword()
+  const disableMfa = useDisableMfa()
 
   const [unlinkTarget, setUnlinkTarget] = useState<{
     accountId: string
     providerId: string
   } | null>(null)
   const [sessionToRevoke, setSessionToRevoke] = useState<string | null>(null)
-  const [mfaStep, setMfaStep] = useState<'idle' | 'enroll'>('idle')
-  const [totpUri, setTotpUri] = useState('')
-  const [secret, setSecret] = useState('')
-  const [backupCodes, setBackupCodes] = useState<string[]>([])
-  const [totpCode, setTotpCode] = useState('')
   const [disableOpen, setDisableOpen] = useState(false)
   const [disablePassword, setDisablePassword] = useState('')
-
-  const [qrImg, setQrImg] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!totpUri) {
-      setQrImg(null)
-      return
-    }
-    let cancelled = false
-    QRCode.toDataURL(totpUri, { width: 160, margin: 1 })
-      .then((url) => {
-        if (!cancelled) setQrImg(url)
-      })
-      .catch(() => {
-        if (!cancelled) setQrImg(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [totpUri])
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -294,22 +264,6 @@ function SecurityCard() {
     (account) => account.providerId !== 'credential',
   )
   const lastProvider = !security.hasCredentialAccount && providers.length <= 1
-
-  async function handleStartMfa() {
-    try {
-      const enrollment = await startMfa.mutateAsync(undefined)
-      setTotpUri(enrollment.totpUri)
-      setSecret(enrollment.secret)
-      setBackupCodes(enrollment.backupCodes)
-      setMfaStep('enroll')
-    } catch (cause) {
-      toast.error(
-        cause instanceof Error
-          ? cause.message.replace(/^[A-Z_]+:\s*/, '')
-          : 'Unable to start MFA setup.',
-      )
-    }
-  }
 
   return (
     <Card>
@@ -385,88 +339,30 @@ function SecurityCard() {
           <h3 id="mfa-section" className="text-sm font-semibold">
             Two-Factor Authentication
           </h3>
-          {security.twoFactorEnabled ? (
-            <div className="space-y-2">
-              <Badge className="bg-success/15 text-success">Enabled</Badge>
-              <div>
-                <Button variant="outline" size="sm" onClick={() => setDisableOpen(true)}>
-                  Disable 2FA
+          {/* S-0.4 is a screen of its own. The inline flow this replaced could
+              not show the manual key beside the QR, could not hold the
+              "two-factor is still off" notice, and let a user close the backup
+              codes without ever acknowledging them. */}
+          <div className="flex flex-wrap items-center gap-3">
+            {security.twoFactorEnabled ? (
+              <>
+                <Badge className="bg-success-bg text-success-fg">Enabled</Badge>
+                <Button size="sm" variant="outline" render={<Link to="/settings/mfa" />}>
+                  Manage two-factor
                 </Button>
-              </div>
-            </div>
-          ) : mfaStep === 'enroll' ? (
-            <div className="space-y-4 rounded-md border p-4">
-              <p className="text-sm">
-                Scan this QR code with your authenticator app (Google Authenticator, 1Password,
-                Authy), or enter the key manually.
-              </p>
-              {qrImg ? (
-                <img
-                  src={qrImg}
-                  alt="TOTP QR code"
-                  width={160}
-                  height={160}
-                  className="rounded border bg-white p-1"
-                />
-              ) : (
-                <p className="text-muted-foreground text-xs">
-                  QR unavailable — use the manual key below.
-                </p>
-              )}
-              <div className="space-y-1">
-                <Label htmlFor="totp-secret">Manual key</Label>
-                <Input
-                  id="totp-secret"
-                  readOnly
-                  value={secret}
-                  className="max-w-xs font-mono text-xs"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Enter the 6-digit code to confirm</Label>
-                <InputOTP maxLength={6} value={totpCode} onChange={setTotpCode}>
-                  <InputOTPGroup>
-                    {[0, 1, 2, 3, 4, 5].map((index) => (
-                      <InputOTPSlot key={index} index={index} />
-                    ))}
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
-              {backupCodes.length > 0 ? (
-                <div className="rounded bg-muted p-3 text-xs">
-                  <p className="font-medium">Backup codes (store safely — shown once):</p>
-                  <p className="mt-1 font-mono">{backupCodes.join(' · ')}</p>
-                </div>
-              ) : null}
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  disabled={totpCode.length < 6 || verifyMfa.isPending}
-                  onClick={async () => {
-                    try {
-                      await verifyMfa.mutateAsync({ code: totpCode })
-                      setMfaStep('idle')
-                      setTotpCode('')
-                    } catch {
-                      /* toast handled by mutation */
-                    }
-                  }}
-                >
-                  Verify & Enable
+                <Button size="sm" variant="ghost" onClick={() => setDisableOpen(true)}>
+                  Turn off 2FA
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setMfaStep('idle')}>
-                  Cancel
+              </>
+            ) : (
+              <>
+                <Badge variant="secondary">Not enabled</Badge>
+                <Button size="sm" variant="outline" render={<Link to="/settings/mfa" />}>
+                  Set up two-factor
                 </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary">Not enabled</Badge>
-              <Button size="sm" variant="outline" onClick={() => void handleStartMfa()}>
-                Set Up
-              </Button>
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </section>
 
         <section aria-labelledby="sessions-section" className="space-y-3">

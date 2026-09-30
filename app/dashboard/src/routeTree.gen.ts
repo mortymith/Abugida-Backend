@@ -45,6 +45,7 @@ import { Route as AppSettingsApiRouteImport } from './routes/_app/settings/api'
 import { Route as AppSettingsBillingRouteImport } from './routes/_app/settings/billing'
 import { Route as AppSettingsBrandingRouteImport } from './routes/_app/settings/branding'
 import { Route as AppSettingsIntegrationsRouteImport } from './routes/_app/settings/integrations'
+import { Route as AppSettingsMfaRouteImport } from './routes/_app/settings/mfa'
 import { Route as AppSettingsPrivacyRouteImport } from './routes/_app/settings/privacy'
 import { Route as AppSettingsProfileRouteImport } from './routes/_app/settings/profile'
 import { Route as AppSettingsRolesRouteImport } from './routes/_app/settings/roles'
@@ -56,6 +57,7 @@ import { Route as AppStudentsCohortsRouteImport } from './routes/_app/students/c
 import { Route as AppStudentsMessagingRouteImport } from './routes/_app/students/messaging'
 import { Route as AppStudentsRequestsRouteImport } from './routes/_app/students/requests'
 import { Route as AppStudentsRulesRouteImport } from './routes/_app/students/rules'
+import { Route as AuthInviteTokenRouteImport } from './routes/_auth/invite.$token'
 import { Route as AppAnalyticsCoursesCourseIdRouteImport } from './routes/_app/analytics/courses/$courseId'
 import { Route as AppContentLibraryAssetIdIndexRouteImport } from './routes/_app/content-library/$assetId.index'
 import { Route as AppContentLibraryAssetIdTranscriptRouteImport } from './routes/_app/content-library/$assetId.transcript'
@@ -245,6 +247,11 @@ const AppSettingsIntegrationsRoute = AppSettingsIntegrationsRouteImport.update({
   path: '/integrations',
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
+const AppSettingsMfaRoute = AppSettingsMfaRouteImport.update({
+  id: '/mfa',
+  path: '/mfa',
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
 const AppSettingsPrivacyRoute = AppSettingsPrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -299,6 +306,11 @@ const AppStudentsRulesRoute = AppStudentsRulesRouteImport.update({
   id: '/rules',
   path: '/rules',
   getParentRoute: () => AppStudentsRouteRoute,
+} as any)
+const AuthInviteTokenRoute = AuthInviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const AppAnalyticsCoursesCourseIdRoute =
   AppAnalyticsCoursesCourseIdRouteImport.update({
@@ -384,6 +396,7 @@ export interface FileRoutesByFullPath {
   '/settings/billing': typeof AppSettingsBillingRoute
   '/settings/branding': typeof AppSettingsBrandingRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
+  '/settings/mfa': typeof AppSettingsMfaRoute
   '/settings/privacy': typeof AppSettingsPrivacyRoute
   '/settings/profile': typeof AppSettingsProfileRoute
   '/settings/roles': typeof AppSettingsRolesRoute
@@ -394,6 +407,7 @@ export interface FileRoutesByFullPath {
   '/students/messaging': typeof AppStudentsMessagingRoute
   '/students/requests': typeof AppStudentsRequestsRoute
   '/students/rules': typeof AppStudentsRulesRoute
+  '/invite/$token': typeof AuthInviteTokenRoute
   '/analytics/': typeof AppAnalyticsIndexRoute
   '/content-library/': typeof AppContentLibraryIndexRoute
   '/courses/': typeof AppCoursesIndexRoute
@@ -433,6 +447,7 @@ export interface FileRoutesByTo {
   '/settings/billing': typeof AppSettingsBillingRoute
   '/settings/branding': typeof AppSettingsBrandingRoute
   '/settings/integrations': typeof AppSettingsIntegrationsRoute
+  '/settings/mfa': typeof AppSettingsMfaRoute
   '/settings/privacy': typeof AppSettingsPrivacyRoute
   '/settings/profile': typeof AppSettingsProfileRoute
   '/settings/roles': typeof AppSettingsRolesRoute
@@ -443,6 +458,7 @@ export interface FileRoutesByTo {
   '/students/messaging': typeof AppStudentsMessagingRoute
   '/students/requests': typeof AppStudentsRequestsRoute
   '/students/rules': typeof AppStudentsRulesRoute
+  '/invite/$token': typeof AuthInviteTokenRoute
   '/analytics': typeof AppAnalyticsIndexRoute
   '/content-library': typeof AppContentLibraryIndexRoute
   '/courses': typeof AppCoursesIndexRoute
@@ -492,6 +508,7 @@ export interface FileRoutesById {
   '/_app/settings/billing': typeof AppSettingsBillingRoute
   '/_app/settings/branding': typeof AppSettingsBrandingRoute
   '/_app/settings/integrations': typeof AppSettingsIntegrationsRoute
+  '/_app/settings/mfa': typeof AppSettingsMfaRoute
   '/_app/settings/privacy': typeof AppSettingsPrivacyRoute
   '/_app/settings/profile': typeof AppSettingsProfileRoute
   '/_app/settings/roles': typeof AppSettingsRolesRoute
@@ -502,6 +519,7 @@ export interface FileRoutesById {
   '/_app/students/messaging': typeof AppStudentsMessagingRoute
   '/_app/students/requests': typeof AppStudentsRequestsRoute
   '/_app/students/rules': typeof AppStudentsRulesRoute
+  '/_auth/invite/$token': typeof AuthInviteTokenRoute
   '/_app/analytics/': typeof AppAnalyticsIndexRoute
   '/_app/content-library/': typeof AppContentLibraryIndexRoute
   '/_app/courses/': typeof AppCoursesIndexRoute
@@ -550,6 +568,7 @@ export interface FileRouteTypes {
     | '/settings/billing'
     | '/settings/branding'
     | '/settings/integrations'
+    | '/settings/mfa'
     | '/settings/privacy'
     | '/settings/profile'
     | '/settings/roles'
@@ -560,6 +579,7 @@ export interface FileRouteTypes {
     | '/students/messaging'
     | '/students/requests'
     | '/students/rules'
+    | '/invite/$token'
     | '/analytics/'
     | '/content-library/'
     | '/courses/'
@@ -599,6 +619,7 @@ export interface FileRouteTypes {
     | '/settings/billing'
     | '/settings/branding'
     | '/settings/integrations'
+    | '/settings/mfa'
     | '/settings/privacy'
     | '/settings/profile'
     | '/settings/roles'
@@ -609,6 +630,7 @@ export interface FileRouteTypes {
     | '/students/messaging'
     | '/students/requests'
     | '/students/rules'
+    | '/invite/$token'
     | '/analytics'
     | '/content-library'
     | '/courses'
@@ -657,6 +679,7 @@ export interface FileRouteTypes {
     | '/_app/settings/billing'
     | '/_app/settings/branding'
     | '/_app/settings/integrations'
+    | '/_app/settings/mfa'
     | '/_app/settings/privacy'
     | '/_app/settings/profile'
     | '/_app/settings/roles'
@@ -667,6 +690,7 @@ export interface FileRouteTypes {
     | '/_app/students/messaging'
     | '/_app/students/requests'
     | '/_app/students/rules'
+    | '/_auth/invite/$token'
     | '/_app/analytics/'
     | '/_app/content-library/'
     | '/_app/courses/'
@@ -945,6 +969,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsIntegrationsRouteImport
       parentRoute: typeof AppSettingsRouteRoute
     }
+    '/_app/settings/mfa': {
+      id: '/_app/settings/mfa'
+      path: '/mfa'
+      fullPath: '/settings/mfa'
+      preLoaderRoute: typeof AppSettingsMfaRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
     '/_app/settings/privacy': {
       id: '/_app/settings/privacy'
       path: '/privacy'
@@ -1021,6 +1052,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/students/rules'
       preLoaderRoute: typeof AppStudentsRulesRouteImport
       parentRoute: typeof AppStudentsRouteRoute
+    }
+    '/_auth/invite/$token': {
+      id: '/_auth/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof AuthInviteTokenRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/_app/analytics/courses/$courseId': {
       id: '/_app/analytics/courses/$courseId'
@@ -1225,6 +1263,7 @@ interface AppSettingsRouteRouteChildren {
   AppSettingsBillingRoute: typeof AppSettingsBillingRoute
   AppSettingsBrandingRoute: typeof AppSettingsBrandingRoute
   AppSettingsIntegrationsRoute: typeof AppSettingsIntegrationsRoute
+  AppSettingsMfaRoute: typeof AppSettingsMfaRoute
   AppSettingsPrivacyRoute: typeof AppSettingsPrivacyRoute
   AppSettingsProfileRoute: typeof AppSettingsProfileRoute
   AppSettingsRolesRoute: typeof AppSettingsRolesRoute
@@ -1238,6 +1277,7 @@ const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
   AppSettingsBillingRoute: AppSettingsBillingRoute,
   AppSettingsBrandingRoute: AppSettingsBrandingRoute,
   AppSettingsIntegrationsRoute: AppSettingsIntegrationsRoute,
+  AppSettingsMfaRoute: AppSettingsMfaRoute,
   AppSettingsPrivacyRoute: AppSettingsPrivacyRoute,
   AppSettingsProfileRoute: AppSettingsProfileRoute,
   AppSettingsRolesRoute: AppSettingsRolesRoute,
@@ -1306,12 +1346,14 @@ interface AuthRouteRouteChildren {
   AuthLoginRoute: typeof AuthLoginRoute
   AuthMfaRoute: typeof AuthMfaRoute
   AuthSignupRoute: typeof AuthSignupRoute
+  AuthInviteTokenRoute: typeof AuthInviteTokenRoute
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
   AuthLoginRoute: AuthLoginRoute,
   AuthMfaRoute: AuthMfaRoute,
   AuthSignupRoute: AuthSignupRoute,
+  AuthInviteTokenRoute: AuthInviteTokenRoute,
 }
 
 const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(

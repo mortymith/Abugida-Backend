@@ -17,6 +17,14 @@ export const Route = createFileRoute('/_app')({
     // Resolve the platform role once per navigation (spec 11 roles matrix).
     // Consumed downstream via useRole() / route context.
     const role = await getServerRole()
+
+    // A claimable invite is captured on the login screen, before there was a
+    // session, so its ticket is redeemed here — the first authenticated entry
+    // point. Never let it block navigation: an invite is worth a retry, the
+    // dashboard is not worth a spinner.
+    const { redeemPendingClaim } = await import('#/features/auth/auth.pending-claim')
+    void redeemPendingClaim().catch(() => undefined)
+
     return { ...auth, role }
   },
   component: AppLayout,

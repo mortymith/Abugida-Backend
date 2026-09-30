@@ -1,20 +1,39 @@
-import type { Provider } from '#/features/auth/hooks/auth.provider-memory'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { InformationCircleIcon } from '@hugeicons/core-free-icons'
+
 import { Button } from '#/components/ui/button'
 import { Spinner } from '#/components/ui/spinner'
+import { Tooltip, TooltipContent, TooltipTrigger } from '#/components/ui/tooltip'
 import { cn } from '#/lib/utils'
+import type { Provider } from '../auth.providers'
+import { providerLabel } from '../auth.providers'
 
 interface ProviderButtonProps {
   provider: Provider
   onClick: () => void
   loading?: boolean
   disabled?: boolean
+  /**
+   * Forwarded to the button so the login screen can place initial focus on the
+   * first *enabled* provider (spec S-0.1 Keyboard & Focus).
+   */
+  ref?: React.Ref<HTMLButtonElement>
+  /**
+   * Spec 11's three-case rule: a provider blocked by current state is
+   * **disabled with a reason**, exposed in a tooltip *and* in `aria-describedby`
+   * — never a silent no-op, and never hidden (a user must be able to learn that
+   * a route exists and is closed). A disabled button cannot host a tooltip on
+   * its own, so the reason is rendered as a sibling note the screen reader
+   * reaches through `aria-describedby`.
+   */
+  disabledReason?: string | null
   className?: string
 }
 
 function ProviderIcon({ provider, className }: { provider: Provider; className?: string }) {
   if (provider === 'google') {
     return (
-      <svg className={className} viewBox="0 0 24 24">
+      <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
         <path
           d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
           fill="#4285F4"
@@ -36,20 +55,35 @@ function ProviderIcon({ provider, className }: { provider: Provider; className?:
   }
 
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="#2AABEE">
+    <svg className={className} viewBox="0 0 24 24" fill="#2AABEE" aria-hidden="true">
       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
     </svg>
   )
 }
 
-function ProviderButton({ provider, onClick, loading, disabled, className }: ProviderButtonProps) {
-  return (
+function ProviderButton({
+  provider,
+  onClick,
+  loading,
+  disabled,
+  disabledReason,
+  className,
+  ref,
+}: ProviderButtonProps) {
+  const label = providerLabel(provider)
+  const reasonId = disabledReason ? `provider-${provider}-reason` : undefined
+  const isBlocked = Boolean(disabledReason)
+
+  const button = (
     <Button
+      ref={ref}
       type="button"
       variant="outline"
       size="lg"
       onClick={onClick}
       disabled={disabled || loading}
+      aria-describedby={reasonId}
+      aria-busy={loading || undefined}
       className={cn('h-11 w-full bg-background text-foreground', className)}
     >
       {loading ? (
@@ -57,9 +91,45 @@ function ProviderButton({ provider, onClick, loading, disabled, className }: Pro
       ) : (
         <ProviderIcon provider={provider} data-icon="inline-start" />
       )}
-      Continue with {provider === 'google' ? 'Google' : 'Telegram'}
+      Continue with {label}
     </Button>
+  )
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      {isBlocked ? (
+        // A disabled control cannot open a tooltip on hover or focus, so the
+        // reason is a visible note — reachable by screen reader, visible to
+        // everyone, and still the "never hidden" guarantee the spec demands.
+        <>
+          <span className="inline-flex w-full">{button}</span>
+          <p
+            id={reasonId}
+            className="flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground"
+          >
+            <HugeiconsIcon
+              icon={InformationCircleIcon}
+              className="mt-0.5 size-3.5 shrink-0"
+              aria-hidden="true"
+            />
+            {disabledReason}
+          </p>
+        </>
+      ) : (
+        button
+      )}
+    </div>
   )
 }
 
-export { ProviderButton, ProviderIcon }
+/** Tooltip wrapper, used where a control is enabled but worth annotating. */
+function ProviderHint({ children, content }: { children: React.ReactElement; content: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger render={children} />
+      <TooltipContent>{content}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+export { ProviderButton, ProviderHint, ProviderIcon }

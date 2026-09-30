@@ -1,15 +1,9 @@
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { HugeiconsIcon } from '@hugeicons/react'
-import {
-  ArrowRight02Icon,
-  Book02Icon,
-  Briefcase02Icon,
-  Settings02Icon,
-} from '@hugeicons/core-free-icons'
+import { ArrowRight02Icon, RefreshIcon } from '@hugeicons/core-free-icons'
 
-import { WorkspaceSchema } from '#/features/auth/schemas/auth.signup.schema'
-import type { WorkspaceInput } from '#/features/auth/schemas/auth.signup.schema'
 import { Button } from '#/components/ui/button'
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '#/components/ui/field'
 import { Input } from '#/components/ui/input'
@@ -19,68 +13,136 @@ import {
   InputGroupInput,
   InputGroupText,
 } from '#/components/ui/input-group'
-import { ToggleGroup, ToggleGroupItem } from '#/components/ui/toggle-group'
 import { Spinner } from '#/components/ui/spinner'
 import { ErrorMessage } from '#/components/common/error-message'
+import { SignupWorkspaceSchema, slugFromName } from '#/features/auth/schemas/auth.signup.schema'
+import type { SignupWorkspaceInput } from '#/features/auth/schemas/auth.signup.schema'
+import { checkSubdomainAvailable } from '#/features/auth/server/auth.signup'
+import { PRIMARY_USE_CASE_OPTIONS } from '#/features/onboarding/onboarding.checklist'
 
 interface SignupStep2Props {
-  onComplete: (data: WorkspaceInput) => void
-  loading?: boolean
-  /** General error surfaced from the server, shown in an alert */
+  onSubmit: (data: SignupWorkspaceInput) => void
+  onBack?: () => void
+  /** Provisioning is a write and is never queued — it is blocked while offline. */
+  online: boolean
+  pending?: boolean
+  /** Screen-level failure, e.g. a plan limit or a 5xx with a request ID. */
   serverError?: string | null
-  /** Server error about the subdomain (e.g. already taken), shown inline under the URL field */
-  slugError?: string | null
+  /** Server-confirmed collision. Operable suggestions come with it. */
+  slugTaken?: { suggestions: string[] } | null
+  /** Set when the sign-in session expired between steps. */
+  sessionExpired?: boolean
 }
 
-const USE_CASES = [
-  { value: 'language_courses', label: 'Language Courses', icon: Book02Icon },
-  { value: 'corporate_training', label: 'Corporate Training', icon: Briefcase02Icon },
-  { value: 'other', label: 'Other', icon: Settings02Icon },
-] as const
-
-function generateSlug(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 63)
-}
-
-function SignupStep2({ onComplete, loading, serverError, slugError }: SignupStep2Props) {
+/**
+ * S-0.2 step 1 (Account & Org).
+ *
+ * Three things the spec is strict about and this form honours:
+ *
+ *  - **Primary Use Case is a radio group, not a multi-select.** One Tab stop,
+ *    arrow keys to choose — the payment/no-payment answer is a single decision
+ *    and must not read as "pick several".
+ *  - **A slow subdomain check never blanks the form.** Only the subdomain field
+ *    shows a pending state; the step indicator and everything already typed stay
+ *    exactly where they are.
+ *  - **A taken subdomain is a field error with operable suggestions**, never a
+ *    screen-level failure — the rest of the step survives.
+ */
+function SignupStep2({
+  onSubmit,
+  onBack,
+  online,
+  pending,
+  serverError,
+  slugTaken,
+  sessionExpired,
+}: SignupStep2Props) {
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    setError,
+    clearErrors,
     formState: { errors },
-  } = useForm<WorkspaceInput>({
-    resolver: zodResolver(WorkspaceSchema),
-    defaultValues: {
-      name: '',
-      slug: '',
-      useCase: undefined,
-    },
+  } = useForm<SignupWorkspaceInput>({
+    resolver: zodResolver(SignupWorkspaceSchema),
+    defaultValues: { name: '', slug: '', useCase: undefined },
+    mode: 'onBlur',
   })
+
+  const [checking, setChecking] = useState(false)
+  const slugEdited = useRef(false)
 
   const workspaceName = watch('name')
   const workspaceSlug = watch('slug')
   const selectedUseCase = watch('useCase')
 
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const name = e.target.value
-    register('name').onChange(e)
-    if (!watch('slug') || watch('slug') === generateSlug(workspaceName)) {
-      setValue('slug', generateSlug(name), { shouldValidate: true })
+  // `register()` must be called once per field, and its ref has to reach the
+  // input — that ref is how React Hook Form learns the field's value. So the
+  // handlers are pulled out here and the rest of the registration is spread
+  // onto the input untouched. (Overriding the ref looks harmless and is not:
+  // the form then validates `undefined` and reports the field as empty no
+  // matter what the user typed.)
+  const { onChange: onNameChange, ...nameField } = register('name')
+  const { onChange: onSlugChange, ...slugField } = register('slug')
+
+  function handleNameChange(event: React.ChangeEvent<HTMLInputElement>) {
+    onNameChange(event)
+    const previousDerived = slugFromName(workspaceName)
+
+    // Keep the subdomain in step with the name until the user edits it, so a
+    // slow check never fights the user's typing.
+    if (!slugEdited.current || workspaceSlug === previousDerived) {
+      slugEdited.current = false
+      setValue('slug', slugFromName(event.target.value), { shouldValidate: false })
     }
   }
 
-  const onSubmit = (data: WorkspaceInput) => {
-    onComplete(data)
+  function handleSlugChange(event: React.ChangeEvent<HTMLInputElement>) {
+    slugEdited.current = true
+    onSlugChange(event)
   }
+
+  // Debounced availability check. A collision found here is advisory; the
+  // authoritative answer is the server's response on submit.
+  useEffect(() => {
+    const slug = workspaceSlug.trim()
+    if (!slug || slug.length < 3 || !online) return
+
+    let cancelled = false
+    setChecking(true)
+
+    const timer = window.setTimeout(() => {
+      void checkSubdomainAvailable({ data: { slug } })
+        .then((result) => {
+          if (cancelled) return
+          if (!result.available) {
+            setError('slug', { type: 'server', message: 'That subdomain is already taken.' })
+          } else {
+            clearErrors('slug')
+          }
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (!cancelled) setChecking(false)
+        })
+    }, 400)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+      setChecking(false)
+    }
+  }, [workspaceSlug, online, setError, clearErrors])
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-6">
-      {serverError && <ErrorMessage message={serverError} />}
+      {sessionExpired ? (
+        <ErrorMessage message="Your sign-in took too long. Sign in again — your workspace name is kept." />
+      ) : serverError ? (
+        <ErrorMessage message={serverError} />
+      ) : null}
 
       <FieldGroup className="gap-5">
         <Field data-invalid={errors.name ? true : undefined}>
@@ -89,23 +151,33 @@ function SignupStep2({ onComplete, loading, serverError, slugError }: SignupStep
             id="workspace-name"
             placeholder={import.meta.env.VITE_APP_NAME}
             autoComplete="organization"
-            {...register('name')}
+            // Spec: "On arrival focus lands on the Workspace Name field."
+            // `autoFocus` does this without taking the registration's ref away
+            // the way a custom `ref` prop would.
+            autoFocus
+            {...nameField}
             onChange={handleNameChange}
             aria-invalid={errors.name ? true : undefined}
+            aria-describedby={errors.name ? 'workspace-name-error' : undefined}
           />
-          {errors.name && <FieldError>{errors.name.message}</FieldError>}
+          {errors.name ? (
+            <FieldError id="workspace-name-error">{errors.name.message}</FieldError>
+          ) : null}
         </Field>
 
-        <Field data-invalid={errors.slug || slugError ? true : undefined}>
+        <Field data-invalid={errors.slug || slugTaken ? true : undefined}>
           <FieldLabel htmlFor="workspace-slug">Workspace URL</FieldLabel>
           <InputGroup>
             <InputGroupInput
               id="workspace-slug"
               placeholder="abugida"
               autoComplete="off"
+              spellCheck={false}
               className="font-mono"
-              {...register('slug')}
+              {...slugField}
+              onChange={handleSlugChange}
               aria-invalid={errors.slug ? true : undefined}
+              aria-describedby="workspace-slug-help"
             />
             <InputGroupAddon align="inline-end">
               <InputGroupText className="font-mono text-xs">
@@ -113,74 +185,130 @@ function SignupStep2({ onComplete, loading, serverError, slugError }: SignupStep
               </InputGroupText>
             </InputGroupAddon>
           </InputGroup>
+
           {errors.slug ? (
-            <FieldError>{errors.slug.message}</FieldError>
-          ) : slugError ? (
-            <FieldError>{slugError}</FieldError>
+            <FieldError id="workspace-slug-error">{errors.slug.message}</FieldError>
+          ) : slugTaken ? (
+            <div className="flex flex-col gap-1.5">
+              <FieldError id="workspace-slug-error">
+                That subdomain is already taken. Try one of these:
+              </FieldError>
+              <div className="flex flex-wrap gap-1.5">
+                {slugTaken.suggestions.map((suggestion) => (
+                  <Button
+                    key={suggestion}
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="font-mono"
+                    onClick={() => {
+                      setValue('slug', suggestion, { shouldValidate: true })
+                      clearErrors('slug')
+                    }}
+                  >
+                    {suggestion}
+                  </Button>
+                ))}
+              </div>
+            </div>
           ) : (
-            workspaceName &&
-            workspaceSlug && (
-              <FieldDescription>
-                Your workspace will live at{' '}
-                <span className="font-medium text-foreground">
-                  {workspaceSlug}.{import.meta.env.VITE_WORKSPACE_DOMAIN}
+            <FieldDescription id="workspace-slug-help">
+              {checking ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Spinner className="size-3" />
+                  Checking availability…
                 </span>
-              </FieldDescription>
-            )
+              ) : workspaceSlug ? (
+                <>
+                  Your workspace will live at{' '}
+                  <span className="font-medium text-foreground">
+                    {workspaceSlug}.{import.meta.env.VITE_WORKSPACE_DOMAIN}
+                  </span>
+                </>
+              ) : (
+                'Lowercase letters, numbers and hyphens.'
+              )}
+            </FieldDescription>
           )}
         </Field>
 
-        <Field data-invalid={errors.useCase ? true : undefined}>
-          <FieldLabel htmlFor="workspace-use-case">Primary use case</FieldLabel>
-          <ToggleGroup
-            id="workspace-use-case"
-            variant="outline"
-            value={[selectedUseCase]}
-            onValueChange={(groupValue) => {
-              setValue('useCase', groupValue[0] as unknown as WorkspaceInput['useCase'], {
-                shouldDirty: true,
-                shouldValidate: true,
-              })
-            }}
-            className="grid w-full grid-cols-3 gap-2"
+        <fieldset>
+          <legend className="mb-2 text-sm font-medium">Primary use case</legend>
+          <div
+            role="radiogroup"
+            aria-label="Primary use case"
+            className="grid grid-cols-1 gap-2 sm:grid-cols-3"
           >
-            {USE_CASES.map((useCase) => {
-              const isSelected = selectedUseCase === useCase.value
+            {PRIMARY_USE_CASE_OPTIONS.map((option) => {
+              const checked = selectedUseCase === option.value
               return (
-                <ToggleGroupItem
-                  key={useCase.value}
-                  value={useCase.value}
-                  aria-invalid={errors.useCase ? true : undefined}
-                  className="h-auto w-full flex-col gap-1.5 rounded-xl px-3 py-3.5 hover:bg-transparent data-pressed:border-primary data-pressed:bg-primary/5 data-pressed:text-primary"
+                <label
+                  key={option.value}
+                  className={`flex cursor-pointer flex-col gap-1 rounded-xl border p-3 text-left transition-colors focus-within:ring-[3px] focus-within:ring-ring/50 ${
+                    checked
+                      ? 'border-primary bg-primary/5 text-primary'
+                      : 'border-border hover:bg-accent/40'
+                  }`}
                 >
-                  <HugeiconsIcon
-                    icon={useCase.icon}
-                    size={20}
-                    strokeWidth={1.5}
-                    className={isSelected ? 'text-primary' : 'text-muted-foreground/70'}
-                  />
-                  <span className="text-xs font-semibold leading-tight">{useCase.label}</span>
-                </ToggleGroupItem>
+                  <span className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="useCase"
+                      value={option.value}
+                      checked={checked}
+                      onChange={() =>
+                        setValue('useCase', option.value, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                      }
+                      className="size-4 accent-primary"
+                    />
+                    <span className="text-sm font-semibold leading-tight">{option.label}</span>
+                  </span>
+                  <span className="text-xs leading-relaxed text-muted-foreground">
+                    {option.description}
+                  </span>
+                </label>
               )
             })}
-          </ToggleGroup>
-          {errors.useCase && <FieldError>{errors.useCase.message}</FieldError>}
-        </Field>
+          </div>
+          {errors.useCase ? <FieldError>{errors.useCase.message}</FieldError> : null}
+        </fieldset>
       </FieldGroup>
 
-      <Button type="submit" size="lg" className="w-full" disabled={loading || !selectedUseCase}>
-        {loading ? (
-          <>
-            <Spinner data-icon="inline-start" />
-            Setting up your workspace…
-          </>
-        ) : (
-          <>
-            Continue
-            <HugeiconsIcon icon={ArrowRight02Icon} data-icon="inline-end" />
-          </>
-        )}
-      </Button>
+      <div className="flex gap-2">
+        {onBack ? (
+          <Button type="button" variant="outline" size="lg" onClick={onBack} disabled={pending}>
+            Back
+          </Button>
+        ) : null}
+        <Button
+          type="submit"
+          size="lg"
+          className="flex-1"
+          disabled={pending || !online || !selectedUseCase}
+        >
+          {pending ? (
+            <>
+              <Spinner data-icon="inline-start" />
+              Setting up your workspace…
+            </>
+          ) : (
+            <>
+              Continue
+              <HugeiconsIcon icon={ArrowRight02Icon} data-icon="inline-end" />
+            </>
+          )}
+        </Button>
+      </div>
+
+      {!online ? (
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <HugeiconsIcon icon={RefreshIcon} className="size-3.5" aria-hidden="true" />
+          We'll finish creating your workspace when you're back.
+        </p>
+      ) : null}
     </form>
   )
 }

@@ -37,9 +37,12 @@ export const auth = createAuth({
       issuer: env.TOTP_ISSUER,
       twoFactorCookieMaxAge: env.TWO_FACTOR_COOKIE_MAX_AGE,
       trustDeviceMaxAge: env.TRUST_DEVICE_MAX_AGE,
+      // The option is `durationSeconds`. The previous `lockDuration` was not a
+      // recognised key, so the configured cooldown was silently ignored and
+      // Better Auth fell back to its own 900s default.
       accountLockout: {
         maxFailedAttempts: env.ACCOUNT_LOCKOUT_MAX_ATTEMPTS,
-        lockDuration: env.ACCOUNT_LOCKOUT_DURATION,
+        durationSeconds: env.ACCOUNT_LOCKOUT_DURATION,
       },
     }),
     organization({

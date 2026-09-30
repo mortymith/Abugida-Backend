@@ -19,7 +19,8 @@ const envSchema = z
     TWO_FACTOR_COOKIE_MAX_AGE: z.coerce.number().int().positive().default(600),
     TRUST_DEVICE_MAX_AGE: z.coerce.number().int().positive().default(2592000),
     ACCOUNT_LOCKOUT_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
-    ACCOUNT_LOCKOUT_DURATION: z.coerce.number().int().positive().default(600),
+    /** Better Auth's `accountLockout.durationSeconds`. Spec S-0.3: 15 minutes. */
+    ACCOUNT_LOCKOUT_DURATION: z.coerce.number().int().positive().default(900),
     MFA_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
     VITE_MFA_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
     WORKSPACE_DOMAIN: z.string().default('abugida.app'),

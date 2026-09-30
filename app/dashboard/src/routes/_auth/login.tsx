@@ -7,12 +7,19 @@ import { LoginForm } from '#/features/auth/components/auth.login-form'
 type LoginSearch = {
   error?: string
   redirectTo?: string
+  invite?: string
 }
 
+/**
+ * Reject anything that is not a same-origin absolute path. Without this a
+ * `?redirectTo=https://evil.example` would turn the login screen into an open
+ * redirect after a successful sign-in.
+ */
 function isSafeRedirectPath(value: string): boolean {
   return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\')
 }
 
+/** S-0.1 Login. All the screen's state lives in the form component. */
 export const Route = createFileRoute('/_auth/login')({
   validateSearch: (search: Record<string, unknown>): LoginSearch => ({
     error: typeof search.error === 'string' ? search.error : undefined,
@@ -20,12 +27,13 @@ export const Route = createFileRoute('/_auth/login')({
       typeof search.redirectTo === 'string' && isSafeRedirectPath(search.redirectTo)
         ? search.redirectTo
         : undefined,
+    invite: typeof search.invite === 'string' ? search.invite : undefined,
   }),
   component: LoginPage,
 })
 
 function LoginPage() {
-  const { error, redirectTo } = Route.useSearch()
+  const { error, redirectTo, invite } = Route.useSearch()
   const { data: session } = useSession()
   const navigate = useNavigate()
 
@@ -37,7 +45,11 @@ function LoginPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <LoginForm redirectTo={redirectTo ?? '/dashboard'} callbackError={error} />
+      <LoginForm
+        redirectTo={redirectTo ?? import.meta.env.VITE_DEFAULT_LOGIN_REDIRECT ?? '/dashboard'}
+        callbackError={error}
+        inviteToken={invite}
+      />
 
       <p className="anim-up d2 text-center text-sm text-muted-foreground">
         New here?{' '}
