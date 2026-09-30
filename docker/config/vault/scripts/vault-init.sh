@@ -44,18 +44,38 @@ if echo "${INIT_STATUS}" | grep -q 'Initialized.*true'; then
   exit 0
 fi
 
+# Unseal keys are irreplaceable: a truncated overwrite destroys the only
+# copy. Never clobber a non-empty file — an intentional re-init (storage
+# wiped by <tier>-clean) removes the stale file first.
+if [ -s "${INIT_OUTPUT}" ]; then
+  log_err "refusing to overwrite existing non-empty ${INIT_OUTPUT}"
+  log_err "if a re-initialize is intended, remove the stale file first:"
+  log_err "  rm ${INIT_OUTPUT}"
+  exit 1
+fi
+
 log_info "Initializing Vault (${KEY_SHARES} key shares, threshold ${KEY_THRESHOLD})..."
 
 # ── 2. Initialize + capture output to LOCAL file ONLY ─────────────
 ensure_output_dir
 
-# vault operator init outputs JSON; redirect to file, never stdout to logs
+# vault operator init outputs JSON; redirect to file, never stdout to logs.
+# Write to a temp file first so a failed init never leaves a partial file.
+INIT_TMP="${INIT_OUTPUT}.tmp"
+trap 'rm -f "${INIT_TMP}"' EXIT
+
 vault operator init \
   -key-shares="${KEY_SHARES}" \
   -key-threshold="${KEY_THRESHOLD}" \
   -format=json \
-  > "${INIT_OUTPUT}" 2> /dev/null
+  > "${INIT_TMP}" 2> /dev/null
 
+if ! jq -e '.unseal_keys_b64 | length > 0' "${INIT_TMP}" > /dev/null 2>&1; then
+  log_err "vault operator init did not return usable keys — ${INIT_OUTPUT} left untouched"
+  exit 1
+fi
+
+mv "${INIT_TMP}" "${INIT_OUTPUT}"
 chmod 600 "${INIT_OUTPUT}"
 log_ok "Initialization output saved to ${INIT_OUTPUT} (chmod 600, gitignored)"
 
