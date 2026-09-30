@@ -5,7 +5,7 @@
 ## What changed in Part 01 (Revision 3)
 
 - **Email-dependent states are gone.** A Telegram user may have no address, so _Invite Email Mismatch_ and _Email Already Registered_ now describe the **provider identity**, per [Part 11 § Notification Delivery](11-Global-Standards.md#notification-delivery). Added **Invite not found / expired / already consumed**.
-- **New screen [S-0.4 Multi-Factor Enrollment](#scr-0-4)** — three steps, QR **or** manual key `XXXX-XXXX-XXXX`, verified before the toggle flips, then 10 single-use backup codes shown exactly once. Nothing in the previous revision showed a user _enabling_ MFA.
+- **New screen [S-0.4 Multi-Factor Enrollment](#scr-0-4)** — three steps, QR **or** manual key `XXXX-XXXX-XXXX-…` (the full secret, grouped), verified before the toggle flips, then 10 single-use backup codes shown exactly once. Nothing in the previous revision showed a user _enabling_ MFA.
 - **Admin lockout is no longer a dead end.** "Contact your workspace Admin" was useless when the locked-out user _is_ the only Admin. Replaced by **Request an admin reset** (30-minute single-use code over Telegram) and **Verified support recovery** (24-hour unlock), both audit-logged.
 - **Login gains the states it was missing:** per-provider rate limiting with a live countdown, offline, and a provider **disabled for this workspace** — disabled-with-reason, never hidden, per the [three-case permission rule](11-Global-Standards.md#global-validation-and-feedback-patterns).
 - **The checklist is conditional on `Primary Use Case`**, so a workspace that will never charge is not shown an item it can never complete; the card is hidden once complete and a **Resume** affordance replaces it.
@@ -240,7 +240,7 @@ Sign-in is exclusively federated: every staff member authenticates with **Google
   │  └────────────┘                                                  │
   │                                                                  │
   │  2. …or enter this key manually                                  │
-  │     A3F2-B19C-77D4   [Copy]                                       │
+  │     A3F2-B19C-77D4-…   [Copy]                                    │
   │                                                                  │
   │  3. Enter the 6-digit code to confirm                             │
   │     [ _ _ _ _ _ _ ]   [Verify and turn on 2FA]                   │
@@ -262,7 +262,7 @@ Sign-in is exclusively federated: every staff member authenticates with **Google
   ```
 - **Primary Actions:**
   1. **Choose and scan.** The user picks an authenticator app from a short list (Google Authenticator, Authy, 1Password, Aegis) and scans a QR code carrying an `otpauth://` URI.
-  2. **Manual key fallback.** The same secret is shown as a **manual key formatted `XXXX-XXXX-XXXX`** with a **Copy** button, always visible — not hidden behind the "can't scan" toggle — because a phone camera failure is common and the recovery must not depend on a re-render of a QR.
+  2. **Manual key fallback.** The same secret is shown as a **manual key in 4-character groups covering the whole secret** (`XXXX-XXXX-XXXX-…`, a base32 TOTP secret is 32 characters) with a **Copy** button, always visible — not hidden behind the "can't scan" toggle — because a phone camera failure is common and the recovery must not depend on a re-render of a QR. The key is **never truncated**: a partial key enrols nowhere and fails silently. See [`DESIGN.md` §15 #23](DESIGN.md#15-spec-conflict-register).
   3. **Confirm.** A 6-digit code is entered. **The MFA toggle does not flip until this code verifies.** A 6-digit code is not proof the key was saved correctly; the real proof is that the user's device generates the next code.
   4. **Save backup codes.** Shown exactly once; the screen is not dismissible until the user confirms **I saved them** (an explicit acknowledgement, not a timeout). Never emailed, never shown again. Regenerating invalidates all previous codes with a warning naming the count.
   5. **Regenerate backup codes** — reissues 10 new codes, invalidates the old set, and requires confirmation because it silently breaks any copy already saved.
