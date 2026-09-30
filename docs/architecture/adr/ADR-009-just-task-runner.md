@@ -12,6 +12,8 @@ The project requires a single command-line interface to execute operational task
 
 Adopt [Just](https://github.com/casey/just) v1.40.0 as the sole task runner for all project operations. Every workflow—dev server startup, staging deployment, production deployment, database backup, security scanning, certificate renewal—is expressed as a Just recipe. Recipes differentiate environments through `DEV_COMPOSE`, `STAGING_COMPOSE`, and `PROD_COMPOSE` variables, each assembling the appropriate set of modular Compose files from the `docker/compose/` directory.
 
+> **Superseded detail:** `DEV_COMPOSE` / `STAGING_COMPOSE` / `PROD_COMPOSE` are no longer justfile variables. The same three file sets are defined in `scripts/lib/compose.sh` and reached through `dc <tier>`, which recipes and standalone scripts share. Everything else in this ADR still holds.
+
 ### Compose Variables
 
 The three compose variables map to the three-environment tier model:

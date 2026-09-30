@@ -142,17 +142,19 @@ my-service:
 Add recipes to `justfile` in the relevant section:
 
 ```just
-# Build my-service image
-build-my-service:
-    docker compose build my-service
-
-# Restart my-service
+# Restart my-service in every tier
 restart-my-service:
-    {{DEV_COMPOSE}} up -d my-service
+    #!/usr/bin/env bash
+    source scripts/lib/compose.sh
+    for tier in dev staging prod; do
+      dc "${tier}" up -d my-service
+    done
 
-# View my-service logs
+# View my-service logs (same helper `just logs <service>` uses)
 logs-my-service:
-    {{DEV_COMPOSE}} logs -f my-service
+    #!/usr/bin/env bash
+    source scripts/lib/compose.sh
+    dc dev logs -f my-service
 ```
 
 ### 7. Update Networking Matrix

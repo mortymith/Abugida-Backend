@@ -80,7 +80,7 @@ my-project/
   - **Staging** (20 services): base + `app.yml` + `observability.yml` + `security.yml` + `staging.override.yml` — adds ClickHouse, the monitoring stack, application services, and the Vault + MinIO-backup security layer. Single instances, moderate resources.
   - **Prod** (31 services): base + app + observability + `edge.yml` + `scaling.yml` + `security.yml` + `prod.override.yml` — full HA stack with Vault, replicas, Keepalived, and Cloudflare Tunnel.
 
-- **Just as CLI**: Every operational command (build, deploy, backup, scan) is a `just` recipe. Run `just --list` for the full index. Recipes use `DEV_COMPOSE`, `STAGING_COMPOSE`, and `PROD_COMPOSE` variables to select the right file combination for each environment.
+- **Just as CLI**: Every operational command (build, deploy, backup, scan) is a `just` recipe. Run `just --list` for the full index. Recipes are thin dispatchers: the tier → compose file mapping lives in `scripts/lib/compose.sh` (`dc <tier> <args>`), shared helpers in `scripts/lib/common.sh`, and multi-step logic in `scripts/<domain>/<name>.sh`.
 
 - **Tiered secrets (ADR-006)**: Development uses `.env` environment variables directly — no Docker secrets, no Vault required. Staging and production use HashiCorp Vault for dynamic, time-limited credentials. Docker secrets have been removed entirely; sensitive values reach containers as environment variables in every environment.
 

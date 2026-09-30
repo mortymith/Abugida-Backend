@@ -14,6 +14,8 @@ Enforce a grouped, sectioned structure in the justfile. Recipes are organized un
 
 The three compose variables (`DEV_COMPOSE`, `STAGING_COMPOSE`, and `PROD_COMPOSE`) are defined at the top of the justfile and used throughout. New recipes must select the appropriate variable for their target environment.
 
+> **Superseded detail (see `docs/development/writing-just-recipes.md`).** The three justfile variables were replaced by the shell library `scripts/lib/compose.sh`, where the tier → compose file set mapping lives in a single `case` statement. Recipes now `source scripts/lib/compose.sh` and call `dc <tier> <compose args…>`, so adding a compose module is a one-line change instead of editing three variables. Grouping, `snake_case` names and the `*ARGS` convention from this ADR are unchanged.
+
 ## Consequences
 
 **Positive:** Running `just --list` produces a neatly grouped, categorized summary of every operation. New contributors can locate the right recipe by section and follow the existing naming pattern. The `*ARGS` convention keeps recipe signatures simple while preserving full composability with underlying CLIs. The three compose variables make environment targeting explicit and consistent.

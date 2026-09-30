@@ -66,7 +66,7 @@ docker compose \
   up -d
 ```
 
-The Just aliases `DEV_COMPOSE`, `STAGING_COMPOSE`, and `PROD_COMPOSE` wrap these multi-file commands for everyday use.
+The `dc <tier>` helper in `scripts/lib/compose.sh` wraps these multi-file commands for everyday use (`just dev-up`, `just staging-recreate`, `just prod-build`).
 
 ### Legacy Files
 

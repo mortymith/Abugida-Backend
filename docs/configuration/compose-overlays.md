@@ -55,12 +55,13 @@ PROD_COMPOSE="docker compose \
   -f docker/compose/profiles/prod.override.yml"
 ```
 
-The Just aliases `DEV_COMPOSE`, `STAGING_COMPOSE`, and `PROD_COMPOSE` wrap these commands:
+The tier → file-set mapping is defined once in `scripts/lib/compose.sh`; `dc <tier>` wraps it for recipes and scripts:
 
 ```bash
-just dev        # equivalent to DEV_COMPOSE up -d
-just staging    # equivalent to STAGING_COMPOSE up -d
-just deploy prod # equivalent to PROD_COMPOSE with deploy script
+just dev-up        # dc dev up -d
+just staging-up    # dc staging up -d
+just prod-build    # dc prod build
+just validate-compose   # parses all three tiers with placeholder secrets
 ```
 
 ## Module Responsibilities
