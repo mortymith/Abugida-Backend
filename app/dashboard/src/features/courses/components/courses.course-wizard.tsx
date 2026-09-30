@@ -513,8 +513,8 @@ export function CurriculumEditor({
 
   const createModule = useMutation({
     mutationFn: async (title: string) => {
-      const { createModule } = await import('../server/all')
-      return createModule({ data: { coursePublicId, title } })
+      const { createModule: createModuleRequest } = await import('../server/all')
+      return createModuleRequest({ data: { coursePublicId, title } })
     },
     onSuccess: () => {
       invalidate()
