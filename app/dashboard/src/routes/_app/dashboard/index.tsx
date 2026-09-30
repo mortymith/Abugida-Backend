@@ -16,6 +16,7 @@ import {
   coursePerformanceQueryOptions,
 } from '#/features/dashboard/dashboard.queries'
 import { downloadCsv, buildCsv } from '#/features/dashboard/dashboard.export-csv'
+import { ChecklistCard, ChecklistResumeLink } from '#/features/onboarding'
 import { toast } from '#/components/common/toast'
 
 const overviewSearchSchema = z.object({
@@ -85,6 +86,7 @@ function AnalyticsOverviewPage() {
     <div className="flex flex-col gap-6">
       {/* Header row: date range + export (spec S-1.1) */}
       <div className="flex flex-wrap items-center justify-end gap-2">
+        <ChecklistResumeLink />
         <DateRangePicker
           selection={rangeInput}
           onChange={applyRangeChange}
@@ -94,6 +96,11 @@ function AnalyticsOverviewPage() {
           Export
         </Button>
       </div>
+
+      {/* S-0.2 Getting Started Checklist. Renders nothing once every applicable
+          item is complete, and the payment task is absent for a workspace that
+          will never charge. */}
+      <ChecklistCard id="getting-started" />
 
       {/* Stats row — horizontal scroll on mobile (spec S-1.1) */}
       <section aria-label="Key metrics">
