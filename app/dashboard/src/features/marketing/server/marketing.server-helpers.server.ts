@@ -7,7 +7,7 @@
 import { eq } from '@abugida/database'
 import { auditLogs, systemConfigs } from '@abugida/database/ops'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
+import { getAuth } from '#/config/auth.server'
 import { env } from '#/config/app.config'
 import { getRequest } from '@tanstack/react-start/server'
 import {
@@ -189,7 +189,7 @@ export async function enqueueEmails(emails: QueuedEmail[]): Promise<void> {
 export async function requireCallerEmail(): Promise<{ id: string; email: string; name: string }> {
   const userId = await requireUserId()
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) throw new Error('UNAUTHORIZED')
   return {
     id: userId,

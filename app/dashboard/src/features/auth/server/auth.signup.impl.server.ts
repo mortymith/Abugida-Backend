@@ -16,7 +16,7 @@
 import { eq } from '@abugida/database'
 import { member, organization } from '@abugida/database/auth'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
+import { getAuth } from '#/config/auth.server'
 import { getRequest } from '@tanstack/react-start/server'
 import { clientIp, currentUserId, requestId } from './auth.request.server'
 import { logger } from '#/config/observability.config'
@@ -95,7 +95,7 @@ export async function provisionWorkspaceImpl(
   }
 
   const request = getRequest()
-  const api = auth.raw.api as unknown as Record<
+  const api = getAuth().api as unknown as Record<
     string,
     (args: { body: Record<string, unknown>; headers: Headers }) => Promise<unknown>
   >

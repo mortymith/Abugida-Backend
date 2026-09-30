@@ -15,7 +15,7 @@ export type { AppConfig } from './app_config'
 export { databaseConfig } from './database'
 export type { DatabaseConfig } from './database'
 
-export { authConfig, createAuthInstance } from './auth'
+export { createAuthInstance } from './auth'
 
 export { queueConfig, createQueue } from './queue'
 export type { QueueClient } from '@abugida/queue'

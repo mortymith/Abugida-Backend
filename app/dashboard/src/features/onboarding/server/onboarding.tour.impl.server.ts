@@ -8,7 +8,7 @@ import { eq } from '@abugida/database'
 import { userProfiles } from '@abugida/database/auth'
 import { db } from '#/config/db.config'
 import { getRequest } from '@tanstack/react-start/server'
-import { auth } from '#/config/auth.server'
+import { getAuth } from '#/config/auth.server'
 
 export interface TourState {
   /** True once the tour was completed or skipped (never auto-launch again). */
@@ -18,7 +18,7 @@ export interface TourState {
 
 async function requireUserId(): Promise<string> {
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) throw new Error('UNAUTHORIZED')
   return session.value.user.id
 }

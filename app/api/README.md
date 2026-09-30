@@ -63,6 +63,16 @@ src/
 
 Configuration modules consume `appConfig` and never read `process.env` directly.
 
+## API documentation
+
+`GET /docs` serves the OpenAPI 3.1 document and `/scalar` the Scalar
+reference (both development-only). The `/auth/*` paths are **not** declared by
+this app: they are served by `@abugida/auth`, which generates their
+documentation from the live Better Auth instance and merges it into the API's
+document (`registerSystemDocumentation` in `src/modules/system`). The security
+schemes `Bearer` (JWT) and `apiKeyHeader` (`X-API-Key`) are declared by the
+API; the session-cookie scheme (`sessionCookie`) comes from the auth document.
+
 ## Testing Social Sign-In
 
 The social sign-in endpoint only requires the public provider name. Callback

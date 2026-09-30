@@ -17,9 +17,8 @@ describe('config barrel exports', () => {
     expect(mod.databaseConfig).toBeDefined()
   })
 
-  it('re-exports authConfig and createAuthInstance from auth', async () => {
+  it('re-exports createAuthInstance from auth', async () => {
     const mod = await import('@/config/index')
-    expect(mod.authConfig).toBeDefined()
     expect(typeof mod.createAuthInstance).toBe('function')
   })
 

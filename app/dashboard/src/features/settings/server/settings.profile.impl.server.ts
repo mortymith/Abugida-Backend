@@ -9,7 +9,7 @@
 import { eq } from '@abugida/database'
 import { member, userProfiles } from '@abugida/database/auth'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
+import { getAuth } from '#/config/auth.server'
 import { getRequest } from '@tanstack/react-start/server'
 import { createStorage, configFromEnv, hasEnvConfig } from '@abugida/storage'
 import { requireProfileUser } from './settings.server-helpers.server'
@@ -52,7 +52,7 @@ interface SessionValue {
 async function getSessionValue(): Promise<{ userId: string; value: SessionValue }> {
   const userId = await requireProfileUser()
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) throw new Error('UNAUTHORIZED')
   return { userId, value: session.value as unknown as SessionValue }
 }
@@ -62,7 +62,7 @@ async function callAuthApi<T>(
   args: { body?: Record<string, unknown>; query?: Record<string, unknown> } = {},
 ): Promise<T> {
   const request = getRequest()
-  const api = auth.raw.api as unknown as Record<
+  const api = getAuth().api as unknown as Record<
     string,
     (args: {
       headers: Headers

@@ -25,10 +25,10 @@ export interface ChecklistResult extends ChecklistState {
 }
 
 export async function getChecklistImpl(): Promise<ChecklistResult | null> {
-  const { auth } = await import('#/config/auth.server')
+  const { getAuth } = await import('#/config/auth.server')
   const { getRequest } = await import('@tanstack/react-start/server')
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) return null
 
   const userId = session.value.user.id

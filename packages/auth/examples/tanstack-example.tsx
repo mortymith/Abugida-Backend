@@ -3,29 +3,28 @@
  */
 
 import { createFileRoute } from '@tanstack/react-router'
-import { createAuth } from '@abugida/auth'
+import { createAbugidaAuth } from '@abugida/auth'
+import { resolveAuthEnv } from '@abugida/auth/env'
 import {
   createAuthServerFunctions,
   requireAuthBeforeLoad,
   createAuthClient,
 } from '@abugida/auth/tanstack'
-import { authSchema, createClient } from '@abugida/database'
+import { createClient } from '@abugida/database'
 
 // --- app/lib/auth.server.ts ------------------------------------------------
 
 const db = createClient(process.env.DATABASE_URL!)
 
-export const auth = createAuth({
-  environment: (process.env.NODE_ENV as 'development' | 'production' | 'test') ?? 'development',
-  baseUrl: process.env.AUTH_BASE_URL ?? 'http://localhost:3000',
-  secret: process.env.AUTH_SECRET!,
-  database: { db, schema: authSchema, provider: 'pg' },
-  providers: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    },
-  },
+export const auth = createAbugidaAuth({
+  env: resolveAuthEnv({
+    ENVIRONMENT: process.env.NODE_ENV,
+    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET, // openssl rand -hex 32
+    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+  }),
+  db,
 })
 
 export const authServerFns = createAuthServerFunctions(auth)

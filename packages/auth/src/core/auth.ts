@@ -1,11 +1,13 @@
 /**
  * @module core/auth
  *
- * `createAuth()` is the single entry point consumers use. It:
+ * `createAbugidaAuth()` (in `core/server.ts`) is the only entry point
+ * consumers use; it delegates here. This module:
  *   1. validates config (fail fast on bad env/credentials)
  *   2. builds the `socialProviders` block from the pluggable provider registry
- *   3. wires the Drizzle adapter using the injected db + schema
- *   4. returns a betterAuth instance plus a few package-specific helpers
+ *   3. registers the authoritative plugin set (`plugins/server.ts`)
+ *   4. wires the Drizzle adapter using the injected db + schema
+ *   5. returns a betterAuth instance plus a few package-specific helpers
  *
  * Everything downstream (Hono middleware, TanStack integration) consumes
  * only the returned `AuthInstance` — they never touch better-auth directly.
@@ -16,11 +18,11 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import type { AuthConfig, AuthDatabaseSchema } from './types'
 import { validateAuthConfig, withDefaults } from '../config'
 import { googleProvider } from '../providers'
-import { buildTelegramPlugins } from '../providers/telegram'
+import { buildServerPlugins } from '../plugins/server'
+import { PASSWORDLESS_DISABLED_PATHS, PASSWORDLESS_DISABLED_TEMPLATES } from './routes'
 import { ProviderRegistry } from '../providers/base'
 import { resolveSession, revokeSession, refreshSession } from './session'
 import { getValidAccessToken } from './token-refresh'
-import { buildTokenPlugins } from './tokens'
 import { noopLogger, redact, type Logger } from './logger'
 import { isProduction } from './environment'
 
@@ -33,6 +35,18 @@ export interface AuthInstance {
    * exact literal options type isn't meaningful.
    */
   raw: Auth
+  /**
+   * Better Auth's server API for the current request — the typed route for
+   * plugin endpoints (two-factor verification, organizations, …). Always call
+   * it with the caller's `headers`; it carries the session.
+   */
+  api: Auth['api']
+  /**
+   * The Drizzle handle this instance was built with. Used by the shared
+   * authorization helpers (`core/authorize.ts`) so apps do not each query the
+   * `member` table their own way.
+   */
+  db: unknown
   /** Resolve a session from a Headers object (Hono, TanStack, anywhere with a Request). */
   getSession: (headers: Headers) => ReturnType<typeof resolveSession>
   /** Same as getSession, but bypasses better-auth's short-lived cookie cache. */
@@ -132,23 +146,10 @@ export function buildRateLimitOptions(config: AuthConfig):
 }
 
 /**
- * Creates a fully configured auth instance shared by Hono and TanStack Start
- * apps. This is the package's single required entry point — most consumers
- * need nothing else.
+ * Creates a fully configured auth instance from a validated `AuthConfig`.
  *
- * @example
- * ```ts
- * export const auth = createAuth({
- *   environment: process.env.NODE_ENV as AuthEnvironment,
- *   baseUrl: process.env.AUTH_BASE_URL!,
- *   secret: process.env.AUTH_SECRET!,
- *   database: { db, schema, provider: "pg" },
- *   providers: {
- *     google: { clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET! },
- *     telegram: { clientId: process.env.TELEGRAM_OIDC_CLIENT_ID!, clientSecret: process.env.TELEGRAM_OIDC_CLIENT_SECRET! },
- *   },
- * });
- * ```
+ * Internal building block of `createAbugidaAuth()`; exported for this
+ * package's own tests, not part of the public entry point.
  */
 export function createAuth<TSchema extends AuthDatabaseSchema>(
   inputConfig: AuthConfig<TSchema>,
@@ -160,10 +161,12 @@ export function createAuth<TSchema extends AuthDatabaseSchema>(
 
   const registry = buildProviderRegistry(config)
   const socialProviders = buildSocialProviders(config, registry)
+  const plugins = buildServerPlugins(config)
 
   logger.info('Initializing auth instance', {
     environment: config.environment,
     providers: Object.keys(socialProviders).join(','),
+    plugins: plugins.length,
   })
 
   const raw = betterAuth({
@@ -173,6 +176,13 @@ export function createAuth<TSchema extends AuthDatabaseSchema>(
     // internal endpoints (sign-in/social, sign-up/email, callback/:provider,
     // get-session, sign-out, …) relative to this path.
     basePath: config.basePath,
+    // The platform is passwordless: sign-in is Google or Telegram OIDC only, so
+    // Better Auth's credential endpoints (email sign-in/sign-up, password
+    // reset, e-mail change/verification, password change) are switched off.
+    // Better Auth applies this both in its router (404) and in its OpenAPI
+    // generator (path not documented), so the served surface and the
+    // generated document stay in step. See core/routes.ts.
+    disabledPaths: [...PASSWORDLESS_DISABLED_PATHS, ...PASSWORDLESS_DISABLED_TEMPLATES],
     secret: config.secret,
     database: drizzleAdapter(config.database.db as never, {
       provider: config.database.provider,
@@ -186,14 +196,9 @@ export function createAuth<TSchema extends AuthDatabaseSchema>(
     account: { encryptOAuthTokens: true },
     trustedOrigins: config.cors?.origins,
     rateLimit: buildRateLimitOptions(config),
-    // Telegram (better-auth-telegram) and opt-in JWT issuance (PowerSync et
-    // al). Additional consumer plugins come next, then betterAuthOverrides so
-    // consumer overrides always win.
-    plugins: [
-      ...buildTelegramPlugins(config),
-      ...buildTokenPlugins(config),
-      ...(config.additionalPlugins ?? []),
-    ],
+    // The single plugin registry: Telegram (when configured), JWT/bearer (when
+    // configured), two-factor and organizations. Apps cannot extend it.
+    plugins,
     // better-auth issues + validates its own CSRF (state/PKCE) tokens for the
     // OAuth redirect flow automatically; `trustedOrigins` above is what scopes
     // which origins are allowed to complete a flow at all. See core/csrf.ts
@@ -206,6 +211,8 @@ export function createAuth<TSchema extends AuthDatabaseSchema>(
 
   return {
     raw: authApi,
+    api: authApi.api,
+    db: config.database.db,
     getSession: (headers: Headers) => resolveSession(authApi, headers, { logger }),
     refreshSession: (headers: Headers) => refreshSession(authApi, headers, logger),
     signOut: (headers: Headers) => revokeSession(authApi, headers, logger),

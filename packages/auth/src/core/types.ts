@@ -4,9 +4,12 @@
  * Shared type contracts for @abugida/auth. These types are the extension
  * points that let new OAuth providers, database schemas, and frameworks be
  * plugged in without touching core logic.
+ *
+ * The plugin registry is deliberately *not* an extension point: it is owned by
+ * `plugins/server.ts` so every app serves the same auth surface.
  */
 
-import type { BetterAuthOptions, BetterAuthPlugin } from 'better-auth'
+import type { BetterAuthOptions } from 'better-auth'
 import type { Logger } from './logger'
 
 // ---------------------------------------------------------------------------
@@ -162,7 +165,7 @@ export interface ProvidersConfig {
 
 /**
  * Opt-in JWT issuance for service-to-client consumers (currently PowerSync).
- * When present, `createAuth()` registers better-auth's jwt + bearer plugins:
+ * When present, the shared instance registers better-auth's jwt + bearer plugins:
  * signing keys are served at `<basePath>/jwks` and tokens authenticate as
  * bearer credentials. Requires the generated `jwks` table in the consumer's
  * Drizzle schema. See core/tokens.ts.
@@ -172,6 +175,36 @@ export interface TokensConfig {
   issuer?: string
   /** Audience claim. Default: "abugida" — must match PowerSync client_auth.audience. */
   audience?: string | string[]
+}
+
+/**
+ * Two-factor authentication policy (TOTP + backup codes).
+ *
+ * Owned by this package: an app supplies values through the shared auth env
+ * (`config/env.ts`), never plugin options of its own, so the lockout
+ * behaviour is identical in the API and the dashboard.
+ */
+export interface TwoFactorConfig {
+  /** Issuer shown in the authenticator app. */
+  issuer: string
+  /** Lifetime (seconds) of the short-lived "2FA verified" cookie. */
+  twoFactorCookieMaxAge?: number
+  /** Lifetime (seconds) of a trusted-device cookie. */
+  trustDeviceMaxAge?: number
+  accountLockout?: {
+    maxFailedAttempts: number
+    /** better-auth's option name; not `lockDuration`. */
+    durationSeconds: number
+  }
+}
+
+/**
+ * Organization behaviour. The plugin itself is always registered — its tables
+ * are part of the shared schema — so this block only tunes behaviour.
+ */
+export interface OrganizationConfig {
+  /** Whether a signed-in user may create their own workspace. Default: true. */
+  allowUserToCreateOrganization?: boolean
 }
 
 export interface AuthConfig<TSchema extends AuthDatabaseSchema = AuthDatabaseSchema> {
@@ -203,26 +236,18 @@ export interface AuthConfig<TSchema extends AuthDatabaseSchema = AuthDatabaseSch
    */
   logger?: Logger
   /**
-   * Additional better-auth plugins to register alongside the built-in
-   * Telegram and JWT/bearer plugins. Merged in before `betterAuthOverrides`
-   * so consumer overrides always win.
-   *
-   * @example
-   * ```ts
-   * import { twoFactor } from "better-auth/plugins/two-factor"
-   * import { organization } from "better-auth/plugins/organization"
-   *
-   * createAuth({
-   *   additionalPlugins: [twoFactor(), organization()],
-   *   ...
-   * })
-   * ```
+   * Two-factor policy. Omit only to serve an instance with 2FA disabled;
+   * `createAbugidaAuth()` always supplies it from the shared env contract.
    */
-  additionalPlugins?: BetterAuthPlugin[]
+  twoFactor?: TwoFactorConfig
+  /** Organization behaviour. The plugin is registered either way. */
+  organization?: OrganizationConfig
   /**
-   * Escape hatch for advanced consumers who need to pass raw better-auth
-   * options through. Merged in last, after our derived config, so it can
-   * override anything.
+   * Advanced escape hatch for this package's own `createAuth()` (used by
+   * `createAbugidaAuth()` and by tests). It is intentionally not reachable
+   * from the public entry point: an app that merged raw better-auth options
+   * here could silently fork the auth contract, which is exactly what this
+   * package exists to prevent.
    */
   betterAuthOverrides?: Partial<BetterAuthOptions>
 }
@@ -239,6 +264,8 @@ export type AuthErrorKind =
   | 'csrf_mismatch'
   | 'rate_limited'
   | 'unauthorized'
+  /** Authenticated, but not permitted to act on the target resource. */
+  | 'forbidden'
   | 'unknown'
 
 export interface AuthErrorBase {
@@ -276,6 +303,10 @@ export interface AuthUnauthorizedError extends AuthErrorBase {
   kind: 'unauthorized'
 }
 
+export interface AuthForbiddenError extends AuthErrorBase {
+  kind: 'forbidden'
+}
+
 export interface AuthUnknownError extends AuthErrorBase {
   kind: 'unknown'
 }
@@ -287,6 +318,7 @@ export type AuthError =
   | AuthCsrfError
   | AuthRateLimitError
   | AuthUnauthorizedError
+  | AuthForbiddenError
   | AuthUnknownError
 
 /** Result type used throughout the package instead of throwing across module boundaries. */

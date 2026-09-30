@@ -22,7 +22,7 @@ import { and, eq, sql } from '@abugida/database'
 import { member, twoFactor, users } from '@abugida/database/auth'
 import { auditLogs, notifications, supportTickets, systemConfigs } from '@abugida/database/ops'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
+import { getAuth } from '#/config/auth.server'
 import { getRequest } from '@tanstack/react-start/server'
 import { clientIp, currentUserId, requestId, requireUserId } from './auth.request.server'
 import type { MfaChallengeStatus } from '../auth.mfa-lockout'
@@ -40,7 +40,7 @@ export type MfaVerifyResult =
 /** Call Better Auth's server API for the current request. */
 async function callAuthApi<T>(method: string, body: Record<string, unknown>): Promise<T | null> {
   const request = getRequest()
-  const api = auth.raw.api as unknown as Record<
+  const api = getAuth().api as unknown as Record<
     string,
     (args: { body: Record<string, unknown>; headers: Headers }) => Promise<T>
   >

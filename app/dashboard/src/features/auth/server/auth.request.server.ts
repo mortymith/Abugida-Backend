@@ -3,7 +3,7 @@
  * Never import from client code.
  */
 import { getRequest } from '@tanstack/react-start/server'
-import { auth } from '#/config/auth.server'
+import { getAuth } from '#/config/auth.server'
 
 /**
  * The client address, taken from the first hop of `X-Forwarded-For` and falling
@@ -29,7 +29,7 @@ export function requestId(): string {
 /** Resolve the caller's user id, or `null` when unauthenticated. */
 export async function currentUserId(): Promise<string | null> {
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   return session.ok ? session.value.user.id : null
 }
 
@@ -46,7 +46,7 @@ export async function currentSessionUser(): Promise<{
   twoFactorEnabled: boolean
 } | null> {
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) return null
   const user = session.value.user as typeof session.value.user & { twoFactorEnabled?: boolean }
   return { id: user.id, twoFactorEnabled: user.twoFactorEnabled === true }

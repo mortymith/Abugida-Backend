@@ -1,7 +1,7 @@
 {
   "name": "@abugida/auth",
   "version": "0.0.1",
-  "description": "Shared authentication layer for Hono and TanStack Start apps, built on better-auth. Ships a Google OAuth provider and Telegram sign-in (better-auth-telegram, OIDC only).",
+  "description": "The single source of truth for authentication in the Abugida monorepo. Owns the Better Auth instance, plugin registry (Google, Telegram OIDC, two-factor, organizations), session/security policy and role vocabulary. Integrations for Hono and TanStack Start.",
   "type": "module",
   "license": "MIT",
   "private": false,
@@ -41,6 +41,18 @@
     "./providers": {
       "types": "./dist/providers/index.d.ts",
       "import": "./dist/providers/index.js"
+    },
+    "./env": {
+      "types": "./dist/config/env.d.ts",
+      "import": "./dist/config/env.js"
+    },
+    "./roles": {
+      "types": "./dist/core/roles.d.ts",
+      "import": "./dist/core/roles.js"
+    },
+    "./routes": {
+      "types": "./dist/core/routes.d.ts",
+      "import": "./dist/core/routes.js"
     }
   },
   "files": [
@@ -57,18 +69,14 @@
     "clean": "rm -rf dist"
   },
   "peerDependencies": {
-    "@abugida/database": "workspace:*",
     "@tanstack/react-router": ">=1.0.0",
     "@tanstack/react-start": ">=1.0.0",
     "better-auth": "1.6.26",
-    "drizzle-orm": ">=0.36.0",
+    "drizzle-orm": ">=0.45.0",
     "hono": ">=4.6.0",
     "react": ">=18.0.0"
   },
   "peerDependenciesMeta": {
-    "@abugida/database": {
-      "optional": true
-    },
     "hono": {
       "optional": true
     },
@@ -83,8 +91,9 @@
     }
   },
   "dependencies": {
+    "@abugida/database": "workspace:*",
     "better-auth-telegram": "^2.0.1",
-    "zod": "^3.23.8"
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@tanstack/react-router": "^1.87.0",
@@ -92,7 +101,7 @@
     "@types/bun": "^1.4.2",
     "@types/react": "^19.2.18",
     "better-auth": "1.6.26",
-    "drizzle-orm": "^0.36.4",
+    "drizzle-orm": "^0.45.2",
     "eslint": "^10.8.1",
     "hono": "^4.6.14",
     "prettier": "^3.9.6",

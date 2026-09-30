@@ -17,6 +17,12 @@ export interface ResolvedSession {
     id: string
     userId: string
     expiresAt: Date
+    /**
+     * The organization the session is currently acting in, set by the
+     * organization plugin's `/auth/organization/set-active`. `null` when the
+     * user belongs to no organization or has not picked one.
+     */
+    activeOrganizationId: string | null
   }
   user: {
     id: string
@@ -69,6 +75,11 @@ export async function resolveSession(
         id: result.session.id,
         userId: result.session.userId,
         expiresAt: new Date(result.session.expiresAt),
+        // Only present once the organization plugin has registered; read it
+        // defensively so the resolver keeps working for instances that serve
+        // a narrower plugin set.
+        activeOrganizationId:
+          (result.session as { activeOrganizationId?: string | null }).activeOrganizationId ?? null,
       },
       user: {
         id: result.user.id,

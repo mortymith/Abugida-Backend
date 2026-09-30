@@ -88,23 +88,25 @@ features/<domain>/
 
 Never create a second instance of anything in this table:
 
-| Singleton             | Lives in                                                              |
-| --------------------- | --------------------------------------------------------------------- |
-| Env                   | `src/config/app.config.ts` → `env`                                    |
-| DB client             | `src/config/db.config.ts` → `db`                                      |
-| Auth server instance  | `src/config/auth.server.ts` → `auth`                                  |
-| Auth server functions | `src/config/auth.config.ts` → `authServerFns` (consumed by the guard) |
-| Auth client           | `src/lib/auth-client.ts` → `authClient`                               |
-| Query client          | `src/integrations/tanstack-query/root-provider.tsx`                   |
-| Observability         | `src/config/observability.config.ts`                                  |
+| Singleton             | Lives in                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Env                   | `src/config/app.config.ts` → `env`                                                                                        |
+| DB client             | `src/config/db.config.ts` → `db`                                                                                          |
+| Auth server instance  | `src/config/auth.server.ts` → `getAuth()`                                                                                 |
+| Auth server functions | `src/config/auth.config.ts` → `authServerFns` (RPC declarations; behaviour from `serverSession` & co. in `@abugida/auth`) |
+| Auth client           | `src/lib/auth-client.ts` → `authClient`                                                                                   |
+| Query client          | `src/integrations/tanstack-query/root-provider.tsx`                                                                       |
+| Observability         | `src/config/observability.config.ts`                                                                                      |
 
-Shared packages: import from `@abugida/{auth,database,queue,storage,observability}`. Subpaths in use are `@abugida/auth/tanstack/{client,guard,server}`, `@abugida/database/{client,auth,catalog,finance,learning,marketing,ops}`, and `@abugida/queue/tanstack`. Never reimplement their logic locally.
+Shared packages: import from `@abugida/{auth,database,queue,storage,observability}`. Subpaths in use are `@abugida/auth/tanstack/{client,guard,server}`, `@abugida/auth/{env,roles}`, `@abugida/database/{client,auth,catalog,finance,learning,marketing,ops}`, and `@abugida/queue/tanstack`. Never reimplement their logic locally.
 
-Auth is Google + Telegram only, via the `twoFactor` and `organization` plugins. Never add password, email, or password-reset UI. Any flow that assumes an email address (invites, receipts, notifications) needs a Telegram-safe path — a claimable link or code.
+`@abugida/auth` owns the auth instance, plugin registry, env contract, role vocabulary, organization authorization and the behaviour behind the auth server functions. The four `authServerFns` in `src/config/auth.config.ts` are RPC _declarations_ only: TanStack Start's server-function transform does not reach a workspace package's `dist/`, and its import protection denies a route-reachable module from importing `*.server.*` (where the instance lives) — so the app declares, the package implements. The dashboard contributes environment, db client and logger only (`createAbugidaAuth({ env: resolveAuthEnv(env), db, logger })`), and reaches the instance through `getAuth()`. Auth env variables come from `authEnvShape`, not from `app.config.ts`.
+
+Auth is Google + Telegram only. The `twoFactor` and `organization` plugins are registered by `@abugida/auth` (the client side registers the matching client plugins), so the dashboard cannot enable or extend them. Never add password, email, or password-reset UI. Any flow that assumes an email address (invites, receipts, notifications) needs a Telegram-safe path — a claimable link or code.
 
 **Roles are enforced by capability, not by the role string.** There are two independent systems: `member.role` (workspace-wide, one text value) and `course_roles` (per course, grantable and revocable). The **effective role** is the union of both, **capped by** the member role — a course role never grants what the member role denies. Because `member.role` is a bare text column, **Reviewer and Support are not member roles**; they are capability-shaped and come from course roles or member flags. `spec /13-Identity-and-Workspaces.md` § _The Two Role Systems_ is the authority, and `Part 11` § _Course Lifecycle Capabilities_ is the enforcement table. Permission checks stay server-side; the UI role badge is context, never a gate.
 
-**Four gaps block parts of the spec** and are recorded in `spec /13` § _Implementation Gaps_. The critical one: **`invitation.email` is `notNull()`**, so the claimable-link invite the Telegram-safe delivery rule requires cannot be stored — make it nullable and add `handle` + `token` before building any invite flow in Parts 01, 06, 08, 10, or 13. The auth client also lacks `organizationClient()`, so workspace switching cannot be built until it is added.
+**Four gaps block parts of the spec** and are recorded in `spec /13` § _Implementation Gaps_. The critical one: **`invitation.email` is `notNull()`**, so the claimable-link invite the Telegram-safe delivery rule requires cannot be stored — make it nullable and add `handle` + `token` before building any invite flow in Parts 01, 06, 08, 10, or 13. The auth client registers `organizationClient()`/`twoFactorClient()` through `@abugida/auth`, so workspace switching is available client-side.
 
 ## Server / client boundary
 

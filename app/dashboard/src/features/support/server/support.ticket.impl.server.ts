@@ -6,7 +6,7 @@
 import { supportTickets } from '@abugida/database/ops'
 import { db } from '#/config/db.config'
 import { getRequest } from '@tanstack/react-start/server'
-import { auth } from '#/config/auth.server'
+import { getAuth } from '#/config/auth.server'
 import type { SupportTicketInput } from '../schemas/support.schema'
 
 export interface SubmittedTicket {
@@ -15,7 +15,7 @@ export interface SubmittedTicket {
 
 export async function submitSupportTicketImpl(input: SupportTicketInput): Promise<SubmittedTicket> {
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) throw new Error('UNAUTHORIZED')
 
   const rows = await db

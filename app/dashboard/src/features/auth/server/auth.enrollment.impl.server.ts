@@ -17,7 +17,7 @@ import { eq } from '@abugida/database'
 import { twoFactor } from '@abugida/database/auth'
 import { auditLogs } from '@abugida/database/ops'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
+import { getAuth } from '#/config/auth.server'
 import { getRequest } from '@tanstack/react-start/server'
 import { clientIp, currentSessionUser, requestId, requireUserId } from './auth.request.server'
 import { env } from '#/config/app.config'
@@ -32,7 +32,7 @@ import type { EnrollmentEntryPoint } from '../auth.events'
 
 async function callAuthApi<T>(method: string, body: Record<string, unknown>): Promise<T | null> {
   const request = getRequest()
-  const api = auth.raw.api as unknown as Record<
+  const api = getAuth().api as unknown as Record<
     string,
     (args: { body: Record<string, unknown>; headers: Headers }) => Promise<T>
   >

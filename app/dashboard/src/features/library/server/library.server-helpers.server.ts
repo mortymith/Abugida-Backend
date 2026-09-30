@@ -4,21 +4,21 @@
  * Never import from client code.
  */
 import { getRequest } from '@tanstack/react-start/server'
-import { auth } from '#/config/auth.server'
+import { getAuth } from '#/config/auth.server'
 import { COURSE_AUTHORING_ROLES } from '#/features/auth/auth.roles'
 import { resolvePlatformRoleImpl } from '#/features/auth/server/auth.roles.impl.server'
 import type { PlatformRole } from '#/features/auth/auth.roles'
 
 export async function requireUserId(): Promise<string> {
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) throw new Error('UNAUTHORIZED')
   return session.value.user.id
 }
 
 export async function getSessionRole(): Promise<PlatformRole> {
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) return 'viewer'
   return resolvePlatformRoleImpl(session.value.user.id)
 }

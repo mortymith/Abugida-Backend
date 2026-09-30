@@ -1,62 +1,30 @@
 /**
- * Server-only auth instance. Never import this from route files or client code.
- * Server functions in auth.config.ts lazily import this inside their handlers.
+ * Server-only auth instance — the dashboard's single Better Auth instance.
+ *
+ * Never import this from route files or client code. Server functions in
+ * `auth.config.ts` and the `/auth/*` request handler in
+ * `src/default-entry/server.ts` reach it through `getAuth()`.
+ *
+ * The instance itself — plugin registry (Google, Telegram OIDC, two-factor,
+ * organizations), session, cookie, rate-limit and trusted-origin policy, and
+ * the `@abugida/database` schema binding — is owned by `@abugida/auth`. This
+ * module contributes only the dashboard's environment, database client and
+ * logger, so the dashboard and the API cannot drift on any of the rest.
+ *
+ * Built lazily and memoized: the shared logger only exists after
+ * `initObservability()`, and a second better-auth instance would keep its own
+ * cookie cache and plugin registry.
  */
-import { createAuth } from '@abugida/auth'
-import { authSchema } from '@abugida/database/auth'
-import { twoFactor } from 'better-auth/plugins/two-factor'
-import { organization } from 'better-auth/plugins/organization'
+import { createAbugidaAuth } from '@abugida/auth'
+import type { AuthInstance } from '@abugida/auth'
+import { resolveAuthEnv } from '@abugida/auth/env'
 import { env } from './app.config'
 import { db } from './db.config'
+import { logger } from './observability.config'
 
-export const auth = createAuth({
-  cors: { origins: [env.WEB_APP_URL ?? env.AUTH_BASE_URL, env.AUTH_BASE_URL] },
-  environment: env.ENVIRONMENT,
-  baseUrl: env.AUTH_BASE_URL,
-  basePath: env.AUTH_BASE_PATH,
-  secret: env.BETTER_AUTH_SECRET,
-  database: { db, schema: authSchema, provider: 'pg' },
-  providers: {
-    google:
-      env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
-        ? {
-            clientId: env.GOOGLE_CLIENT_ID,
-            clientSecret: env.GOOGLE_CLIENT_SECRET,
-          }
-        : undefined,
-    telegram:
-      env.TELEGRAM_OIDC_CLIENT_ID && env.TELEGRAM_OIDC_CLIENT_SECRET
-        ? {
-            clientId: env.TELEGRAM_OIDC_CLIENT_ID,
-            clientSecret: env.TELEGRAM_OIDC_CLIENT_SECRET,
-          }
-        : undefined,
-  },
-  additionalPlugins: [
-    twoFactor({
-      issuer: env.TOTP_ISSUER,
-      twoFactorCookieMaxAge: env.TWO_FACTOR_COOKIE_MAX_AGE,
-      trustDeviceMaxAge: env.TRUST_DEVICE_MAX_AGE,
-      // The option is `durationSeconds`. The previous `lockDuration` was not a
-      // recognised key, so the configured cooldown was silently ignored and
-      // Better Auth fell back to its own 900s default.
-      accountLockout: {
-        maxFailedAttempts: env.ACCOUNT_LOCKOUT_MAX_ATTEMPTS,
-        durationSeconds: env.ACCOUNT_LOCKOUT_DURATION,
-      },
-    }),
-    organization({
-      schema: {
-        organization: {
-          additionalFields: {
-            useCase: {
-              type: 'string',
-              required: true,
-              input: true,
-            },
-          },
-        },
-      },
-    }),
-  ],
-})
+let instance: AuthInstance | undefined
+
+export function getAuth(): AuthInstance {
+  instance ??= createAbugidaAuth({ env: resolveAuthEnv(env), db, logger })
+  return instance
+}

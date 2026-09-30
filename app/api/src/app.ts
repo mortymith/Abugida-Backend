@@ -15,13 +15,7 @@ import type { RedisClient } from 'bun'
 import { createStorage, type Storage, type StorageConfig } from '@abugida/storage'
 import type { QueueClient } from '@abugida/queue'
 import { mountAuthRoutes } from '@abugida/auth/hono'
-import {
-  socialSignInRoute,
-  oauthCallbackRoute,
-  telegramConfigRoute,
-  signOutRoute,
-  getSessionRoute,
-} from './modules/auth'
+import type { MountAuthRoutesOptions } from '@abugida/auth/hono'
 
 import { appConfig } from './config/app_config'
 import { createAuthInstance } from './config/auth'
@@ -168,53 +162,16 @@ export function createApp(): ApiApplication {
   // ── Feature modules ──────────────────────────────────────────────────────
 
   // ── Auth — Better Auth endpoints ─────────────────────────────────────────
-  // Register documentation routes before the mounted catch-all so Hono
-  // matches these explicit routes first. Better Auth remains the handler.
-  // Better Auth's generated handler response is intentionally broader than
-  // the response types declared by these documentation-only routes.
-  // OpenAPI validation consumes JSON request bodies before invoking the handler.
-  // Rebuild the social sign-in request so Better Auth can parse the body too.
-  // Redirect destinations and OAuth controls are deliberately backend-owned.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const socialAuthHandler = ((c: any) => {
-    const body = c.req.valid('json')
-    const callbackURL =
-      appConfig.AUTH_CALLBACK_URL ?? appConfig.WEB_APP_URL ?? appConfig.BETTER_AUTH_URL
-    const backendBody = {
-      provider: body.provider === 'telegram' ? 'telegram-oidc' : body.provider,
-      callbackURL,
-      errorCallbackURL:
-        appConfig.AUTH_ERROR_CALLBACK_URL ?? appConfig.WEB_APP_URL ?? appConfig.BETTER_AUTH_URL,
-      newUserCallbackURL:
-        appConfig.AUTH_NEW_USER_CALLBACK_URL ?? appConfig.WEB_APP_URL ?? appConfig.BETTER_AUTH_URL,
-      disableRedirect: true,
-    }
-    const request = new Request(c.req.raw.url, {
-      method: c.req.raw.method,
-      headers: c.req.raw.headers,
-      body: JSON.stringify(backendBody),
-    })
-    return auth.raw.handler(request)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }) as any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const authHandler = ((c: any) => auth.raw.handler(c.req.raw)) as any
-  // Wraps Better Auth's /telegram/config response to add the client-facing
-  // provider id so clients know what to pass to POST /auth/sign-in/social.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const telegramConfigHandler = async (c: any) => {
-    const res = await auth.raw.handler(c.req.raw)
-    const body = await res.json()
-    return c.json({ provider: 'telegram', ...body })
-  }
-  app.openapi(socialSignInRoute, socialAuthHandler)
-  app.openapi(oauthCallbackRoute, authHandler)
-  // Telegram OIDC discovery endpoint registered by the better-auth-telegram
-  // plugin (OIDC-only: no widget/miniapp endpoints exist to document).
-  app.openapi(telegramConfigRoute, telegramConfigHandler)
-  app.openapi(signOutRoute, authHandler)
-  app.openapi(getSessionRoute, authHandler)
-  mountAuthRoutes(app as unknown as Parameters<typeof mountAuthRoutes>[0], auth)
+  // One mount, owned by `@abugida/auth`: the Better Auth request handler under
+  // `/auth/*`, plus the session-refresh endpoint and the two policy wrappers
+  // below. There are no hand-written auth routes or schemas — the endpoints are
+  // documented from the live auth instance into `/docs` (see
+  // `registerSystemDocumentation`).
+  mountAuthRoutes(
+    app as unknown as Parameters<typeof mountAuthRoutes>[0],
+    auth,
+    registerAuthRoutePolicy(),
+  )
 
   // Users module — profile, onboarding, consents, devices, dashboard
   const userRepo = createUserRepository(db)
@@ -321,7 +278,40 @@ export function createApp(): ApiApplication {
 
   // ── Documentation endpoints (development only) ──────────────────────────
 
-  registerSystemDocumentation(app)
+  registerSystemDocumentation(app, auth)
 
   return { app, queue, storage }
+}
+
+/**
+ * API policy for the auth routes `@abugida/auth` mounts: which app the OAuth
+ * provider may redirect to, and how public provider ids map onto the ones
+ * Better Auth knows.
+ *
+ * Redirect destinations and OAuth options are backend-owned — a client may
+ * only name a provider. `telegram` is the public id; Better Auth knows Telegram
+ * OIDC as `telegram-oidc`.
+ */
+export function registerAuthRoutePolicy(): MountAuthRoutesOptions {
+  return {
+    socialSignIn: {
+      callbackURL: authCallbackUrl('AUTH_CALLBACK_URL'),
+      errorCallbackURL: authCallbackUrl('AUTH_ERROR_CALLBACK_URL'),
+      newUserCallbackURL: authCallbackUrl('AUTH_NEW_USER_CALLBACK_URL'),
+      providerAliases: { telegram: 'telegram-oidc' },
+    },
+    // better-auth reports the internal OIDC provider id; clients pass `telegram`.
+    telegramConfig: { providerId: 'telegram' },
+  }
+}
+
+/**
+ * Where the OAuth provider redirects the user after a sign-in attempt. Each
+ * callback has its own variable, falling back to the web app and finally to
+ * the API's own origin.
+ */
+function authCallbackUrl(
+  key: 'AUTH_CALLBACK_URL' | 'AUTH_ERROR_CALLBACK_URL' | 'AUTH_NEW_USER_CALLBACK_URL',
+): string {
+  return appConfig[key] ?? appConfig.WEB_APP_URL ?? appConfig.BETTER_AUTH_URL
 }

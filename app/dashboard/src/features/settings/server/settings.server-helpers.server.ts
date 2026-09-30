@@ -9,13 +9,13 @@ import { eq, inArray, sql } from '@abugida/database'
 import { member, organization } from '@abugida/database/auth'
 import { auditLogs, systemConfigs } from '@abugida/database/ops'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
+import { getAuth } from '#/config/auth.server'
 import { getRequest } from '@tanstack/react-start/server'
 
 /** Any authenticated platform user (S-6.5 profile is own-record for all roles). */
 export async function requireUserId(): Promise<string> {
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) throw new Error('UNAUTHORIZED')
   return session.value.user.id
 }

@@ -1,85 +1,81 @@
 /**
  * @module auth.test
- * @description Unit tests for the auth configuration module.
+ * @description Unit tests for the API's auth wiring.
  *
- * These tests verify the auth module's interface and exports.
- * The module builds auth config from appConfig at import time.
+ * The auth policy itself (instance, plugin registry, session/security
+ * settings, database binding) is owned by `@abugida/auth` and tested there.
+ * What matters here is that the API builds exactly one instance from that
+ * package and hands it around unchanged.
  */
 
-import { describe, it, expect } from 'bun:test'
+import { beforeAll, describe, it, expect } from 'bun:test'
 
 describe('auth module', () => {
-  it('exports authConfig object', async () => {
-    const mod = await import('@/config/auth')
-    expect(mod.authConfig).toBeDefined()
-    expect(typeof mod.authConfig).toBe('object')
-  }, 15_000)
-
-  it('authConfig has required fields', async () => {
-    const mod = await import('@/config/auth')
-    const config = mod.authConfig
-    expect(config.secret).toBeDefined()
-    expect(config.baseUrl).toBeDefined()
-    expect(config.database).toBeDefined()
-    expect(config.database.db).toBeDefined()
-    expect(config.database.schema).toBeDefined()
-    expect(config.database.provider).toBe('pg')
+  beforeAll(async () => {
+    // The auth instance logs through the shared observability logger, which
+    // requires init() — the same order app.ts uses.
+    const { init } = await import('@/config/observability')
+    await init()
   })
-
-  it('authConfig has providers object', async () => {
-    const mod = await import('@/config/auth')
-    expect(mod.authConfig.providers).toBeDefined()
-    expect(typeof mod.authConfig.providers).toBe('object')
-  })
-
-  it('authConfig has rateLimit config', async () => {
-    const mod = await import('@/config/auth')
-    expect(mod.authConfig.rateLimit).toBeDefined()
-    expect(mod.authConfig.rateLimit.max).toBe(100)
-    expect(mod.authConfig.rateLimit.windowSeconds).toBe(60)
-  })
-
   it('exports createAuthInstance function', async () => {
     const mod = await import('@/config/auth')
     expect(typeof mod.createAuthInstance).toBe('function')
   })
 
-  it('buildProviders includes Google when credentials are set', async () => {
+  it('builds exactly one instance per process', async () => {
     const mod = await import('@/config/auth')
-    // The auth module reads from appConfig which is parsed at import time
-    // In the test environment, GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set
-    if (mod.authConfig.providers?.google) {
-      expect(mod.authConfig.providers.google.clientId).toBeDefined()
-      expect(mod.authConfig.providers.google.clientSecret).toBeDefined()
-    }
+    expect(mod.createAuthInstance()).toBe(mod.createAuthInstance())
   })
 
-  it('buildProviders includes Telegram OIDC when credentials are set', async () => {
-    const mod = await import('@/config/auth')
-    if (mod.authConfig.providers?.telegram) {
-      expect(mod.authConfig.providers.telegram.clientId).toBeDefined()
-      expect(mod.authConfig.providers.telegram.clientSecret).toBeDefined()
-    }
+  it('resolves the configuration from the shared auth package', async () => {
+    const { createAuthInstance } = await import('@/config/auth')
+    const { config, api, db } = createAuthInstance()
+
+    expect(config.secret).toBeDefined()
+    expect(config.baseUrl).toBeDefined()
+    expect(config.database.provider).toBe('pg')
+    expect(config.database.db).toBeDefined()
+    // Bound from @abugida/database — the app never declares these tables.
+    expect(config.database.schema).toHaveProperty('user')
+    expect(config.database.schema).toHaveProperty('session')
+    expect(config.database.schema).toHaveProperty('organization')
+
+    expect(typeof config.providers).toBe('object')
+    expect(config.rateLimit.max).toBe(100)
+    expect(config.rateLimit.windowSeconds).toBe(60)
+    expect(config.cors?.credentials).toBe(true)
+    expect(Array.isArray(config.cors?.origins)).toBe(true)
+
+    // Exposes better-auth's server API and the Drizzle handle the shared
+    // authorization helpers need.
+    expect(api).toBeDefined()
+    expect(db).toBeDefined()
   })
 
-  it('authConfig includes CORS when WEB_APP_URL is set', async () => {
-    const mod = await import('@/config/auth')
-    // WEB_APP_URL may or may not be set in test env
-    if (mod.authConfig.cors) {
-      expect(mod.authConfig.cors.origins).toBeDefined()
-      expect(Array.isArray(mod.authConfig.cors.origins)).toBe(true)
-      expect(mod.authConfig.cors.credentials).toBe(true)
+  it('serves the same plugin surface as the dashboard', async () => {
+    const { createAuthInstance } = await import('@/config/auth')
+    const { api } = createAuthInstance() as unknown as {
+      api: Record<string, unknown>
     }
+
+    // Organizations and two-factor are registered by @abugida/auth, not here.
+    expect(api.getActiveMember).toBeDefined()
+    expect(api.createOrganization).toBeDefined()
+    expect(api.listMembers).toBeDefined()
+    expect(api.verifyTOTP).toBeDefined()
+    expect(api.verifyBackupCode).toBeDefined()
   })
 
-  it('does not expose client-controlled social sign-in options in the public schema', async () => {
-    const { SocialLoginBodySchema } = await import('@/modules/auth/auth.schemas')
-    expect(SocialLoginBodySchema.safeParse({ provider: 'telegram' }).success).toBe(true)
-    expect(
-      SocialLoginBodySchema.safeParse({
-        provider: 'telegram',
-        callbackURL: 'https://client-controlled.example',
-      }).data,
-    ).toEqual({ provider: 'telegram' })
+  it('mounts the auth endpoints with backend-owned social sign-in policy', async () => {
+    // Redirect destinations are app configuration, not request data: the
+    // shared mount replaces the client's body (see
+    // `SocialSignInPolicy` in @abugida/auth and its tests).
+    const { registerAuthRoutePolicy } = await import('@/app')
+    expect(typeof registerAuthRoutePolicy).toBe('function')
+
+    const policy = registerAuthRoutePolicy()
+    expect(policy.socialSignIn?.callbackURL).toBeDefined()
+    expect(policy.socialSignIn?.providerAliases).toEqual({ telegram: 'telegram-oidc' })
+    expect(policy.telegramConfig).toEqual({ providerId: 'telegram' })
   })
 })

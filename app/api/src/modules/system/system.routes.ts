@@ -13,6 +13,8 @@
 import type { OpenAPIHono } from '@hono/zod-openapi'
 import { createRoute } from '@hono/zod-openapi'
 import { Scalar } from '@scalar/hono-api-reference'
+import { getAuthOpenApiDocument, mergeAuthOpenApiDocument } from '@abugida/auth'
+import type { AuthInstance, OpenApiDocumentLike } from '@abugida/auth'
 import { appConfig } from '@/config/app_config'
 import type { AppEnv } from '@/middleware/types'
 import {
@@ -117,16 +119,87 @@ export type HealthReadinessRoute = typeof healthReadinessRoute
  * The OpenAPI document is served at `GET /docs` and the Scalar interactive
  * reference UI at `/scalar`. Both are only available in non-production
  * environments to prevent exposing internal API details.
+ *
+ * The `/auth/*` paths are not declared by this application: they are served by
+ * the shared auth handler and documented by `@abugida/auth`, which generates
+ * them from the live Better Auth instance. They are merged into the document
+ * here, so the published document stays a single, accurate source.
  */
-export function registerSystemDocumentation(app: OpenAPIHono<AppEnv>): void {
+export function registerSystemDocumentation(app: OpenAPIHono<AppEnv>, auth: AuthInstance): void {
   if (appConfig.NODE_ENV === 'production') return
 
-  app.doc31('/docs', {
-    openapi: '3.1.0',
-    info: {
-      title: 'Abugida Application API',
-      version: appConfig.OTEL_SERVICE_VERSION,
-      description: `# Overview
+  app.get('/docs', async (c) => {
+    const document = app.getOpenAPI31Document(OPENAPI_DOCUMENT) as unknown as OpenApiDocumentLike
+    const authDocument = await getAuthOpenApiDocument(auth)
+    return c.json(
+      withApiSecuritySchemes(mergeAuthOpenApiDocument(document, authDocument, AUTH_DOCUMENT_MERGE)),
+    )
+  })
+
+  app.use(
+    '/scalar',
+    Scalar({
+      url: '/docs',
+      pageTitle: 'Abugida API — Scalar Reference',
+    }),
+  )
+}
+
+/** Path the auth handler is mounted under; must match `mountAuthRoutes`. */
+const AUTH_BASE_PATH = '/auth'
+
+/**
+ * How the generated auth document is folded into the API's own document.
+ *
+ * `Bearer` and `sessionCookie` are the names the API's hand-written routes
+ * already use, so the auth operations point at the same definitions instead of
+ * adding Better Auth's own (`bearerAuth`, `apiKeyCookie`) as duplicates of the
+ * same mechanisms.
+ */
+const AUTH_DOCUMENT_MERGE = {
+  basePath: AUTH_BASE_PATH,
+  tag: 'Auth',
+  bearerSecurityScheme: 'Bearer',
+  cookieSecurityScheme: 'sessionCookie',
+} as const
+
+/**
+ * Security schemes referenced by the API's own routes. Better Auth's session
+ * cookie scheme is contributed by the merged auth document as `sessionCookie`;
+ * without these two definitions the document's `Bearer` / `apiKeyHeader`
+ * requirements would point at nothing.
+ */
+const API_SECURITY_SCHEMES = {
+  Bearer: {
+    type: 'http',
+    scheme: 'bearer',
+    description:
+      'JWT access token issued by Better Auth. Send as `Authorization: Bearer <access_token>`.',
+  },
+  apiKeyHeader: {
+    type: 'apiKey',
+    in: 'header',
+    name: 'X-API-Key',
+    description: 'Webhook API key issued to a partner integration.',
+  },
+} as const
+
+function withApiSecuritySchemes<T extends OpenApiDocumentLike>(document: T): T {
+  return {
+    ...document,
+    components: {
+      ...document.components,
+      securitySchemes: { ...document.components?.securitySchemes, ...API_SECURITY_SCHEMES },
+    },
+  }
+}
+
+const OPENAPI_DOCUMENT = {
+  openapi: '3.1.0',
+  info: {
+    title: 'Abugida Application API',
+    version: appConfig.OTEL_SERVICE_VERSION,
+    description: `# Overview
 
 Unified REST API for the **Abugida Application** — a comprehensive learning platform
 supporting examination preparation across multiple education segments.
@@ -218,105 +291,96 @@ All enum values are transmitted as **UPPER_SNAKE_CASE** in both requests and res
 (e.g., \`IOS\`, \`ANDROID\`, \`WEB\`). The API gateway serializes/deserializes to/from the
 database's lowercase snake_case storage format transparently. Clients never need to
 handle lowercase enum values.`,
-      contact: {
-        name: 'Abugida API Support Team',
-        email: 'api-support@abugada.com',
-        url: 'https://abugada.com/developers',
-      },
-      license: {
-        name: 'Proprietary',
-        url: 'https://abugada.com/license',
-      },
+    contact: {
+      name: 'Abugida API Support Team',
+      email: 'api-support@abugada.com',
+      url: 'https://abugada.com/developers',
     },
-    servers: [
-      {
-        url: `http://${appConfig.HOST}:${appConfig.PORT}`,
-        description: 'Local development server',
-      },
-      {
-        url: 'https://accuracy-flip-playing.ngrok-free.dev',
-        description: 'Tunnel development server',
-      },
-    ],
-    tags: [
-      {
-        name: 'System',
-        description:
-          'Health checks, metrics, and operational endpoints. Includes liveness and readiness probes for container orchestration and load balancer integration.',
-      },
-      {
-        name: 'Auth',
-        description:
-          'Authentication and session management powered by Better Auth. Includes sign-up, sign-in (email/password, Google, Telegram), session refresh, sign-out, OAuth callbacks, email verification, and password reset flows.',
-      },
-      {
-        name: 'Users',
-        description:
-          'User profiles, preferences, onboarding, devices, and GDPR operations. Covers the full user lifecycle from registration through account deletion, including consent management and data export.',
-      },
-      {
-        name: 'Dashboard',
-        description:
-          'User dashboard with aggregated statistics, activity feed, and insights. Provides a single endpoint for the home screen with study time, lessons, XP, streak, and weekly data.',
-      },
-      {
-        name: 'ExamTypes',
-        description:
-          'Exam type hierarchy navigation (self-referencing tree). Represents education categories and sub-categories for organizing courses.',
-      },
-      {
-        name: 'Resources',
-        description:
-          'Educational resource library — hierarchy navigation, course search, and lesson details. Covers courses, modules, lessons, tags, and full-text search with autocomplete.',
-      },
-      {
-        name: 'Bundles',
-        description:
-          'Course bundles — grouped course packages by exam type with discount pricing. Supports browsing, search, and purchase option discovery.',
-      },
-      {
-        name: 'Progress',
-        description:
-          'User learning progress, enrollments, lesson completions, and study tracking. Tracks completion percentages and learning history across all enrolled courses.',
-      },
-      {
-        name: 'Bookmark',
-        description:
-          'User bookmarks for courses and resources. Enables quick access to frequently visited or saved content.',
-      },
-      {
-        name: 'Downloads',
-        description:
-          'Offline course content downloads, download status tracking, and presigned download URLs for mobile offline access.',
-      },
-      {
-        name: 'Purchases',
-        description:
-          'Telebirr-only purchases for courses and bundles. Manages the complete purchase lifecycle from initiation through enrollment creation.',
-      },
-      {
-        name: 'Quiz',
-        description:
-          'Quiz questions, attempts, and answer submission. Supports server-side grading and attempt history tracking.',
-      },
-      {
-        name: 'Recommendations',
-        description:
-          'Course ratings, reviews, and popularity-based recommendations. Helps users discover relevant content based on community feedback.',
-      },
-      {
-        name: 'Webhooks',
-        description:
-          'Incoming webhooks from payment providers and SMS service. Handles asynchronous callbacks for payment confirmation and delivery status.',
-      },
-    ],
-  })
-
-  app.use(
-    '/scalar',
-    Scalar({
-      url: '/docs',
-      pageTitle: 'Abugida API — Scalar Reference',
-    }),
-  )
-}
+    license: {
+      name: 'Proprietary',
+      url: 'https://abugada.com/license',
+    },
+  },
+  servers: [
+    {
+      url: `http://${appConfig.HOST}:${appConfig.PORT}`,
+      description: 'Local development server',
+    },
+    {
+      url: 'https://accuracy-flip-playing.ngrok-free.dev',
+      description: 'Tunnel development server',
+    },
+  ],
+  tags: [
+    {
+      name: 'System',
+      description:
+        'Health checks, metrics, and operational endpoints. Includes liveness and readiness probes for container orchestration and load balancer integration.',
+    },
+    {
+      name: 'Auth',
+      description:
+        'Authentication and session management powered by Better Auth. Includes sign-up, sign-in (email/password, Google, Telegram), session refresh, sign-out, OAuth callbacks, email verification, and password reset flows.',
+    },
+    {
+      name: 'Users',
+      description:
+        'User profiles, preferences, onboarding, devices, and GDPR operations. Covers the full user lifecycle from registration through account deletion, including consent management and data export.',
+    },
+    {
+      name: 'Dashboard',
+      description:
+        'User dashboard with aggregated statistics, activity feed, and insights. Provides a single endpoint for the home screen with study time, lessons, XP, streak, and weekly data.',
+    },
+    {
+      name: 'ExamTypes',
+      description:
+        'Exam type hierarchy navigation (self-referencing tree). Represents education categories and sub-categories for organizing courses.',
+    },
+    {
+      name: 'Resources',
+      description:
+        'Educational resource library — hierarchy navigation, course search, and lesson details. Covers courses, modules, lessons, tags, and full-text search with autocomplete.',
+    },
+    {
+      name: 'Bundles',
+      description:
+        'Course bundles — grouped course packages by exam type with discount pricing. Supports browsing, search, and purchase option discovery.',
+    },
+    {
+      name: 'Progress',
+      description:
+        'User learning progress, enrollments, lesson completions, and study tracking. Tracks completion percentages and learning history across all enrolled courses.',
+    },
+    {
+      name: 'Bookmark',
+      description:
+        'User bookmarks for courses and resources. Enables quick access to frequently visited or saved content.',
+    },
+    {
+      name: 'Downloads',
+      description:
+        'Offline course content downloads, download status tracking, and presigned download URLs for mobile offline access.',
+    },
+    {
+      name: 'Purchases',
+      description:
+        'Telebirr-only purchases for courses and bundles. Manages the complete purchase lifecycle from initiation through enrollment creation.',
+    },
+    {
+      name: 'Quiz',
+      description:
+        'Quiz questions, attempts, and answer submission. Supports server-side grading and attempt history tracking.',
+    },
+    {
+      name: 'Recommendations',
+      description:
+        'Course ratings, reviews, and popularity-based recommendations. Helps users discover relevant content based on community feedback.',
+    },
+    {
+      name: 'Webhooks',
+      description:
+        'Incoming webhooks from payment providers and SMS service. Handles asynchronous callbacks for payment confirmation and delivery status.',
+    },
+  ],
+} satisfies Parameters<OpenAPIHono<AppEnv>['getOpenAPI31Document']>[0]

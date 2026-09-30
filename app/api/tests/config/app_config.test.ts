@@ -128,13 +128,17 @@ describe('parseAppConfig', () => {
     it('throws when GOOGLE_CLIENT_ID is set without GOOGLE_CLIENT_SECRET', () => {
       expect(() =>
         parseAppConfig(baseEnv({ GOOGLE_CLIENT_ID: 'id', GOOGLE_CLIENT_SECRET: undefined })),
-      ).toThrow('GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together')
+      ).toThrow(
+        'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must both be provided or both left unset.',
+      )
     })
 
     it('throws when GOOGLE_CLIENT_SECRET is set without GOOGLE_CLIENT_ID', () => {
       expect(() =>
         parseAppConfig(baseEnv({ GOOGLE_CLIENT_ID: undefined, GOOGLE_CLIENT_SECRET: 'secret' })),
-      ).toThrow('GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together')
+      ).toThrow(
+        'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must both be provided or both left unset.',
+      )
     })
 
     it('accepts both Telegram OIDC credentials together', () => {
@@ -150,7 +154,7 @@ describe('parseAppConfig', () => {
 
     it('throws when Telegram OIDC credentials are incomplete', () => {
       expect(() => parseAppConfig(baseEnv({ TELEGRAM_OIDC_CLIENT_ID: 'oidc-client' }))).toThrow(
-        'TELEGRAM_OIDC_CLIENT_ID and TELEGRAM_OIDC_CLIENT_SECRET must be set together',
+        'TELEGRAM_OIDC_CLIENT_ID and TELEGRAM_OIDC_CLIENT_SECRET must both be provided or both left unset.',
       )
     })
 

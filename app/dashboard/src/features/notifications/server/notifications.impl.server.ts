@@ -6,7 +6,7 @@
 import { and, desc, eq, inArray, isNull, sql } from '@abugida/database'
 import { notifications } from '@abugida/database/ops'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
+import { getAuth } from '#/config/auth.server'
 import { getRequest } from '@tanstack/react-start/server'
 import { resolveEntityLink } from '#/lib/entity-links'
 import type { LinkableEntityType } from '#/lib/entity-links'
@@ -47,7 +47,7 @@ function toItem(row: typeof notifications.$inferSelect): NotificationItem {
 
 async function requireUserId(): Promise<string> {
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) throw new Error('UNAUTHORIZED')
   return session.value.user.id
 }

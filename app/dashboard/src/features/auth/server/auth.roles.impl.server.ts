@@ -1,36 +1,29 @@
 /**
  * Server-only role resolution. Never import from client code — this module
- * pulls in the database client and the Better Auth server instance.
+ * pulls in the database client and the shared auth instance.
+ *
+ * The membership query and the role translation are the shared authorization
+ * helpers in `@abugida/auth`, so "am I an admin?" is answered by the same code
+ * here as in the API's own checks.
  */
-import { eq } from '@abugida/database'
-import { member } from '@abugida/database/auth'
+import { resolveUserPlatformRole } from '@abugida/auth'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
-import { mapBetterAuthRoleToPlatformRole, ROLE_PRIORITY } from '../auth.roles'
+import { getAuth } from '#/config/auth.server'
 import type { PlatformRole } from '../auth.roles'
 
 /**
- * Resolve a user's platform role from the Better Auth organization `member`
- * table. Falls back to the least-privileged `viewer` when the user has no
- * org membership yet — role assignment is an admin concern, not a session
- * error.
+ * Resolve a user's platform role across their organizations. Falls back to the
+ * least-privileged `viewer` when the user has no org membership yet — role
+ * assignment is an admin concern, not a session error.
  */
-export async function resolvePlatformRoleImpl(userId: string): Promise<PlatformRole> {
-  const rows = await db.select({ role: member.role }).from(member).where(eq(member.userId, userId))
-
-  let best: PlatformRole = 'viewer'
-  for (const row of rows) {
-    const candidate = mapBetterAuthRoleToPlatformRole(row.role)
-    if (ROLE_PRIORITY[candidate] > ROLE_PRIORITY[best]) best = candidate
-  }
-  return best
+export async function resolvePlatformRoleImpl(userId: string | null): Promise<PlatformRole> {
+  return resolveUserPlatformRole(db, userId)
 }
 
 /** Resolve the calling request's platform role. Runs inside handler context. */
 export async function getServerRoleImpl(): Promise<PlatformRole> {
   const { getRequest } = await import('@tanstack/react-start/server')
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
-  if (!session.ok) return 'viewer'
-  return resolvePlatformRoleImpl(session.value.user.id)
+  const session = await getAuth().getSession(request.headers)
+  return resolvePlatformRoleImpl(session.ok ? session.value.user.id : null)
 }

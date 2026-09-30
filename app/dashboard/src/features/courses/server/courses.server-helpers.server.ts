@@ -8,7 +8,7 @@ import { courses, modules, lessons } from '@abugida/database/catalog'
 import { member } from '@abugida/database/auth'
 import { notifications } from '@abugida/database/ops'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
+import { getAuth } from '#/config/auth.server'
 import { getRequest } from '@tanstack/react-start/server'
 import {
   COURSE_AUTHORING_ROLES,
@@ -20,14 +20,14 @@ import type { PlatformRole } from '#/features/auth/auth.roles'
 
 export async function requireUserId(): Promise<string> {
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) throw new Error('UNAUTHORIZED')
   return session.value.user.id
 }
 
 export async function getSessionRole(): Promise<PlatformRole> {
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) return 'viewer'
   const { resolvePlatformRoleImpl } = await import('#/features/auth/server/auth.roles.impl.server')
   return resolvePlatformRoleImpl(session.value.user.id)

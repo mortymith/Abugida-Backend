@@ -7,7 +7,7 @@
 
 import type { AuthProviderDefinition, BaseProviderCredentials } from '@abugida/auth'
 import { assertNonEmpty } from '@abugida/auth/providers' // re-exported validation helper
-import { createAuth } from '@abugida/auth'
+import { createAuth } from '../src/core/auth' // the low-level factory
 
 interface GithubCredentials extends BaseProviderCredentials {
   clientId: string
@@ -35,10 +35,15 @@ const githubProvider: AuthProviderDefinition<GithubCredentials> = {
   },
 }
 
+/**
+ * Providers are registered in `buildProviderRegistry()` (src/core/auth.ts),
+ * which is why this example drives the internal factory: a consumer app uses
+ * `createAbugidaAuth()` and cannot register a provider of its own at runtime.
+ */
 export const auth = createAuth({
   environment: 'development',
   baseUrl: 'http://localhost:3000',
-  secret: process.env.AUTH_SECRET!,
+  secret: process.env.BETTER_AUTH_SECRET!,
   database: {
     db: {} /* your drizzle instance */,
     schema: {} as never /* your injected schema */,

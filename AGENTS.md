@@ -19,13 +19,13 @@ Turborepo over pnpm workspaces (`app/*`, `packages/*`). Root `pnpm <script>` fan
 
 ### Shared packages
 
-| Path                     | Package                  | What it is                                                                                            |
-| ------------------------ | ------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `packages/auth`          | `@abugida/auth`          | Better Auth layer — exports core + `/hono`, `/tanstack`, `/providers` subpaths                        |
-| `packages/database`      | `@abugida/database`      | Drizzle schema by domain (`auth`, `catalog`, `finance`, `learning`, `ops`, `shared`) + `createClient` |
-| `packages/observability` | `@abugida/observability` | Pino logging + OpenTelemetry tracing/metrics — exports `/hono`, `/tanstack`, `/astro` subpaths        |
-| `packages/queue`         | `@abugida/queue`         | BullMQ queue management — exports `/tanstack` subpath                                                 |
-| `packages/storage`       | `@abugida/storage`       | S3-compatible object storage — exports `/tanstack` subpath                                            |
+| Path                     | Package                  | What it is                                                                                                                                                                                                                  |
+| ------------------------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/auth`          | `@abugida/auth`          | **Single source of truth for auth** — Better Auth instance + plugin registry, env contract, role vocabulary, authorization helpers. Exports core + `/hono`, `/tanstack`, `/client`, `/env`, `/roles`, `/providers` subpaths |
+| `packages/database`      | `@abugida/database`      | Drizzle schema by domain (`auth`, `catalog`, `finance`, `learning`, `ops`, `shared`) + `createClient`                                                                                                                       |
+| `packages/observability` | `@abugida/observability` | Pino logging + OpenTelemetry tracing/metrics — exports `/hono`, `/tanstack`, `/astro` subpaths                                                                                                                              |
+| `packages/queue`         | `@abugida/queue`         | BullMQ queue management — exports `/tanstack` subpath                                                                                                                                                                       |
+| `packages/storage`       | `@abugida/storage`       | S3-compatible object storage — exports `/tanstack` subpath                                                                                                                                                                  |
 
 - All apps import from the shared packages via `workspace:*`. Do not reimplement auth, database, queue, storage, or observability logic locally.
 - To scope to one workspace, run from that directory or `pnpm --filter <name> <script>`.
@@ -33,12 +33,14 @@ Turborepo over pnpm workspaces (`app/*`, `packages/*`). Root `pnpm <script>` fan
 
 ### Application boundaries and authentication
 
-- `app/api` and `app/dashboard` each implement and own their own authentication layer and runtime instance by composing the shared `@abugida/auth` package. The shared package provides the common auth foundation; it does not make either app a dependency of the other.
-- The API uses the shared Hono integration (`@abugida/auth/hono`), while the dashboard uses the shared TanStack integrations (`@abugida/auth/tanstack/*`). Keep auth configuration, route mounting, clients, middleware, and session guards inside their respective app.
+- `app/api` and `app/dashboard` each own their own runtime and compose the shared `@abugida/auth` package; neither app is a dependency of the other.
+- `@abugida/auth` owns everything auth: the Better Auth instance, the plugin registry (Google, Telegram OIDC, JWT/bearer, two-factor, organizations), session/cookie/rate-limit/trusted-origin policy, the role vocabulary, and organization authorization. Apps supply only environment, database client and logger (`createAbugidaAuth({ env, db, logger })`). Apps must not re-declare auth env vars, plugins, role mappings or schema.
+- The auth environment contract lives in `@abugida/auth/env` (`authEnvShape`): spread it into an app's own zod schema instead of re-declaring variables.
+- The API uses the shared Hono integration (`@abugida/auth/hono`), while the dashboard uses the shared TanStack integrations (`@abugida/auth/tanstack/*`). Keep route mounting, clients, middleware and session guards inside their respective app.
 - `app/api` must not import, call, mount, proxy, or otherwise access code from `app/dashboard`.
 - `app/dashboard` must not import, call, mount, proxy, or otherwise access code from `app/api`.
 - Communication between the apps must happen only through explicitly supported boundaries such as public HTTP APIs, shared packages, or shared infrastructure. Never bypass these boundaries with cross-app imports.
-- When authentication is involved, each app must use its own locally configured auth entry point and integration. Do not reuse the other app's auth instance, client, middleware, route handlers, or server functions.
+- When authentication is involved, each app must use its own locally built auth instance and its own framework integration. Do not reuse the other app's instance, middleware, route handlers or server functions — but do build both from `@abugida/auth` so they serve an identical auth surface.
 
 ## Commands
 
@@ -79,7 +81,7 @@ just validate-compose   # Validate all three compose tiers
 
 - Code style is prettier + eslint: no semicolons, single quotes, trailing commas, printWidth 100.
 - Root tsconfig is strict with `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitReturns`, `isolatedModules`. Match these in new code.
-- `packages/auth`: Build with `tsc` to `dist/` before consuming. Framework middleware is intentionally kept in subpaths (`/hono`, `/tanstack`) so consumers don't pull unnecessary deps.
+- `packages/auth`: Build with `tsc` to `dist/` before consuming. Framework middleware is intentionally kept in subpaths (`/hono`, `/tanstack`, `/client`, `/env`, `/roles`) so consumers don't pull unnecessary deps. Add new auth behaviour here, not in an app.
 - `packages/database`: Schema is organized by domain under `schema/` (`auth`, `catalog`, `finance`, `learning`, `ops`, `shared`). The barrel `index.ts` re-exports everything.
 - `app/dashboard`: File-based routing via TanStack Router. After adding/renaming routes run `pnpm --filter @abugida/dashboard generate-routes`. `*.gen.ts` files are eslint-ignored. See `app/dashboard/AGENTS.md` for dashboard-specific conventions.
 - `app/api`: Hono REST API with Zod OpenAPI. See `app/api/` for module structure.

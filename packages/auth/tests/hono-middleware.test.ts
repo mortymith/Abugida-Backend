@@ -199,3 +199,113 @@ describe('mountAuthRoutes session refresh endpoint', () => {
     expect(res.status).toBe(401)
   })
 })
+
+describe('mountAuthRoutes social sign-in policy', () => {
+  const policy = {
+    callbackURL: 'https://app.abugida.com/callback',
+    errorCallbackURL: 'https://app.abugida.com/login',
+    newUserCallbackURL: 'https://app.abugida.com/welcome',
+    providerAliases: { telegram: 'telegram-oidc' },
+  }
+
+  function appWith(seen: Record<string, unknown>[]) {
+    const auth = fakeAuthInstance({
+      raw: {
+        handler: async (request: Request) => {
+          const body = await request.clone().text()
+          seen.push({ body: body ? JSON.parse(body) : null, url: request.url })
+          return new Response(JSON.stringify({ url: 'https://provider/authorize' }), {
+            headers: { 'content-type': 'application/json' },
+          })
+        },
+      } as never,
+    })
+    const app = new Hono<{ Bindings: Record<string, unknown>; Variables: HonoAuthVariables }>()
+    mountAuthRoutes(app, auth, { socialSignIn: policy })
+    return app
+  }
+
+  it('replaces the client body with the server-built one', async () => {
+    const seen: Record<string, unknown>[] = []
+    const res = await appWith(seen).request('/auth/sign-in/social', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ provider: 'telegram', callbackURL: 'https://evil.example' }),
+    })
+
+    expect(res.status).toBe(200)
+    expect(seen[0]?.body).toEqual({
+      provider: 'telegram-oidc',
+      callbackURL: 'https://app.abugida.com/callback',
+      errorCallbackURL: 'https://app.abugida.com/login',
+      newUserCallbackURL: 'https://app.abugida.com/welcome',
+      disableRedirect: true,
+    })
+  })
+
+  it('leaves an unaliased provider id alone', async () => {
+    const seen: Record<string, unknown>[] = []
+    await appWith(seen).request('/auth/sign-in/social', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ provider: 'google' }),
+    })
+
+    expect((seen[0]?.body as { provider: string }).provider).toBe('google')
+  })
+
+  it('rejects a request without a provider before it reaches better-auth', async () => {
+    const seen: Record<string, unknown>[] = []
+    const res = await appWith(seen).request('/auth/sign-in/social', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ callbackURL: 'https://evil.example' }),
+    })
+
+    expect(res.status).toBe(400)
+    expect(seen).toHaveLength(0)
+    expect(((await res.json()) as { error: { kind: string } }).error.kind).toBe('provider_error')
+  })
+
+  it('rejects an unparseable body before it reaches better-auth', async () => {
+    const seen: Record<string, unknown>[] = []
+    const res = await appWith(seen).request('/auth/sign-in/social', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: 'not json',
+    })
+
+    expect(res.status).toBe(400)
+    expect(seen).toHaveLength(0)
+  })
+
+  it('leaves other better-auth endpoints on the catch-all handler', async () => {
+    const seen: Record<string, unknown>[] = []
+    const res = await appWith(seen).request('/auth/get-session')
+
+    expect(res.status).toBe(200)
+    expect(seen[0]?.url).toContain('/auth/get-session')
+  })
+})
+
+describe('mountAuthRoutes telegram config', () => {
+  it('adds the public provider id to the better-auth response', async () => {
+    const auth = fakeAuthInstance({
+      raw: {
+        handler: async () =>
+          new Response(JSON.stringify({ botUsername: 'abugida_bot', oidcEnabled: true }), {
+            headers: { 'content-type': 'application/json' },
+          }),
+      } as never,
+    })
+    const app = new Hono<{ Bindings: Record<string, unknown>; Variables: HonoAuthVariables }>()
+    mountAuthRoutes(app, auth, { telegramConfig: { providerId: 'telegram' } })
+
+    const res = await app.request('/auth/telegram/config')
+    expect(await res.json()).toEqual({
+      provider: 'telegram',
+      botUsername: 'abugida_bot',
+      oidcEnabled: true,
+    })
+  })
+})

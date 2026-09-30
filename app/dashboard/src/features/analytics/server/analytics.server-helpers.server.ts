@@ -6,7 +6,7 @@
 import { and, eq, isNull } from '@abugida/database'
 import { courses, lessons } from '@abugida/database/catalog'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
+import { getAuth } from '#/config/auth.server'
 import { getRequest } from '@tanstack/react-start/server'
 import { hasAtLeastRole, REVENUE_ROLES } from '#/features/auth/auth.roles'
 import type { PlatformRole } from '#/features/auth/auth.roles'
@@ -16,14 +16,14 @@ export { pctDelta } from '../analytics.metric-math'
 
 export async function requireUserId(): Promise<string> {
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) throw new Error('UNAUTHORIZED')
   return session.value.user.id
 }
 
 export async function getSessionRole(): Promise<PlatformRole> {
   const request = getRequest()
-  const session = await auth.getSession(request.headers)
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) return 'viewer'
   return resolvePlatformRoleImpl(session.value.user.id)
 }

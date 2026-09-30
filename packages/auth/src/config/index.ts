@@ -35,7 +35,7 @@ const sessionSchema = z
 
 const corsSchema = z
   .object({
-    origins: z.array(z.string().url()).min(1),
+    origins: z.array(z.url()).min(1),
     credentials: z.boolean().optional(),
   })
   .optional()
@@ -46,6 +46,7 @@ const rateLimitSchema = z
     windowSeconds: z.number().int().positive(),
     customRules: z
       .record(
+        z.string(),
         z.union([
           z.object({ window: z.number().int().positive(), max: z.number().int().positive() }),
           z.literal(false),
@@ -57,7 +58,7 @@ const rateLimitSchema = z
 
 const tokensSchema = z
   .object({
-    issuer: z.string().url().optional(),
+    issuer: z.url().optional(),
     audience: z.union([z.string().min(1), z.array(z.string().min(1))]).optional(),
   })
   .optional()
@@ -66,7 +67,7 @@ const googleCredentialsSchema = z
   .object({
     clientId: z.string().min(1),
     clientSecret: z.string().min(1),
-    redirectUri: z.string().url().optional(),
+    redirectUri: z.url().optional(),
     additionalClientIds: z.array(z.string().min(1)).optional(),
     accessType: z.enum(['online', 'offline']).optional(),
     prompt: z.enum(['none', 'consent', 'select_account']).optional(),
@@ -94,7 +95,7 @@ const basePathSchema = z
 
 const baseConfigSchema = z.object({
   environment: z.enum(['development', 'test', 'production']),
-  baseUrl: z.string().url(),
+  baseUrl: z.url(),
   basePath: basePathSchema.optional(),
   secret: z
     .string()
@@ -103,6 +104,20 @@ const baseConfigSchema = z.object({
   cors: corsSchema,
   rateLimit: rateLimitSchema,
   tokens: tokensSchema,
+  twoFactor: z
+    .object({
+      issuer: z.string().min(1),
+      twoFactorCookieMaxAge: z.number().int().positive().optional(),
+      trustDeviceMaxAge: z.number().int().positive().optional(),
+      accountLockout: z
+        .object({
+          maxFailedAttempts: z.number().int().positive(),
+          durationSeconds: z.number().int().positive(),
+        })
+        .optional(),
+    })
+    .optional(),
+  organization: z.object({ allowUserToCreateOrganization: z.boolean().optional() }).optional(),
   providers: z.object({
     google: googleCredentialsSchema,
     telegram: telegramCredentialsSchema,

@@ -6,6 +6,7 @@
  */
 
 import { createAuthClient as createBetterAuthReactClient } from 'better-auth/react'
+import { buildClientPlugins } from '../../client/plugins'
 
 // ---------------------------------------------------------------------------
 // Client-side: React hooks
@@ -14,13 +15,18 @@ import { createAuthClient as createBetterAuthReactClient } from 'better-auth/rea
 export interface AuthClientOptions {
   /** Optional auth origin. When omitted, the client uses the current browser origin. */
   baseUrl?: string
-  /** Auth endpoint path, such as `/auth`. */
+  /** Auth endpoint path, such as `/auth`. Defaults to `/auth`. */
   basePath?: string
 }
 
 /**
  * Creates the client-side auth object used inside React components. Exposes
- * `useSession()`, `signIn.social({ provider })`, and `signOut()`.
+ * `useSession()`, `signIn.social({ provider })`, `signOut()`, plus the
+ * organization and two-factor actions the server registry serves.
+ *
+ * The plugin set is the shared client registry (`buildClientPlugins()`) and is
+ * not configurable: a client that offered fewer actions than the server would
+ * fail at call time, and one that offered more would ship dead UI.
  *
  * @example
  * ```tsx
@@ -33,9 +39,10 @@ export interface AuthClientOptions {
  * }
  * ```
  */
-export function createAuthClient(options: AuthClientOptions) {
+export function createAuthClient(options: AuthClientOptions = {}) {
   return createBetterAuthReactClient({
     baseURL: options.baseUrl,
-    basePath: options.basePath,
+    basePath: options.basePath ?? '/auth',
+    plugins: buildClientPlugins(),
   })
 }

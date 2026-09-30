@@ -40,7 +40,12 @@ const PUBLIC_GET_ROOTS: ReadonlySet<string> = new Set([
 /** Root prefixes that always stay public regardless of method. */
 const PUBLIC_ROOTS: ReadonlySet<string> = new Set(['/auth', '/health'])
 
-const PUBLIC_DOC_PREFIXES: ReadonlySet<string> = new Set(['/doc', '/openapi'])
+/**
+ * Root prefixes of the self-hosted documentation, which stay public (and are
+ * only mounted outside production). `/doc` covers `/doc31`-style paths,
+ * `/docs` the OpenAPI document and `/scalar` the reference UI.
+ */
+const PUBLIC_DOC_PREFIXES: ReadonlySet<string> = new Set(['/doc', '/docs', '/scalar', '/openapi'])
 
 /**
  * Decides whether a request is allowed through without a session. Uses the

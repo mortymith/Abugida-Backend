@@ -1,14 +1,14 @@
 /**
  * Client-safe entry point for @abugida/auth.
  *
- * Only exports types and client-side utilities. No server-only imports
- * (better-auth, node:crypto, DB adapters, better-auth-telemetry, etc.).
+ * Only exports the browser client, the plugin registry that mirrors the
+ * server, and pure types. No server-only imports (better-auth server,
+ * database adapters, `@abugida/database`, …).
  */
 
-// TanStack Start client integration
 export { createAuthClient, type AuthClientOptions } from '../middleware/tanstack/client'
+export { buildClientPlugins } from './plugins'
 
-// Core types needed by client code
 export type { AuthInstance } from '../core/auth'
 export type { ResolvedSession } from '../core/session'
 export type {
@@ -21,6 +21,8 @@ export type {
   CorsConfig,
   RateLimitConfig,
   TokensConfig,
+  TwoFactorConfig,
+  OrganizationConfig,
   GoogleProviderCredentials,
   TelegramProviderCredentials,
   BaseProviderCredentials,
@@ -31,5 +33,16 @@ export type {
 } from '../core/types'
 export { ok, err } from '../core/types'
 
-// Provider types (for client-side provider configuration if needed)
+export {
+  PLATFORM_ROLES,
+  ROLE_PRIORITY,
+  isPlatformRole,
+  mapBetterAuthRoleToPlatformRole,
+  highestPlatformRole,
+  hasAtLeastRole,
+} from '../core/roles'
+export type { PlatformRole } from '../core/roles'
+
+export { ORGANIZATION_ADDITIONAL_FIELDS } from '../plugins/constants'
+
 export type { ProviderRegistry } from '../providers/base'

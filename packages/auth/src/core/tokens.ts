@@ -2,7 +2,7 @@
  * @module core/tokens
  *
  * Opt-in JWT issuance for service-to-client consumers — currently PowerSync.
- * Enabled by passing a `tokens` block to `createAuth()`.
+ * Enabled by setting `TOKEN_AUDIENCE` in the shared auth environment.
  *
  * When enabled, better-auth's `jwt` plugin is registered, which:
  *   - serves the signing keys at `GET <basePath>/jwks` (with this package's

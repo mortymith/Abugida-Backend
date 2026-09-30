@@ -14,11 +14,19 @@
  * Downstream configuration modules (`./database`, `./auth`, `./queue`,
  * `./observability`, `./rate-limit`) consume `appConfig` and never touch
  * `process.env` for application configuration.
+ *
+ * Authentication variables are *not* declared here: they come from
+ * `authEnvShape` (`@abugida/auth/env`), which is the single declaration of
+ * the auth environment contract in the monorepo. What stays here is the
+ * API's own deployment policy — HTTPS-only origins in production, a provider
+ * required in production, CORS origin syntax — plus everything that is not
+ * about authentication.
  */
 
 import 'dotenv/config'
 
 import { z } from 'zod'
+import { applyAuthEnvIssues, authEnvShape } from '@abugida/auth/env'
 
 // ---------------------------------------------------------------------------
 // Shared scalar helpers
@@ -39,48 +47,10 @@ const booleanFromEnv = z
 const positiveIntFromEnv = z.coerce.number().int().positive()
 
 /**
- * Compose services always pass optional vars as `${VAR:-}`, which resolves to
- * an empty string when unset in `.env`. Normalize `""`/whitespace-only values
- * to `undefined` so "not configured" reads as absent instead of failing
- * min-length/URL validation (and so the "set together" pair checks in
- * `superRefine` see both halves as unset).
- */
-function emptyToUndefined(value: unknown): unknown {
-  return typeof value === 'string' && value.trim() === '' ? undefined : value
-}
-
-const optionalNonEmptyString = z.preprocess(emptyToUndefined, z.string().min(1).optional())
-
-const WEAK_SECRETS = new Set([
-  'change-me',
-  'change_me',
-  'changeme',
-  'secret',
-  'password',
-  'your-secret-here',
-  'replace-this',
-  'todo',
-  'test',
-  'example',
-  'admin',
-  'default',
-])
-
-function isWeakSecret(value: string): boolean {
-  const lower = value.toLowerCase()
-  if (WEAK_SECRETS.has(lower)) return true
-  // All same character: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-  if (/^(.)\1+$/.test(lower)) return true
-  // Weak repeated pattern after stripping separators: "changemechangeme"
-  const stripped = lower.replace(/[-_]/g, '')
-  const repeatedMatch = stripped.match(/^(.{2,8})\1+$/)
-  if (repeatedMatch) return true
-  return false
-}
-
-/**
  * Merge `WEB_APP_URL` and the comma-separated `CORS_ORIGINS` into a single
- * deduplicated origin list consumed by the CORS middleware.
+ * deduplicated origin list consumed by the CORS middleware. `@abugida/auth`
+ * builds the same list for Better Auth's trusted origins, from the same
+ * variables.
  */
 function buildCorsOrigins(
   authUrl: string,
@@ -108,6 +78,13 @@ function buildCorsOrigins(
 
 const appConfigSchema = z
   .object({
+    // ── Auth (Better Auth) ─────────────────────────────────────────────────
+    // Declared by `@abugida/auth/env`: secret, origins, mount path, OAuth
+    // credentials, token issuance, auth rate limiting, two-factor policy and
+    // the organization switch. Spreading it here means the API and the
+    // dashboard cannot drift on a variable name, a default or a secret rule.
+    ...authEnvShape,
+
     // ── Runtime identity ────────────────────────────────────────────────────
     // Both are set by the deployment: compose injects `ENVIRONMENT`, while Bun
     // and the API Docker image set `NODE_ENV`. `ENVIRONMENT` wins, and the
@@ -128,53 +105,8 @@ const appConfigSchema = z
     DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(20),
 
     // ── Auth (Better Auth) ─────────────────────────────────────────────────
-    BETTER_AUTH_SECRET: z
-      .string()
-      .min(
-        32,
-        'BETTER_AUTH_SECRET must be at least 32 characters (generate with `openssl rand -hex 32`).',
-      )
-      .refine(
-        (val) => !isWeakSecret(val),
-        'BETTER_AUTH_SECRET must not be a well-known placeholder or trivially guessable value.',
-      ),
-    BETTER_AUTH_URL: z.string().url('BETTER_AUTH_URL must be a valid URL.'),
-    AUTH_CALLBACK_URL: z.preprocess(
-      emptyToUndefined,
-      z.string().url('AUTH_CALLBACK_URL must be a valid URL.').optional(),
-    ),
-    AUTH_ERROR_CALLBACK_URL: z.preprocess(
-      emptyToUndefined,
-      z.string().url('AUTH_ERROR_CALLBACK_URL must be a valid URL.').optional(),
-    ),
-    AUTH_NEW_USER_CALLBACK_URL: z.preprocess(
-      emptyToUndefined,
-      z.string().url('AUTH_NEW_USER_CALLBACK_URL must be a valid URL.').optional(),
-    ),
     // JWT issuer / audience — opt-in token issuance for PowerSync. Requires
     // better-auth's generated `jwks` table in the Drizzle schema.
-    AUTH_BASE_URL: z.preprocess(
-      emptyToUndefined,
-      z.string().url('AUTH_BASE_URL must be a valid URL.').optional(),
-    ),
-    TOKEN_AUDIENCE: z.string().min(1).optional(),
-    WEB_APP_URL: z.preprocess(
-      emptyToUndefined,
-      z.string().url('WEB_APP_URL must be a valid URL.').optional(),
-    ),
-    // Additional browser/WebView origins allowed to call the API. Comma-separated
-    // list merged with WEB_APP_URL into the resolved `corsOrigins`.
-    CORS_ORIGINS: z.string().optional(),
-
-    // ── OAuth providers (Google + Telegram per API spec) ───────────────────
-    GOOGLE_CLIENT_ID: optionalNonEmptyString,
-    GOOGLE_CLIENT_SECRET: optionalNonEmptyString,
-    // Telegram sign-in runs exclusively through Telegram OIDC
-    // (oauth.telegram.org). Credentials come from BotFather's "Web Login"
-    // settings (Bot Settings > Web Login) and are required as a pair; the
-    // client secret is NOT the bot token.
-    TELEGRAM_OIDC_CLIENT_ID: optionalNonEmptyString,
-    TELEGRAM_OIDC_CLIENT_SECRET: optionalNonEmptyString,
 
     // ── Queue (BullMQ / Redis) ──────────────────────────────────────────────
     REDIS_HOST: z.string().min(1).default('localhost'),
@@ -193,9 +125,6 @@ const appConfigSchema = z
     RATE_LIMIT_AUTHENTICATED_PER_MINUTE: z.coerce.number().int().positive().default(100),
     // Unauthenticated IPs: 1000 req/min.
     RATE_LIMIT_ANONYMOUS_PER_MINUTE: z.coerce.number().int().positive().default(1000),
-    // Better Auth's own per-IP/per-route limiter on the /auth endpoints.
-    AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
-    AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
 
     // ── Proxy / networking ────────────────────────────────────────────────
     // Set to "true" when behind a trusted reverse proxy (Caddy) that overwrites
@@ -256,28 +185,10 @@ const appConfigSchema = z
       })
     }
 
-    // OAuth credential groups must be complete or absent.
-    const googleId = env.GOOGLE_CLIENT_ID
-    const googleSecret = env.GOOGLE_CLIENT_SECRET
-    if (Boolean(googleId) !== Boolean(googleSecret)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['GOOGLE_CLIENT_ID'],
-        message:
-          'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set together (or both left unset).',
-      })
-    }
-
-    const telegramOidcParts = [env.TELEGRAM_OIDC_CLIENT_ID, env.TELEGRAM_OIDC_CLIENT_SECRET]
-    const telegramOidcCount = telegramOidcParts.filter(Boolean).length
-    if (telegramOidcCount > 0 && telegramOidcCount < 2) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['TELEGRAM_OIDC_CLIENT_ID'],
-        message:
-          'TELEGRAM_OIDC_CLIENT_ID and TELEGRAM_OIDC_CLIENT_SECRET must be set together (or both left unset).',
-      })
-    }
+    // Auth cross-field rules (OAuth credential pairs) are owned by
+    // `@abugida/auth` and reported through this same error surface. This API
+    // additionally requires a provider in production, below.
+    applyAuthEnvIssues(env, ctx)
 
     // CORS_ORIGINS must be a comma-separated list of valid origins.
     if (env.CORS_ORIGINS) {

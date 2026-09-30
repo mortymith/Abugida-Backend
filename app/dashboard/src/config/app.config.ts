@@ -1,26 +1,33 @@
 import { config } from 'dotenv'
 import { z } from 'zod/v4'
+import { applyAuthEnvIssues, authEnvShape } from '@abugida/auth/env'
 
 config()
 
+/**
+ * The environment contract is split in two on purpose:
+ *
+ *  - `authEnvShape` (`@abugida/auth/env`) declares every variable
+ *    authentication needs — secret, origins, mount path, OAuth credentials,
+ *    token issuance, two-factor and organization policy — so the dashboard and
+ *    the API cannot drift on a name, a default, or a secret rule. Validation of
+ *    those keys happens when `resolveAuthEnv()` projects them for
+ *    `createAbugidaAuth()`.
+ *  - this file declares what is specific to the dashboard: browser-visible
+ *    (`VITE_*`) values, product copy defaults and the integrations the
+ *    dashboard's server bridges own.
+ */
 const envSchema = z
   .object({
+    ...authEnvShape,
+
     ENVIRONMENT: z.enum(['development', 'production', 'test']).default('development'),
     APP_NAME: z.string().default('Abugida Academy'),
     DATABASE_URL: z.url(),
-    BETTER_AUTH_SECRET: z.string().min(32),
-    BETTER_AUTH_URL: z.url(),
-    AUTH_BASE_URL: z.url(),
-    AUTH_BASE_PATH: z.string().default('/auth'),
     VITE_AUTH_BASE_PATH: z.string().startsWith('/').default('/auth'),
     LOGIN_PATH: z.string().default('/login'),
     DEFAULT_LOGIN_REDIRECT: z.string().default('/dashboard'),
-    TOTP_ISSUER: z.string().default('Abugida Academy'),
-    TWO_FACTOR_COOKIE_MAX_AGE: z.coerce.number().int().positive().default(600),
-    TRUST_DEVICE_MAX_AGE: z.coerce.number().int().positive().default(2592000),
-    ACCOUNT_LOCKOUT_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
-    /** Better Auth's `accountLockout.durationSeconds`. Spec S-0.3: 15 minutes. */
-    ACCOUNT_LOCKOUT_DURATION: z.coerce.number().int().positive().default(900),
+    /** Attempts the MFA screen allows before it defers to the server's counter. */
     MFA_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
     VITE_MFA_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
     WORKSPACE_DOMAIN: z.string().default('abugida.app'),
@@ -28,12 +35,7 @@ const envSchema = z
     VITE_WORKSPACE_DOMAIN: z.string().default('abugida.app'),
     VITE_LOGIN_PATH: z.string().default('/login'),
     VITE_DEFAULT_LOGIN_REDIRECT: z.string().default('/dashboard'),
-    AUTH_CALLBACK_URL: z.string().optional(),
-    AUTH_ERROR_CALLBACK_URL: z.string().optional(),
-    AUTH_NEW_USER_CALLBACK_URL: z.string().optional(),
-    WEB_APP_URL: z.string().optional(),
     COURSE_PREVIEW_URL: z.url().optional(),
-    TOKEN_AUDIENCE: z.string().optional(),
 
     // ── Object storage (Content Library) ────────────────────────────────
     // Optional so the dashboard can start without storage; the Library
@@ -55,11 +57,6 @@ const envSchema = z
     REDIS_PORT: z.coerce.number().int().positive().default(6379),
     REDIS_PASSWORD: z.string().optional(),
     REDIS_DB: z.coerce.number().int().min(0).max(15).optional(),
-
-    GOOGLE_CLIENT_ID: z.string().optional(),
-    GOOGLE_CLIENT_SECRET: z.string().optional(),
-    TELEGRAM_OIDC_CLIENT_ID: z.string().optional(),
-    TELEGRAM_OIDC_CLIENT_SECRET: z.string().optional(),
 
     // ── AI generation (spec 04 S-2.11 / S-2.16) ─────────────────────────
     // Optional: with none set, the deterministic local generator is used.
@@ -87,24 +84,11 @@ const envSchema = z
     OTEL_TRACES_SAMPLER_ARG: z.coerce.number().default(1),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   })
-  .refine(
-    (data) => {
-      if (data.GOOGLE_CLIENT_ID && !data.GOOGLE_CLIENT_SECRET) return false
-      if (!data.GOOGLE_CLIENT_ID && data.GOOGLE_CLIENT_SECRET) return false
-      return true
-    },
-    { message: 'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must both be provided' },
-  )
-  .refine(
-    (data) => {
-      if (data.TELEGRAM_OIDC_CLIENT_ID && !data.TELEGRAM_OIDC_CLIENT_SECRET) return false
-      if (!data.TELEGRAM_OIDC_CLIENT_ID && data.TELEGRAM_OIDC_CLIENT_SECRET) return false
-      return true
-    },
-    {
-      message: 'TELEGRAM_OIDC_CLIENT_ID and TELEGRAM_OIDC_CLIENT_SECRET must both be provided',
-    },
-  )
+  .superRefine((env, ctx) => {
+    // Auth cross-field rules (OAuth credential pairs) live with the keys they
+    // describe, and fail here rather than later at auth-module import.
+    applyAuthEnvIssues(env, ctx)
+  })
 
 export const env = envSchema.parse(process.env)
 

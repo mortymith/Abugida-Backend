@@ -255,8 +255,8 @@ export async function setApprovalGateImpl(input: {
 
 export async function getPendingReviewCountImpl(): Promise<number> {
   const request = await import('@tanstack/react-start/server').then((mod) => mod.getRequest())
-  const { auth } = await import('#/config/auth.server')
-  const session = await auth.getSession(request.headers)
+  const { getAuth } = await import('#/config/auth.server')
+  const session = await getAuth().getSession(request.headers)
   if (!session.ok) return 0
 
   const { resolvePlatformRoleImpl } = await import('#/features/auth/server/auth.roles.impl.server')

@@ -8,7 +8,7 @@
 import { and, asc, eq, inArray, sql } from '@abugida/database'
 import { member, invitation, users } from '@abugida/database/auth'
 import { db } from '#/config/db.config'
-import { auth } from '#/config/auth.server'
+import { getAuth } from '#/config/auth.server'
 import { getRequest } from '@tanstack/react-start/server'
 import {
   requireSettingsAdmin,
@@ -26,7 +26,7 @@ import type {
 async function callOrganizationApi<T>(endpoint: string, body: Record<string, unknown>): Promise<T> {
   const request = getRequest()
   const result = await (
-    auth.raw.api as unknown as Record<
+    getAuth().api as unknown as Record<
       string,
       (args: { headers: Headers; body: Record<string, unknown> }) => Promise<T>
     >

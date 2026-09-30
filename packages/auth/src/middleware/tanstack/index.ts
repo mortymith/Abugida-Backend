@@ -14,8 +14,13 @@
 
 export {
   createAuthServerFunctions,
-  requireAuthBeforeLoad,
+  serverSession,
+  serverRefreshedSession,
+  serverSignOut,
+  serverAccessToken,
   type AuthServerFunctions,
 } from './server'
+
+export { requireAuthBeforeLoad } from './guards'
 
 export { createAuthClient, type AuthClientOptions } from './client'

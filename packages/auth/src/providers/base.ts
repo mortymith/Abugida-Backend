@@ -40,8 +40,8 @@ export function assertNonEmpty(
 
 /**
  * Registry of providers keyed by id. Built-in providers (google) are
- * registered by `createAuth()`; consumers can add their own via
- * `config.providers.custom` without forking this package.
+ * registered by `buildProviderRegistry()` in `core/auth.ts`; adding a provider
+ * is a change to this package, not something a consuming app does at runtime.
  */
 export class ProviderRegistry {
   private readonly providers = new Map<string, AuthProviderDefinition>()
