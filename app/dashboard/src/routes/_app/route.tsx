@@ -1,7 +1,7 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router'
 import { requireAuthBeforeLoad } from '@abugida/auth/tanstack/guard'
 import { getWorkspaceContext } from '#/features/workspaces'
-import { readSidebarOpen } from '#/features/navigation'
+import { getSidebarOpenState } from '#/features/navigation'
 import { SidebarProvider, SidebarInset } from '#/components/ui/sidebar'
 import { TooltipProvider } from '#/components/ui/tooltip'
 import { AppSidebar } from '#/components/layout/layout.app-sidebar'
@@ -34,15 +34,18 @@ export const Route = createFileRoute('/_app')({
      * renders the rail the user last chose. Without this the wide rail is
      * rendered on every page load and snaps shut after hydration — a flash for
      * anyone who collapsed it. `undefined` means no opinion (first visit), which
-     * the shell reads as open. Client-side navigations re-run `beforeLoad`
-     * without a request, hence the guard.
+     * the shell reads as open. Only during SSR: the cookie cannot change mid-
+     * session and the sidebar owns the preference client-side afterwards, so
+     * asking again on every client navigation would be an RPC round trip for a
+     * value the shell already has.
      */
     let sidebarOpen: boolean | undefined
-    try {
-      const { getRequest } = await import('@tanstack/react-start/server')
-      sidebarOpen = readSidebarOpen(getRequest().headers.get('cookie'))
-    } catch {
-      sidebarOpen = undefined
+    if (typeof document === 'undefined') {
+      try {
+        sidebarOpen = await getSidebarOpenState()
+      } catch {
+        sidebarOpen = undefined
+      }
     }
 
     // A claimable invite is captured on the login screen, before there was a

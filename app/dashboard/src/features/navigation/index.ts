@@ -42,6 +42,7 @@ export {
 } from './navigation.resume-preference'
 export { useResumeDecision } from './hooks/navigation.resume-target'
 export { SIDEBAR_STATE_COOKIE, readSidebarOpen } from './navigation.sidebar-preference'
+export { getSidebarOpenState } from './navigation.sidebar-state'
 export { PRODUCT_NAME, buildDocumentTitle, composeAnnouncement } from './navigation.page-title'
 export {
   buildNavigationGroup,
