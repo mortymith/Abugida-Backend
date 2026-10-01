@@ -17,6 +17,7 @@ import {
   useTogglePaymentGateway,
 } from '../hooks/settings.mutations'
 import { CheckboxRow, SaveBar } from './settings.setting-controls'
+import { PageHeader } from '#/components/common/page-header'
 
 /**
  * S-6.3 Integrations — payment gateways, email service, sign-in providers,
@@ -414,13 +415,11 @@ export function IntegrationsView() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Integrations</h1>
-        <p className="text-muted-foreground text-sm">
-          Configure external integrations: payment gateways, email, sign-in providers, and
-          analytics.
-        </p>
-      </header>
+      <PageHeader
+        title="Integrations"
+        level={2}
+        description="Configure external integrations: payment gateways, email, sign-in providers, and analytics."
+      />
       {query.isError ? (
         <RetryErrorState onRetry={() => void query.refetch()} isRetrying={query.isFetching} />
       ) : null}

@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { ArrowLeft02Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Button } from '#/components/ui/button'
+import { PageHeader } from '#/components/common/page-header'
 import { DateRangePicker } from '#/features/dashboard/components/dashboard.date-range-picker'
 import type { DateRangeSelection } from '#/features/dashboard/components/dashboard.date-range-picker'
 
@@ -22,7 +23,12 @@ interface AnalyticsSectionHeaderProps {
 
 /**
  * Shared S-5.x screen header: back link, title, date range, actions.
- * Keeps the analytics screens visually consistent with S-1.1/S-1.2.
+ *
+ * A **thin adapter** over `PageHeader`, not a second header: it keeps the
+ * analytics-only affordances (course-scoped back link, date range) while the
+ * title, spacing and heading level come from the one primitive every other
+ * module uses. Previously this rendered its own `text-xl font-semibold` title,
+ * which is why Analytics did not match the rest of the product.
  */
 export function AnalyticsSectionHeader({
   backTo,
@@ -38,32 +44,31 @@ export function AnalyticsSectionHeader({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {backTo ? (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              render={<Link to={backTo} params={backParams} />}
-            >
-              <HugeiconsIcon icon={ArrowLeft02Icon} className="size-4" />
-              <span className="sr-only">{backLabel}</span>
-            </Button>
-          ) : null}
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-            {subtitle ? <p className="text-sm text-muted-foreground">{subtitle}</p> : null}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {selection && onRangeChange ? (
-            <DateRangePicker
-              selection={selection}
-              onChange={onRangeChange}
-              label={rangeLabel ?? 'Date range'}
-            />
-          ) : null}
-          {actions}
-        </div>
+        {backTo ? (
+          <Button variant="ghost" size="icon-sm" render={<Link to={backTo} params={backParams} />}>
+            <HugeiconsIcon icon={ArrowLeft02Icon} className="size-4" />
+            <span className="sr-only">{backLabel}</span>
+          </Button>
+        ) : null}
+        <PageHeader
+          className="min-w-0 flex-1 pb-0"
+          title={title}
+          description={subtitle}
+          actions={
+            (selection && onRangeChange) || actions ? (
+              <>
+                {selection && onRangeChange ? (
+                  <DateRangePicker
+                    selection={selection}
+                    onChange={onRangeChange}
+                    label={rangeLabel ?? 'Date range'}
+                  />
+                ) : null}
+                {actions}
+              </>
+            ) : undefined
+          }
+        />
       </div>
     </div>
   )

@@ -21,6 +21,7 @@ import { MarketingStatusBadge } from './marketing.status-badge'
 import { CampaignComposeDialog } from './marketing.campaign-compose-dialog'
 import { CampaignDetailSheet } from './marketing.campaign-detail-sheet'
 import type { CampaignsQueryInput } from '../schemas/marketing.schema'
+import { PageHeader } from '#/components/common/page-header'
 
 const CAMPAIGN_STATUS_FILTERS: Array<{ value: CampaignsQueryInput['status']; label: string }> = [
   { value: 'all', label: 'All statuses' },
@@ -58,41 +59,41 @@ export function CampaignsView({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Email Campaigns</h1>
-          <p className="text-sm text-muted-foreground">
-            Plan, send, and measure announcement, reminder, and promotion emails to student
-            segments.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {onQueryChange ? (
-            <select
-              aria-label="Status filter"
-              className="border-input bg-background flex h-9 w-44 rounded-md border px-3 text-sm"
-              value={query.status}
-              onChange={(event) =>
-                onQueryChange({
-                  ...query,
-                  status: event.target.value as CampaignsQueryInput['status'],
-                })
-              }
-            >
-              {CAMPAIGN_STATUS_FILTERS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          ) : null}
-          {canWrite && (
-            <Button onClick={() => setComposeOpen(true)}>
-              <PlusIcon aria-hidden /> New Campaign
-            </Button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Email Campaigns"
+        description="Plan, send, and measure announcement, reminder, and promotion emails to student segments."
+        actions={
+          <>
+            {' '}
+            <div className="flex flex-wrap items-center gap-2">
+              {onQueryChange ? (
+                <select
+                  aria-label="Status filter"
+                  className="border-input bg-background flex h-9 w-44 rounded-md border px-3 text-sm"
+                  value={query.status}
+                  onChange={(event) =>
+                    onQueryChange({
+                      ...query,
+                      status: event.target.value as CampaignsQueryInput['status'],
+                    })
+                  }
+                >
+                  {CAMPAIGN_STATUS_FILTERS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+              {canWrite && (
+                <Button onClick={() => setComposeOpen(true)}>
+                  <PlusIcon aria-hidden /> New Campaign
+                </Button>
+              )}
+            </div>
+          </>
+        }
+      />
 
       {campaignsQuery.isLoading ? (
         <div className="space-y-2" aria-busy="true" aria-label="Loading campaigns">

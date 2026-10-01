@@ -43,6 +43,7 @@ import {
 } from '../hooks/marketing.mutations'
 import { MarketingStatusBadge } from './marketing.status-badge'
 import type { AffiliateRow } from '../marketing.types'
+import { PageHeader } from '#/components/common/page-header'
 
 const AFFILIATE_STATUS_FILTERS = [
   { value: 'all', label: 'All affiliates' },
@@ -83,41 +84,41 @@ export function AffiliatesView({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Affiliate Program</h1>
-          <p className="text-sm text-muted-foreground">
-            Affiliates promote courses and earn commissions on sales — applications, links,
-            performance, and payouts.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {onStatusChange ? (
-            <select
-              aria-label="Status filter"
-              className="border-input bg-background h-9 w-44 rounded-md border px-3 text-sm"
-              value={status}
-              onChange={(event) => onStatusChange(event.target.value)}
-            >
-              {AFFILIATE_STATUS_FILTERS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          ) : null}
-          {canPayout && (
-            <Button variant="outline" onClick={() => setSettingsOpen(true)}>
-              Program Settings
-            </Button>
-          )}
-          {canWrite && (
-            <Button onClick={() => setInviteOpen(true)}>
-              <PlusIcon aria-hidden /> Invite Affiliate
-            </Button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Affiliate Program"
+        description="Affiliates promote courses and earn commissions on sales — applications, links, performance, and payouts."
+        actions={
+          <>
+            {' '}
+            <div className="flex flex-wrap gap-2">
+              {onStatusChange ? (
+                <select
+                  aria-label="Status filter"
+                  className="border-input bg-background h-9 w-44 rounded-md border px-3 text-sm"
+                  value={status}
+                  onChange={(event) => onStatusChange(event.target.value)}
+                >
+                  {AFFILIATE_STATUS_FILTERS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+              {canPayout && (
+                <Button variant="outline" onClick={() => setSettingsOpen(true)}>
+                  Program Settings
+                </Button>
+              )}
+              {canWrite && (
+                <Button onClick={() => setInviteOpen(true)}>
+                  <PlusIcon aria-hidden /> Invite Affiliate
+                </Button>
+              )}
+            </div>
+          </>
+        }
+      />
 
       {programQuery.isLoading ? (
         <Skeleton className="mb-4 h-20 w-full" aria-busy="true" />

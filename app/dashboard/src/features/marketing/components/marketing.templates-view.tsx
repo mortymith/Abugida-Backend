@@ -28,6 +28,7 @@ import { cn } from '#/lib/utils'
 import { useRole } from '#/features/auth'
 import { templatesQueryOptions } from '../hooks/marketing.queries'
 import { useCreateFromPrebuilt } from '../hooks/marketing.mutations'
+import { PageHeader } from '#/components/common/page-header'
 
 /**
  * S-8.2 Email Templates: template list with last-updated and usage counts,
@@ -47,67 +48,67 @@ export function TemplatesView() {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Email Templates</h1>
-          <p className="text-sm text-muted-foreground">
-            Pre-built, customizable templates with merge tags, live preview, and versioned
-            publishes.
-          </p>
-        </div>
-        {canWrite && (
-          <DropdownMenu open={libraryOpen} onOpenChange={setLibraryOpen}>
-            <DropdownMenuTrigger
-              render={
-                <Button>
-                  <PlusIcon aria-hidden /> New from pre-built library
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Pre-built library</DropdownMenuLabel>
-              {[
-                { key: 'welcome', name: 'Welcome' },
-                { key: 'announcement', name: 'Course Announcement' },
-                { key: 'reminder', name: 'Lesson Reminder' },
-                { key: 'promotion', name: 'Promotion' },
-                { key: 'certificate_issued', name: 'Certificate Issued' },
-                { key: 're_engagement', name: 'Re-engagement' },
-              ].map((entry) => (
-                <DropdownMenuItem
-                  key={entry.key}
-                  onSelect={() => {
-                    // Each pre-built entry starts an editable copy — take the
-                    // user straight into the editor for it.
-                    void createFromPrebuilt
-                      .mutateAsync({ key: entry.key })
-                      .then((result) =>
-                        navigate({
-                          to: '/marketing/templates/$templateId',
-                          params: { templateId: result.templatePublicId },
-                        }),
-                      )
-                      .catch(() => undefined)
-                  }}
-                >
-                  {entry.name}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={() =>
-                  void navigate({
-                    to: '/marketing/templates/$templateId',
-                    params: { templateId: 'new' },
-                  })
-                }
-              >
-                Blank canvas
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
+      <PageHeader
+        title="Email Templates"
+        description="Pre-built, customizable templates with merge tags, live preview, and versioned publishes."
+        actions={
+          <>
+            {' '}
+            {canWrite && (
+              <DropdownMenu open={libraryOpen} onOpenChange={setLibraryOpen}>
+                <DropdownMenuTrigger
+                  render={
+                    <Button>
+                      <PlusIcon aria-hidden /> New from pre-built library
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Pre-built library</DropdownMenuLabel>
+                  {[
+                    { key: 'welcome', name: 'Welcome' },
+                    { key: 'announcement', name: 'Course Announcement' },
+                    { key: 'reminder', name: 'Lesson Reminder' },
+                    { key: 'promotion', name: 'Promotion' },
+                    { key: 'certificate_issued', name: 'Certificate Issued' },
+                    { key: 're_engagement', name: 'Re-engagement' },
+                  ].map((entry) => (
+                    <DropdownMenuItem
+                      key={entry.key}
+                      onSelect={() => {
+                        // Each pre-built entry starts an editable copy — take the
+                        // user straight into the editor for it.
+                        void createFromPrebuilt
+                          .mutateAsync({ key: entry.key })
+                          .then((result) =>
+                            navigate({
+                              to: '/marketing/templates/$templateId',
+                              params: { templateId: result.templatePublicId },
+                            }),
+                          )
+                          .catch(() => undefined)
+                      }}
+                    >
+                      {entry.name}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      void navigate({
+                        to: '/marketing/templates/$templateId',
+                        params: { templateId: 'new' },
+                      })
+                    }
+                  >
+                    Blank canvas
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </>
+        }
+      />
 
       {templatesQuery.isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">

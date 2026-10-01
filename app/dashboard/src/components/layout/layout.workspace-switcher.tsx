@@ -54,48 +54,38 @@ export function useWorkspaceSwitcherOpen() {
 /**
  * S-13.2 Workspace Switcher, as the shell uses it.
  *
- * Two placements, one implementation: the **header button** (desktop — the
- * leftmost header element, because the workspace scopes everything below it) and
- * the **first row of the mobile drawer**, above the nav items.
+ * One placement in the shell: the **first row of the mobile drawer**, above the
+ * nav items. On desktop the active workspace name is the sidebar wordmark, so
+ * the header does not repeat it.
  *
- * Both are governed by the same rule — the control is **absent for a
- * single-workspace user**, never disabled, because there is nothing to switch to
- * (spec 11 case 1) — and the avatar menu reads the same predicate, so no entry
- * point can claim a switcher the others do not have.
+ * The control is **absent for a single-workspace user**, never disabled, because
+ * there is nothing to switch to (spec 11 case 1) — and the avatar menu reads the
+ * same predicate, so no entry point can claim a switcher the others do not have.
  *
  * `⌘/Ctrl+Shift+O` opens it from anywhere, including the item editor.
  */
-export function WorkspaceSwitcher() {
-  const context = useWorkspaceContext()
-  const active = context.workspaces.find((workspace) => workspace.isActive)
-  const [announcement, setAnnouncement] = useState('')
+/**
+ * `⌘/Ctrl+Shift+O` opens the switcher from anywhere, including the item editor.
+ *
+ * Registered by the **shell** (`AppSidebar`), not by the trigger: a shortcut that
+ * only exists while one control happens to be mounted is not a shortcut. Reusing
+ * the trigger's predicate is deliberately unnecessary — opening the menu when
+ * there is only one workspace is harmless, because the menu renders nothing at
+ * all without a second destination.
+ */
+export function useWorkspaceSwitcherShortcut(): void {
+  const { setOpen: openSwitcher } = useWorkspaceSwitcherOpen()
 
-  if (!active) return null
-
-  if (!canSwitchWorkspace(context)) {
-    // Nothing to switch to: the scope is plain text, with no control at all.
-    return (
-      <p className="flex min-w-0 items-center gap-2 truncate text-sm">
-        <span className="truncate font-medium">{active.name}</span>
-        <RoleBadge role={active.platformRole} />
-      </p>
-    )
-  }
-
-  return (
-    <>
-      <SwitcherTrigger
-        active={active}
-        className="max-w-[28ch] justify-start gap-2"
-        onSwitched={(name) => setAnnouncement(`Now viewing ${name}.`)}
-      />
-      {/* The destination is announced politely: a role swap is exactly the kind
-          of change a screen-reader user must not discover silently. */}
-      <p aria-live="polite" className="sr-only">
-        {announcement}
-      </p>
-    </>
-  )
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const key = event.key.toLowerCase()
+      if (key !== 'o' || !(event.metaKey || event.ctrlKey) || !event.shiftKey) return
+      event.preventDefault()
+      openSwitcher(true)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [openSwitcher])
 }
 
 /** The mobile drawer's first row: workspace name, role badge, switcher. */
@@ -103,6 +93,8 @@ export function WorkspaceSwitcherRow() {
   const context = useWorkspaceContext()
   const active = context.workspaces.find((workspace) => workspace.isActive)
   const [announcement, setAnnouncement] = useState('')
+
+  useWorkspaceSwitcherShortcut()
 
   if (!active) return null
 
@@ -141,21 +133,7 @@ function SwitcherTrigger({
   const context = useWorkspaceContext()
   const online = useOnline()
   const switchWorkspace = useSwitchWorkspace()
-  const { open, setOpen: setOpenState } = useWorkspaceSwitcherOpen()
-
-  // `⌘/Ctrl+Shift+O` opens the switcher from anywhere in the app. Registered
-  // only when the control exists, so the shortcut and the button share one
-  // predicate: a single-workspace user has neither.
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      const key = event.key.toLowerCase()
-      if (key !== 'o' || !(event.metaKey || event.ctrlKey) || !event.shiftKey) return
-      event.preventDefault()
-      setOpenState(true)
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [setOpenState])
+  const { open } = useWorkspaceSwitcherOpen()
 
   // Switching reissues the session cookie, so it needs a connection — blocked
   // with a reason rather than failing silently (S-13.2 Offline).

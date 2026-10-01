@@ -11,6 +11,7 @@ export { useCourseWorkspace, type CourseWorkspaceContext } from './navigation.co
 export {
   BADGE_CAP,
   CREATE_COURSE_ROLES,
+  NAV_GROUPS,
   NAV_ITEMS,
   REVIEW_ROLES,
   badgeAccessibleName,
@@ -19,8 +20,10 @@ export {
   canSeeRevenue,
   formatBadgeCount,
   getActiveNavItemId,
+  getVisibleNavGroups,
   getVisibleNavItems,
   isNavItemActive,
+  type NavGroup,
   type NavItem,
 } from './navigation.config'
 export { NAV_EVENT, trackNavEvent, type NavEventName } from './navigation.events'
@@ -38,6 +41,8 @@ export {
   useResumePreference,
 } from './navigation.resume-preference'
 export { useResumeDecision } from './hooks/navigation.resume-target'
+export { SIDEBAR_STATE_COOKIE, readSidebarOpen } from './navigation.sidebar-preference'
+export { PRODUCT_NAME, buildDocumentTitle, composeAnnouncement } from './navigation.page-title'
 export {
   buildNavigationGroup,
   buildQuickActionGroup,

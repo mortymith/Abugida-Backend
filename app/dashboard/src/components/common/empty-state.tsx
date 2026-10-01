@@ -7,6 +7,11 @@ import type { ReactNode } from 'react'
  * - `standard`: module has no records at all → icon + message + CTA.
  * - `compact`: records exist but a filter/search excluded them → lighter
  *   "No matches" message + "Clear filters" action (spec 11 Empty vs Zero-Result).
+ *
+ * The title is a **heading**, not a paragraph. A screen whose only content is an
+ * empty state used to expose no heading at all, so a screen-reader user landing
+ * there heard an unlabelled message; `level={2}` keeps the outline correct under
+ * the page's `<h1>` and `level={3}` under a card's title.
  */
 interface EmptyStateProps {
   variant?: 'standard' | 'compact'
@@ -14,6 +19,8 @@ interface EmptyStateProps {
   title: string
   description?: string
   action?: ReactNode
+  /** Heading level for the title. Defaults to `2`. */
+  level?: 2 | 3
   className?: string
 }
 
@@ -23,8 +30,11 @@ export function EmptyState({
   title,
   description,
   action,
+  level = 2,
   className,
 }: EmptyStateProps) {
+  const Heading = level === 2 ? 'h2' : 'h3'
+
   if (variant === 'compact') {
     return (
       <div
@@ -33,7 +43,7 @@ export function EmptyState({
           className,
         )}
       >
-        <p className="text-sm font-medium">{title}</p>
+        <Heading className="text-sm font-medium">{title}</Heading>
         {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
         {action}
       </div>
@@ -52,7 +62,7 @@ export function EmptyState({
           {icon}
         </div>
       ) : null}
-      <p className="text-base font-semibold">{title}</p>
+      <Heading className="text-base font-semibold">{title}</Heading>
       {description ? <p className="max-w-sm text-sm text-muted-foreground">{description}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>

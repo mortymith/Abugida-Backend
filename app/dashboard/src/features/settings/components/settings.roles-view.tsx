@@ -19,6 +19,7 @@ import { RetryErrorState } from '#/components/common/retry-error-state'
 import { rolesQueryOptions } from '../hooks/settings.queries'
 import { useCreateCustomRole, useSaveRolePermissions } from '../hooks/settings.mutations'
 import { PermissionMatrix } from './settings.permission-matrix'
+import { PageHeader } from '#/components/common/page-header'
 
 /**
  * S-6.9 Roles & Permissions — the per-module capability matrix (spec 09
@@ -62,18 +63,18 @@ export function RolesView() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Roles & Permissions</h1>
-          <p className="text-muted-foreground text-sm">
-            Fine-grained capability toggles per module. Changes apply immediately to users with the
-            role.
-          </p>
-        </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} /> Create Custom Role
-        </Button>
-      </header>
+      <PageHeader
+        title="Roles & Permissions"
+        description="Fine-grained capability toggles per module. Changes apply immediately to users with the role."
+        level={2}
+        actions={
+          <>
+            <Button onClick={() => setCreateOpen(true)}>
+              <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} /> Create Custom Role
+            </Button>
+          </>
+        }
+      />
 
       <Card>
         <CardHeader className="flex flex-wrap items-center justify-between gap-3">

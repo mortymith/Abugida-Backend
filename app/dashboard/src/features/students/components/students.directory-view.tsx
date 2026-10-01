@@ -47,6 +47,7 @@ import {
   DialogTitle,
 } from '#/components/ui/dialog'
 import { StudentsEnrollDialog } from './students.enroll-dialog'
+import { PageHeader } from '#/components/common/page-header'
 
 /**
  * S-4.1 Student Directory: search, course/status filters, sortable columns,
@@ -135,28 +136,30 @@ export function StudentsDirectoryView({ query }: { query: DirectoryQuery }) {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Students</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <StudentsAddStudentModal open={addOpen} onOpenChange={setAddOpen} />
-          {canWrite && (
-            <Button variant="outline" onClick={() => setAddOpen(true)}>
-              <PlusIcon aria-hidden /> Add Student
-            </Button>
-          )}
-          {canWrite && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                // S-4.4 Create Cohort: land on the cohorts screen.
-                void navigate({ to: '/students/cohorts' })
-              }}
-            >
-              <PlusIcon aria-hidden /> Create Cohort
-            </Button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Students"
+        actions={
+          <>
+            <StudentsAddStudentModal open={addOpen} onOpenChange={setAddOpen} />
+            {canWrite && (
+              <Button variant="outline" onClick={() => setAddOpen(true)}>
+                <PlusIcon aria-hidden /> Add Student
+              </Button>
+            )}
+            {canWrite && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // S-4.4 Create Cohort: land on the cohorts screen.
+                  void navigate({ to: '/students/cohorts' })
+                }}
+              >
+                <PlusIcon aria-hidden /> Create Cohort
+              </Button>
+            )}
+          </>
+        }
+      />
 
       <StudentsStatCards stats={statsQuery.data} />
 

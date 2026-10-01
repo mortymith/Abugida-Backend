@@ -35,6 +35,7 @@ import { MarketingStatusBadge } from './marketing.status-badge'
 import { CouponGeneratorDialog } from './marketing.coupon-generate-dialog'
 import { countRecentRedemptions } from '../server/all'
 import type { CouponRow } from '../marketing.types'
+import { PageHeader } from '#/components/common/page-header'
 
 const COUPON_STATUS_FILTERS = [
   { value: 'all', label: 'All codes' },
@@ -91,36 +92,36 @@ export function CouponsView({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Discount &amp; Coupon Codes</h1>
-          <p className="text-sm text-muted-foreground">
-            Single-use or multi-use codes for specific courses, with usage limits, expiry, and
-            revenue attribution.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {onStatusChange ? (
-            <select
-              aria-label="Status filter"
-              className="border-input bg-background flex h-9 w-44 rounded-md border px-3 text-sm"
-              value={status}
-              onChange={(event) => onStatusChange(event.target.value)}
-            >
-              {COUPON_STATUS_FILTERS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          ) : null}
-          {canWrite && (
-            <Button onClick={() => setGenerateOpen(true)}>
-              <PlusIcon aria-hidden /> Generate Codes
-            </Button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Discount &amp; Coupon Codes"
+        description="Single-use or multi-use codes for specific courses, with usage limits, expiry, and revenue attribution."
+        actions={
+          <>
+            {' '}
+            <div className="flex flex-wrap items-center gap-2">
+              {onStatusChange ? (
+                <select
+                  aria-label="Status filter"
+                  className="border-input bg-background flex h-9 w-44 rounded-md border px-3 text-sm"
+                  value={status}
+                  onChange={(event) => onStatusChange(event.target.value)}
+                >
+                  {COUPON_STATUS_FILTERS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+              {canWrite && (
+                <Button onClick={() => setGenerateOpen(true)}>
+                  <PlusIcon aria-hidden /> Generate Codes
+                </Button>
+              )}
+            </div>
+          </>
+        }
+      />
 
       {couponsQuery.isLoading ? (
         <div className="space-y-2" aria-busy="true">

@@ -22,6 +22,7 @@ import { exportAuditLogCsv } from '../server/all'
 import { CheckboxRow, SaveBar } from './settings.setting-controls'
 import type { AuditLogQuery } from '../schemas/settings.schema'
 import { toast } from '#/components/common/toast'
+import { PageHeader } from '#/components/common/page-header'
 
 /**
  * S-6.8 Security & Audit Log — workspace security policies (Policies tab)
@@ -325,12 +326,11 @@ export function SecurityView() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Security & Audit Log</h1>
-        <p className="text-muted-foreground text-sm">
-          Workspace security policy configuration and a searchable, exportable audit trail.
-        </p>
-      </header>
+      <PageHeader
+        title="Security & Audit Log"
+        level={2}
+        description="Workspace security policy configuration and a searchable, exportable audit trail."
+      />
       <div role="tablist" aria-label="Security sections" className="flex gap-1">
         {(
           [

@@ -12,6 +12,7 @@ import { brandingQueryOptions } from '../hooks/settings.queries'
 import { useResetBranding, useSaveBranding } from '../hooks/settings.mutations'
 import { getBrandingUploadUrl } from '../server/all'
 import { toast } from '#/components/common/toast'
+import { PageHeader } from '#/components/common/page-header'
 
 /**
  * S-6.4 Branding — logo/favicon upload, brand colors, custom CSS, live
@@ -157,12 +158,11 @@ export function BrandingView() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Branding</h1>
-        <p className="text-muted-foreground text-sm">
-          Configure platform branding: logo, colors, favicon, and custom CSS.
-        </p>
-      </header>
+      <PageHeader
+        title="Branding"
+        level={2}
+        description="Configure platform branding: logo, colors, favicon, and custom CSS."
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

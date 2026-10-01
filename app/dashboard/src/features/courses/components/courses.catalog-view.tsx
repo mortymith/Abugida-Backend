@@ -21,6 +21,7 @@ import { CourseCard } from './courses.course-card'
 import { AiCourseGeneratorModal } from './courses.ai-course-modal'
 import { BulkImportModal } from './courses.import-modal'
 import { useRole } from '#/features/auth'
+import { PageHeader } from '#/components/common/page-header'
 
 type Search = {
   search?: string
@@ -131,49 +132,49 @@ export function CoursesCatalog() {
 
   return (
     <div className="flex flex-col gap-5">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Courses</h1>
-          <p className="text-sm text-muted-foreground">Manage your course catalog.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <form
-            role="search"
-            onSubmit={(event) => {
-              event.preventDefault()
-              patchSearch({ search: searchDraft || undefined })
-            }}
-          >
-            <div className="relative">
-              <HugeiconsIcon
-                icon={Search01Icon}
-                size={16}
-                className="absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
-              />
-              <Input
-                className="w-56 pl-9"
-                placeholder="Search courses…"
-                aria-label="Search courses"
-                value={searchDraft}
-                onChange={(event) => setSearchDraft(event.target.value)}
-              />
-            </div>
-          </form>
-          <select
-            aria-label="Sort courses"
-            className="h-9 rounded-lg border bg-input/30 px-3 text-sm"
-            value={query.sort}
-            onChange={(event) => patchSearch({ sort: event.target.value })}
-          >
-            <option value="recent">Most recent</option>
-            <option value="title">Title A–Z</option>
-            <option value="students">Most students</option>
-          </select>
-          {isAuthoring ? (
-            <CreateMenu onAi={() => setAiOpen(true)} onImport={() => setImportOpen(true)} />
-          ) : null}
-        </div>
-      </header>
+      <PageHeader
+        title="Courses"
+        description="Manage your course catalog."
+        actions={
+          <>
+            <form
+              role="search"
+              onSubmit={(event) => {
+                event.preventDefault()
+                patchSearch({ search: searchDraft || undefined })
+              }}
+            >
+              <div className="relative">
+                <HugeiconsIcon
+                  icon={Search01Icon}
+                  size={16}
+                  className="absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                  className="w-56 pl-9"
+                  placeholder="Search courses…"
+                  aria-label="Search courses"
+                  value={searchDraft}
+                  onChange={(event) => setSearchDraft(event.target.value)}
+                />
+              </div>
+            </form>
+            <select
+              aria-label="Sort courses"
+              className="h-9 rounded-lg border bg-input/30 px-3 text-sm"
+              value={query.sort}
+              onChange={(event) => patchSearch({ sort: event.target.value })}
+            >
+              <option value="recent">Most recent</option>
+              <option value="title">Title A–Z</option>
+              <option value="students">Most students</option>
+            </select>
+            {isAuthoring ? (
+              <CreateMenu onAi={() => setAiOpen(true)} onImport={() => setImportOpen(true)} />
+            ) : null}
+          </>
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter courses">
         {(['all', 'published', 'draft', 'archived'] as const).map((status) => (

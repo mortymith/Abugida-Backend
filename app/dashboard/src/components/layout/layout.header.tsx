@@ -8,7 +8,7 @@ import { Button } from '#/components/ui/button'
 import { PRIMARY_NAV_ID } from './layout.app-sidebar'
 import { AppBreadcrumbs } from './layout.breadcrumbs'
 import { UserMenuContent } from './layout.user-menu'
-import { WorkspaceSwitcher } from './layout.workspace-switcher'
+
 import { CreateCourseButton, trackNavEvent } from '#/features/navigation'
 import { SearchTrigger } from '#/features/search'
 import { HelpPanel } from '#/features/support'
@@ -22,12 +22,12 @@ import { useState } from 'react'
  *
  * 1. **Menu** — collapses the sidebar; `Esc` in the mobile drawer returns focus
  *    here.
- * 2. **Workspace name** — leftmost, *before* the breadcrumb, because it scopes
- *    everything below it. Absent entirely for a single-workspace user rather
- *    than disabled (S-13.2).
- * 3. **Breadcrumb** — workspace-aware, see `layout.breadcrumbs.tsx`.
- * 4. **Help · Search · New Course** — quick actions, each role-gated.
- * 5. **Avatar** — `aria-haspopup="menu"`, with **Switch workspace** present only
+ * 2. **Breadcrumb** — workspace-aware, see `layout.breadcrumbs.tsx`. The active
+ *    workspace name lives in the sidebar wordmark, so the header does not
+ *    repeat it (S-13.2 switching stays available in the avatar menu and the
+ *    mobile drawer).
+ * 3. **Help · Search · New Course** — quick actions, each role-gated.
+ * 4. **Avatar** — `aria-haspopup="menu"`, with **Switch workspace** present only
  *    when the user belongs to more than one workspace, the same predicate the
  *    header button uses.
  */
@@ -66,12 +66,6 @@ export function Header() {
         }
       />
       <Separator orientation="vertical" className="mr-2 h-4" />
-
-      {/* Hidden on mobile: the drawer carries the workspace row above the nav. */}
-      <div className="hidden min-w-0 md:block">
-        <WorkspaceSwitcher />
-      </div>
-      <Separator orientation="vertical" className="mr-2 hidden h-4 md:block" />
 
       <AppBreadcrumbs />
 

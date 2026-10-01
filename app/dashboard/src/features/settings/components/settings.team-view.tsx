@@ -37,6 +37,7 @@ import {
 import { PLATFORM_ROLES } from '#/features/auth/auth.roles'
 import { ROLE_DEFINITIONS } from '../settings.constants'
 import type { TeamMemberItem } from '../settings.types'
+import { PageHeader } from '#/components/common/page-header'
 
 /**
  * S-6.2 Team Management — members, roles, statuses, invitations, and the
@@ -104,17 +105,18 @@ export function TeamView() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Team</h1>
-          <p className="text-muted-foreground text-sm">
-            Manage team members, their roles, and access levels.
-          </p>
-        </div>
-        <Button onClick={() => setInviteOpen(true)}>
-          <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} /> Invite Team Member
-        </Button>
-      </header>
+      <PageHeader
+        title="Team"
+        description="Manage team members, their roles, and access levels."
+        level={2}
+        actions={
+          <>
+            <Button onClick={() => setInviteOpen(true)}>
+              <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} /> Invite Team Member
+            </Button>
+          </>
+        }
+      />
 
       <Card>
         <CardHeader>

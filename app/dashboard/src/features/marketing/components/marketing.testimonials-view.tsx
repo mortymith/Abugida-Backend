@@ -36,6 +36,7 @@ import {
 import { QUOTE_MAX_LENGTH, QUOTE_MIN_LENGTH } from '../marketing.testimonial-rules'
 import type { TestimonialQueryInput } from '../schemas/marketing.schema'
 import type { TestimonialRequestRow, TestimonialRow } from '../marketing.types'
+import { PageHeader } from '#/components/common/page-header'
 
 /**
  * S-8.5 Student Testimonials: consent-first moderation queue (approve,
@@ -67,15 +68,13 @@ export function TestimonialsView({
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Student Testimonials</h1>
-          <p className="text-sm text-muted-foreground">
-            Collect, moderate, and display student testimonials on course landing pages.
-          </p>
-        </div>
-        {canWrite && <Button onClick={() => setCollectOpen(true)}>Collect Manually</Button>}
-      </div>
+      <PageHeader
+        title="Student Testimonials"
+        description="Collect, moderate, and display student testimonials on course landing pages."
+        actions={
+          <> {canWrite && <Button onClick={() => setCollectOpen(true)}>Collect Manually</Button>}</>
+        }
+      />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <select

@@ -43,6 +43,7 @@ import { getAvatarUploadUrl } from '../server/all'
 import { SaveBar } from './settings.setting-controls'
 import { LANGUAGE_OPTIONS } from '../settings.constants'
 import { toast } from '#/components/common/toast'
+import { PageHeader } from '#/components/common/page-header'
 
 /**
  * S-6.5 My Profile & Account — the signed-in user's own record: identity,
@@ -604,12 +605,11 @@ function SecurityCard() {
 export function ProfileView() {
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">My Profile</h1>
-        <p className="text-muted-foreground text-sm">
-          Personal account settings for your signed-in user.
-        </p>
-      </header>
+      <PageHeader
+        title="My Profile"
+        level={2}
+        description="Personal account settings for your signed-in user."
+      />
       <IdentityCard />
       <SecurityCard />
       <p className="text-muted-foreground flex items-center gap-1 text-xs">

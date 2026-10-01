@@ -6,6 +6,7 @@ import { Skeleton } from '#/components/ui/skeleton'
 import { EmptyState } from '#/components/common/empty-state'
 import { RetryErrorState } from '#/components/common/retry-error-state'
 import { billingQueryOptions } from '../hooks/settings.queries'
+import { PageHeader } from '#/components/common/page-header'
 
 /**
  * S-6.6 Billing & Subscription. Usage bars are computed from real platform
@@ -47,12 +48,11 @@ export function BillingView() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Billing & Subscription</h1>
-        <p className="text-muted-foreground text-sm">
-          Manage this workspace's own subscription plan, usage, and invoices.
-        </p>
-      </header>
+      <PageHeader
+        title="Billing & Subscription"
+        level={2}
+        description="Manage this workspace's own subscription plan, usage, and invoices."
+      />
 
       {query.isPending ? (
         <div className="space-y-4">

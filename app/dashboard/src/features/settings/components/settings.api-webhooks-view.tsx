@@ -38,6 +38,7 @@ import {
 import { WEBHOOK_EVENT_TYPES } from '../settings.constants'
 import type { WebhookEndpointItem } from '../settings.types'
 import { toast } from '#/components/common/toast'
+import { PageHeader } from '#/components/common/page-header'
 
 /**
  * S-6.7 API & Webhooks — API keys (one-time reveal) and outbound webhook
@@ -535,12 +536,11 @@ function WebhookDeliveryLog({ publicId }: { publicId: string }) {
 export function ApiWebhooksView() {
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">API & Webhooks</h1>
-        <p className="text-muted-foreground text-sm">
-          Manage API keys and outbound webhooks for integrating Abugida with external systems.
-        </p>
-      </header>
+      <PageHeader
+        title="API & Webhooks"
+        level={2}
+        description="Manage API keys and outbound webhooks for integrating Abugida with external systems."
+      />
       <ApiKeysSection />
       <WebhooksSection />
     </div>

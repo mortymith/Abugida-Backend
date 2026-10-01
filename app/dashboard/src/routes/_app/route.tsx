@@ -1,6 +1,7 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router'
 import { requireAuthBeforeLoad } from '@abugida/auth/tanstack/guard'
 import { getWorkspaceContext } from '#/features/workspaces'
+import { readSidebarOpen } from '#/features/navigation'
 import { SidebarProvider, SidebarInset } from '#/components/ui/sidebar'
 import { TooltipProvider } from '#/components/ui/tooltip'
 import { AppSidebar } from '#/components/layout/layout.app-sidebar'
@@ -28,6 +29,22 @@ export const Route = createFileRoute('/_app')({
     // with the navigation.
     const { role } = workspace
 
+    /*
+     * The sidebar's collapsed/expanded preference, read on the server so SSR
+     * renders the rail the user last chose. Without this the wide rail is
+     * rendered on every page load and snaps shut after hydration — a flash for
+     * anyone who collapsed it. `undefined` means no opinion (first visit), which
+     * the shell reads as open. Client-side navigations re-run `beforeLoad`
+     * without a request, hence the guard.
+     */
+    let sidebarOpen: boolean | undefined
+    try {
+      const { getRequest } = await import('@tanstack/react-start/server')
+      sidebarOpen = readSidebarOpen(getRequest().headers.get('cookie'))
+    } catch {
+      sidebarOpen = undefined
+    }
+
     // A claimable invite is captured on the login screen, before there was a
     // session, so its ticket is redeemed here — the first authenticated entry
     // point. Never let it block navigation: an invite is worth a retry, the
@@ -35,7 +52,7 @@ export const Route = createFileRoute('/_app')({
     const { redeemPendingClaim } = await import('#/features/auth/auth.pending-claim')
     void redeemPendingClaim().catch(() => undefined)
 
-    return { ...auth, role, workspace }
+    return { ...auth, role, workspace, sidebarOpen }
   },
   // 403 and 404 render **inside** this shell (see `layout.route-error.tsx`):
   // the sidebar and header stay mounted, so the user can navigate out.
@@ -44,9 +61,12 @@ export const Route = createFileRoute('/_app')({
 })
 
 function AppLayout() {
+  // Resolved in `beforeLoad`, so SSR and hydration agree on the rail's width.
+  const { sidebarOpen } = Route.useRouteContext()
+
   return (
     <TooltipProvider>
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={sidebarOpen ?? true}>
         {/*
           Skip to content: the **first focusable element in the DOM** on every
           authenticated route, visible on focus, targeting the main region's

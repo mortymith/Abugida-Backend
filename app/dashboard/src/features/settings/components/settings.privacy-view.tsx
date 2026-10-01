@@ -41,6 +41,7 @@ import {
 import { CheckboxRow } from './settings.setting-controls'
 import { RETENTION_INACTIVITY_OPTIONS, RETENTION_WARNING_OPTIONS } from '../settings.constants'
 import type { RetentionPolicy } from '../settings.types'
+import { PageHeader } from '#/components/common/page-header'
 
 /**
  * S-6.10 Privacy & Data Retention — retention policies with a real match
@@ -596,13 +597,11 @@ export function PrivacyView() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Privacy & Data Retention</h1>
-        <p className="text-muted-foreground text-sm">
-          Automated retention policies, the data-subject request queue, and the consent log.
-          Sensitive actions are dual-confirmed and fully audited.
-        </p>
-      </header>
+      <PageHeader
+        title="Privacy & Data Retention"
+        level={2}
+        description="Automated retention policies, the data-subject request queue, and the consent log. Sensitive actions are dual-confirmed and fully audited."
+      />
       <div role="tablist" aria-label="Privacy sections" className="flex gap-1">
         {(
           [

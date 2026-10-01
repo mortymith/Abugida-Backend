@@ -12,6 +12,7 @@ import { useSaveGeneralSettings } from '../hooks/settings.mutations'
 import { CheckboxRow, SaveBar, SettingRow } from './settings.setting-controls'
 import { COMMON_TIMEZONES, DATE_FORMATS } from '../settings.constants'
 import type { GeneralSettings } from '../settings.types'
+import { PageHeader } from '#/components/common/page-header'
 
 /**
  * S-6.1 General Settings — platform, course, and notification configuration
@@ -89,12 +90,11 @@ export function GeneralSettingsView() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-muted-foreground text-sm">
-          System-wide settings, configurations, and preferences.
-        </p>
-      </header>
+      <PageHeader
+        title="Settings"
+        level={1}
+        description="System-wide settings, configurations, and preferences."
+      />
 
       <Card>
         <CardHeader>

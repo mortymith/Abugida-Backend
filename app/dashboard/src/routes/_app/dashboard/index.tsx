@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Button } from '#/components/ui/button'
 import { EmptyState } from '#/components/common/empty-state'
+import { PageHeader } from '#/components/common/page-header'
 import { RetryErrorState } from '#/components/common/retry-error-state'
 import { StatCard, StatCardSkeleton } from '#/features/dashboard/components/dashboard.stat-card'
 import { TrendChart } from '#/features/dashboard/components/dashboard.trend-chart'
@@ -84,18 +85,33 @@ function AnalyticsOverviewPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header row: date range + export (spec S-1.1) */}
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <ChecklistResumeLink />
-        <DateRangePicker
-          selection={rangeInput}
-          onChange={applyRangeChange}
-          label={overviewQuery.data?.range.label ?? 'Date range'}
-        />
-        <Button variant="outline" size="sm" onClick={handleExport} disabled={!overviewQuery.data}>
-          Export
-        </Button>
-      </div>
+      {/*
+        The screen's title band. The dashboard is the one module root that had no
+        heading at all — orientation came from the breadcrumb alone — so it is the
+        clearest beneficiary of the shared `PageHeader`.
+      */}
+      <PageHeader
+        title="Dashboard"
+        description="Revenue, enrollments, and course performance for the selected period."
+        actions={
+          <>
+            <ChecklistResumeLink />
+            <DateRangePicker
+              selection={rangeInput}
+              onChange={applyRangeChange}
+              label={overviewQuery.data?.range.label ?? 'Date range'}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={!overviewQuery.data}
+            >
+              Export
+            </Button>
+          </>
+        }
+      />
 
       {/* S-0.2 Getting Started Checklist. Renders nothing once every applicable
           item is complete, and the payment task is absent for a workspace that

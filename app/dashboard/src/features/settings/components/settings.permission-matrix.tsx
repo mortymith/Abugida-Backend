@@ -9,6 +9,7 @@ import {
   TableRow,
 } from '#/components/ui/table'
 import { cn } from '#/lib/utils'
+import { permissionModuleLabel } from '#/features/settings/settings.constants'
 
 /**
  * S-6.9 Permission Matrix (spec 09 shared component #16): module ×
@@ -48,9 +49,12 @@ export function PermissionMatrix({
           {modules.map((moduleName) => {
             const caps = matrix[moduleName] ?? []
             const hasAny = caps.length > 0
+            // The row is keyed and stored by its module key, but *shown* by its
+            // current product name — Content Library is displayed as Media.
+            const moduleLabel = permissionModuleLabel(moduleName)
             return (
               <TableRow key={moduleName}>
-                <TableCell className="font-medium">{moduleName}</TableCell>
+                <TableCell className="font-medium">{moduleLabel}</TableCell>
                 <TableCell className="text-muted-foreground text-xs tabular-nums">
                   {memberCount > 0 && hasAny ? memberCount : hasAny ? memberCount : '—'}
                 </TableCell>
@@ -68,7 +72,7 @@ export function PermissionMatrix({
                             onChange={(event) =>
                               onChange(moduleName, capability, event.target.checked)
                             }
-                            aria-label={`${capability} ${moduleName}`}
+                            aria-label={`${capability} ${permissionModuleLabel(moduleName)}`}
                             className="accent-primary size-4"
                           />
                           <HugeiconsIcon
@@ -86,7 +90,7 @@ export function PermissionMatrix({
                             onChange={(event) =>
                               onChange(moduleName, capability, event.target.checked)
                             }
-                            aria-label={`${capability} ${moduleName}`}
+                            aria-label={`${capability} ${permissionModuleLabel(moduleName)}`}
                             className="accent-primary size-4"
                           />
                           <span className="text-muted-foreground text-xs" aria-hidden="true">

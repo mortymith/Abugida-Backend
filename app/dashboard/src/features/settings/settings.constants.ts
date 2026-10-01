@@ -49,6 +49,33 @@ export const PERMISSION_MODULES = [
   'Billing',
 ] as const
 
+/**
+ * What each permission module is called in the UI.
+ *
+ * A module whose product name changed — Content Library is now **Media** — keeps
+ * its stored key and gets a new label here. The keys in `PERMISSION_MODULES` are
+ * persisted in `roles.permissions`, so renaming one would silently orphan every
+ * saved role matrix (the module would read as fully unchecked until an admin
+ * re-saved it). Renaming the *label* needs no migration.
+ */
+export const PERMISSION_MODULE_LABELS: Record<PermissionModule, string> = {
+  Dashboard: 'Dashboard',
+  Courses: 'Courses',
+  'Content Library': 'Media',
+  Students: 'Students',
+  Analytics: 'Analytics',
+  Settings: 'Settings',
+  Billing: 'Billing',
+}
+
+/** The display name for a stored module key, falling back to the key itself. */
+export function permissionModuleLabel(moduleName: string): string {
+  // An unknown key (a role saved before a module existed) renders as itself
+  // rather than as `undefined`.
+  const label = (PERMISSION_MODULE_LABELS as Record<string, string | undefined>)[moduleName]
+  return label ?? moduleName
+}
+
 export const PERMISSION_CAPABILITIES = ['view', 'create', 'edit', 'delete', 'publish'] as const
 
 export type PermissionModule = (typeof PERMISSION_MODULES)[number]
