@@ -36,7 +36,7 @@
   |-------------------|           | Search Bar (Global)      | |Avatar | |
   | 🏠 Dashboard      +-----------+--------------------------+-----------+
   | 📚 Courses    (3)  | Main Content Area                              |
-  | 📁 Content Library| (Scrollable; workspace header stays pinned)   |
+  | 📁 Media| (Scrollable; workspace header stays pinned)   |
   | 👨‍🎓 Students        |                                               |
   | ✅ Review     (2)  |                                               |
   | 📈 Analytics      |                                               |
@@ -49,24 +49,24 @@
   ```
 - **Nav Item → Capability Map.** This table is the contract: an item a role cannot use is **absent** from the sidebar, never disabled (Part 11 three-case rule).
 
-  | Nav item            | Granted by                                                        | Admin | Editor                | Reviewer       | Viewer         | Support                    |
-  | ------------------- | ----------------------------------------------------------------- | ----- | --------------------- | -------------- | -------------- | -------------------------- |
-  | **Dashboard**       | any workspace member                                              | ✔     | ✔                     | ✔              | ✔              | ✔                          |
-  | **Courses**         | `courses.read`                                                    | ✔     | ✔                     | ✔              | ✔              | ✖ absent                   |
-  | **Content Library** | `assets.read`                                                     | ✔     | ✔                     | ✔              | ✔              | ✔                          |
-  | **Students**        | `students.read`                                                   | ✔     | ✔                     | ✔              | ✔              | ✔                          |
-  | **Review** (badge)  | `course.review`                                                   | ✔     | ✖ absent              | ✔              | ✖ absent       | ✖ absent                   |
-  | **Analytics**       | any module with data + `finance.view_revenue` for the revenue tab | ✔     | ✔ (revenue view only) | ✔ (no revenue) | ✔ (no revenue) | ✖ absent                   |
-  | **Marketing**       | `marketing.write`                                                 | ✔     | ✔                     | ✔              | ✔              | ✔ (no send, no financials) |
-  | **Settings**        | `settings.write` (Admin only)                                     | ✔     | ✖ absent              | ✖ absent       | ✖ absent       | ✖ absent                   |
-  | **New Course ▾**    | `course.create`                                                   | ✔     | ✔                     | ✖ absent       | ✖ absent       | ✖ absent                   |
-  - **Support:** sees **Students** (plus Dashboard, Content Library, Marketing read-only) and **no course-authoring nav item at all** — not Courses, not New Course. Its grant is `students.read`, `students.message`, `courses.read_enrolled_context`, `assets.read`, `testimonials.moderate`, `audit.read_own_actions`. **Revenue is redacted server-side**, so the Analytics revenue tab renders an explanation, not a disabled chart.
-  - **Reviewer** sees Courses, Content Library, Students, Review, Analytics, Marketing; **no New Course** and no Settings.
+  | Nav item           | Granted by                                                        | Admin | Editor                | Reviewer       | Viewer         | Support                    |
+  | ------------------ | ----------------------------------------------------------------- | ----- | --------------------- | -------------- | -------------- | -------------------------- |
+  | **Dashboard**      | any workspace member                                              | ✔     | ✔                     | ✔              | ✔              | ✔                          |
+  | **Courses**        | `courses.read`                                                    | ✔     | ✔                     | ✔              | ✔              | ✖ absent                   |
+  | **Media**          | `assets.read`                                                     | ✔     | ✔                     | ✔              | ✔              | ✔                          |
+  | **Students**       | `students.read`                                                   | ✔     | ✔                     | ✔              | ✔              | ✔                          |
+  | **Review** (badge) | `course.review`                                                   | ✔     | ✖ absent              | ✔              | ✖ absent       | ✖ absent                   |
+  | **Analytics**      | any module with data + `finance.view_revenue` for the revenue tab | ✔     | ✔ (revenue view only) | ✔ (no revenue) | ✔ (no revenue) | ✖ absent                   |
+  | **Marketing**      | `marketing.write`                                                 | ✔     | ✔                     | ✔              | ✔              | ✔ (no send, no financials) |
+  | **Settings**       | `settings.write` (Admin only)                                     | ✔     | ✖ absent              | ✖ absent       | ✖ absent       | ✖ absent                   |
+  | **New Course ▾**   | `course.create`                                                   | ✔     | ✔                     | ✖ absent       | ✖ absent       | ✖ absent                   |
+  - **Support:** sees **Students** (plus Dashboard, Media, Marketing read-only) and **no course-authoring nav item at all** — not Courses, not New Course. Its grant is `students.read`, `students.message`, `courses.read_enrolled_context`, `assets.read`, `testimonials.moderate`, `audit.read_own_actions`. **Revenue is redacted server-side**, so the Analytics revenue tab renders an explanation, not a disabled chart.
+  - **Reviewer** sees Courses, Media, Students, Review, Analytics, Marketing; **no New Course** and no Settings.
   - **Viewer** sees everything read-only; the whole New Course control is **absent** rather than disabled.
   - Roles are resolved **per workspace** by `_app/route.tsx` `beforeLoad`; the nav is rebuilt on workspace switch and never merges a second workspace's grants.
 
 - **Primary Actions:**
-  1. Navigate between modules (Dashboard, Courses, Content Library, Students, Review, Analytics, Marketing, Settings) — the sidebar list and the map above are the same set.
+  1. Navigate between modules (Dashboard, Courses, Media, Students, Review, Analytics, Marketing, Settings) — the sidebar list and the map above are the same set.
   2. Global search for courses, curriculum items, students, and assets.
   3. Quick-create via the header "New Course" split button; **Resume authoring** returns to the last-opened course workspace.
   4. Access user profile and logout.
@@ -84,7 +84,7 @@
     | **Zero**             | No badge is rendered at all; the item is still present                                                                                                        |
     | **Mixed assignment** | Hover and `title` read _"2 of 5 assigned to you"_                                                                                                             |
   - **Review Nav Item:** Visible to Admin and Reviewer only. Hidden entirely for other roles rather than disabled, per the permission-aware UI rule. Reviewers with authored-but-unapproved work see the **"Yours — awaiting another reviewer"** self-approval guard in the queue, not a blocked badge.
-  - **Workspace Breadcrumb:** Outside a workspace the breadcrumb is `Courses` / `Content Library` / etc. Inside a workspace it is `Courses / <course title> / <tab>`, and inside the Curriculum tab with an item selected, `Courses / <course> / Curriculum / <item title>`. The tab segment is **not** a link to the last-visited tab; it is a dropdown of the five workspace destinations, which makes switching tabs reachable without scrolling back to the nav row.
+  - **Workspace Breadcrumb:** Outside a workspace the breadcrumb is `Courses` / `Media` / etc. Inside a workspace it is `Courses / <course title> / <tab>`, and inside the Curriculum tab with an item selected, `Courses / <course> / Curriculum / <item title>`. The tab segment is **not** a link to the last-visited tab; it is a dropdown of the five workspace destinations, which makes switching tabs reachable without scrolling back to the nav row.
     - **Ge'ez truncation:** the course and item segments truncate with CSS `text-overflow: ellipsis` on a **single line** — never a fixed-px line clamp and never a middle-ellipsis string. The full value is carried by **both** `title` and `aria-label`, and the link's **accessible name is the full title** so truncation is purely visual. No segment is constrained below **40 characters of growth headroom** for Amharic, per Part 11: Ge'ez is shorter in characters but wider in glyphs, and growth of 30–40% must not clip.
   - **Resume Authoring:** Shown when the user has a course open in another tab or was last editing within the last **7 days**: "Continue in {course}" → [S-2.6](04-Courses.md#scr-2-6) at the tab and item they left. Conflict rules:
     | Condition                                                            | Behaviour                                                                                          |

@@ -10,7 +10,7 @@ import {
 /**
  * Refine box for the `/search` results page.
  *
- * Mirrors the Content Library search field: the draft lives in local state and
+ * Mirrors the Media search field: the draft lives in local state and
  * is committed to `?q=` on a debounce (and immediately on Enter / blur). Binding
  * `value` straight to the URL instead would drop keystrokes whenever the
  * pending navigation was superseded by the next one, and would push a history

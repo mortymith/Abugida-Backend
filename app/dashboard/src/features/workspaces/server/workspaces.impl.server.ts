@@ -68,6 +68,22 @@ export async function resolveWorkspaceContextImpl(): Promise<WorkspaceContext> {
 }
 
 /**
+ * The active workspace's id, or a throw.
+ *
+ * This is the tenancy boundary for every workspace-scoped read (courses, assets,
+ * search). It throws instead of returning `null` on purpose: a read with no
+ * workspace must fail as the 403 case in spec 11, never quietly continue
+ * unfiltered and read every workspace's rows.
+ */
+export async function requireActiveOrganizationIdImpl(): Promise<string> {
+  const { activeWorkspaceId } = await resolveWorkspaceContextImpl()
+  if (!activeWorkspaceId) {
+    throw new Error('NO_ACTIVE_WORKSPACE')
+  }
+  return activeWorkspaceId
+}
+
+/**
  * The platform role **of the active workspace**, falling back to the most
  * privileged membership when the session has no workspace. Route guards use
  * this so a permission gate can never disagree with the navigation the user is

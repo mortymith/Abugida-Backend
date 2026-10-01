@@ -8,7 +8,7 @@
 
 ## 1. Product Context
 
-An **admin-facing** workspace for running courses: authoring, review/approval, content library, students and cohorts, analytics, marketing, settings. It is not the learner player.
+An **admin-facing** workspace for running courses: authoring, review/approval, media, students and cohorts, analytics, marketing, settings. It is not the learner player.
 
 | Role     | Primary jobs                                 | Design implication                                    |
 | -------- | -------------------------------------------- | ----------------------------------------------------- |
@@ -217,7 +217,7 @@ Every interactive component defines default, hover, focus-visible, active, disab
 ### 5.1 App shell (S-A.1)
 
 - Sidebar: `--bg-sidebar`, text `--nav-text`, active item `--nav-active-bg` with white text and a 3px leading indicator.
-- Items appear only if the role can access the module. Order: Dashboard, Courses, Content Library, Students, Analytics, Marketing, Settings. _(The wireframe omits Analytics; see §15.)_
+- Items appear only if the role can access the module. Order: Dashboard, Courses, Media, Students, Analytics, Marketing, Settings. _(The wireframe omits Analytics; see §15.)_
 - Collapsed mode (64px): tooltips appear on **focus as well as hover**.
 - Header: breadcrumb, global search (`/` focuses it), **notification bell with count**, "Create Course" split button, avatar menu.
 - Sign-out lives in the avatar menu only.

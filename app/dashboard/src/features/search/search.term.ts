@@ -16,7 +16,7 @@
  *    query, and `isSearchTermChange` cannot tell a real refinement from noise.
  *
  * This module is pure so it stays unit-testable without a DOM, mirroring
- * `library.search-term.ts`.
+ * `media.search-term.ts`.
  */
 
 /** Minimum characters before a query is sent to the server. */

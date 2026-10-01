@@ -11,7 +11,7 @@ import { useCourseWorkspace } from './navigation.course-workspace'
  * S-A.1 workspace-aware breadcrumbs.
  *
  * Outside a workspace the trail is the module trail (`Courses`,
- * `Content Library`, …). Inside one it is
+ * `Media`, …). Inside one it is
  * `Courses / <course title> / <tab>`, and inside the Curriculum tab with an item
  * selected, `Courses / <course> / Curriculum / <item title>`.
  *
@@ -53,7 +53,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   reviews: 'Review',
   templates: 'Templates',
   new: 'New Course',
-  'content-library': 'Content Library',
+  media: 'Media',
   students: 'Students',
   cohorts: 'Cohorts',
   badges: 'Badges',

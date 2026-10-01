@@ -228,9 +228,9 @@ export function CourseDetail({
                 variant="ghost"
                 size="sm"
                 disabled
-                title="Selection mode for the Content Library arrives with spec 05"
+                title="Selection mode for the Media arrives with spec 05"
               >
-                Import from Library
+                Import from Media
               </Button>
             </div>
           ) : null}

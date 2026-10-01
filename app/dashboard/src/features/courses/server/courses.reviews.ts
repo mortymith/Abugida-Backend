@@ -47,10 +47,13 @@ export const setApprovalGate = createServerFn({ method: 'POST' })
     return setApprovalGateImpl(data)
   })
 
-/** Sidebar badge: pending review count (S-A.1 Courses badge). */
-export const getPendingReviewCount = createServerFn({ method: 'GET' }).handler(
-  async (): Promise<number> => {
-    const { getPendingReviewCountImpl } = await import('./courses.reviews.impl.server')
-    return getPendingReviewCountImpl()
-  },
-)
+/**
+ * S-A.1 navigation badges: total open review work (`total`, the Courses badge)
+ * and the share of it the signed-in reviewer can decide (`assignedToMe`, the
+ * Review badge). See the impl for why "assigned to you" means "not authored by
+ * you".
+ */
+export const getPendingReviewCount = createServerFn({ method: 'GET' }).handler(async () => {
+  const { getPendingReviewCountImpl } = await import('./courses.reviews.impl.server')
+  return getPendingReviewCountImpl()
+})

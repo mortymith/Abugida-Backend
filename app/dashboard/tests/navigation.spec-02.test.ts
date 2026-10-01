@@ -39,7 +39,7 @@ const ROLES: PlatformRole[] = ['admin', 'editor', 'reviewer', 'viewer', 'support
 const WIREFRAME_ORDER = [
   'Dashboard',
   'Courses',
-  'Content Library',
+  'Media',
   'Students',
   'Review',
   'Analytics',
@@ -55,18 +55,10 @@ describe('Nav Item → Capability map', () => {
   test('an item a role cannot use is absent, never disabled (spec criterion 4)', () => {
     const expected: Record<PlatformRole, string[]> = {
       admin: WIREFRAME_ORDER,
-      editor: ['Dashboard', 'Courses', 'Content Library', 'Students', 'Analytics', 'Marketing'],
-      reviewer: [
-        'Dashboard',
-        'Courses',
-        'Content Library',
-        'Students',
-        'Review',
-        'Analytics',
-        'Marketing',
-      ],
-      viewer: ['Dashboard', 'Courses', 'Content Library', 'Students', 'Analytics', 'Marketing'],
-      support: ['Dashboard', 'Content Library', 'Students', 'Marketing'],
+      editor: ['Dashboard', 'Courses', 'Media', 'Students', 'Analytics', 'Marketing'],
+      reviewer: ['Dashboard', 'Courses', 'Media', 'Students', 'Review', 'Analytics', 'Marketing'],
+      viewer: ['Dashboard', 'Courses', 'Media', 'Students', 'Analytics', 'Marketing'],
+      support: ['Dashboard', 'Media', 'Students', 'Marketing'],
     }
 
     for (const role of ROLES) {
@@ -109,7 +101,7 @@ describe('active item', () => {
   test('marks the module a nested route belongs to', () => {
     expect(getActiveNavItemId('admin', '/dashboard')).toBe('dashboard')
     expect(getActiveNavItemId('admin', '/students/badges')).toBe('students')
-    expect(getActiveNavItemId('viewer', '/content-library')).toBe('content-library')
+    expect(getActiveNavItemId('viewer', '/media')).toBe('media')
   })
 
   test('the review queue lights Review, never Courses (one aria-current at a time)', () => {
@@ -143,6 +135,11 @@ describe('review badge', () => {
   test('names what is counted', () => {
     expect(badgeAccessibleName(1)).toBe('1 open review awaiting review')
     expect(badgeAccessibleName(3)).toBe('3 open reviews awaiting review')
+  })
+
+  test('the Review badge keeps the exact count once the label is capped', () => {
+    expect(formatBadgeCount(120)).toBe('99+')
+    expect(badgeAccessibleName(120, 2)).toBe('2 of 120 open reviews assigned to you')
   })
 })
 

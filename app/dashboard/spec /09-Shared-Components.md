@@ -52,7 +52,7 @@ Every component the product renders, and where its behaviour is actually specifi
 | Lifecycle Stepper           | [S-2.22](04-Courses.md#scr-2-22)         | [Part 04](04-Courses.md#course-lifecycle)       | Clickable, labelled, never colour-only                                                |
 | Approval Status Stepper     | [S-2.14](04-Courses.md#scr-2-14)         | [Part 04](04-Courses.md#scr-2-14)               | Draft → Published                                                                     |
 | Rich-Text Authoring Surface | [S-2.7](04-Courses.md#scr-2-7)           | [Part 12](12-Course-Editor-Markdown-Lessons.md) | Idle-timer autosave; ⌘K must not be swallowed here                                    |
-| File Preview Modal          | [S-3.5](05-Content-Library.md#scr-3-5)   | [Part 05](05-Content-Library.md#scr-3-5)        | Video / PDF / image                                                                   |
+| File Preview Modal          | [S-3.5](05-Media.md#scr-3-5)             | [Part 05](05-Media.md#scr-3-5)                  | Video / PDF / image                                                                   |
 | Badge Card                  | [S-4.7](06-Students.md#scr-4-7)          | [Part 06](06-Students.md#scr-4-7)               | Badge + trigger + status pill                                                         |
 | Rule Builder                | [S-4.8](06-Students.md#scr-4-8)          | [Part 06](06-Students.md#scr-4-8)               | Always paired with a dry-run preview                                                  |
 | Permission Matrix Table     | [S-6.9](08-Settings.md#scr-6-9)          | [Part 08](08-Settings.md#scr-6-9)               | Module × capability toggles                                                           |
@@ -203,7 +203,7 @@ The four new components exist because the Course Workspace ([Part 04](04-Courses
 
 - **Purpose:** Standard empty state for list views with no data.
 - **User Role(s):** All roles
-- **Primary Actions:** the module's creation action — **Create Course** in the example. Secondary: browse the [Content Library](#navigation). The `multi-action` variant exposes 3–4 equal-weight starting paths instead. Rate the state with 👍 / 👎.
+- **Primary Actions:** the module's creation action — **Create Course** in the example. Secondary: browse the [Media](#navigation). The `multi-action` variant exposes 3–4 equal-weight starting paths instead. Rate the state with 👍 / 👎.
 - **Data Displayed/Modified:** Read-only. It renders a count and a copy string supplied by the caller; the 👍 / 👎 form posts `{ screenId, componentId, variant, rating, comment? }` to a feedback endpoint and writes nothing else.
 - **Wireframe Layout (Text-Based):**
   ```
@@ -217,7 +217,7 @@ The four new components exist because the Course Workspace ([Part 04](04-Courses
   │              │        Create Course          │                  │
   │              └───────────────────────────────┘                  │
   │                                                                  │
-  │              Or browse the [Content Library]                    │
+  │              Or browse the [Media]                    │
   │              to get started.                                    │
   │                                                                  │
   │                                    👍  👎  (in-context feedback)   │
@@ -238,7 +238,7 @@ The four new components exist because the Course Workspace ([Part 04](04-Courses
   - **Loading:** a skeleton, not this component. An empty state that flashes during load is a defect.
   - **Not permitted:** a module the role cannot use renders the Forbidden page, never an empty state. See [Resilience](#resilience).
   - **Error:** a load failure renders the error state with Retry and a request ID. An empty state is never a fallback for a failed request.
-- **Navigation:** CTA → the module's creation flow; **Content Library** link → [S-3.1](05-Content-Library.md#scr-3-1).
+- **Navigation:** CTA → the module's creation flow; **Media** link → [S-3.1](05-Media.md#scr-3-1).
 
 ---
 
@@ -418,7 +418,7 @@ The four new components exist because the Course Workspace ([Part 04](04-Courses
   - **Default:** Source pre-filled from the triggering row; **This course** preselected; the target section defaults to the source's section and the position to _after the source_.
   - **Duplicating a Section:** A progress summary states the exact counts: "Copying 2 sections and 14 items…". Section duplication is never silent about scope.
   - **Name Conflict:** An existing item with the same title in the target section → automatic " (copy)" suffix, shown before confirming.
-  - **Duplicating:** Progress indicator; media is referenced, not re-uploaded, when the asset lives in the [Content Library](05-Content-Library.md#scr-3-1).
+  - **Duplicating:** Progress indicator; media is referenced, not re-uploaded, when the asset lives in the [Media](05-Media.md#scr-3-1).
   - **Success:** Toast: "Duplicated." with an **Open the copy** deep link that selects the new item in the tree.
   - **Review-Gated Target:** If the target course requires approval ([S-2.14](04-Courses.md#scr-2-14)), the copy is created in Draft and cannot bypass the workflow.
   - **Archived Source:** Allowed; the copy is created live. The dialog states that the source is archived.

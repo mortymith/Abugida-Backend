@@ -12,8 +12,8 @@ import { submitForReviewImpl } from './courses.reviews.impl.server'
 import {
   linkLessonAsset,
   unlinkLessonAssets,
-} from '#/features/library/server/library.usage.impl.server'
-import { categoryForMime } from '#/features/library/library.asset-category'
+} from '#/features/media/server/media.usage.impl.server'
+import { categoryForMime } from '#/features/media/media.asset-category'
 import { readBodyFormat } from '../schemas/courses.markdown.schema'
 import type { SaveLessonInput } from './courses.lessons'
 
@@ -33,7 +33,7 @@ export interface LessonEditDTO {
   bodyFormat: 'html' | 'markdown'
   contentType: 'pdf' | 'video' | 'quiz' | 'exercise' | 'link'
   videoUrl: string | null
-  /** Content Library asset backing this lesson's media (spec 05). */
+  /** Media asset backing this lesson's media (spec 05). */
   assetId: string | null
   assetName: string | null
   durationMinutes: number | null
@@ -142,7 +142,7 @@ export async function saveLessonImpl(input: SaveLessonInput): Promise<{ rowVersi
   }
 
   const rowVersion = await db.transaction(async (tx) => {
-    // Content Library linkage (spec 05 S-2.7 ↔ S-3.1): validate the asset,
+    // Media linkage (spec 05 S-2.7 ↔ S-3.1): validate the asset,
     // copy its denormalized media fields, and maintain asset_usage rows.
     let assetLink: {
       assetId: number

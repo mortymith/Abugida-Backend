@@ -21,7 +21,7 @@ import { LESSON_AUTOSAVE_IDLE_MS, useLessonAutosave } from '../hooks/courses.mar
 import { courseQueryKeys } from '../hooks/courses.queries'
 import { REVIEW_STATE_LABELS } from '../courses.review-state'
 import { LESSON_MIN_TEXT_LENGTH, normalizeMarkdown, summarizeMarkdown } from '../courses.markdown'
-import { LibraryAssetPicker } from '#/features/library'
+import { MediaAssetPicker } from '#/features/media'
 import type { SaveLessonInput } from '../server/courses.lessons'
 import type { LessonEditDTO } from '../server/courses.lessons.impl.server'
 import type { AssetCategory } from '@abugida/database/catalog'
@@ -73,7 +73,7 @@ export function LessonEditor({
   const [videoUrl, setVideoUrl] = useState('')
   const [assetId, setAssetId] = useState<string | null>(null)
   const [assetName, setAssetName] = useState<string | null>(null)
-  const [mediaSource, setMediaSource] = useState<'library' | 'url'>('url')
+  const [mediaSource, setMediaSource] = useState<'media' | 'url'>('url')
   const [durationMinutes, setDurationMinutes] = useState('')
   const [tagsDraft, setTagsDraft] = useState('')
   const [dirty, setDirty] = useState(false)
@@ -112,7 +112,7 @@ export function LessonEditor({
     setVideoUrl(data.videoUrl ?? '')
     setAssetId(data.assetId ?? null)
     setAssetName(data.assetName)
-    setMediaSource(data.assetId ? 'library' : 'url')
+    setMediaSource(data.assetId ? 'media' : 'url')
     setDurationMinutes(data.durationMinutes?.toString() ?? '')
     setTagsDraft(data.tags.join(', '))
     setRowVersion(data.rowVersion)
@@ -165,7 +165,7 @@ export function LessonEditor({
       bodyFormat: 'markdown',
       contentType,
       videoUrl: mediaSource === 'url' && videoUrl.trim() ? videoUrl.trim() : null,
-      assetId: mediaSource === 'library' ? assetId : null,
+      assetId: mediaSource === 'media' ? assetId : null,
       durationMinutes: durationMinutes === '' ? null : Number(durationMinutes),
       tags: tagsDraft
         .split(',')
@@ -454,15 +454,15 @@ export function LessonEditor({
               variant="ghost"
               size="sm"
               title={
-                contentType === 'video' && mediaSource === 'library' && assetId
+                contentType === 'video' && mediaSource === 'media' && assetId
                   ? 'Open the transcription & subtitle editor'
-                  : 'Captions need a video from the Content Library (Library media source)'
+                  : 'Captions need a video from Media (library media source)'
               }
-              disabled={locked || contentType !== 'video' || mediaSource !== 'library' || !assetId}
+              disabled={locked || contentType !== 'video' || mediaSource !== 'media' || !assetId}
               onClick={() => {
                 if (!assetId) return
                 void navigate({
-                  to: '/content-library/$assetId/transcript',
+                  to: '/media/$assetId/transcript',
                   params: { assetId },
                   search: { returnTo: window.location.pathname },
                 })
@@ -503,17 +503,17 @@ export function LessonEditor({
               <div className="mb-1 flex gap-1" role="tablist" aria-label="Media source">
                 <Button
                   type="button"
-                  variant={mediaSource === 'library' ? 'default' : 'outline'}
+                  variant={mediaSource === 'media' ? 'default' : 'outline'}
                   size="xs"
                   role="tab"
-                  aria-selected={mediaSource === 'library'}
+                  aria-selected={mediaSource === 'media'}
                   disabled={locked}
                   onClick={() => {
-                    setMediaSource('library')
+                    setMediaSource('media')
                     setDirty(true)
                   }}
                 >
-                  Library
+                  Media
                 </Button>
                 <Button
                   type="button"
@@ -530,7 +530,7 @@ export function LessonEditor({
                   {contentType === 'video' ? 'YouTube/Vimeo' : 'PDF URL'}
                 </Button>
               </div>
-              {mediaSource === 'library' ? (
+              {mediaSource === 'media' ? (
                 <div className="flex flex-col gap-1">
                   {assetId ? (
                     <p
@@ -547,7 +547,7 @@ export function LessonEditor({
                     disabled={locked}
                     onClick={() => openPicker(contentType === 'video' ? ['video'] : ['document'])}
                   >
-                    {assetId ? 'Change library asset' : 'Choose from Library'}
+                    {assetId ? 'Change media asset' : 'Choose from Media'}
                   </Button>
                 </div>
               ) : contentType === 'video' ? (
@@ -620,14 +620,14 @@ export function LessonEditor({
         </aside>
       </div>
 
-      <LibraryAssetPicker
+      <MediaAssetPicker
         open={pickerOpen}
         onOpenChange={setPickerOpen}
         categories={pickerCategories}
         onSelect={(asset) => {
           setAssetId(asset.publicId)
           setAssetName(asset.name)
-          setMediaSource('library')
+          setMediaSource('media')
           setDirty(true)
         }}
       />

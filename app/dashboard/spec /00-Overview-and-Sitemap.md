@@ -2,7 +2,7 @@
 
 This document is the authoritative user-experience blueprint for the Abugida Academy course-operations platform. It specifies every screen, workflow, shared component, and design-system token required to design, build, and evaluate the product. It is written for cross-functional use by product designers, engineers, QA, and stakeholders, and it describes the target experience rather than any particular release of it.
 
-**Scope:** The admin-facing workspace — authentication, dashboard, courses, content library, students, analytics, marketing, and settings.
+**Scope:** The admin-facing workspace — authentication, dashboard, courses, media, students, analytics, marketing, and settings.
 **Convention:** Screens carry stable IDs (`S-x.y`) that are referenced throughout the document; every screen ID in the sitemap links to the module file that holds its full definition.
 
 ---
@@ -110,12 +110,12 @@ Every screen heading in this specification carries a status marker so that reade
 |                                    | Review & Approval Queue               | [S-2.14](04-Courses.md#scr-2-14)                     | 🔄 CHANGED   |
 |                                    | Prerequisites & Unlock Rules          | [S-2.15](04-Courses.md#scr-2-15)                     | 🔄 CHANGED   |
 |                                    | AI Quiz Generator                     | [S-2.16](04-Courses.md#scr-2-16)                     | 🔄 CHANGED   |
-| **3. Content Library**             | Asset Repository                      | [S-3.1](05-Content-Library.md#scr-3-1)               | 🔄 CHANGED   |
-|                                    | Asset Upload Modal                    | [S-3.2](05-Content-Library.md#scr-3-2)               | _(retained)_ |
-|                                    | Asset Detail View                     | [S-3.3](05-Content-Library.md#scr-3-3)               | 🔄 CHANGED   |
-|                                    | Folders & Collections                 | [S-3.4](05-Content-Library.md#scr-3-4)               | _(retained)_ |
-|                                    | File Preview Modal                    | [S-3.5](05-Content-Library.md#scr-3-5)               | _(retained)_ |
-|                                    | Transcription & Subtitle Editor       | [S-3.6](05-Content-Library.md#scr-3-6)               | 🔄 CHANGED   |
+| **3. Media**                       | Asset Repository                      | [S-3.1](05-Media.md#scr-3-1)                         | 🔄 CHANGED   |
+|                                    | Asset Upload Modal                    | [S-3.2](05-Media.md#scr-3-2)                         | _(retained)_ |
+|                                    | Asset Detail View                     | [S-3.3](05-Media.md#scr-3-3)                         | 🔄 CHANGED   |
+|                                    | Folders & Collections                 | [S-3.4](05-Media.md#scr-3-4)                         | _(retained)_ |
+|                                    | File Preview Modal                    | [S-3.5](05-Media.md#scr-3-5)                         | _(retained)_ |
+|                                    | Transcription & Subtitle Editor       | [S-3.6](05-Media.md#scr-3-6)                         | 🔄 CHANGED   |
 | **4. Students**                    | Student Directory                     | [S-4.1](06-Students.md#scr-4-1)                      | 🔄 CHANGED   |
 |                                    | Student Profile                       | [S-4.2](06-Students.md#scr-4-2)                      | _(retained)_ |
 |                                    | Student Progress Dashboard            | [S-4.3](06-Students.md#scr-4-3)                      | _(retained)_ |
@@ -184,7 +184,7 @@ The specification is split into one file per module, exactly as listed in the si
 | 02   | [02-Global-Navigation.md](02-Global-Navigation.md)                           | A. Global Navigation                                                                                                                                      | S-A.1           |
 | 03   | [03-Dashboard.md](03-Dashboard.md)                                           | 1. Dashboard                                                                                                                                              | S-1.1 – S-1.4   |
 | 04   | [04-Courses.md](04-Courses.md)                                               | 2. Courses — **Course Workspace & authoring**                                                                                                             | S-2.1 – S-2.23  |
-| 05   | [05-Content-Library.md](05-Content-Library.md)                               | 3. Content Library                                                                                                                                        | S-3.1 – S-3.6   |
+| 05   | [05-Media.md](05-Media.md)                                                   | 3. Media                                                                                                                                                  | S-3.1 – S-3.6   |
 | 06   | [06-Students.md](06-Students.md)                                             | 4. Students                                                                                                                                               | S-4.1 – S-4.8   |
 | 07   | [07-Analytics.md](07-Analytics.md)                                           | 5. Analytics                                                                                                                                              | S-5.1 – S-5.5   |
 | 08   | [08-Settings.md](08-Settings.md)                                             | 6. Settings                                                                                                                                               | S-6.1 – S-6.10  |
@@ -361,9 +361,9 @@ flowchart LR
 | [S-2.14](04-Courses.md#scr-2-14) Review Queue                                                          | Queue now covers **both** entities: curriculum items and whole courses; adds course-level decisions, withdrawal, and deep links into [S-2.22](04-Courses.md#scr-2-22)              |
 | [S-2.15](04-Courses.md#scr-2-15) Unlock Rules                                                          | Opened from the sidebar item `⋯` menu and the item pane; adds a **section-level** "complete in order" default                                                                      |
 | [S-2.16](04-Courses.md#scr-2-16) AI Quiz Generator                                                     | Unchanged in behaviour; reachable from the item pane, the Quiz Builder, and the sidebar `⋯` menu                                                                                   |
-| [S-3.1](05-Content-Library.md#scr-3-1) Asset Repository                                                | Adds a **return-to** affordance: an asset opened from a curriculum item returns to that item in the workspace                                                                      |
-| [S-3.3](05-Content-Library.md#scr-3-3) Asset Detail                                                    | Adds "Attach to curriculum item…" and richer "Used in" links that deep-link into the workspace Curriculum tab                                                                      |
-| [S-3.6](05-Content-Library.md#scr-3-6) Transcription                                                   | Return path now resolves to the workspace item pane rather than a standalone lesson route                                                                                          |
+| [S-3.1](05-Media.md#scr-3-1) Asset Repository                                                          | Adds a **return-to** affordance: an asset opened from a curriculum item returns to that item in the workspace                                                                      |
+| [S-3.3](05-Media.md#scr-3-3) Asset Detail                                                              | Adds "Attach to curriculum item…" and richer "Used in" links that deep-link into the workspace Curriculum tab                                                                      |
+| [S-3.6](05-Media.md#scr-3-6) Transcription                                                             | Return path now resolves to the workspace item pane rather than a standalone lesson route                                                                                          |
 | [S-4.1](06-Students.md#scr-4-1) Student Directory                                                      | Becomes the canonical table implementation behind both the global directory and [S-2.18](04-Courses.md#scr-2-18)                                                                   |
 | [S-5.1](07-Analytics.md#scr-5-1) Course Performance                                                    | Becomes the canonical implementation behind [S-2.19](04-Courses.md#scr-2-19); adds per-item engagement rows that deep-link to the item pane                                        |
 | [S-5.3](07-Analytics.md#scr-5-3) Drop-off                                                              | Becomes a tab inside [S-2.19](04-Courses.md#scr-2-19)                                                                                                                              |

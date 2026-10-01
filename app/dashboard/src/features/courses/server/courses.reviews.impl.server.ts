@@ -11,6 +11,7 @@ import {
   createNotifications,
   requireAuthoringRole,
   requireRoleIn,
+  requireActiveOrganizationId,
   resolveCourse,
   resolveLesson,
   userIdsWithPlatformRoles,
@@ -18,14 +19,19 @@ import {
 import { REVIEW_DECISION_ROLES } from '#/features/auth/auth.roles'
 import { applyReviewDecision } from '../courses.review-state'
 import type { ReviewDecisionInput, ReviewQueueQuery } from '../schemas/courses.workflow.schema'
-import type { ReviewLessonPreview, ReviewQueueItem } from '../courses.types'
+import type { PendingReviewCounts, ReviewLessonPreview, ReviewQueueItem } from '../courses.types'
 
 const requester = users
 
 export async function getReviewQueueImpl(data: ReviewQueueQuery): Promise<ReviewQueueItem[]> {
   await requireRoleIn(['admin', 'reviewer'])
 
-  const filters = [eq(reviewRequests.state, data.state)]
+  // Scoped to the active workspace: the queue shows this workspace's review
+  // work, and every row in it belongs to a course the user can open.
+  const filters = [
+    eq(reviewRequests.state, data.state),
+    eq(courses.organizationId, await requireActiveOrganizationId()),
+  ]
   if (data.coursePublicId) {
     const course = await resolveCourse(data.coursePublicId)
     filters.push(eq(reviewRequests.courseId, course.id))
@@ -254,36 +260,63 @@ export async function setApprovalGateImpl(input: {
 }
 
 /**
- * S-A.1 Courses badge: pending review work across curriculum items **and**
- * whole courses.
+ * S-A.1 Review badge: pending review work across curriculum items **and** whole
+ * courses.
  *
- * Rules that are enforced here rather than in the component: archived courses
- * are **excluded** (their submissions are decisions already taken), the count is
- * only produced for a role that can actually decide a submission, and the caller
- * refreshes on focus rather than on a timer.
+ * Two numbers, because the sidebar shows two badges and they answer different
+ * questions:
+ *
+ * - `total` — every open submission in the workspace. This is the **Courses**
+ *   badge: the review work that exists.
+ * - `assignedToMe` — the open submissions the signed-in user can actually
+ *   decide, i.e. the ones they did **not** author (spec 11 self-approval guard:
+ *   "a user can never approve a submission they authored"). This is the
+ *   **Review** badge, and it is what makes "2 of 5 assigned to you" a real,
+ *   checkable number rather than a placeholder.
+ *
+ * Archived courses are **excluded** (their submissions are decisions already
+ * taken), and the count is only produced for a role that can decide a
+ * submission at all.
  */
-export async function getPendingReviewCountImpl(): Promise<number> {
+export async function getPendingReviewCountImpl(): Promise<PendingReviewCounts> {
   const request = await import('@tanstack/react-start/server').then((mod) => mod.getRequest())
   const { getAuth } = await import('#/config/auth.server')
   const session = await getAuth().getSession(request.headers)
-  if (!session.ok) return 0
+  if (!session.ok) return { total: 0, assignedToMe: 0 }
 
   const { resolvePlatformRoleImpl } = await import('#/features/auth/server/auth.roles.impl.server')
   const role = await resolvePlatformRoleImpl(session.value.user.id)
-  if (!REVIEW_DECISION_ROLES.includes(role)) return 0
+  if (!REVIEW_DECISION_ROLES.includes(role)) return { total: 0, assignedToMe: 0 }
+
+  // Scoped to the active workspace: the badge counts this workspace's review
+  // work and nothing else. A caller with no workspace has nothing to count, so
+  // this is the one read that degrades to zero instead of throwing — the badge
+  // must not take the whole navigation shell down with it.
+  let organizationId: string
+  try {
+    organizationId = await requireActiveOrganizationId()
+  } catch {
+    return { total: 0, assignedToMe: 0 }
+  }
 
   const rows = await db
-    .select({ count: sql<number>`COUNT(*)::int` })
+    .select({ requestedBy: reviewRequests.requestedBy })
     .from(reviewRequests)
     .innerJoin(courses, eq(courses.id, reviewRequests.courseId))
     .where(
       and(
         eq(reviewRequests.state, 'pending'),
+        eq(courses.organizationId, organizationId),
         isNull(courses.deletedAt),
         sql`${courses.status} <> 'archived'`,
       ),
     )
-  return Number(rows.at(0)?.count ?? 0)
+
+  const userId = session.value.user.id
+  return {
+    total: rows.length,
+    assignedToMe: rows.filter((row) => row.requestedBy !== userId).length,
+  }
 }
 
 async function resolveCourseById(courseId: number) {

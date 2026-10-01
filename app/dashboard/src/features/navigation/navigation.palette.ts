@@ -76,8 +76,8 @@ export const QUICK_ACTIONS: readonly QuickAction[] = [
   {
     id: 'upload-asset',
     label: 'Upload Content Asset',
-    keywords: 'upload asset content library file',
-    to: '/content-library',
+    keywords: 'upload asset content media file',
+    to: '/media',
     roles: ['admin', 'editor', 'reviewer', 'viewer', 'support'],
   },
   {

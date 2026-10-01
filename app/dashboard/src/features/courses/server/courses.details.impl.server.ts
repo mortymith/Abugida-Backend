@@ -6,6 +6,7 @@ import { courses, examTypes } from '@abugida/database/catalog'
 import { users } from '@abugida/database/auth'
 import { db } from '#/config/db.config'
 import {
+  requireActiveOrganizationId,
   requireAuthoringRole,
   requireUserId,
   resolveCourse,
@@ -82,6 +83,9 @@ export async function createCourseDraftImpl(
   const inserted = await db
     .insert(courses)
     .values({
+      // A course belongs to the workspace it was created in (spec 13); this is
+      // what every later read is scoped by.
+      organizationId: await requireActiveOrganizationId(),
       title: input.title.trim(),
       slug,
       description: (input.description ?? '').trim() || null,

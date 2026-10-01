@@ -13,7 +13,7 @@
 
 ## What changed in Part 11 (Revision 2)
 
-- The reusable component library gains the seven components the [Course Workspace](04-Courses.md#the-course-workspace-model) needs (items 22–28 below).
+- The reusable component media gains the seven components the [Course Workspace](04-Courses.md#the-course-workspace-model) needs (items 22–28 below).
 - **Status colours are now defined once**, in a single mapping table covering the course lifecycle, curriculum item review states, and the save-state indicator. Revision 1 described the Published pill as purple in one place and green in another; the mapping table resolves the ambiguity.
 - Autosave is specified as a **per-surface** contract, and a new rule requires a dirty buffer to be **flushed before any item, tab, section, or route change**.
 - The roles matrix gains the course-lifecycle capabilities introduced by the [Draft → In Review → Published → Archived](04-Courses.md#course-lifecycle) workflow.
@@ -37,7 +37,7 @@
 11. **Drop Zone:** Drag-and-drop file upload area with progress indicator. Specified as [S-7.12](09-Shared-Components.md#scr-7-12) with resumable upload.
 12. **Notification Bell ([S-1.4](03-Dashboard.md#scr-1-4)):** Header icon with unread-count badge and dropdown preview.
 13. **Command Palette ([S-7.5](09-Shared-Components.md#scr-7-5)):** ⌘K/Ctrl+K launcher available globally, with course-contextual actions.
-14. **File Preview Modal ([S-3.5](05-Content-Library.md#scr-3-5)):** Reusable overlay for video/PDF/image preview.
+14. **File Preview Modal ([S-3.5](05-Media.md#scr-3-5)):** Reusable overlay for video/PDF/image preview.
 15. **Permission Matrix Table ([S-6.9](08-Settings.md#scr-6-9)):** Reusable grid of module × capability toggles, also used for custom-role creation.
 16. **Rule Builder:** Visual WHEN / AND / THEN builder used in [S-4.8](06-Students.md#scr-4-8) enrollment rules and [S-6.10](08-Settings.md#scr-6-10) retention policies, always paired with a dry-run preview.
 17. **AI Prompt Panel ([S-2.11](04-Courses.md#scr-2-11), [S-2.16](04-Courses.md#scr-2-16)):** Prompt input, parameters, streaming output, per-item regenerate, and explicit accept/discard — AI content is always editable and labeled ✨.
@@ -219,7 +219,7 @@ Every screen's **User Role(s)** field in this document refers back to this matri
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------- | ------------------------------------------------------ | ---------- | ---------------------------------- |
 | Dashboard & Analytics ([Sec. 1](03-Dashboard.md#section-1-dashboard), [Sec. 5](07-Analytics.md#section-5-analytics--reporting))                                | Full       | Full (Revenue: view only)         | View only                                              | View only  | No revenue access                  |
 | Courses ([Sec. 2](04-Courses.md#section-2-course-workspace--course-authoring))                                                                                 | Full       | Create / Edit / Submit for review | Review — approve, request changes, reject (no editing) | View only  | No access                          |
-| Content Library ([Sec. 3](05-Content-Library.md#section-3-content-library))                                                                                    | Full       | Full                              | View only                                              | View only  | No access                          |
+| Media ([Sec. 3](05-Media.md#section-3-media))                                                                                                                  | Full       | Full                              | View only                                              | View only  | No access                          |
 | Students & Cohorts ([Sec. 4](06-Students.md#section-4-student--enrollment-management))                                                                         | Full       | Create / Edit                     | View only                                              | View only  | View + Message                     |
 | Badges & Enrollment Automation ([S-4.7](06-Students.md#scr-4-7), [S-4.8](06-Students.md#scr-4-8))                                                              | Full       | Full                              | View only                                              | View only  | View only                          |
 | Marketing & Growth ([Sec. 8](10-Marketing-and-Growth.md#section-8-marketing--growth))                                                                          | Full       | Full (Payout runs: Admin)         | View only                                              | View only  | View only (no send, no financials) |
@@ -397,7 +397,7 @@ Component-level behavior for every shared component is in [Part 09 § Responsive
 - **Per-block language:** any run of non-default-language text carries a `lang` attribute, set from the item pane's _Set language_ action. Screen-reader pronunciation follows `lang`; a missing `lang` is an advisory readiness check, never a save error. Mixed-direction runs render inside `dir="auto"`.
 - **Zoom & Reflow:** Content reflows to 320px CSS width with no horizontal scrolling and no loss of function at 400% zoom. No fixed-px line clamps are used to buy layout space (WCAG 2.2 §1.4.10).
 - **Screen Reader Support:** Charts ([S-1.1](03-Dashboard.md#scr-1-1), [S-5.1](07-Analytics.md#scr-5-1), etc.) expose an underlying data table as an accessible alternative; icons without visible text carry `aria-label`s; live-region announcements cover async results (imports finished, campaigns sent, rules dry-run counts, reorders, readiness re-checks).
-- **Media Accessibility:** Every video lesson offers editable captions/transcript ([S-3.6](05-Content-Library.md#scr-3-6)); captions are on by default and audio-only states are never the sole channel for instructions. `RC-5` blocks publishing a video item without captions. Every image inserted into lesson content requires non-empty alt text before the node is committed.
+- **Media Accessibility:** Every video lesson offers editable captions/transcript ([S-3.6](05-Media.md#scr-3-6)); captions are on by default and audio-only states are never the sole channel for instructions. `RC-5` blocks publishing a video item without captions. Every image inserted into lesson content requires non-empty alt text before the node is committed.
 - **Target Sizes:** Interactive targets meet a minimum 40×40px hit area on touch devices; adjacent targets keep ≥ 8px separation. Drag handles and row `⋯` menus are at least 32px with a 40px hit area, because a dense tree is where 24px targets quietly break touch use.
 - **Motion:** Skeleton shimmer and drag-lift animations respect `prefers-reduced-motion`; no essential information is conveyed through animation alone.
 - **Forms:** Every input has a programmatically associated label; validation errors are announced via `aria-live` regions, not color alone; error messages state both what is wrong and how to fix it.
@@ -415,7 +415,7 @@ flowchart LR
     SignUp[S-0.2 Org Sign-Up] --> Shell
     Shell --> Dash[S-1.1 Dashboard]
     Shell --> Courses[S-2.1 Course Catalog]
-    Shell --> Library[S-3.1 Content Library]
+    Shell --> Media[S-3.1 Media]
     Shell --> Students[S-4.1 Student Directory]
     Shell --> Analytics[S-5.1 Course Performance]
     Shell --> Marketing[S-8.1 Email Campaigns]

@@ -272,7 +272,7 @@ export function MarkdownToolbar({
         open={imageOpen}
         onOpenChange={setImageOpen}
         title="Insert image"
-        description="Paste a direct image URL. Images hosted in the Content Library are attached as lesson media instead, from the settings panel."
+        description="Paste a direct image URL. Images hosted in the Media are attached as lesson media instead, from the settings panel."
         label="Image URL"
         placeholder="https://cdn.example.com/diagram.png"
         confirmLabel="Insert image"

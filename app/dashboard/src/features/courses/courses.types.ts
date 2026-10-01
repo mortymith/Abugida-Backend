@@ -9,6 +9,16 @@ import type { CourseLifecycleState } from './courses.workspace'
 
 /** Shared DTOs between server functions and UI components (spec 04). */
 
+/**
+ * S-A.1 navigation badges: `total` open review submissions in the workspace
+ * (the Courses badge) and `assignedToMe`, the share the signed-in reviewer can
+ * actually decide — the ones they did not author, per the self-approval guard.
+ */
+export interface PendingReviewCounts {
+  total: number
+  assignedToMe: number
+}
+
 export interface CourseCatalogItem {
   publicId: string
   title: string

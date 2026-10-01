@@ -56,12 +56,47 @@ export async function requireRoleIn(allowed: readonly PlatformRole[]): Promise<s
   return userId
 }
 
-/** Resolve a course by public id or throw. */
+/**
+ * The workspace every course read is scoped to (spec 13).
+ *
+ * A workspace is not a user: it is the unit a course belongs to, and it is held
+ * in the session. Resolving it here — once, server-side — is what stops a course
+ * in another workspace from being reachable through a deep link, the search
+ * index, or a stale id.
+ *
+ * Throws rather than returning `null`: a course read with no workspace is the
+ * 403 case in spec 11, and it must never silently fall back to "no filter",
+ * which would read every workspace's rows.
+ */
+export async function requireActiveOrganizationId(): Promise<string> {
+  const { requireActiveOrganizationIdImpl } =
+    await import('#/features/workspaces/server/workspaces.impl.server')
+  return requireActiveOrganizationIdImpl()
+}
+
+/** SQL predicate: rows belonging to the active workspace. */
+export async function activeWorkspaceScope() {
+  return eq(courses.organizationId, await requireActiveOrganizationId())
+}
+
+/**
+ * Resolve a course by public id, **within the active workspace**, or throw.
+ *
+ * A course in another workspace is reported as not found rather than forbidden:
+ * telling a user that a course exists in a workspace they cannot see is itself
+ * a leak.
+ */
 export async function resolveCourse(coursePublicId: string) {
   const rows = await db
     .select()
     .from(courses)
-    .where(and(eq(courses.publicId, coursePublicId), isNull(courses.deletedAt)))
+    .where(
+      and(
+        eq(courses.publicId, coursePublicId),
+        isNull(courses.deletedAt),
+        await activeWorkspaceScope(),
+      ),
+    )
     .limit(1)
   const course = rows.at(0)
   if (!course) throw new Error('COURSE_NOT_FOUND')

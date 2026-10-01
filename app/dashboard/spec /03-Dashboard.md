@@ -172,7 +172,7 @@ The course performance table also gains a **state** column carrying each course'
 
 ##### Screen Name: S-1.3 Global Search Results
 
-- **Purpose:** Unified results page for the header search bar in [S-A.1](02-Global-Navigation.md#scr-a-1), spanning courses, curriculum items, students, and content-library assets. Revision 2 adds curriculum items as a first-class result type.
+- **Purpose:** Unified results page for the header search bar in [S-A.1](02-Global-Navigation.md#scr-a-1), spanning courses, curriculum items, students, and media assets. Revision 2 adds curriculum items as a first-class result type.
 - **User Role(s):** Admin, Editor, Reviewer, Viewer, Support — per the [Part 11 matrix](11-Global-Standards.md#roles--permissions-matrix); the result types each role may see are filtered **server-side**.
 - **Wireframe Layout (Text-Based):**
   ```
@@ -222,7 +222,7 @@ The course performance table also gains a **state** column carrying each course'
   - Course result → [S-2.6](04-Courses.md#scr-2-6) Course Workspace · Overview
   - Curriculum item result → [S-2.17](04-Courses.md#scr-2-17) Curriculum tab with that item selected and its pane open — the author lands on the thing they searched for, already in context
   - Student result → [S-4.2](06-Students.md#scr-4-2) Student Profile
-  - Asset result → [S-3.3](05-Content-Library.md#scr-3-3) Asset Detail View
+  - Asset result → [S-3.3](05-Media.md#scr-3-3) Asset Detail View
 - **Instrumentation & acceptance:** events `search_submitted{queryLength,tab,resultCount,entityType}`, `search_result_opened{entityType,position}`, `search_recent_used{position}`, `search_cleared{scope}` — **query text and result names are never logged**. Budget: results in < 400 ms after debounce; the first group paints < 200 ms; INP < 200 ms on arrow navigation.
   - A 1-character query issues no request and shows the minimum-length message.
   - A role without `students.read` sees no Students tab and no student name in the recents row, in the HTML, or in the network payload.

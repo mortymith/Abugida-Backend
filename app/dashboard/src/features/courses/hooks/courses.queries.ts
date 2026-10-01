@@ -17,6 +17,7 @@ import {
   getCourseTemplates,
 } from '#/features/courses/server/all'
 import type {
+  PendingReviewCounts,
   CourseFormReference,
   CourseAnalyticsDTO,
   CourseCatalogResult,
@@ -164,7 +165,7 @@ export function reviewPreviewQueryOptions(lessonPublicId: string) {
 export function pendingReviewCountQueryOptions(enabled: boolean) {
   return queryOptions({
     queryKey: courseQueryKeys.pendingReviews(),
-    queryFn: async (): Promise<number> => await getPendingReviewCount(),
+    queryFn: async (): Promise<PendingReviewCounts> => await getPendingReviewCount(),
     staleTime: STALE.badge,
     enabled,
     refetchInterval: false,

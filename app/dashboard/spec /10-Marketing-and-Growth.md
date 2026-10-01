@@ -123,7 +123,7 @@ Screens for attracting, converting, and retaining students: campaigns with per-c
 - **Wireframe Layout (Text-Based):**
   ```
   ┌──────────────────────────────────────────────────────────────────┐
-  │ Header: "Template Editor"          [+ New] [Pre-built library ▾]  │
+  │ Header: "Template Editor"          [+ New] [Pre-built media ▾]  │
   │ Editor: "Course Announcement"                                   │
   │ Subject:    [{{course_name}} starts {{start_date}} — save your   │
   │              seat]        Preheader: [Seats are limited…]       │

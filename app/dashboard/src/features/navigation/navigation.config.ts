@@ -22,7 +22,7 @@ import type { PlatformRole } from '#/features/auth'
  *   | ---------------- | ------------------------ | ----- ------ -------- ------ ------- |
  *   | Dashboard       | any workspace member    |  ✔     ✔      ✔        ✔       ✔     |
  *   | Courses         | `courses.read`          |  ✔     ✔      ✔        ✔       ✖     |
- *   | Content Library | `assets.read`           |  ✔     ✔      ✔        ✔       ✔     |
+ *   | Media           | `assets.read`           |  ✔     ✔      ✔        ✔       ✔     |
  *   | Students        | `students.read`         |  ✔     ✔      ✔        ✔       ✔     |
  *   | Review          | `course.review`         |  ✔     ✖      ✔        ✖       ✖     |
  *   | Analytics       | any module with data    |  ✔     ✔      ✔        ✔       ✖     |
@@ -69,10 +69,10 @@ export const NAV_ITEMS: readonly NavItem[] = [
     badgeFor: ['admin', 'reviewer'],
   },
   {
-    id: 'content-library',
-    label: 'Content Library',
+    id: 'media',
+    label: 'Media',
     icon: Folder02Icon,
-    to: '/content-library',
+    to: '/media',
     capability: 'assets.read',
     roles: ['admin', 'editor', 'reviewer', 'viewer', 'support'],
   },
@@ -143,6 +143,60 @@ export function getVisibleNavItems(role: PlatformRole): NavItem[] {
   return NAV_ITEMS.filter((item) => item.roles.includes(role))
 }
 
+/**
+ * Visual grouping of the same items, in the same order.
+ *
+ * The groups exist for the **eye**, not for authorisation: `roles` above still
+ * decides visibility, and every item is listed exactly once, so a group can never
+ * disagree with the item list it points at. Grouping gives the rail two anchors —
+ * _Workspace_ (the daily destinations) and _Manage_ (the occasional ones) —
+ * instead of eight peers in one undifferentiated list.
+ *
+ * A group whose items are all invisible to the role is dropped rather than
+ * rendered as a bare label, so a Viewer never sees an empty "Manage" heading.
+ */
+export const NAV_GROUPS: readonly NavGroup[] = [
+  {
+    id: 'workspace',
+    label: 'Workspace',
+    itemIds: ['dashboard', 'courses', 'media', 'students', 'review'],
+  },
+  { id: 'manage', label: 'Manage', itemIds: ['analytics', 'marketing', 'settings'] },
+]
+
+export interface NavGroup {
+  id: string
+  /** Rendered as a `SidebarGroupLabel`; hidden automatically in the icon rail. */
+  label: string
+  itemIds: readonly string[]
+}
+
+/**
+ * `NAV_ITEMS` sliced into the visible groups, in visual order.
+ *
+ * An item in `NAV_ITEMS` but in no group would silently vanish from the rail, so
+ * any such item is appended to an implicit trailing group rather than dropped.
+ */
+export function getVisibleNavGroups(
+  role: PlatformRole,
+): Array<{ id: string; label: string; items: NavItem[] }> {
+  const byId = new Map(NAV_ITEMS.map((item) => [item.id, item]))
+  const grouped = new Set(NAV_GROUPS.flatMap((group) => group.itemIds))
+
+  const groups = NAV_GROUPS.map((group) => ({
+    id: group.id,
+    label: group.label,
+    items: group.itemIds
+      .map((id) => byId.get(id))
+      .filter((item): item is NavItem => item != null && item.roles.includes(role)),
+  })).filter((group) => group.items.length > 0)
+
+  const orphans = NAV_ITEMS.filter((item) => !grouped.has(item.id) && item.roles.includes(role))
+  if (orphans.length > 0) groups.push({ id: 'other', label: 'More', items: orphans })
+
+  return groups
+}
+
 export function canCreateCourse(role: PlatformRole): boolean {
   return CREATE_COURSE_ROLES.includes(role)
 }
@@ -183,8 +237,13 @@ export function formatBadgeCount(count: number): string {
 }
 
 /**
- * The badge's accessible name and `title`. A mixed assignment reads
- * _"2 of 5 assigned to you"_; a plain count names what is being counted.
+ * A badge's accessible name and `title`.
+ *
+ * - **Courses badge** (no assignment): _"5 open reviews awaiting review"_ — the
+ *   review work that exists in the workspace.
+ * - **Review badge**: _"2 of 5 assigned to you"_ — what the signed-in reviewer
+ *   can actually decide. The exact count is always reachable here even when the
+ *   visible label is capped at `99+`.
  */
 export function badgeAccessibleName(count: number, assignedToMe?: number): string {
   const reviews = count === 1 ? 'review' : 'reviews'

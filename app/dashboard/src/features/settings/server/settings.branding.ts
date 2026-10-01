@@ -5,7 +5,7 @@ import { brandingUploadSchema, saveBrandingSchema } from '../schemas/settings.sc
 
 /**
  * Client-safe S-6.4 Branding server functions. Uploads use presigned URLs
- * (browser → MinIO/S3) via @abugida/storage — same pattern as Content Library.
+ * (browser → MinIO/S3) via @abugida/storage — same pattern as Media.
  */
 
 export const getBranding = createServerFn({ method: 'GET' }).handler(

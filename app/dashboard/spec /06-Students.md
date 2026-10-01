@@ -1,6 +1,6 @@
 # Section 4: Student & Enrollment Management
 
-> **Abugida Academy — UX Design Specification** · Part 06 of 11 · [↑ Overview & Sitemap](00-Overview-and-Sitemap.md) · [← Content Library](05-Content-Library.md) · [Analytics →](07-Analytics.md)
+> **Abugida Academy — UX Design Specification** · Part 06 of 11 · [↑ Overview & Sitemap](00-Overview-and-Sitemap.md) · [← Media](05-Media.md) · [Analytics →](07-Analytics.md)
 
 ## What changed in Part 06 (Revision 3)
 

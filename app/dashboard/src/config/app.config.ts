@@ -42,8 +42,8 @@ const envSchema = z
     VITE_DEFAULT_LOGIN_REDIRECT: z.string().default('/dashboard'),
     COURSE_PREVIEW_URL: z.url().optional(),
 
-    // ── Object storage (Content Library) ────────────────────────────────
-    // Optional so the dashboard can start without storage; the Library
+    // ── Object storage (Media) ────────────────────────────────
+    // Optional so the dashboard can start without storage; the Media
     // server bridge returns STORAGE_NOT_CONFIGURED until these are present.
     STORAGE_PROVIDER: z.enum(['aws-s3', 'minio', 'r2', 'spaces', 'wasabi', 'b2']).optional(),
     STORAGE_ENDPOINT: z.string().optional(),

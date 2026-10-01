@@ -64,7 +64,7 @@ describe('moduleForPath', () => {
     expect(moduleForPath('/settings/profile')).toBe('settings')
     expect(moduleForPath('/students')).toBe('students')
     expect(moduleForPath('/analytics/revenue')).toBe('analytics')
-    expect(moduleForPath('/content-library/abc')).toBe('content-library')
+    expect(moduleForPath('/media/abc')).toBe('media')
     expect(moduleForPath('/')).toBe('dashboard')
   })
 
@@ -79,9 +79,9 @@ describe('supportTicketSchema', () => {
       category: 'bug',
       subject: 'Upload fails',
       message: 'Uploading a 40MB video fails at 90% with an error toast.',
-      currentScreen: '/content-library',
+      currentScreen: '/media',
     })
-    expect(parsed.currentScreen).toBe('/content-library')
+    expect(parsed.currentScreen).toBe('/media')
     expect(parsed.category).toBe('bug')
   })
 

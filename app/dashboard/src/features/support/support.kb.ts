@@ -8,7 +8,7 @@
  */
 
 export type HelpModule =
-  'dashboard' | 'courses' | 'content-library' | 'students' | 'analytics' | 'settings' | 'general'
+  'dashboard' | 'courses' | 'media' | 'students' | 'analytics' | 'settings' | 'general'
 
 export interface HelpArticle {
   id: string
@@ -25,7 +25,7 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     title: 'Getting started with Abugida',
     summary:
       'A five-minute orientation to the dashboard: navigation, search, and your first course.',
-    body: 'The sidebar groups the workspace into Dashboard, Courses, Content Library, Students, Analytics, and Settings. Press ⌘K (or Ctrl+K) anywhere to jump between screens or run quick actions. To publish your first course, start with Create Course, add modules and lessons, then submit it for review from the course detail page.',
+    body: 'The sidebar groups the workspace into Dashboard, Courses, Media, Students, Analytics, and Settings. Press ⌘K (or Ctrl+K) anywhere to jump between screens or run quick actions. To publish your first course, start with Create Course, add modules and lessons, then submit it for review from the course detail page.',
     module: 'general',
     keywords: ['onboarding', 'tour', 'orientation', 'navigation', 'first course', 'intro'],
   },
@@ -41,7 +41,7 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     id: 'curriculum-lessons',
     title: 'Building a curriculum with modules and lessons',
     summary: 'Add modules, order lessons with drag-and-drop, and attach quizzes or media.',
-    body: 'Open a course and edit its curriculum to add modules and lessons. Lessons support video, PDF, exercise, link, and quiz content; media is referenced from the Content Library so assets stay shared and deduplicated. Drag rows to reorder, then save the curriculum order.',
+    body: 'Open a course and edit its curriculum to add modules and lessons. Lessons support video, PDF, exercise, link, and quiz content; media is referenced from Media so assets stay shared and deduplicated. Drag rows to reorder, then save the curriculum order.',
     module: 'courses',
     keywords: ['curriculum', 'module', 'lesson', 'quiz', 'media', 'reorder'],
   },
@@ -57,8 +57,8 @@ export const HELP_ARTICLES: readonly HelpArticle[] = [
     id: 'upload-assets',
     title: 'Uploading and organizing content assets',
     summary: 'Upload videos, documents, and images once, then reference them in any lesson.',
-    body: 'The Content Library holds every uploaded asset with folders for organization. Uploads process asynchronously and show progress; once ready, an asset can be attached to lessons from the lesson editor.',
-    module: 'content-library',
+    body: 'Media holds every uploaded asset with folders for organization. Uploads process asynchronously and show progress; once ready, an asset can be attached to lessons from the lesson editor.',
+    module: 'media',
     keywords: ['upload', 'asset', 'library', 'media', 'folder', 'video'],
   },
   {
@@ -131,8 +131,8 @@ export function moduleForPath(path: string): HelpModule {
       return 'dashboard'
     case 'courses':
       return 'courses'
-    case 'content-library':
-      return 'content-library'
+    case 'media':
+      return 'media'
     case 'students':
       return 'students'
     case 'analytics':

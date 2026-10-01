@@ -8,6 +8,7 @@ import { importJobs } from '@abugida/database/ops'
 import { db } from '#/config/db.config'
 import {
   nextModuleSortOrder,
+  requireActiveOrganizationId,
   requireAuthoringRole,
   slugifyTitle,
   uniqueCourseSlug,
@@ -148,6 +149,7 @@ export async function runImportImpl(input: {
     const inserted = await db
       .insert(courses)
       .values({
+        organizationId: await requireActiveOrganizationId(),
         title,
         slug,
         examTypeId,

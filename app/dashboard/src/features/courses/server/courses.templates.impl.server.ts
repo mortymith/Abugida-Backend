@@ -15,6 +15,7 @@ import { quizQuestions } from '@abugida/database/learning'
 import { db } from '#/config/db.config'
 import {
   escapeLike,
+  requireActiveOrganizationId,
   requireAuthoringRole,
   resolveCourse,
   slugifyTitle,
@@ -83,6 +84,7 @@ export async function useTemplateImpl(
     const insertedCourse = await tx
       .insert(courses)
       .values({
+        organizationId: await requireActiveOrganizationId(),
         title,
         slug,
         description: template.description,

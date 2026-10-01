@@ -1,6 +1,6 @@
 # Section 2: Course Workspace & Course Authoring
 
-> **Abugida Academy — UX Design Specification** · Part 04 of 11 · [↑ Overview & Sitemap](00-Overview-and-Sitemap.md) · [← Dashboard](03-Dashboard.md) · [Content Library →](05-Content-Library.md)
+> **Abugida Academy — UX Design Specification** · Part 04 of 11 · [↑ Overview & Sitemap](00-Overview-and-Sitemap.md) · [← Dashboard](03-Dashboard.md) · [Media →](05-Media.md)
 
 ## What changed in Part 04 (Revision 3)
 
@@ -149,7 +149,7 @@ stateDiagram-v2
 | `/_app/courses/$courseId?lessons/$lessonId`                                         | **Alias** → redirects to `?tab=curriculum&item=$lessonId`. Same component, no second editor.      |
 
 - `tab` defaults to `overview`; `item` is ignored outside the `curriculum` tab; `atab` is ignored outside the `analytics` tab.
-- The alias route exists so that search results, notifications, and the Content Library "Used in" list keep working. It must not host a second editor implementation.
+- The alias route exists so that search results, notifications, and the Media "Used in" list keep working. It must not host a second editor implementation.
 - The workspace route allows `admin`, `editor`, `reviewer`, `viewer`, and `support`. Authoring affordances inside it are permission-filtered, not route-filtered, so a Reviewer can open the same item the Editor sees and act on the review. **Support is a special case:** their workspace nav renders the **Students tab only** — Overview, Curriculum, Analytics, and Settings are absent entirely (case 1 of the three-case rule above), per the [Support grant in Part 11](11-Global-Standards.md#roles--permissions-matrix). The route is the same; the destinations are not.
 
 ### Item Action Matrix
@@ -295,7 +295,7 @@ The 60s idle timer and an explicit button are **not** two competing save systems
   - **Default (Populated):** Full grid of cards; the status pill reflects the [course lifecycle](04-Courses.md#course-lifecycle). Every pill is the [fill/text/tint triple](11-Global-Standards.md#status-colour-mapping) with a label and an icon — never colour alone.
   - **Status pills and filters:** `All · Draft · In Review · Approved · Scheduled · Published · Archived`. **Approved** matches `review_requests.entity_type='course' AND decision='approved' AND courses.status='draft'`; **Scheduled** matches any course with a future `scheduled_publish_at`.
   - **In Review:** Indigo pill + "In review" line; a Reviewer's card shows the pending decision count. The derived-Approved case adds a secondary line _"Approved, awaiting publish."_
-  - **Empty State (No Courses):** [S-7.3](09-Shared-Components.md#scr-7-3) Empty State: "No courses yet. Create your first course!" with a prominent **New Course** CTA and a link to the [Content Library](05-Content-Library.md#scr-3-1).
+  - **Empty State (No Courses):** [S-7.3](09-Shared-Components.md#scr-7-3) Empty State: "No courses yet. Create your first course!" with a prominent **New Course** CTA and a link to the [Media](05-Media.md#scr-3-1).
   - **Loading:** 6–9 skeleton cards with 160px placeholder thumbnails.
   - **Filtered (No Results):** "No courses match your filters." + **Clear filters** — deliberately _not_ the [S-7.3](09-Shared-Components.md#scr-7-3) creation CTA, per [Part 11](11-Global-Standards.md#global-validation-and-feedback-patterns).
   - **Error:** "Unable to load courses. Retry?" with a Retry button and a request ID.
@@ -418,7 +418,7 @@ The 60s idle timer and an explicit button are **not** two competing save systems
   | Drag-and-drop reorder and cross-section move | [S-7.9](09-Shared-Components.md#scr-7-9) Curriculum Tree                                        |
   | Inline rename                                | [S-7.10](09-Shared-Components.md#scr-7-10) Item Actions Menu → Rename                           |
   | Edit a lesson's content                      | [S-2.7](04-Courses.md#scr-2-7) item pane, same screen as the tree                               |
-  | Import from Library / bulk import            | [S-2.13](04-Courses.md#scr-2-13), opened from the Curriculum toolbar                            |
+  | Import from Media / bulk import              | [S-2.13](04-Courses.md#scr-2-13), opened from the Curriculum toolbar                            |
   | "At least 1 module with 1 lesson" rule       | [S-2.22](04-Courses.md#scr-2-22) publish readiness check `RC-3`                                 |
 
 <a id="retired-s-2-4"></a>
@@ -592,7 +592,7 @@ The 60s idle timer and an explicit button are **not** two competing save systems
   10. **Collapse / expand** sections; state persists per user in `localStorage`.
   11. **Bulk select** items with a checkbox or `Shift`-click to archive, move, or reorder many at once.
   12. Open a **section settings** popover: description, estimated duration, free-preview toggle, section-level sequential ordering.
-  13. Import from the [Content Library](05-Content-Library.md#scr-3-1) or run a bulk import ([S-2.13](#scr-2-13)) directly into this course.
+  13. Import from the [Media](05-Media.md#scr-3-1) or run a bulk import ([S-2.13](#scr-2-13)) directly into this course.
 - **Data Displayed/Modified:**
   - Reads `getCurriculum` → `CurriculumDTO` (sections with their items, per-item `reviewStatus`, `hasBody`, `hasQuiz`, `hasUnlockRules`, `studentCount`, plus section totals).
   - Writes through dedicated server functions, each atomic, each `rowVersion`-guarded, each audit-logged:
@@ -670,13 +670,13 @@ The 60s idle timer and an explicit button are **not** two competing save systems
   - `＋ Add item ▾ → Quiz` → creates and opens [S-2.8](#scr-2-8) in the pane
   - `⋯ → Unlock rules` → [S-2.15](#scr-2-15) slide-over, on top of the workspace
   - `⋯ → Duplicate…` → [S-7.7](09-Shared-Components.md#scr-7-7) Duplicate Item modal
-  - `⋯ → Captions & transcript` (video items) → [S-3.6](05-Content-Library.md#scr-3-6)
+  - `⋯ → Captions & transcript` (video items) → [S-3.6](05-Media.md#scr-3-6)
   - `⋯ → ✨ AI Quiz` → [S-2.16](#scr-2-16)
   - `⋯ → View analytics` → [S-2.19](#scr-2-19) Analytics filtered to that item
   - `⋯ → Copy Markdown` → clipboard, using the raw body ([Part 12 § 9.1](12-Course-Editor-Markdown-Lessons.md#91-server-functions))
   - `＋ Section ▾ → From template` → [S-2.12](#scr-2-12)
   - `⇪ Import` → [S-2.13](#scr-2-13) Bulk Section & Item Import
-  - `＋ Add item ▾ → From Content Library` → [S-3.1](05-Content-Library.md#scr-3-1) in picker mode, which attaches media to the new item and returns to it in the pane
+  - `＋ Add item ▾ → From Media` → [S-3.1](05-Media.md#scr-3-1) in picker mode, which attaches media to the new item and returns to it in the pane
   - **Preview** (header) → [S-2.21](#scr-2-21) Learner Preview
   - **Submit for review** (header) → [S-2.22](#scr-2-22)
   - "N hidden" → expands the filter rather than navigating away
@@ -974,7 +974,7 @@ The 60s idle timer and an explicit button are **not** two competing save systems
   │ Overview:                                                               │
   │   Type Lesson · Status Draft · Duration 30m · 0 students                 │
   │   ⚠ Needs content before publishing                          [Fix →]    │
-  │   Media: 🎥 [Video URL …]  📄 [Library asset]  ▤ Attach media            │
+  │   Media: 🎥 [Video URL …]  📄 [Media asset]  ▤ Attach media            │
   │   Captions: ✨ Auto-transcribe → [S-3.6]                                  │
   │   Quiz: ☑ "Reading check" → [Open Quiz Builder]                          │
   │   Rules: 🔒 Prerequisites → [S-2.15]   Tags: [TOEFL] [Reading] [+]       │
@@ -992,11 +992,11 @@ The 60s idle timer and an explicit button are **not** two competing save systems
   ```
 - **Primary Actions:**
   1. Edit the item title inline in the pane header and the Markdown body in the Tiptap canvas (Rich / Split / Preview modes).
-  2. Attach media from the [Content Library](05-Content-Library.md#scr-3-1) or by URL; embed tables, task lists, code, and video embeds from the toolbar.
+  2. Attach media from the [Media](05-Media.md#scr-3-1) or by URL; embed tables, task lists, code, and video embeds from the toolbar.
   3. Set duration, content type within the Lesson kind, tags, and availability.
   4. Attach, open, or detach a quiz ([S-2.8](#scr-2-8)).
   5. Configure prerequisites and lock behaviour ([S-2.15](#scr-2-15)).
-  6. Generate or edit captions and transcript ([S-3.6](05-Content-Library.md#scr-3-6)).
+  6. Generate or edit captions and transcript ([S-3.6](05-Media.md#scr-3-6)).
   7. Draft a quiz from the content with AI ([S-2.16](#scr-2-16)).
   8. Preview just this item as a student ([S-2.21](#scr-2-21)).
   9. Submit the item for review, or act on reviewer feedback ([S-2.14](#scr-2-14)).
@@ -1075,9 +1075,9 @@ The 60s idle timer and an explicit button are **not** two competing save systems
   - Item sub-tab **Content** → this pane's canvas; **Settings** → the [S-2.17](#scr-2-17) item settings region (media, prerequisites, tags, availability)
   - **Open Quiz Builder** → [S-2.8](#scr-2-8) in the same pane
   - **✨ AI Quiz** → [S-2.16](#scr-2-16)
-  - **Captions & transcript** → [S-3.6](05-Content-Library.md#scr-3-6)
+  - **Captions & transcript** → [S-3.6](05-Media.md#scr-3-6)
   - **🔒 Prerequisites** → [S-2.15](#scr-2-15) slide-over
-  - **📤 Attach media** → [S-3.1](05-Content-Library.md#scr-3-1) in picker mode
+  - **📤 Attach media** → [S-3.1](05-Media.md#scr-3-1) in picker mode
   - **Preview item** / **👁** → [S-2.21](#scr-2-21) at this item
   - **Submit for review** → [S-2.14](#scr-2-14) queue; reviewer decision in [S-2.22](#scr-2-22)
   - **⋯ → Duplicate…** → [S-7.7](09-Shared-Components.md#scr-7-7) · **⋯ → Copy Markdown** → clipboard · **⋯ → Publish item / Unpublish item**
@@ -1122,7 +1122,7 @@ The 60s idle timer and an explicit button are **not** two competing save systems
   - **No questions yet:** the question list is empty with a single CTA, **Add question** (or **✨ Generate with AI** as the named `multi-action` variant, because both are credible starting paths). A quiz with no questions fails `RC-4b` and the failure is stated in the pane, not only in readiness.
   - **Default:** At least one blank question on creation; the item title is the quiz title until renamed.
   - **Validation Error:** "Every question needs a correct answer marked." blocks save and marks the offending question inline.
-  - **Detached Quiz:** A quiz can exist before it is placed. The header shows "Not attached to a curriculum item" with **Attach…**; unattached quizzes are excluded from publish readiness and are visible only from the Library/Library picker, never as a curriculum row.
+  - **Detached Quiz:** A quiz can exist before it is placed. The header shows "Not attached to a curriculum item" with **Attach…**; unattached quizzes are excluded from publish readiness and are visible only from the Media module and its picker, never as a curriculum row.
   - **Saving / Saved / Error:** [S-7.8](09-Shared-Components.md#scr-7-8). The explicit control is **`Flush now`**, disabled with `aria-describedby` "No unsaved changes" when the buffer is clean.
   - **Locked by Review (blocked by state → disabled with a reason):** the builder renders with every control **disabled**, the reason _"In review — withdraw to edit"_ / _"Approved — editing clears the approval"_ in a tooltip and in `aria-describedby`, and the review checklist shown alongside. It is not replaced by a read-only summary.
   - **Archived Item (case 3):** the whole surface is replaced by an "Archived item" banner and a **Restore** action.
@@ -1162,7 +1162,7 @@ The 60s idle timer and an explicit button are **not** two competing save systems
   │ Overview                                                                │
   │   Type Assignment  Status Draft  Submissions 0  Avg score —            │
   │   Brief: "Write 300 words on the impact of skimming…"                 │
-  │   Attachments: 📄 prompt.pdf (Content Library)        [+ Attach]        │
+  │   Attachments: 📄 prompt.pdf (Media)        [+ Attach]        │
   │   Rubric: 3 criteria  [Edit rubric]                                    │
   │   Submission: ☑ Online text  ☐ File upload  ☐ External link            │
   │   Attempts: 1  Due: 2026-09-12 23:59 EAT  ☐ Late submissions accepted  │
@@ -1177,7 +1177,7 @@ The 60s idle timer and an explicit button are **not** two competing save systems
   ```
 - **Primary Actions:**
   1. Write the assignment brief in the same Markdown/Tiptap canvas as [S-2.7](#scr-2-7).
-  2. Attach reference material from the [Content Library](05-Content-Library.md#scr-3-1).
+  2. Attach reference material from the [Media](05-Media.md#scr-3-1).
   3. Define a rubric (criteria, levels, weights) or a points value.
   4. Choose submission channels, attempts, due date, and late-submission policy.
   5. Choose grading mode and feedback release timing.
@@ -1187,7 +1187,7 @@ The 60s idle timer and an explicit button are **not** two competing save systems
 - **States:**
   - **Loading:** skeleton for the brief and rubric; the submission-channel list resolves separately so a slow settings read does not block the author from writing the brief.
   - **Default:** A new assignment starts with a stub brief and no rubric; the Overview sub-tab flags "Needs content" until a brief and at least one submission channel exist.
-  - **No Attachment:** Allowed; the attach slot shows the empty state and links to the [Content Library](05-Content-Library.md#scr-3-1).
+  - **No Attachment:** Allowed; the attach slot shows the empty state and links to the [Media](05-Media.md#scr-3-1).
   - **Due Date in the Past:** Allowed for an already-published assignment; the warning explains the effect on new submissions only.
   - **Grading Mode Changed:** Switching to rubric grading requires at least one criterion; switching to points requires a value > 0.
   - **Grading Actions (Admin and Editor, published items):** review submissions, score, release feedback, and export. This is the `assignment.grade` capability, granted to **Admin and Editor** per [Part 11](11-Global-Standards.md#course-lifecycle-capabilities) — it is not Admin-only. For Reviewer, Viewer, and Support the grading controls are **absent entirely** (case 1), not disabled.
@@ -1205,7 +1205,7 @@ The 60s idle timer and an explicit button are **not** two competing save systems
   - **Conflict:** two graders scoring the same submission shows **Keep mine / Take theirs** and records which rubric version each used.
   - **Partial failure:** a bulk release of feedback saves the released rows and names the failed ones.
 - **Navigation:**
-  - **Attach** → [S-3.1](05-Content-Library.md#scr-3-1) picker
+  - **Attach** → [S-3.1](05-Media.md#scr-3-1) picker
   - **🔒 Rules** → [S-2.15](#scr-2-15)
   - **Preview as student** → [S-2.21](#scr-2-21) at this item
   - **Edit rubric / grade submissions** → rubric editor; submissions list (may live behind this pane in a future revision — out of scope here)
@@ -1325,10 +1325,10 @@ The 60s idle timer and an explicit button are **not** two competing save systems
 | RC-1  | Title ≥ 3 characters (grapheme clusters), exam/category and instructor set, thumbnail present                                                                                                       | Publish    | [S-2.20](#scr-2-20) Details    |
 | RC-2  | Description present, 100–500 characters                                                                                                                                                             | Publish    | [S-2.20](#scr-2-20) Details    |
 | RC-3  | At least one section containing at least one item in the [published set](#item-visibility)                                                                                                          | Publish    | [S-2.17](#scr-2-17) Curriculum |
-| RC-4a | **Every Lesson in the published set** has a title and **either ≥ 50 characters of prose _or_ a resolvable media asset** (a library asset, a valid video/PDF URL, or an embed)                       | Publish    | item pane — [S-2.7](#scr-2-7)  |
+| RC-4a | **Every Lesson in the published set** has a title and **either ≥ 50 characters of prose _or_ a resolvable media asset** (a media asset, a valid video/PDF URL, or an embed)                         | Publish    | item pane — [S-2.7](#scr-2-7)  |
 | RC-4b | **Every Quiz in the published set** has **≥ 1 question, and every question has a keyed correct answer**. The item body is an optional short Markdown intro and is **never** the reason a quiz fails | Publish    | [S-2.8](#scr-2-8)              |
 | RC-4c | **Every Assignment in the published set** has a brief of **≥ 50 characters of prose** _and_ **≥ 1 enabled submission channel**                                                                      | Publish    | [S-2.23](#scr-2-23)            |
-| RC-5  | All media URLs valid; no missing library assets; captions present for video items                                                                                                                   | Publish    | item **Overview** sub-tab      |
+| RC-5  | All media URLs valid; no missing media assets; captions present for video items                                                                                                                     | Publish    | item **Overview** sub-tab      |
 | RC-6  | Pricing consistent (free, or price > 0 with currency), at least one payment gateway enabled                                                                                                         | Publish    | [S-2.20](#scr-2-20) Pricing    |
 | RC-7  | Completion rule chosen; certificate configured when the rule awards one                                                                                                                             | Publish    | [S-2.20](#scr-2-20) Completion |
 | RC-8  | When `requiresApproval` is on: all items approved, or the course-level review approved                                                                                                              | Publish    | [S-2.14](#scr-2-14) queue      |
@@ -1647,7 +1647,7 @@ Every check renders with **Fix** — a deep link into the exact field, on the ex
   - **Empty:** [S-7.3](09-Shared-Components.md#scr-7-3) "No templates in this category yet."
 - **Resilience:**
   - **403:** applying a template is absent without `course.create`; browsing is available to all authoring roles.
-  - **Offline:** the library renders from cache; applying a template is blocked with _"You're offline — this needs a connection."_
+  - **Offline:** the Media module renders from cache; applying a template is blocked with _"You're offline — this needs a connection."_
   - **Not found:** a retired template shows _"This template is no longer available."_ with a link to the template gallery.
   - **Server error:** _"The template couldn't be applied — your course is unchanged."_ with Retry.
 - **Navigation:**

@@ -6,13 +6,15 @@ import { and, asc, desc, eq, ilike, isNull, ne, or, sql } from '@abugida/databas
 import { courses, courseStats, modules, lessons, examTypes } from '@abugida/database/catalog'
 import { users } from '@abugida/database/auth'
 import { db } from '#/config/db.config'
-import { escapeLike } from './courses.server-helpers.server'
+import { activeWorkspaceScope, escapeLike } from './courses.server-helpers.server'
 import { COURSES_PAGE_SIZE } from '../schemas/courses.catalog.schema'
 import type { CatalogQuery } from '../schemas/courses.catalog.schema'
 import type { CourseCatalogItem, CourseCatalogResult } from '../courses.types'
 
 export async function loadCourseCatalog(data: CatalogQuery): Promise<CourseCatalogResult> {
-  const filters = [isNull(courses.deletedAt)]
+  // Every catalog row is the **active workspace's** (spec 13): a course in
+  // another workspace is not visible, searchable, or countable here.
+  const filters = [isNull(courses.deletedAt), await activeWorkspaceScope()]
   if (data.status === 'all') {
     // Archived courses are hidden from the default view (spec S-2.1).
     filters.push(ne(courses.status, 'archived'))

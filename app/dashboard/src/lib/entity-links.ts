@@ -3,7 +3,7 @@
  * notifications) to their destination routes.
  *
  * Routes that belong to other spec modules (Courses S-2.6, Students S-4.2,
- * Settings S-6.x, Content Library S-3.3) do not exist yet. Each entry carries
+ * Settings S-6.x, Media S-3.3) do not exist yet. Each entry carries
  * an `exists` flag so the UI can navigate when the target lands and fall back
  * to an explanatory toast instead of a broken route — one flag to flip per
  * module as those specs are implemented.
@@ -21,7 +21,7 @@ const REGISTRY: Record<LinkableEntityType, EntityLink> = {
   lesson: { path: '/courses/{id}', exists: false }, // S-2.7 editor needs course+lesson ids; flip when notifications carry both
   review_queue: { path: '/courses/reviews', exists: true }, // S-2.14 Approval Queue — live
   student: { path: '/students/{id}', exists: true }, // S-4.2 Student Profile (spec part 06) — live
-  asset: { path: '/content-library/{id}', exists: true }, // S-3.3 Asset Detail (spec part 05) — live
+  asset: { path: '/media/{id}', exists: true }, // S-3.3 Asset Detail (spec part 05) — live
   revenue: { path: '/dashboard/revenue', exists: true },
   team: { path: '/settings/team', exists: true }, // S-6.2 Team Management (spec part 08) — live
   notification: { path: '/notifications', exists: true },

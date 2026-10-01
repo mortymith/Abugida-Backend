@@ -37,7 +37,7 @@ export const LESSON_EDITOR_PLACEHOLDER = 'Lesson content — rich text, media li
  *  - `Markdown` overrides setContent / insertContent / insertContentAt and must
  *    therefore be registered **last** so it wins command resolution (D-6).
  *  - `allowBase64: false` keeps pasted data URIs out of `lessons.body`; images
- *    are served from the Content Library (S-3.1).
+ *    are served from the Media (S-3.1).
  */
 export const LESSON_EDITOR_EXTENSIONS = [
   StarterKit.configure({

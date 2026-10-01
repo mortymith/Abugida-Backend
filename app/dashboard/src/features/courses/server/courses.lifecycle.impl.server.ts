@@ -19,6 +19,7 @@ import { purchaseOptions } from '@abugida/database/finance'
 import { db } from '#/config/db.config'
 import {
   createNotifications,
+  requireActiveOrganizationId,
   requireAuthoringRole,
   resolveCourse,
   slugifyTitle,
@@ -174,6 +175,7 @@ export async function duplicateCourseImpl(
     const inserted = await tx
       .insert(courses)
       .values({
+        organizationId: await requireActiveOrganizationId(),
         title,
         slug,
         description: source.description,

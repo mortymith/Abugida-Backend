@@ -66,7 +66,7 @@ import type {
  * Mutation hooks for the Settings feature (spec 08). Every mutation funnels
  * through a shared wrapper that invalidates the given keys, toasts success,
  * and strips server error codes (`CODE: message`) — the established
- * students/courses/library convention.
+ * students/courses/media convention.
  */
 
 function stripErrorCode(message: string): string {

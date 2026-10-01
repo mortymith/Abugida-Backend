@@ -15,6 +15,7 @@ import {
 } from '@abugida/database/catalog'
 import { users } from '@abugida/database/auth'
 import { db } from '#/config/db.config'
+import { requireActiveOrganizationId } from '#/features/courses/server/courses.server-helpers.server'
 import { resolveEntityLink } from '#/lib/entity-links'
 import type { GlobalSearchPayload, SearchGroup, SearchResultsItem } from '../search.types'
 import { SEARCH_GROUP_LABELS, SEARCH_RESULT_LIMIT } from '../search.types'
@@ -33,6 +34,11 @@ export async function loadGlobalSearch(data: { query: string }): Promise<GlobalS
 
   const term = `%${likeLiteral(data.query)}%`
 
+  // Search is scoped to the **active workspace** (spec 02 S-A.1): the same course
+  // title can exist in two workspaces, so results are the ones the user is
+  // acting in — which is also why the palette names the workspace it searched.
+  const organizationId = await requireActiveOrganizationId()
+
   // ── Courses ───────────────────────────────────────────────────────────
   const courseRows = await db
     .select({
@@ -46,6 +52,7 @@ export async function loadGlobalSearch(data: { query: string }): Promise<GlobalS
     .where(
       and(
         isNull(courses.deletedAt),
+        eq(courses.organizationId, organizationId),
         or(ilike(courses.title, term), ilike(courses.description, term)),
       ),
     )
@@ -62,7 +69,13 @@ export async function loadGlobalSearch(data: { query: string }): Promise<GlobalS
     .from(lessons)
     .innerJoin(modules, eq(lessons.moduleId, modules.id))
     .innerJoin(courses, eq(modules.courseId, courses.id))
-    .where(and(isNull(courses.deletedAt), ilike(lessons.title, term)))
+    .where(
+      and(
+        isNull(courses.deletedAt),
+        eq(courses.organizationId, organizationId),
+        ilike(lessons.title, term),
+      ),
+    )
     .orderBy(asc(lessons.title))
     .limit(PER_GROUP_MAX)
 
@@ -87,6 +100,7 @@ export async function loadGlobalSearch(data: { query: string }): Promise<GlobalS
         .where(
           and(
             isNull(assetLibrary.deletedAt),
+            eq(assetLibrary.organizationId, organizationId),
             or(
               ilike(assetLibrary.name, term),
               ilike(assetLibrary.description, term),

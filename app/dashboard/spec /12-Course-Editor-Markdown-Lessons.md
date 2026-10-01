@@ -35,14 +35,14 @@
 
 ### 1.1 Goals
 
-| #   | Goal                                                                                                                               |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| G-1 | Author lesson bodies as **Markdown**, with the installed Tiptap editor as the WYSIWYG surface.                                     |
-| G-2 | Guarantee **round-trip stability**: `parse(serialize(doc)) === doc` for every construct the platform allows.                       |
-| G-3 | Eliminate **silent content loss** — the failure mode where a construct parses to text and is destroyed on the next save.           |
-| G-4 | Remain compatible with the **existing course management workflow**: review gate, row-version concurrency, autosave, library media. |
-| G-5 | Keep the whole lesson body in a single source of truth (`lessons.body`) so no second column of copy can drift.                     |
-| G-6 | Stay inside the existing architecture — no second editor, no second DB client, no cross-app imports.                               |
+| #   | Goal                                                                                                                       |
+| --- | -------------------------------------------------------------------------------------------------------------------------- |
+| G-1 | Author lesson bodies as **Markdown**, with the installed Tiptap editor as the WYSIWYG surface.                             |
+| G-2 | Guarantee **round-trip stability**: `parse(serialize(doc)) === doc` for every construct the platform allows.               |
+| G-3 | Eliminate **silent content loss** — the failure mode where a construct parses to text and is destroyed on the next save.   |
+| G-4 | Remain compatible with the **existing course management workflow**: review gate, row-version concurrency, autosave, media. |
+| G-5 | Keep the whole lesson body in a single source of truth (`lessons.body`) so no second column of copy can drift.             |
+| G-6 | Stay inside the existing architecture — no second editor, no second DB client, no cross-app imports.                       |
 
 ### 1.2 Non-Goals
 
@@ -50,7 +50,7 @@
 - Not collaborative/multi-user editing or CRDT merge — out of scope; the `rowVersion` guard remains the concurrency control.
 - Not a general-purpose Markdown IDE. No file tree, no multi-file vault, no Git-style diffing.
 - Not an **autonomous** AI authoring surface. The ✨ AI generators ([S-2.11](04-Courses.md#scr-2-11), [S-2.16](04-Courses.md#scr-2-16)) consume lesson text as _input_ and never write to `lessons.body` on their own. **Revision 3:** the one narrow exception is explicit, human-accepted insertion of generated **body** text, which is specified in [§11.1](#111-ai-authored-body-content-explicitly-bounded) and is bounded by the same human-in-the-loop rule.
-- Not a replacement for [S-3.6](05-Content-Library.md#scr-3-6) transcription; the editor links to it, it does not embed it.
+- Not a replacement for [S-3.6](05-Media.md#scr-3-6) transcription; the editor links to it, it does not embed it.
 
 ---
 
@@ -358,7 +358,7 @@ export const LESSON_EDITOR_EXTENSIONS = [
 
 Notes:
 
-- `Image.configure({ allowBase64: false })` keeps pasted base64 blobs from reaching `lessons.body`. Images are served from the Content Library ([S-3.1](05-Content-Library.md#scr-3-1)); the picker is one of **four** insertion routes — the others are drag-drop, clipboard paste, and URL — all specified in [§7.5](#75-image-insertion).
+- `Image.configure({ allowBase64: false })` keeps pasted base64 blobs from reaching `lessons.body`. Images are served from the Media ([S-3.1](05-Media.md#scr-3-1)); the picker is one of **four** insertion routes — the others are drag-drop, clipboard paste, and URL — all specified in [§7.5](#75-image-insertion).
 - `Table` imports as a **named** export (`import { Table } from '@tiptap/extension-table'`), not default.
 - `Table` requires its row/header/cell siblings; omitting them throws `No node type or group 'tableRow' found`.
 - `Markdown` must be last (D-6).
@@ -413,13 +413,13 @@ Mode switch is a `role="tablist"` in the editor header, persisted to `localStora
 
 Replaces the current inline `window.prompt`-driven bar. Grouped by role, with `aria-pressed` on every toggle and arrow-key roving tabindex per [Part 11 § Accessibility](11-Global-Standards.md#accessibility-specification).
 
-| Group   | Controls                                                              | Markdown produced                    |
-| ------- | --------------------------------------------------------------------- | ------------------------------------ |
-| Blocks  | Paragraph · H2 · H3 · Blockquote · Code block · Horizontal rule       | `p`, `##`, `###`, `>`, fenced, `---` |
-| Lists   | Bulleted · Numbered · Task list                                       | `-`, `1.`, `- [ ]`                   |
-| Inline  | Bold · Italic · Underline · Strikethrough · Inline code · Link        | `**`, `*`, `~~`, `` ` ``, `[…]()`    |
-| Insert  | Image (Content Library) · Table (insert 3×2) · Video embed · PDF link | `![…]()`, GFM table, link            |
-| History | Undo · Redo                                                           | —                                    |
+| Group   | Controls                                                        | Markdown produced                    |
+| ------- | --------------------------------------------------------------- | ------------------------------------ |
+| Blocks  | Paragraph · H2 · H3 · Blockquote · Code block · Horizontal rule | `p`, `##`, `###`, `>`, fenced, `---` |
+| Lists   | Bulleted · Numbered · Task list                                 | `-`, `1.`, `- [ ]`                   |
+| Inline  | Bold · Italic · Underline · Strikethrough · Inline code · Link  | `**`, `*`, `~~`, `` ` ``, `[…]()`    |
+| Insert  | Image (Media) · Table (insert 3×2) · Video embed · PDF link     | `![…]()`, GFM table, link            |
+| History | Undo · Redo                                                     | —                                    |
 
 **Toolbar keyboard model.** The bar is a **single tab stop**: one `role="toolbar"` container, roving `tabindex` so exactly one control in the whole bar is in the tab order.
 
@@ -448,7 +448,7 @@ Groups are also separated visually and by an `aria-label` per group (`Blocks`, `
 
 `Esc` closes the dialog and returns focus to the toolbar control that opened it. The dialog is a modal, so focus is trapped and restored per Part 11.
 
-**Media affordances.** "Add Media" opens the Content Library picker (`LibraryAssetPicker`) and "Captions & transcript" navigates to [S-3.6](05-Content-Library.md#scr-3-6) — both unchanged from S-2.7. Revision 3 adds the four insertion routes, upload states, and the alt-text gate in [§7.5](#75-image-insertion); Markdown authoring changes how _text_ is stored, not how library media is attached.
+**Media affordances.** "Add Media" opens the Media picker (`LibraryAssetPicker`) and "Captions & transcript" navigates to [S-3.6](05-Media.md#scr-3-6) — both unchanged from S-2.7. Revision 3 adds the four insertion routes, upload states, and the alt-text gate in [§7.5](#75-image-insertion); Markdown authoring changes how _text_ is stored, not how media is attached.
 
 ### 7.3 Keyboard
 
@@ -502,8 +502,8 @@ Beyond the Part 11 baseline, Markdown-specific obligations:
 
 | Route               | Behaviour                                                                                                                                                                                    |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Add Media**       | `LibraryAssetPicker` ([S-3.1](05-Content-Library.md#scr-3-1)) — unchanged                                                                                                                    |
-| **Drag-drop**       | Dropped files go through the [S-7.12](09-Shared-Components.md#scr-7-12) drop zone, upload to the Content Library, then insert at the drop position                                           |
+| **Add Media**       | `LibraryAssetPicker` ([S-3.1](05-Media.md#scr-3-1)) — unchanged                                                                                                                              |
+| **Drag-drop**       | Dropped files go through the [S-7.12](09-Shared-Components.md#scr-7-12) drop zone, upload to the Media, then insert at the drop position                                                     |
 | **Clipboard paste** | A pasted `image/*` file follows the same route; a pasted **base64 data URI is rejected** with _"Paste a file, not image data."_ (`Image.allowBase64: false`, [§6.1](#61-the-extension-list)) |
 | **URL**             | A pasted or typed absolute image URL inserts directly after a HEAD check ([§9.4](#94-reference-audit))                                                                                       |
 
@@ -703,18 +703,18 @@ Failure shape: `ValidationError` with a machine-readable `code`, a human message
 
 ### 9.4 Reference audit
 
-[§9.3](#93-server-side-validation) checks whether a construct is **representable**. It says nothing about whether the construct still **resolves** — an image whose library asset was deleted, or a link to a page that 404s, passes every construct check and reaches students broken. Revision 2 had no detection at all; discovery was a support ticket.
+[§9.3](#93-server-side-validation) checks whether a construct is **representable**. It says nothing about whether the construct still **resolves** — an image whose media asset was deleted, or a link to a page that 404s, passes every construct check and reaches students broken. Revision 2 had no detection at all; discovery was a support ticket.
 
-| Reference type | Check                                                                                                                   | Cache / cost                                                                                                | Code               |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------ |
-| **Image URL**  | `HEAD` against the **library asset table** (a DB lookup, not the CDN) — a 200 in the asset table means the asset exists | No network call. One indexed query per distinct asset id                                                    | `ASSET_MISSING`    |
-| **Link host**  | `HEAD` against the origin, cached per host + path-prefix                                                                | **24h TTL** per host. Negative results cached for **1h** so a dead host is not re-probed on every keystroke | `LINK_UNREACHABLE` |
+| Reference type | Check                                                                                                                 | Cache / cost                                                                                                | Code               |
+| -------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------ |
+| **Image URL**  | `HEAD` against the **media asset table** (a DB lookup, not the CDN) — a 200 in the asset table means the asset exists | No network call. One indexed query per distinct asset id                                                    | `ASSET_MISSING`    |
+| **Link host**  | `HEAD` against the origin, cached per host + path-prefix                                                              | **24h TTL** per host. Negative results cached for **1h** so a dead host is not re-probed on every keystroke | `LINK_UNREACHABLE` |
 
 Both are **advisory** [S-7.11](09-Shared-Components.md#scr-7-11) rows, never `ValidationError`:
 
 - They are emitted as rows in the **readiness checklist**, grouped under advisory, with a **Fix** deep link that **selects the node and focuses the relevant dialog** — the link dialog for `LINK_UNREACHABLE`, the image's alt-text/asset field for `ASSET_MISSING` — per Part 11's rule that a `Fix` link moves focus to the offending field.
 - An advisory **never blocks autosave** ([§8.1.2](#812-the-autosave-matrix)) and never produces a `409`. It **does** block publish readiness, because a broken image in a Published lesson is a student-facing defect.
-- A **Content Library** asset that is merely archived is `ASSET_MISSING` with the message _"This image is in the library's archive — restore it or choose another."_, and a **Fix** action that opens the asset. An asset that is present in the table but failing its CDN `HEAD` is a distinct message so the author knows it is a delivery problem, not a missing file.
+- A **Media** asset that is merely archived is `ASSET_MISSING` with the message _"This image is in the Media module's archive — restore it or choose another."_, and a **Fix** action that opens the asset. An asset that is present in the table but failing its CDN `HEAD` is a distinct message so the author knows it is a delivery problem, not a missing file.
 - The audit runs on **flush** (`Ctrl/⌘ + S`, context switch, and the 60s idle timer) and on **publish-readiness re-check** — never per keystroke. The 24h link cache is what makes this affordable.
 
 > **Skipped checks, and why.** `RC-4a` / `RC-4b` / `RC-4c` apply to the **base variant only**, per [Part 04 S-2.7](04-Courses.md#scr-2-7). A **translation variant with no source text yet** — a translation the course declares in `content_language` but has not authored — is reported as an **advisory**, never a blocking check, and the checklist row states the skip rather than showing a pass: _"RC-4 skipped — no source text for this translation."_ A readiness check that reports a pass it did not perform is worse than a visible skip. Translating a lesson must never un-publish a course.
@@ -971,7 +971,7 @@ export const lessonBodyRevisions = pgTable('lessons_body_revisions', {
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ------ |
 | Q-1 | Should the source pane be a `<textarea>` (chosen, a11y-first) or a CodeMirror 6 instance with a documented a11y layer?                                                                                                                                                                                                                                                                                                     | Design + Eng | Step 8 |
 | Q-2 | Do instructors need fenced math in lessons? If yes it becomes the first custom `parseMarkdown`/`renderMarkdown` node.                                                                                                                                                                                                                                                                                                      | Curriculum   | §14    |
-| Q-3 | Is per-lesson Markdown export ([§9.1](#91-server-functions)) needed for the Content Library, or is lesson body export sufficient?                                                                                                                                                                                                                                                                                          | Product      | Step 8 |
+| Q-3 | Is per-lesson Markdown export ([§9.1](#91-server-functions)) needed for the Media, or is lesson body export sufficient?                                                                                                                                                                                                                                                                                                    | Product      | Step 8 |
 | Q-4 | Should the reviewer queue deep-link straight into Preview mode? ([§11](#11-review-workflow-integration))                                                                                                                                                                                                                                                                                                                   | Product      | Step 8 |
 | Q-5 | ~~Do `01`-`11` UX specs need updating to mention the three view modes?~~ **Answered in Revision 2 — yes.** [Part 04](04-Courses.md#scr-2-7) and [Part 11](11-Global-Standards.md#reusable-component-library) now describe the three view modes as the item pane's _Content_ sub-tab, and the mode switch is documented as a `role="tablist"` presentation concern. No further UX spec change is needed for the view modes. |
 | Q-6 | **New in Revision 2.** When an item is selected in the curriculum tree, should its body load eagerly or only on pane focus? Eager is simpler and matches the current single-item load; lazy is cheaper for a 100-item course. Recommendation: **eager for the selected item only**, which is what the tree-plus-pane model already implies.                                                                                | Eng          | Step 8 |
@@ -987,10 +987,10 @@ Added by the Course Workspace redesign. **This section adds hosting and interact
 
 The editor has exactly one implementation and two hosts:
 
-| Host                               | Route                                                  | Behaviour                                                                                                                                                                                                      |
-| ---------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Curriculum item pane (primary)** | `/_app/courses/$courseId?tab=curriculum&item=<itemId>` | Renders beside the persistent [S-7.9 Curriculum Tree](09-Shared-Components.md#scr-7-9). Selection lives in the URL, so the pane is linkable and the browser Back button moves between items.                   |
-| **Alias route (compatibility)**    | `/_app/courses/$courseId/lessons/$lessonId`            | Redirects to the workspace URL above. It exists for search results, notifications, and the Content Library _Used in_ list. **It must not mount a second editor, a second toolbar, or a second autosave loop.** |
+| Host                               | Route                                                  | Behaviour                                                                                                                                                                                            |
+| ---------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Curriculum item pane (primary)** | `/_app/courses/$courseId?tab=curriculum&item=<itemId>` | Renders beside the persistent [S-7.9 Curriculum Tree](09-Shared-Components.md#scr-7-9). Selection lives in the URL, so the pane is linkable and the browser Back button moves between items.         |
+| **Alias route (compatibility)**    | `/_app/courses/$courseId/lessons/$lessonId`            | Redirects to the workspace URL above. It exists for search results, notifications, and the Media _Used in_ list. **It must not mount a second editor, a second toolbar, or a second autosave loop.** |
 
 The pre-Revision-2 route's `requireRolesBeforeLoad(['admin','editor'])` is replaced by the workspace route's guard plus permission-aware rendering. A Reviewer and a Viewer can therefore open the same URL as an Editor and see a read-only pane — which is what makes the [S-2.14](04-Courses.md#scr-2-14) review experience possible without a separate screen.
 
@@ -1016,7 +1016,7 @@ Revision 2 asserted parity and stopped. Parity is a claim about **every** surfac
 | **Body Markdown**                | **Identical.** Same `streamdown` render, same HTML-disabled configuration, same normalization ([§10.1](#101-normalization)) as the student view. No editor-only wrapper, no placeholder, no "click to edit" affordance inside the body.                                                                                                                                                    |
 | **Title, duration, tags**        | Rendered from the same fields the student header reads, at student-header styling. The editor's own title field is the source, so a stale header is a visible defect, not a nuance.                                                                                                                                                                                                        |
 | **Attached quiz**                | **Not shown** in the editor preview, with a link reading **"Opens after the lesson body"**. An author cannot answer their own quiz from the body pane, and pretending otherwise invites them to grade against the wrong thing.                                                                                                                                                             |
-| **Media + captions**             | Video and audio render; the **transcript link is visible** ([S-3.6](05-Content-Library.md#scr-3-6)) so the author can confirm captions exist. A video with no captions shows the `RC-5` blocking state, not a silent player.                                                                                                                                                               |
+| **Media + captions**             | Video and audio render; the **transcript link is visible** ([S-3.6](05-Media.md#scr-3-6)) so the author can confirm captions exist. A video with no captions shows the `RC-5` blocking state, not a silent player.                                                                                                                                                                         |
 | **Unlock rules / prerequisites** | A banner: **"Gated — students must complete {X}."** Rules come from [S-2.15](04-Courses.md#scr-2-15), evaluated the same way the player evaluates them. A gated lesson previewed by its own author is the single most common way an author misses a misconfigured prerequisite.                                                                                                            |
 | **Availability window**          | A banner when now is **outside** the window: _"Available {date} – {date}."_ Inside the window, no banner. Times per Part 11: `6:00 PM EAT`, never a bare date.                                                                                                                                                                                                                             |
 | **Tenant branding**              | **Applied** — logo, colours, and fonts resolve to the tenant's values, so an author sees what a student of that workspace sees. Branding still may not override `--color-*-text`, `--color-*-tint`, the focus ring, or `--color-danger-*` (Part 11).                                                                                                                                       |

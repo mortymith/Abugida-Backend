@@ -24,7 +24,7 @@ TanStack Start admin/instructor app for the Abugida platform (port 3000). Repo-w
 ```text
 src/
 ├── routes/            # File-based routes: _auth/, _app/, __root.tsx, index.tsx
-├── features/          # 13 domains: analytics, auth, courses, dashboard, library,
+├── features/          # 13 domains: analytics, auth, courses, dashboard, media,
 │                      #   marketing, navigation, notifications, onboarding, search,
 │                      #   settings, students, support
 ├── components/
@@ -125,7 +125,7 @@ Auth is Google + Telegram only. The `twoFactor` and `organization` plugins are r
 
 ## TanStack AI
 
-`@tanstack/ai` with OpenAI / Anthropic / Gemini / Ollama adapters is installed. Use the `chat()` API — not Vercel AI SDK's `streamText()`. Read API keys from `env.*`; never hardcode or pass them from the client. Existing bridges: `features/courses/server/courses.ai.impl.server.ts`, `features/library/server/library.transcripts.impl.server.ts`.
+`@tanstack/ai` with OpenAI / Anthropic / Gemini / Ollama adapters is installed. Use the `chat()` API — not Vercel AI SDK's `streamText()`. Read API keys from `env.*`; never hardcode or pass them from the client. Existing bridges: `features/courses/server/courses.ai.impl.server.ts`, `features/media/server/media.transcripts.impl.server.ts`.
 
 ## Design-system migration state
 
