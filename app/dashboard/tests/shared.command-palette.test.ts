@@ -1,14 +1,10 @@
 import { describe, expect, test } from 'bun:test'
-import { commandItemValue } from '#/components/common/command-palette'
 import {
   buildNavigationGroup,
   buildQuickActionGroup,
   buildResultsGroup,
-  clearRecentSearches,
-  readRecentSearches,
-  rememberSearchTerm,
+  commandItemValue,
   QUICK_ACTIONS,
-  RECENT_SEARCHES_LIMIT,
 } from '#/features/navigation/navigation.palette'
 import { NAV_ITEMS } from '#/features/navigation/navigation.config'
 import type { GlobalSearchPayload } from '#/features/search'
@@ -36,7 +32,7 @@ describe('buildQuickActionGroup', () => {
 
   test('calls the navigate handler with the action target and search params', () => {
     const received: Array<[string, Record<string, unknown> | undefined]> = []
-    const group = buildQuickActionGroup((to, search) => {
+    const group = buildQuickActionGroup('admin', (to, search) => {
       received.push([to, search])
     })
     group.items.forEach((item) => item.onSelect())
@@ -109,41 +105,12 @@ describe('buildResultsGroup', () => {
   })
 })
 
-describe('recent searches', () => {
-  function memoryStorage() {
-    const map = new Map<string, string>()
-    return {
-      getItem: (key: string) => map.get(key) ?? null,
-      setItem: (key: string, value: string) => void map.set(key, value),
-      removeItem: (key: string) => void map.delete(key),
-    }
-  }
-
-  test('most recent first, deduplicated, capped at the limit', () => {
-    const storage = memoryStorage()
-    for (const term of ['toefl', 'ielts', 'toefl']) rememberSearchTerm(storage, term)
-    expect(readRecentSearches(storage)).toEqual(['toefl', 'ielts'])
-  })
-
-  test('ignores blank terms and non-string entries', () => {
-    const storage = memoryStorage()
-    rememberSearchTerm(storage, '   ')
-    storage.setItem('abugida-recent-searches', '[42, "ok"]')
-    expect(readRecentSearches(storage)).toEqual(['ok'])
-  })
-
-  test('caps the stored list', () => {
-    const storage = memoryStorage()
-    for (let i = 0; i < 12; i += 1) rememberSearchTerm(storage, `term-${i}`)
-    const stored = readRecentSearches(storage)
-    expect(stored.length).toBe(RECENT_SEARCHES_LIMIT)
-    expect(stored[0]).toBe('term-11')
-  })
-
-  test('clear removes stored entries', () => {
-    const storage = memoryStorage()
-    rememberSearchTerm(storage, 'toefl')
-    clearRecentSearches(storage)
-    expect(readRecentSearches(storage)).toEqual([])
+describe('buildQuickActionGroup — permissions', () => {
+  test('an action a role cannot use is absent, not disabled', () => {
+    const support = buildQuickActionGroup('support', () => {})
+    const labels = support.items.map((item) => item.label)
+    expect(labels).not.toContain('Create Course')
+    expect(labels).not.toContain('Open Review Queue')
+    expect(labels).toContain('Upload Content Asset')
   })
 })

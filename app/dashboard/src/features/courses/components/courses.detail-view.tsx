@@ -114,13 +114,11 @@ export function CourseDetail({
 
   return (
     <div className="flex flex-col gap-4">
+      {/*
+          No breadcrumb here: the workspace-aware trail is owned by the app shell
+          (S-A.1) so it exists on every screen and stays consistent with the nav.
+        */}
       <header className="flex flex-col gap-3">
-        <nav className="text-sm text-muted-foreground" aria-label="Breadcrumb">
-          <Link to="/courses" className="hover:underline">
-            Courses
-          </Link>{' '}
-          / {course.title}
-        </nav>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="font-display text-2xl font-bold">{course.title}</h1>

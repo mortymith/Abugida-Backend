@@ -253,6 +253,15 @@ export async function setApprovalGateImpl(input: {
   return { ok: true }
 }
 
+/**
+ * S-A.1 Courses badge: pending review work across curriculum items **and**
+ * whole courses.
+ *
+ * Rules that are enforced here rather than in the component: archived courses
+ * are **excluded** (their submissions are decisions already taken), the count is
+ * only produced for a role that can actually decide a submission, and the caller
+ * refreshes on focus rather than on a timer.
+ */
 export async function getPendingReviewCountImpl(): Promise<number> {
   const request = await import('@tanstack/react-start/server').then((mod) => mod.getRequest())
   const { getAuth } = await import('#/config/auth.server')
@@ -266,7 +275,14 @@ export async function getPendingReviewCountImpl(): Promise<number> {
   const rows = await db
     .select({ count: sql<number>`COUNT(*)::int` })
     .from(reviewRequests)
-    .where(eq(reviewRequests.state, 'pending'))
+    .innerJoin(courses, eq(courses.id, reviewRequests.courseId))
+    .where(
+      and(
+        eq(reviewRequests.state, 'pending'),
+        isNull(courses.deletedAt),
+        sql`${courses.status} <> 'archived'`,
+      ),
+    )
   return Number(rows.at(0)?.count ?? 0)
 }
 

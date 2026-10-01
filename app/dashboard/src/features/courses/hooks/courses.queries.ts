@@ -152,13 +152,24 @@ export function reviewPreviewQueryOptions(lessonPublicId: string) {
   })
 }
 
+/**
+ * S-A.1 Courses badge.
+ *
+ * Deterministic rules: no badge at zero (the item stays), `99+` above the cap,
+ * **archived submissions excluded** (a decision already taken), and a refresh
+ * **on focus** rather than on a fixed interval — a 15-minute timer never runs in
+ * a background tab, and work decided in another tab drops out on the next
+ * poll.
+ */
 export function pendingReviewCountQueryOptions(enabled: boolean) {
   return queryOptions({
     queryKey: courseQueryKeys.pendingReviews(),
     queryFn: async (): Promise<number> => await getPendingReviewCount(),
     staleTime: STALE.badge,
     enabled,
-    refetchInterval: 60_000,
+    refetchInterval: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   })
 }
 

@@ -1,34 +1,42 @@
-import { SidebarTrigger } from '#/components/ui/sidebar'
+import { SidebarTrigger, useSidebar } from '#/components/ui/sidebar'
 import { Separator } from '#/components/ui/separator'
 import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '#/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuTrigger } from '#/components/ui/dropdown-menu'
 import { HugeiconsIcon } from '@hugeicons/react'
-import {
-  UserIcon,
-  Settings02Icon,
-  Logout02Icon,
-  CircleQuestionMarkIcon,
-} from '@hugeicons/core-free-icons'
+import { CircleQuestionMarkIcon } from '@hugeicons/core-free-icons'
 import { Button } from '#/components/ui/button'
+import { PRIMARY_NAV_ID } from './layout.app-sidebar'
 import { AppBreadcrumbs } from './layout.breadcrumbs'
-import { CreateCourseButton } from '#/features/navigation'
+import { UserMenuContent } from './layout.user-menu'
+import { WorkspaceSwitcher } from './layout.workspace-switcher'
+import { CreateCourseButton, trackNavEvent } from '#/features/navigation'
 import { SearchTrigger } from '#/features/search'
 import { HelpPanel } from '#/features/support'
-import { useLogout, useSession } from '#/features/auth'
+import { useSession } from '#/features/auth'
 import { useState } from 'react'
 
+/**
+ * S-A.1 top header, 64px, fixed above a scrollable content region.
+ *
+ * Order is deliberate and matches the spec's wireframe:
+ *
+ * 1. **Menu** — collapses the sidebar; `Esc` in the mobile drawer returns focus
+ *    here.
+ * 2. **Workspace name** — leftmost, *before* the breadcrumb, because it scopes
+ *    everything below it. Absent entirely for a single-workspace user rather
+ *    than disabled (S-13.2).
+ * 3. **Breadcrumb** — workspace-aware, see `layout.breadcrumbs.tsx`.
+ * 4. **Help · Search · New Course** — quick actions, each role-gated.
+ * 5. **Avatar** — `aria-haspopup="menu"`, with **Switch workspace** present only
+ *    when the user belongs to more than one workspace, the same predicate the
+ *    header button uses.
+ */
 export function Header() {
   const { data: session } = useSession()
-  const { logout, isLoggingOut } = useLogout()
-  const user = session?.user
+  const { open, openMobile, isMobile } = useSidebar()
   const [helpOpen, setHelpOpen] = useState(false)
 
+  const user = session?.user
   const initials = user?.name
     ? user.name
         .split(' ')
@@ -40,14 +48,31 @@ export function Header() {
 
   const userImage = user?.image ?? undefined
 
-  function handleLogout() {
-    void logout()
-  }
-
   return (
     <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-card px-4">
-      <SidebarTrigger className="-ml-1" />
+      {/*
+        The collapse control: a `button` with `aria-expanded` and `aria-controls`
+        pointing at the navigation it controls. `Esc` in the mobile drawer closes
+        it and returns focus here, which the drawer primitive handles.
+      */}
+      <SidebarTrigger
+        className="-ml-1"
+        aria-expanded={isMobile ? openMobile : open}
+        aria-controls={PRIMARY_NAV_ID}
+        onClick={() =>
+          trackNavEvent('nav.sidebar_toggled', {
+            state: isMobile ? !openMobile : !open ? 'collapsed' : 'expanded',
+          })
+        }
+      />
       <Separator orientation="vertical" className="mr-2 h-4" />
+
+      {/* Hidden on mobile: the drawer carries the workspace row above the nav. */}
+      <div className="hidden min-w-0 md:block">
+        <WorkspaceSwitcher />
+      </div>
+      <Separator orientation="vertical" className="mr-2 hidden h-4 md:block" />
+
       <AppBreadcrumbs />
 
       <div className="flex-1" />
@@ -64,34 +89,27 @@ export function Header() {
       <HelpPanel open={helpOpen} onOpenChange={setHelpOpen} />
 
       <SearchTrigger />
+
+      {/* Quick-create. `course.create`: absent for roles without it, never
+          disabled — the button owns that rule. */}
       <CreateCourseButton />
 
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <button className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              <Avatar size="sm">
-                {userImage != null && <AvatarImage src={userImage} alt={user?.name ?? ''} />}
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
-            </button>
+            <button
+              type="button"
+              aria-label={user?.name ? `Account menu for ${user.name}` : 'Account menu'}
+              className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
           }
-        />
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem render={<a href="/settings/profile" />}>
-            <HugeiconsIcon icon={UserIcon} strokeWidth={2} />
-            My Profile & Account
-          </DropdownMenuItem>
-          <DropdownMenuItem render={<a href="/settings" />}>
-            <HugeiconsIcon icon={Settings02Icon} strokeWidth={2} />
-            Settings
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
-            <HugeiconsIcon icon={Logout02Icon} strokeWidth={2} />
-            Logout
-          </DropdownMenuItem>
-        </DropdownMenuContent>
+        >
+          <Avatar size="sm">
+            {userImage != null ? <AvatarImage src={userImage} alt="" /> : null}
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
+        </DropdownMenuTrigger>
+        <UserMenuContent align="end" />
       </DropdownMenu>
     </header>
   )
