@@ -176,6 +176,20 @@
       "when": 1790761234458,
       "tag": "0024_zippy_madrox",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1790851902208,
+      "tag": "0025_gifted_siren",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1790853216547,
+      "tag": "0026_equal_arachne",
+      "breakpoints": true
     }
   ]
 }

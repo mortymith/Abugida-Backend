@@ -59,6 +59,9 @@ describe('catalog schemas', () => {
 
   describe('courses', () => {
     const validCourse = {
+      // Tenancy (spec 13): a course belongs to a workspace, so the insert schema
+      // requires its owner just like it requires an exam type.
+      organizationId: 'org_01HZY7Q3W9',
       examTypeId: 1,
       title: 'Introduction to TOEFL',
       slug: 'intro-to-toefl',

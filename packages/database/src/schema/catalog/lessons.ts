@@ -80,7 +80,7 @@ export const lessons = pgTable(
       onDelete: 'set null',
       onUpdate: 'cascade',
     }),
-    /** Content Library provenance (spec 05): asset backing this lesson's media. */
+    /** Media provenance (spec 05, "Media"): asset backing this lesson's media. */
     assetId: bigint('asset_id', { mode: 'number' }).references(() => assetLibrary.id, {
       onDelete: 'set null',
       onUpdate: 'cascade',

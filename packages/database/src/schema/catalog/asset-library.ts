@@ -17,9 +17,10 @@ import { relations, sql } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { z } from 'zod'
 import { users } from '../auth/users'
+import { organization } from '../auth/organization'
 
 /**
- * Content Library (spec 05 S-3.1 – S-3.4). Central media repository for
+ * Media (spec 05 S-3.1 – S-3.4, dashboard module "Media"). Central media repository for
  * videos, PDFs, images and audio used across courses.
  *
  * - `asset_folders` organize assets (one level of nesting supported via the
@@ -80,6 +81,17 @@ export const assetLibrary = pgTable(
   {
     id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
     publicId: uuid('public_id').notNull().defaultRandom().unique(),
+    /**
+     * The owning workspace (spec 13) — the same scope rule as `courses`, so the
+     * Media module and global search cannot surface another workspace's
+     * assets. Backfilled by migration 0025, then made `NOT NULL`.
+     */
+    organizationId: text('organization_id')
+      .notNull()
+      .references(() => organization.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade',
+      }),
     name: varchar('name', { length: 300 }).notNull(),
     description: text('description'),
     tags: jsonb('tags').notNull().default([]),
@@ -106,6 +118,7 @@ export const assetLibrary = pgTable(
   },
   (table) => [
     uniqueIndex('idx_asset_library_public').on(table.publicId),
+    index('idx_asset_library_organization').on(table.organizationId, table.createdAt),
     index('idx_asset_library_folder').on(table.folderId),
     index('idx_asset_library_category').on(table.category),
     index('idx_asset_library_uploaded_by').on(table.uploadedBy, table.createdAt),

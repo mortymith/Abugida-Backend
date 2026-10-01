@@ -9,7 +9,7 @@ import { assetLibrary } from './asset-library'
 /**
  * Lesson → asset usage registry (spec 05 S-3.3 "Used In"). Rows are written
  * transactionally by the lesson save flow when a lesson's media comes from
- * the Content Library. Course-thumbnail usage is derived live from
+ * the Media module (spec 05). Course-thumbnail usage is derived live from
  * `courses.thumbnail_object_key` and intentionally not denormalized here.
  *
  * Lives in the catalog domain (next to lessons) so the FK graph stays

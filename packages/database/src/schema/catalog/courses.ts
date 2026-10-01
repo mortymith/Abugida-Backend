@@ -21,6 +21,7 @@ import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { z } from 'zod'
 import { examTypes } from './exam-types'
 import { users } from '../auth/users'
+import { organization } from '../auth/organization'
 import { courseStats } from './course-stats'
 import { courseStatsHistory } from './course-stats-history'
 import { modules } from './modules'
@@ -63,6 +64,18 @@ export const courses = pgTable(
   {
     id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
     publicId: uuid('public_id').notNull().defaultRandom().unique(),
+    /**
+     * The owning workspace (spec 13). A workspace is not a user: it is the unit
+     * courses belong to, and every read is scoped by it. Null only while rows
+     * predate tenancy — the backfill migration assigns them to the earliest
+     * organization, then made `NOT NULL`.
+     */
+    organizationId: text('organization_id')
+      .notNull()
+      .references(() => organization.id, {
+        onDelete: 'cascade',
+        onUpdate: 'cascade',
+      }),
     examTypeId: bigint('exam_type_id', { mode: 'number' })
       .notNull()
       .references(() => examTypes.id, {
@@ -112,6 +125,7 @@ export const courses = pgTable(
   },
   (table) => [
     uniqueIndex('idx_courses_public').on(table.publicId),
+    index('idx_courses_organization').on(table.organizationId, table.status),
     index('idx_courses_list_query').on(table.examTypeId, table.status, table.sortOrder),
     uniqueIndex('idx_courses_slug').on(table.slug),
     index('idx_courses_instructor').on(table.instructorId),
