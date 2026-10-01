@@ -11,6 +11,7 @@
     "#/*": "./src/*"
   },
   "scripts": {
+    "predev": "pnpm --filter \"@abugida/dashboard^...\" run build",
     "dev": "bun run vite dev --port 3000",
     "generate-routes": "bun run tsr generate",
     "build": "bun run vite build",
@@ -20,6 +21,7 @@
     "check": "prettier --check .",
     "typecheck": "bun run tsc --noEmit",
     "migrate:lesson-markdown": "bun run scripts/migrate-lesson-markdown.ts",
+    "probe:tenant": "bun run scripts/dashboard.tenant-probe.ts",
     "clean": "rm -rf dist .turbo node_modules",
     "test": "bun test --pass-with-no-tests"
   },
@@ -29,6 +31,7 @@
     "@abugida/observability": "workspace:*",
     "@abugida/queue": "workspace:*",
     "@abugida/storage": "workspace:*",
+    "@abugida/tenant": "workspace:*",
     "@base-ui/react": "^1.8.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",

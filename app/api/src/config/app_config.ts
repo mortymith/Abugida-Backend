@@ -27,6 +27,7 @@ import 'dotenv/config'
 
 import { z } from 'zod'
 import { applyAuthEnvIssues, authEnvShape } from '@abugida/auth/env'
+import { tenantEnvShape } from '@abugida/tenant/env'
 
 // ---------------------------------------------------------------------------
 // Shared scalar helpers
@@ -84,6 +85,12 @@ const appConfigSchema = z
     // the organization switch. Spreading it here means the API and the
     // dashboard cannot drift on a variable name, a default or a secret rule.
     ...authEnvShape,
+
+    // ── Tenancy ────────────────────────────────────────────────────────────
+    // Declared by `@abugida/tenant/env` (base domain, protocol, dev port,
+    // platform subdomain) so the API and the dashboard resolve a hostname to
+    // the same workspace. Projected in `./tenant`.
+    ...tenantEnvShape,
 
     // ── Runtime identity ────────────────────────────────────────────────────
     // Both are set by the deployment: compose injects `ENVIRONMENT`, while Bun

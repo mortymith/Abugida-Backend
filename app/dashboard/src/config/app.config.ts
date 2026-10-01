@@ -1,6 +1,7 @@
 import { config } from 'dotenv'
 import { z } from 'zod/v4'
 import { applyAuthEnvIssues, authEnvShape } from '@abugida/auth/env'
+import { tenantEnvShape } from '@abugida/tenant/env'
 
 config()
 
@@ -13,6 +14,9 @@ config()
  *    the API cannot drift on a name, a default, or a secret rule. Validation of
  *    those keys happens when `resolveAuthEnv()` projects them for
  *    `createAbugidaAuth()`.
+ *  - `tenantEnvShape` (`@abugida/tenant/env`) declares the tenant base
+ *    domain, protocol, dev port and platform subdomain, so both apps resolve a
+ *    hostname to the same workspace. Projected in `./tenant.server.ts`.
  *  - this file declares what is specific to the dashboard: browser-visible
  *    (`VITE_*`) values, product copy defaults and the integrations the
  *    dashboard's server bridges own.
@@ -20,6 +24,7 @@ config()
 const envSchema = z
   .object({
     ...authEnvShape,
+    ...tenantEnvShape,
 
     ENVIRONMENT: z.enum(['development', 'production', 'test']).default('development'),
     APP_NAME: z.string().default('Abugida Academy'),

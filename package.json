@@ -24,7 +24,7 @@
     "test": "turbo test",
     "clean": "turbo clean && rm -rf node_modules .turbo",
     "clean:workspaces": "turbo clean",
-    "prepare": "husky"
+    "prepare": "husky && turbo run build --filter=./packages/*"
   },
   "type": "module",
   "devDependencies": {

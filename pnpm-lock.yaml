@@ -214,6 +214,9 @@ importers:
       '@abugida/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@abugida/tenant':
+        specifier: workspace:*
+        version: link:../../packages/tenant
       '@hono/zod-openapi':
         specifier: ^1.5.1
         version: 1.6.3(hono@4.13.8)(zod@4.4.3)
@@ -272,6 +275,9 @@ importers:
       '@abugida/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@abugida/tenant':
+        specifier: workspace:*
+        version: link:../../packages/tenant
       '@base-ui/react':
         specifier: ^1.8.0
         version: 1.8.0(@types/react@19.2.18)(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -732,6 +738,36 @@ importers:
       typescript-eslint:
         specifier: ^8.67.0
         version: 8.70.0(eslint@10.11.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
+
+  packages/tenant:
+    devDependencies:
+      '@abugida/auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@abugida/database':
+        specifier: workspace:*
+        version: link:../database
+      '@types/bun':
+        specifier: ^1.4.2
+        version: 1.4.2
+      eslint:
+        specifier: ^10.8.1
+        version: 10.11.0(jiti@2.7.0)(supports-color@7.2.0)
+      hono:
+        specifier: ^4.6.14
+        version: 4.13.8
+      prettier:
+        specifier: ^3.9.6
+        version: 3.9.8
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.67.0
+        version: 8.70.0(eslint@10.11.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
 
 packages:
 

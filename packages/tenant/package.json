@@ -1,0 +1,88 @@
+{
+  "name": "@abugida/tenant",
+  "version": "0.0.1",
+  "description": "The single source of truth for tenancy in the Abugida monorepo: hostname resolution, tenant slugs, reserved subdomains, tenant URLs, tenant context and tenant-scoped authorization. Owns no schema and no authentication \u2014 those stay in @abugida/database and @abugida/auth.",
+  "type": "module",
+  "license": "MIT",
+  "private": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./url": {
+      "types": "./dist/url.d.ts",
+      "import": "./dist/url.js",
+      "default": "./dist/url.js"
+    },
+    "./authorization": {
+      "types": "./dist/authorization.d.ts",
+      "import": "./dist/authorization.js",
+      "default": "./dist/authorization.js"
+    },
+    "./store": {
+      "types": "./dist/store/index.d.ts",
+      "import": "./dist/store/index.js",
+      "default": "./dist/store/index.js"
+    },
+    "./hono": {
+      "types": "./dist/hono/index.d.ts",
+      "import": "./dist/hono/index.js",
+      "default": "./dist/hono/index.js"
+    },
+    "./env": {
+      "types": "./dist/config/env.d.ts",
+      "import": "./dist/config/env.js",
+      "default": "./dist/config/env.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "test": "bun test",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "@abugida/auth": "workspace:*",
+    "@abugida/database": "workspace:*",
+    "hono": ">=4.6.0",
+    "zod": "^4.4.3"
+  },
+  "peerDependenciesMeta": {
+    "hono": {
+      "optional": true
+    }
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@abugida/auth": "workspace:*",
+    "@abugida/database": "workspace:*",
+    "@types/bun": "^1.4.2",
+    "eslint": "^10.8.1",
+    "hono": "^4.6.14",
+    "prettier": "^3.9.6",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.67.0",
+    "zod": "4.4.3"
+  },
+  "keywords": [
+    "tenant",
+    "tenancy",
+    "organization",
+    "subdomain",
+    "abugida"
+  ]
+}
