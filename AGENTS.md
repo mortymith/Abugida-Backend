@@ -30,6 +30,30 @@ Turborepo over pnpm workspaces (`app/*`, `packages/*`). Root `pnpm <script>` fan
 - All apps import from the shared packages via `workspace:*`. Do not reimplement auth, database, queue, storage, or observability logic locally.
 - To scope to one workspace, run from that directory or `pnpm --filter <name> <script>`.
 - Shared packages must be built (`tsc` → `dist/`) before consuming apps can import them. Turbo handles this via `^build` dependencies.
+- `packages/tenant` (`@abugida/tenant`) is the single source of truth for tenancy: hostname resolution, tenant slugs, reserved subdomains, tenant URLs, tenant context and tenant-scoped authorization. It owns no schema and no authentication — those stay in `@abugida/database` and `@abugida/auth`.
+
+#### Shared-package dependency rule
+
+**A shared package must never put another `@abugida/*` workspace package in `dependencies`. Reference it through `peerDependencies` instead.**
+
+```jsonc
+// packages/<pkg>/package.json — correct
+{
+  "peerDependencies": { "@abugida/database": "workspace:*" },
+  "devDependencies": { "@abugida/database": "workspace:*" } // so local typecheck/tests resolve it
+}
+// never
+{ "dependencies": { "@abugida/database": "workspace:*" } }
+```
+
+Why: a shared package is published and consumed by apps that already declare their own workspace dependencies (`app/*` keep `@abugida/*` in `dependencies`). If a package _pins_ a sibling, a consumer silently resolves a second copy of it at runtime — two `@abugida/auth` instances mean two Better Auth clients, two type identities, and authorization decisions that disagree with the ones the UI is looking at. A peer dependency makes the consumer the single owner of the version and the single runtime instance.
+
+Rules:
+
+- Sibling `@abugida/*` packages go in `peerDependencies` (version `workspace:*`) **and** in `devDependencies`, so the package builds and tests standalone. Keep `dependencies` for third-party libraries the package genuinely owns.
+- The same rule applies to `peerDependenciesMeta`: mark a peer `optional: true` only when the import path is genuinely optional (a subpath integration such as `/hono`). A peer that every consumer needs stays required, so a missing peer fails loudly instead of at runtime.
+- This extends the existing convention: `drizzle-orm`, `zod`, `hono` and the framework adapters are already peers, not hard dependencies.
+- Adding a sibling import without moving the manifest entry to `peerDependencies` is a bug, not a style choice — fix the manifest in the same commit as the import.
 
 ### Application boundaries and authentication
 
