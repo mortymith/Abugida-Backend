@@ -538,9 +538,6 @@ importers:
 
   packages/auth:
     dependencies:
-      '@abugida/database':
-        specifier: workspace:*
-        version: link:../database
       better-auth-telegram:
         specifier: ^2.0.1
         version: 2.0.1(better-auth@1.6.26(@opentelemetry/api@1.9.0)(@tanstack/react-start@1.168.56(esbuild@0.28.2)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(rolldown@1.1.5)(rollup@4.63.4)(supports-color@7.2.0)(vite@8.1.5(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(drizzle-kit@0.31.11)(drizzle-orm@0.45.3(@opentelemetry/api@1.9.0)(@types/pg@8.21.0)(bun-types@1.4.2)(kysely@0.29.6)(pg@8.23.0))(pg@8.23.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(solid-js@1.9.15))
@@ -548,6 +545,9 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
     devDependencies:
+      '@abugida/database':
+        specifier: workspace:*
+        version: link:../database
       '@tanstack/react-router':
         specifier: ^1.87.0
         version: 1.170.38(patch_hash=67f82edd1ff079042ec51be34a445ae6c0bcac5b8d8da359721c79cf1ed3c89e)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

@@ -69,6 +69,7 @@
     "clean": "rm -rf dist"
   },
   "peerDependencies": {
+    "@abugida/database": "workspace:*",
     "@tanstack/react-router": ">=1.0.0",
     "@tanstack/react-start": ">=1.0.0",
     "better-auth": "1.6.26",
@@ -91,11 +92,11 @@
     }
   },
   "dependencies": {
-    "@abugida/database": "workspace:*",
     "better-auth-telegram": "^2.0.1",
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@abugida/database": "workspace:*",
     "@tanstack/react-router": "^1.87.0",
     "@tanstack/react-start": "^1.87.0",
     "@types/bun": "^1.4.2",
