@@ -38,6 +38,15 @@ const buttonVariants = cva(
   },
 )
 
+/**
+ * Button primitive.
+ *
+ * `nativeButton` defaults to `true`, so any `render` that produces something
+ * other than a `<button>` (a router `<Link>`, an `<a>`) **must** pass
+ * `nativeButton={false}` — Base UI otherwise warns and the element loses native
+ * button semantics. Note that `disabled` only works on a native button; for a
+ * link, render a real `<button disabled>` instead of an inert anchor.
+ */
 function Button({
   className,
   variant = 'default',

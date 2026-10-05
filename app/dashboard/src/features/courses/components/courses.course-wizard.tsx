@@ -89,7 +89,11 @@ export function CourseWizard({ role }: { role: string }) {
     return (
       <EmptyState
         title="Authoring is limited to Admins and Editors"
-        action={<Button render={<Link to="/courses" />}>Back to Courses</Button>}
+        action={
+          <Button nativeButton={false} render={<Link to="/courses" />}>
+            Back to Courses
+          </Button>
+        }
       />
     )
   }

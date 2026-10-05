@@ -51,6 +51,7 @@ export function AnalyticsPerformanceView({
             <Button
               variant="outline"
               size="sm"
+              nativeButton={false}
               render={<Link to="/analytics/courses/$courseId/drop-off" params={{ courseId }} />}
             >
               Drop-off

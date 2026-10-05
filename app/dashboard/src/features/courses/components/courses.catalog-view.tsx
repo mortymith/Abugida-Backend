@@ -420,7 +420,7 @@ export function CreateMenu({
 
   return (
     <div className="relative">
-      <Button render={<Link to="/courses/new" search={{ step: 1 }} />}>
+      <Button nativeButton={false} render={<Link to="/courses/new" search={{ step: 1 }} />}>
         <HugeiconsIcon icon={Add01Icon} size={16} />
         Create Course
       </Button>

@@ -43,7 +43,11 @@ export function AnalyticsCohortCompare({
       <EmptyState
         title="Create at least two cohorts to compare."
         description="Cohorts are managed in Students → Cohorts."
-        action={<Button render={<Link to="/students/cohorts" />}>Open Cohort Management</Button>}
+        action={
+          <Button nativeButton={false} render={<Link to="/students/cohorts" />}>
+            Open Cohort Management
+          </Button>
+        }
       />
     )
   }

@@ -111,6 +111,7 @@ export function CourseCard({
                 size="icon-sm"
                 aria-label="Edit"
                 title="Edit"
+                nativeButton={false}
                 render={<Link to="/courses/$courseId" params={{ courseId: course.publicId }} />}
               >
                 <HugeiconsIcon icon={Edit02Icon} size={16} />

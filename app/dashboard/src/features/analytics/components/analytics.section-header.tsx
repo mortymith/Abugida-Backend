@@ -45,7 +45,12 @@ export function AnalyticsSectionHeader({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         {backTo ? (
-          <Button variant="ghost" size="icon-sm" render={<Link to={backTo} params={backParams} />}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            nativeButton={false}
+            render={<Link to={backTo} params={backParams} />}
+          >
             <HugeiconsIcon icon={ArrowLeft02Icon} className="size-4" />
             <span className="sr-only">{backLabel}</span>
           </Button>

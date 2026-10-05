@@ -348,7 +348,12 @@ function SecurityCard() {
             {security.twoFactorEnabled ? (
               <>
                 <Badge className="bg-success-bg text-success-fg">Enabled</Badge>
-                <Button size="sm" variant="outline" render={<Link to="/settings/mfa" />}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link to="/settings/mfa" />}
+                >
                   Manage two-factor
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setDisableOpen(true)}>
@@ -358,7 +363,12 @@ function SecurityCard() {
             ) : (
               <>
                 <Badge variant="secondary">Not enabled</Badge>
-                <Button size="sm" variant="outline" render={<Link to="/settings/mfa" />}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link to="/settings/mfa" />}
+                >
                   Set up two-factor
                 </Button>
               </>

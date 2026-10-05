@@ -547,10 +547,21 @@ export function MfaEnrollment() {
             {/* The only exits are the acknowledgement and Done — closing the page
                 would lose the codes, so Esc does nothing here. */}
             <div className="flex flex-wrap gap-2">
-              <Button disabled={!acknowledged} render={<Link to="/settings/profile" />}>
-                <HugeiconsIcon icon={Tick02Icon} data-icon="inline-start" />
-                Done
-              </Button>
+              {acknowledged ? (
+                // A real anchor once the codes are acknowledged. `disabled` is
+                // meaningless on a non-native button, so the pre-acknowledgement
+                // state stays a real `<button disabled>` instead of a link that
+                // looks inert but still navigates.
+                <Button nativeButton={false} render={<Link to="/settings/profile" />}>
+                  <HugeiconsIcon icon={Tick02Icon} data-icon="inline-start" />
+                  Done
+                </Button>
+              ) : (
+                <Button disabled>
+                  <HugeiconsIcon icon={Tick02Icon} data-icon="inline-start" />
+                  Done
+                </Button>
+              )}
               <Button variant="ghost" onClick={() => setConfirm('regenerate')} disabled={pending}>
                 <HugeiconsIcon icon={RefreshIcon} data-icon="inline-start" />
                 Regenerate backup codes
