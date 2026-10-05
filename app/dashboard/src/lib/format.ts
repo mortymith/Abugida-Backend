@@ -1,6 +1,10 @@
 /**
  * Shared display formatters. Money and metrics use `tabular-nums` in the UI
  * (spec 11) — these helpers only produce strings; alignment is CSS.
+ *
+ * Money always carries the **currency code** (`ETB 12,430.00`), never a bare
+ * symbol and never a bare number: spec 11 § Localization & Formatting treats the
+ * code as the primary signal, with two decimals so a pasted figure is exact.
  */
 
 export function formatCurrency(value: number | null | undefined, currency = 'ETB'): string {
@@ -8,7 +12,9 @@ export function formatCurrency(value: number | null | undefined, currency = 'ETB
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
-    maximumFractionDigits: value >= 1000 ? 0 : 2,
+    currencyDisplay: 'code',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value)
 }
 
@@ -17,8 +23,10 @@ export function formatCompactCurrency(value: number | null | undefined, currency
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
-    notation: value >= 10_000 ? 'compact' : 'standard',
-    maximumFractionDigits: value >= 10_000 ? 1 : 0,
+    currencyDisplay: 'code',
+    notation: value >= 100_000 ? 'compact' : 'standard',
+    minimumFractionDigits: value >= 100_000 ? 1 : 2,
+    maximumFractionDigits: value >= 100_000 ? 1 : 2,
   }).format(value)
 }
 
