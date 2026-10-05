@@ -26,6 +26,10 @@ interface ChartDatum {
  * Trend chart (S-1.1): Revenue Trend (line) and Enrollments (bar), built on
  * TanStack Charts' mark-based API. Definitions are memoized against the full
  * data input per the framework adapter contract.
+ *
+ * The screen-reader alternative is **not** rendered here: callers wrap this in
+ * `ChartFigure`, which builds the data table only when it is asked for — an
+ * always-present hidden table is a real cost against the LCP budget.
  */
 export function TrendChart({
   points,
@@ -82,25 +86,6 @@ export function TrendChart({
   return (
     <div className="w-full">
       <Chart definition={definition} height={280} ariaLabel={ariaLabel} />
-      {/* Accessible alternative: every chart exposes its underlying data as a
-          table (spec 11 screen-reader support). */}
-      <table className="sr-only">
-        <caption>{ariaLabel}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Period</th>
-            <th scope="col">Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((datum) => (
-            <tr key={datum.label}>
-              <td>{datum.label}</td>
-              <td>{datum.value}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   )
 }

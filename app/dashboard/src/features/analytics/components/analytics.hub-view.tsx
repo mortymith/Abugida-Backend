@@ -8,7 +8,6 @@ import { CoursePerformanceTable } from '#/features/dashboard/components/dashboar
 import { coursePerformanceQueryOptions } from '#/features/dashboard/dashboard.queries'
 import type { DateRangeSelection } from '#/features/dashboard/components/dashboard.date-range-picker'
 import { AnalyticsSectionHeader } from './analytics.section-header'
-import type { CoursePerformancePage } from '#/features/dashboard/dashboard.types'
 
 interface AnalyticsHubViewProps {
   range: DateRangeSelection
@@ -30,10 +29,6 @@ export function AnalyticsHubView({
 }: AnalyticsHubViewProps) {
   const navigate = useNavigate()
   const query = useQuery(coursePerformanceQueryOptions(range, page))
-
-  function openCourse(row: CoursePerformancePage['rows'][number]) {
-    navigate({ to: '/analytics/courses/$courseId', params: { courseId: row.courseId } })
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -74,7 +69,7 @@ export function AnalyticsHubView({
               data={query.data}
               onPageChange={onPageChange}
               isFetching={query.isFetching}
-              onRowClick={openCourse}
+              getRowHref={(row) => `/analytics/courses/${row.courseId}`}
             />
           ) : null}
         </CardContent>

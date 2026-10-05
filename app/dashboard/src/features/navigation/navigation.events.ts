@@ -31,6 +31,14 @@ export type NavEventName =
   | 'nav.offline_banner_shown'
   | 'nav.session_expiry_warning_shown'
   | 'nav.queue_depth_changed'
+  // Spec 03 (S-1.1 / S-1.2) instrumentation. IDs and counts only — never a
+  // course title, a student name, or a search term.
+  | 'dashboard_viewed'
+  | 'dashboard_range_changed'
+  | 'dashboard_export_clicked'
+  | 'dashboard_course_opened'
+  | 'revenue_viewed'
+  | 'revenue_export_clicked'
 
 export type NavEventProps = Record<string, string | number | boolean>
 

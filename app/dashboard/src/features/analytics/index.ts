@@ -3,6 +3,7 @@
  * barrel only; server functions are exported through `./server/all`.
  */
 export { AnalyticsHubView } from './components/analytics.hub-view'
+export { AnalyticsExportModal } from './components/analytics.export-modal'
 export { AnalyticsPerformanceView } from './components/analytics.performance-view'
 export { AnalyticsDropOffView } from './components/analytics.drop-off-view'
 export { AnalyticsQuizView } from './components/analytics.quiz-view'

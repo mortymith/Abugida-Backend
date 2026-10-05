@@ -3,6 +3,8 @@ import { Skeleton } from '#/components/ui/skeleton'
 import { EmptyState } from '#/components/common/empty-state'
 import { RetryErrorState } from '#/components/common/retry-error-state'
 import { TrendChart } from '#/features/dashboard/components/dashboard.trend-chart'
+import { ChartFigure } from '#/features/dashboard/components/dashboard.chart-figure'
+import { formatTrendBucket } from '#/features/dashboard/schemas/dashboard.date-range.schema'
 import type { MetricAvailability, TrendPoint } from '#/features/dashboard/dashboard.types'
 import type { TrendGranularity } from '#/features/dashboard/schemas/dashboard.date-range.schema'
 
@@ -66,7 +68,13 @@ export function AnalyticsChartCard({
         ) : children != null ? (
           children
         ) : (
-          <>
+          <ChartFigure
+            label={ariaLabel}
+            rows={points.map((point) => ({
+              label: formatTrendBucket(point.date, granularity),
+              value: point.value,
+            }))}
+          >
             <div role="img" aria-label={ariaLabel}>
               <TrendChart
                 points={points}
@@ -76,10 +84,8 @@ export function AnalyticsChartCard({
                 colorVar={colorVar}
               />
             </div>
-            {table ? (
-              <details className="mt-2 text-xs text-muted-foreground">{table}</details>
-            ) : null}
-          </>
+            {table}
+          </ChartFigure>
         )}
       </CardContent>
     </Card>

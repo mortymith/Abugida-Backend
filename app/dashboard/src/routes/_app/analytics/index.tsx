@@ -2,9 +2,10 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { AnalyticsHubView } from '#/features/analytics'
 import { coursePerformanceQueryOptions } from '#/features/dashboard/dashboard.queries'
+import { DATE_RANGE_PRESETS } from '#/features/dashboard/schemas/dashboard.date-range.schema'
 
 const analyticsIndexSearchSchema = z.object({
-  preset: z.enum(['7d', '30d', '90d', '12mo']).optional(),
+  preset: z.enum(DATE_RANGE_PRESETS).optional(),
   from: z.string().optional(),
   to: z.string().optional(),
   page: z.coerce.number().int().min(1).optional(),
