@@ -18,6 +18,7 @@ const TONES = {
   changes_requested: 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300',
   approved: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300',
   rejected: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
+  withdrawn: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
 } as const
 
 const LABELS: Record<string, string> = {
@@ -33,6 +34,7 @@ const LABELS: Record<string, string> = {
   changes_requested: 'Changes Requested',
   approved: 'Approved',
   rejected: 'Rejected',
+  withdrawn: 'Withdrawn',
 }
 
 export function StatusPill({

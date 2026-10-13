@@ -19,18 +19,39 @@ import { REVIEW_STATE_LABELS } from '../courses.review-state'
 import type { ReviewState } from '../schemas/courses.workflow.schema'
 import type { ReviewQueueItem } from '../courses.types'
 
+/**
+ * The pill label for a queue row. `REVIEW_STATE_LABELS` is keyed by the **item**
+ * review status, whose vocabulary is narrower than the queue's — `withdrawn` is
+ * a course-level lifecycle fact with no item analogue — so the queue-only values
+ * are named here rather than widening the shared map.
+ */
+function reviewStatePillLabel(state: ReviewState): string {
+  if (state === 'pending') return 'In Review'
+  if (state === 'rejected') return 'Rejected'
+  if (state === 'withdrawn') return 'Withdrawn'
+  return REVIEW_STATE_LABELS[state]
+}
+
 const TABS: Array<{ state: ReviewState; label: string }> = [
   { state: 'pending', label: 'Pending' },
   { state: 'changes_requested', label: 'Changes Requested' },
   { state: 'approved', label: 'Approved' },
   { state: 'rejected', label: 'Rejected' },
+  { state: 'withdrawn', label: 'Withdrawn' },
 ]
 
 /**
- * S-2.14 Review & Approval Queue: tabs with counts, queue table, review
- * panel with student-accurate preview, checklist, comment, and decision
- * buttons (disabled until the preview is opened; empty-comment decisions
- * confirmed via S-7.1). Workflow gear toggles per-course gating (admin).
+ * S-2.14 Review & Approval Queue.
+ *
+ * Revision 2 extends the queue from lessons only to **both entities** —
+ * individual curriculum items and whole courses — so a reviewer has one place to
+ * clear everything waiting on them. A `Lesson` column heading would therefore be
+ * wrong half the time; the row's kind is read from `entityType`.
+ *
+ * Tabs with counts, queue table, review panel with a student-accurate preview,
+ * checklist, comment, and decision buttons (disabled until the preview is
+ * opened; empty-comment decisions confirmed via S-7.1). The workflow gear
+ * toggles per-course gating (admin).
  */
 export function ReviewsQueue({ role }: { role: string }) {
   const search = useSearch({ from: '/_app/courses/reviews' })
@@ -130,7 +151,7 @@ export function ReviewsQueue({ role }: { role: string }) {
                 <thead className="bg-muted/40 text-left">
                   <tr>
                     <th scope="col" className="px-3 py-2">
-                      Lesson
+                      Subject
                     </th>
                     <th scope="col" className="px-3 py-2">
                       Course
@@ -152,23 +173,25 @@ export function ReviewsQueue({ role }: { role: string }) {
                 <tbody>
                   {queue.data.map((item) => (
                     <tr key={item.reviewPublicId} className="border-t">
-                      <td className="px-3 py-2 font-medium">{item.lessonTitle}</td>
-                      <td className="px-3 py-2">{item.courseTitle}</td>
+                      <td className="px-3 py-2">
+                        <span className="mr-2 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                          {item.entityType === 'course' ? 'Course' : 'Item'}
+                        </span>
+                        {/* A course-level request has no lesson: the whole course
+                            is the subject, so its title stands in. */}
+                        {item.entityType === 'course'
+                          ? `${item.courseTitle} · publish review`
+                          : (item.lessonTitle ?? 'Untitled item')}
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground">
+                        {item.entityType === 'course' ? '—' : item.courseTitle}
+                      </td>
                       <td className="px-3 py-2">{item.requesterName ?? '—'}</td>
                       <td className="px-3 py-2 text-muted-foreground">
                         {relativeTime(item.submittedAt)}
                       </td>
                       <td className="px-3 py-2">
-                        <StatusPill
-                          tone={item.state}
-                          label={
-                            item.state === 'pending'
-                              ? 'In Review'
-                              : item.state === 'rejected'
-                                ? 'Rejected'
-                                : REVIEW_STATE_LABELS[item.state]
-                          }
-                        />
+                        <StatusPill tone={item.state} label={reviewStatePillLabel(item.state)} />
                       </td>
                       <td className="px-3 py-2">
                         <Button

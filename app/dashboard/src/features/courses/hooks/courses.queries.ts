@@ -8,6 +8,7 @@ import {
   getLiveSessions,
   getCompletionSettings,
   getPendingReviewCount,
+  getPublishReadiness,
   getQuizForLesson,
   getReviewLessonPreview,
   getReviewQueue,
@@ -33,6 +34,7 @@ import type {
   UnlockRulesDTO,
   CompletionSettingsDTO,
 } from '../courses.types'
+import type { ReadinessResult } from '../courses.readiness'
 import type { CatalogQuery } from '../schemas/courses.catalog.schema'
 import { nextCatalogPage } from '../courses.catalog-pagination'
 import type { ReviewQueueQuery, TemplateQuery } from '../schemas/courses.workflow.schema'
@@ -41,6 +43,9 @@ export const courseQueryKeys = {
   catalog: (query: CatalogQuery) => ['courses', 'catalog', query] as const,
   reference: () => ['courses', 'reference'] as const,
   details: (coursePublicId: string) => ['courses', 'details', coursePublicId] as const,
+  /** Prefix covering every cached details query, for lifecycle invalidation. */
+  detailsAll: () => ['courses', 'details'] as const,
+  readiness: (coursePublicId: string) => ['courses', 'readiness', coursePublicId] as const,
   curriculum: (coursePublicId: string) => ['courses', 'curriculum', coursePublicId] as const,
   pricing: (coursePublicId: string) => ['courses', 'pricing', coursePublicId] as const,
   quiz: (lessonPublicId: string) => ['courses', 'quiz', lessonPublicId] as const,
@@ -51,6 +56,8 @@ export const courseQueryKeys = {
   templates: (query: TemplateQuery) => ['courses', 'templates', query] as const,
   students: (coursePublicId: string, search: string, page: number) =>
     ['courses', 'students', coursePublicId, search, page] as const,
+  /** The Students nav badge count. Distinct from `students` — see below. */
+  studentCount: (coursePublicId: string) => ['courses', 'student-count', coursePublicId] as const,
   analytics: (coursePublicId: string) => ['courses', 'analytics', coursePublicId] as const,
   liveSessions: (coursePublicId: string) => ['courses', 'live-sessions', coursePublicId] as const,
   completion: (coursePublicId: string) => ['courses', 'completion', coursePublicId] as const,
@@ -100,6 +107,21 @@ export function courseDetailsQueryOptions(coursePublicId: string) {
   return queryOptions({
     queryKey: courseQueryKeys.details(coursePublicId),
     queryFn: (): Promise<CourseDetailsDTO> => getCourseDetails({ data: { coursePublicId } }),
+    staleTime: STALE.detail,
+  })
+}
+
+/**
+ * S-2.22 publish readiness (`RC-1…RC-8`).
+ *
+ * The verdict is re-evaluated on the server on every fetch — the spec
+ * forbids trusting a cached checklist, because publishing re-validates
+ * at the moment of publish anyway.
+ */
+export function publishReadinessQueryOptions(coursePublicId: string) {
+  return queryOptions({
+    queryKey: courseQueryKeys.readiness(coursePublicId),
+    queryFn: (): Promise<ReadinessResult> => getPublishReadiness({ data: { coursePublicId } }),
     staleTime: STALE.detail,
   })
 }
@@ -187,6 +209,31 @@ export function courseStudentsQueryOptions(coursePublicId: string, search: strin
     queryKey: courseQueryKeys.students(coursePublicId, search, page),
     queryFn: (): Promise<CourseStudentsResult> =>
       getCourseStudents({ data: { coursePublicId, search: search || undefined, page } }),
+    staleTime: STALE.list,
+  })
+}
+
+/**
+ * The Students nav count (S-2.6 wireframe: `○ Students (234)`).
+ *
+ * Its own cache entry rather than a projection of `courseStudentsQueryOptions`:
+ * two different result shapes under one key would leave the badge typed as a
+ * number while the tab's fetch had parked a `CourseStudentsResult` there. The
+ * server already answers `totalCount`, so a separate key costs one extra entry
+ * and keeps both call sites honest.
+ *
+ * `staleTime` matches the list, so the tab and the badge refresh together
+ * rather than the badge lagging a page behind the roster it counts.
+ */
+export function courseStudentsQueryOptionsFn(coursePublicId: string) {
+  return queryOptions({
+    queryKey: courseQueryKeys.studentCount(coursePublicId),
+    queryFn: async (): Promise<number> => {
+      const { getCourseStudents: fetchCourseStudents } =
+        await import('#/features/courses/server/all')
+      const result = await fetchCourseStudents({ data: { coursePublicId, page: 0 } })
+      return result.totalCount
+    },
     staleTime: STALE.list,
   })
 }

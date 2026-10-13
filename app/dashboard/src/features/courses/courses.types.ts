@@ -1,9 +1,10 @@
 import type { QuestionType } from './schemas/courses.learning.schema'
 import type { ReviewState } from './schemas/courses.workflow.schema'
+import type { AuthoringHealth } from './courses.readiness'
 /**
- * Course status is the 4-state Revision 2 lifecycle (spec 00 §2.6), owned by
+ * Course status is the five-state lifecycle (spec 04 Revision 3), owned by
  * `courses.workspace.ts` so there is one definition. It must stay assignable
- * from `courseStatusEnum` in @abugida/database, which gained `in_review`.
+ * from `courseStatusEnum` in @abugida/database plus the derived `approved` state.
  */
 import type { CourseLifecycleState } from './courses.workspace'
 
@@ -24,7 +25,17 @@ export interface CourseCatalogItem {
   title: string
   description: string | null
   thumbnailObjectKey: string | null
+  /**
+   * The **stored** status, not the five-state lifecycle. `Approved` is derived
+   * from `approvedAt` so the catalog's Approved filter can match
+   * `review_requests.entity_type = 'course' AND decision = 'approved' AND
+   * status = 'draft'` exactly as the spec states.
+   */
   status: CourseLifecycleState
+  /** Set by an approval decision; cleared on withdrawal, edit, or unpublish. */
+  approvedAt: string | null
+  /** A future `scheduled_publish_at` earns the **Scheduled** filter. */
+  scheduledPublishAt: string | null
   courseType: 'self_paced' | 'instructor_led' | 'hybrid'
   level: 'beginner' | 'intermediate' | 'advanced' | null
   isFree: boolean
@@ -37,6 +48,24 @@ export interface CourseCatalogItem {
   averageRating: number | null
   updatedAt: string
   requiresApproval: boolean
+  /**
+   * S-2.1 authoring health. Read from the same readiness projection that backs
+   * `RC-3`/`RC-4` in S-2.22, so a card can never disagree with the checklist.
+   */
+  authoringHealth: AuthoringHealth
+  /** Counts backing the Approved/Scheduled filters, so pills can show totals. */
+  statusCounts: CatalogStatusCounts
+}
+
+/** Per-status totals for the S-2.1 filter pills. */
+export interface CatalogStatusCounts {
+  all: number
+  draft: number
+  inReview: number
+  approved: number
+  scheduled: number
+  published: number
+  archived: number
 }
 
 export interface CourseCatalogResult {
@@ -64,6 +93,16 @@ export interface CurriculumLessonDTO {
   sortOrder: number
   contentType: 'pdf' | 'video' | 'quiz' | 'exercise' | 'link' | null
   reviewStatus: 'draft' | 'in_review' | 'changes_requested' | 'approved'
+  /**
+   * Per-item visibility (spec 04 § Item visibility). Read by the sidebar so it
+   * can render the `◌ Unpublished` / `📅 Scheduled` pill without a second fetch,
+   * and by the readiness projection that defines the **published set**.
+   */
+  visibility: 'draft' | 'published' | 'scheduled'
+  /** When a `scheduled` item becomes visible; ignored for the other values. */
+  scheduledPublishAt: string | null
+  archivedAt: string | null
+  deletedAt: string | null
   hasBody: boolean
   hasQuiz: boolean
   hasUnlockRules: boolean
@@ -97,7 +136,10 @@ export interface CourseDetailsDTO {
   courseType: 'self_paced' | 'instructor_led' | 'hybrid'
   level: 'beginner' | 'intermediate' | 'advanced' | null
   thumbnailObjectKey: string | null
+  /** The stored four-value status. Use `approvedAt` to derive the fifth state. */
   status: CourseLifecycleState
+  /** Set by an approval decision; the fifth lifecycle state is derived from it. */
+  approvedAt: string | null
   slug: string
   requiresApproval: boolean
   scheduledPublishAt: string | null
@@ -107,6 +149,12 @@ export interface CourseDetailsDTO {
   isFree: boolean
   priceAmount: string | null
   priceCurrency: string
+  /** Default language for this course's authored content (S-2.20). */
+  contentLanguage: 'en' | 'am' | 'ti' | 'gez'
+  /** Monotonic publication version; publishing increments it (S-2.22). */
+  version: number
+  /** Optimistic-concurrency guard for every `rowVersion`-checked write. */
+  rowVersion: number
   createdAt: string
   updatedAt: string
 }
@@ -182,12 +230,18 @@ export interface UnlockRulesDTO {
 
 export interface ReviewQueueItem {
   reviewPublicId: string
-  lessonPublicId: string
-  lessonTitle: string
+  lessonPublicId: string | null
+  lessonTitle: string | null
   coursePublicId: string
   courseTitle: string
   requesterName: string | null
   state: ReviewState
+  /**
+   * Which kind of subject the request targets (spec 04 S-2.14). `course` rows
+   * have `lessonPublicId = null` and gate whole-course publication; `item` rows
+   * point at one curriculum row.
+   */
+  entityType: 'course' | 'item'
   submissionNote: string | null
   decisionComment: string | null
   decidedByName: string | null

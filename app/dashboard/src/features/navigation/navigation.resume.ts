@@ -69,6 +69,7 @@ export interface ResumeFacts {
   role: PlatformRole
   /** `false` once the course details query resolved without a course. */
   courseExists: boolean
+  /** The five-state lifecycle minus `approved`, which folds into `draft`. */
   courseStatus: 'draft' | 'in_review' | 'published' | 'archived' | null
   /** `false` once the curriculum resolved without the remembered item. */
   itemExists: boolean

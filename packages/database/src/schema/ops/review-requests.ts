@@ -17,13 +17,26 @@ import { courses } from '../catalog/courses'
 import { lessons } from '../catalog/lessons'
 import { users } from '../auth/users'
 
-export const reviewStateEnum = z.enum(['pending', 'changes_requested', 'approved', 'rejected'])
+/**
+ * `withdrawn` closes a request the author pulled back (spec 04 S-2.22
+ * `withdrawCourseReview`). It is distinct from `changes_requested`, which is a
+ * reviewer's decision carrying a required comment: a withdrawal has no comment
+ * and no fault attached, and collapsing the two would make the audit trail lie.
+ */
+export const reviewStateEnum = z.enum([
+  'pending',
+  'changes_requested',
+  'approved',
+  'rejected',
+  'withdrawn',
+])
 export type ReviewState = z.infer<typeof reviewStateEnum>
 export const reviewStatePgEnum = pgEnum('review_state', [
   'pending',
   'changes_requested',
   'approved',
   'rejected',
+  'withdrawn',
 ])
 
 /**

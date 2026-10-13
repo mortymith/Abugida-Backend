@@ -38,6 +38,9 @@ export async function getCurriculumImpl(coursePublicId: string): Promise<Curricu
           sortOrder: lessons.sortOrder,
           contentType: lessons.contentType,
           reviewStatus: lessons.reviewStatus,
+          visibility: lessons.visibility,
+          scheduledPublishAt: lessons.scheduledPublishAt,
+          archivedAt: lessons.archivedAt,
           body: lessons.body,
           videoUrl: lessons.videoUrl,
           durationSeconds: lessons.durationSeconds,
@@ -92,6 +95,13 @@ export async function getCurriculumImpl(coursePublicId: string): Promise<Curricu
       sortOrder: lesson.sortOrder,
       contentType: lesson.contentType,
       reviewStatus: lesson.reviewStatus ?? 'draft',
+      // The sidebar reads this for the `◌ Unpublished` / `📅 Scheduled` pill,
+      // and the readiness projection reads it to define the published set.
+      // The column is NOT NULL with a `draft` default, so it is always set.
+      visibility: lesson.visibility,
+      scheduledPublishAt: lesson.scheduledPublishAt?.toISOString() ?? null,
+      archivedAt: lesson.archivedAt?.toISOString() ?? null,
+      deletedAt: null,
       hasBody: Boolean(lesson.body && lesson.body.trim().length > 0),
       hasQuiz: quizLessonIds.has(lesson.id),
       hasUnlockRules: unlockLessonIds.has(lesson.id),

@@ -5,7 +5,12 @@
  */
 export { getCourseCatalog } from './courses.catalog'
 export { getCourseFormReference } from './courses.reference'
-export { createCourseDraft, getCourseDetails, saveCourseDetails } from './courses.details'
+export {
+  createCourseDraft,
+  getCourseDetails,
+  saveCourseDetails,
+  saveCourseTitle,
+} from './courses.details'
 export {
   createLesson,
   createModule,
@@ -55,3 +60,13 @@ export {
 } from './courses.live-sessions'
 export { getCompletionSettings, saveCompletionSettings } from './courses.completion'
 export { getCourseAnalytics, getCourseStudents } from './courses.students'
+export { getPublishReadiness } from './courses.readiness'
+export {
+  approveCourseReview,
+  decideCourseReview,
+  restoreCourse,
+  setItemVisibility,
+  submitCourseForReview,
+  unpublishCourse,
+  withdrawCourseReview,
+} from './courses.lifecycle'

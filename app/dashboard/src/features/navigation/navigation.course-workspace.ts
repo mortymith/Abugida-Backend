@@ -5,8 +5,12 @@ import {
   courseDetailsQueryOptions,
   curriculumQueryOptions,
 } from '#/features/courses/hooks/courses.queries'
-import { CURRICULUM_TAB, parseCourseWorkspaceSearch } from '#/features/courses/courses.workspace'
-import type { CourseWorkspaceTab } from '#/features/courses/courses.workspace'
+import {
+  CURRICULUM_TAB,
+  deriveCourseLifecycleState,
+  parseCourseWorkspaceSearch,
+} from '#/features/courses/courses.workspace'
+import type { CourseLifecycleState, CourseWorkspaceTab } from '#/features/courses/courses.workspace'
 import { rememberCourseWorkspace } from './navigation.resume-preference'
 
 /**
@@ -34,7 +38,7 @@ export interface CourseWorkspaceContext {
   curriculumPending: boolean
 }
 
-type CourseLifecycleTabState = 'draft' | 'in_review' | 'published' | 'archived'
+type CourseLifecycleTabState = CourseLifecycleState
 
 interface WorkspaceMatch {
   routeId: string
@@ -69,7 +73,16 @@ export function useCourseWorkspace(): CourseWorkspaceContext | null {
       : {
           coursePublicId,
           courseTitle: details.data?.title ?? coursePublicId,
-          courseStatus: details.data?.status ?? null,
+          // `Approved` is derived, not stored: a draft course with
+          // `approved_at` set sits between review and publication, and the
+          // breadcrumb pill must show that rather than a plain Draft.
+          courseStatus:
+            details.data == null
+              ? null
+              : deriveCourseLifecycleState({
+                  status: details.data.status,
+                  approvedAt: details.data.approvedAt,
+                }),
           tab,
           ...(itemPublicId ? { itemPublicId } : {}),
           ...(lesson ? { itemTitle: lesson.title } : {}),

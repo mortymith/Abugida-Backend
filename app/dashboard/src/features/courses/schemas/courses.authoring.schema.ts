@@ -142,3 +142,54 @@ export const coursePublishSchema = z
   })
 
 export type CoursePublishInput = z.infer<typeof coursePublishSchema>
+
+/**
+ * S-2.17 `setItemVisibility`: the per-item `draft ⇄ published ⇄ scheduled`
+ * toggle. This changes one item and never the course — an item can be published
+ * inside a draft course, and unpublishing one drops it from the published set
+ * immediately without touching the rest of the curriculum.
+ *
+ * `scheduledPublishAt` is required exactly when the target is `scheduled`; the
+ * server rejects the mismatch rather than silently storing a null.
+ */
+export const setItemVisibilitySchema = z
+  .object({
+    coursePublicId: z.string().uuid(),
+    lessonPublicId: z.string().uuid(),
+    visibility: z.enum(['draft', 'published', 'scheduled']),
+    scheduledPublishAt: z.string().datetime().nullable().default(null),
+  })
+  .superRefine((value, ctx) => {
+    if (value.visibility === 'scheduled' && value.scheduledPublishAt === null) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['scheduledPublishAt'],
+        message: 'Pick when this item should publish',
+      })
+    }
+  })
+
+export type SetItemVisibilityInput = z.infer<typeof setItemVisibilitySchema>
+
+/** S-2.22 course-level review submission (a note is optional). */
+export const courseReviewSubmitSchema = z.object({
+  coursePublicId: z.string().uuid(),
+  submissionNote: z.string().trim().max(2000).nullable().default(null),
+})
+
+/** S-2.22 reviewer decision. A comment is required to *not* approve. */
+export const courseReviewDecisionSchema = z
+  .object({
+    coursePublicId: z.string().uuid(),
+    decision: z.enum(['approve', 'request_changes', 'reject']),
+    comment: z.string().trim().max(2000).default(''),
+  })
+  .superRefine((value, ctx) => {
+    if (value.decision !== 'approve' && value.comment.length === 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['comment'],
+        message: 'Explain what should change — the author sees this',
+      })
+    }
+  })

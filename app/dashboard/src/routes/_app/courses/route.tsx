@@ -6,5 +6,7 @@ import { requireRolesBeforeLoad } from '#/features/auth/server'
  * the catalog; deeper screens gate themselves per the spec 11 matrix.
  */
 export const Route = createFileRoute('/_app/courses')({
-  beforeLoad: () => requireRolesBeforeLoad(['admin', 'editor', 'reviewer', 'viewer', 'support']),
+  beforeLoad: async () => {
+    await requireRolesBeforeLoad(['admin', 'editor', 'reviewer', 'viewer', 'support'])
+  },
 })

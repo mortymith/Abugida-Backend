@@ -176,7 +176,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
 
 export const insertUserSchema = createInsertSchema(users, {
   name: z.string().max(100).nullable().optional(),
-  phoneNumberEncrypted: z.instanceof(Buffer).nullable().optional(),
+  phoneNumberEncrypted: z.instanceof(Uint8Array).nullable().optional(),
   phoneNumberHash: z.string().max(64).nullable().optional(),
   phoneNumberLast4: z.string().length(4).nullable().optional(),
   accountStatus: accountStatusEnum.default('active'),

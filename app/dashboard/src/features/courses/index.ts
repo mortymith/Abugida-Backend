@@ -14,6 +14,16 @@ export { StatusPill } from './components/courses.status-pill'
 export { MarkdownPreview } from './components/courses.markdown-preview'
 export { courseQueryKeys, pendingReviewCountQueryOptions } from './hooks/courses.queries'
 export {
+  readinessItemsNeedingContent,
+  useCourseLifecycleMutations,
+  usePublishReadiness,
+} from './hooks/courses.workspace-hooks'
+export { CourseWorkspaceShell } from './components/courses.workspace-shell'
+export { CourseOverview } from './components/courses.overview-tab'
+export { CurriculumItemPane } from './components/courses.item-pane'
+export { PublishReadinessPanel } from './components/courses.readiness-panel'
+export { CourseTitleEditor } from './components/courses.title-editor'
+export {
   LESSON_MIN_TEXT_LENGTH,
   auditMarkdown,
   normalizeMarkdown,

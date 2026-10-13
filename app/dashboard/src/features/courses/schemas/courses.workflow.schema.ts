@@ -1,8 +1,15 @@
 import { z } from 'zod'
 import { questionTypeSchema } from './courses.learning.schema'
+import { reviewStateEnum } from '@abugida/database/ops'
 
-/** S-2.14 review & approval queue. */
-export const reviewStateSchema = z.enum(['pending', 'changes_requested', 'approved', 'rejected'])
+/**
+ * S-2.14 review & approval queue.
+ *
+ * The state vocabulary is owned by `review_requests` in @abugida/database, so a
+ * decision written by the server can always be rendered by the queue. A copy
+ * here would drift — `withdrawn` was exactly that case.
+ */
+export const reviewStateSchema = z.enum(reviewStateEnum.options)
 export type ReviewState = z.infer<typeof reviewStateSchema>
 
 export const reviewQueueQuerySchema = z.object({

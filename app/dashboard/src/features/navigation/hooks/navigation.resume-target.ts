@@ -9,6 +9,23 @@ import type { PlatformRole } from '#/features/auth'
 import { resolveResumeDecision } from '../navigation.resume'
 import type { ResumeDecision } from '../navigation.resume'
 import { useResumePreference } from '../navigation.resume-preference'
+import { deriveCourseLifecycleState } from '#/features/courses/courses.workspace'
+
+/**
+ * Map the details DTO onto the lifecycle state the resume rule understands.
+ * `approved` folds into `draft` because that is where the course actually sits:
+ * it is not live, and it is still resumable.
+ */
+function resolveResumeCourseStatus(
+  details: { status: string; approvedAt: string | null } | undefined,
+): 'draft' | 'in_review' | 'published' | 'archived' | null {
+  if (details == null) return null
+  const state = deriveCourseLifecycleState({
+    status: details.status,
+    approvedAt: details.approvedAt,
+  })
+  return state === 'approved' ? 'draft' : state
+}
 
 /**
  * Resolve the Resume authoring affordance for the header (S-A.1).
@@ -47,7 +64,9 @@ export function useResumeDecision(role: PlatformRole): ResumeDecision {
     // Absence is only a fact once the query has settled, so a loading response
     // reads as "still there" rather than as a deleted course.
     courseExists: details.isPending ? true : details.data != null,
-    courseStatus: details.data?.status ?? null,
+    // Derived, not raw: a course approved but not yet published is a Draft that
+    // can still be resumed into, so `approved` must not read as "published".
+    courseStatus: resolveResumeCourseStatus(details.data),
     itemExists,
     curriculumPending: curriculum.isPending,
     now: Date.now(),

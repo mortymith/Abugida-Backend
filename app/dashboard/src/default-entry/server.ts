@@ -21,12 +21,22 @@
  * endpoint. The passwordless platform's credential routes are refused the same
  * way.
  */
+import dns from 'node:dns'
 import { createStartHandler, defaultStreamHandler } from '@tanstack/react-start/server'
 import type { Register } from '@tanstack/react-router'
 import type { RequestHandler } from '@tanstack/react-start/server'
 import { isOpenApiPluginPath, isPasswordlessDisabledPath } from '@abugida/auth/routes'
 import { env } from '../config/app.config'
 import { init } from '../config/observability.config'
+
+// Local/CI environments in this dev setup often resolve Google's OAuth hosts
+// to unreachable IPv6 addresses first; prefer IPv4 to avoid 10s connect
+// timeouts during the Google authorization-code exchange.
+try {
+  dns.setDefaultResultOrder('ipv4first')
+} catch {
+  // Older/edge runtimes may not expose this; ignore and keep default behavior.
+}
 
 const startHandler = createStartHandler(defaultStreamHandler)
 

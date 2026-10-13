@@ -403,8 +403,9 @@ function SortableLesson({
         </button>
       ) : null}
       <Link
-        to="/courses/$courseId/lessons/$lessonId"
-        params={{ courseId: coursePublicId, lessonId: lesson.publicId }}
+        to="/courses/$courseId"
+        params={{ courseId: coursePublicId }}
+        search={{ tab: 'curriculum', item: lesson.publicId }}
         className="min-w-0 flex-1 truncate text-sm hover:underline"
       >
         {lesson.title}

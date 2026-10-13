@@ -59,6 +59,21 @@ export const lessonReviewStatusPgEnum = pgEnum('lesson_review_status', [
 export const lessonBodyFormatEnum = z.enum(['html', 'markdown'])
 export type LessonBodyFormat = z.infer<typeof lessonBodyFormatEnum>
 export const lessonBodyFormatPgEnum = pgEnum('lesson_body_format', ['html', 'markdown'])
+/**
+ * Per-item visibility (spec 04 Revision 3, § Item visibility).
+ *
+ * This is what lets a live course grow one item at a time without republishing
+ * the whole thing. It is independent of the course lifecycle, and it is the
+ * field the **published set** — the subset `RC-3` / `RC-4` and the completion
+ * rule evaluate — is defined by.
+ */
+export const lessonVisibilityEnum = z.enum(['draft', 'published', 'scheduled'])
+export type LessonVisibility = z.infer<typeof lessonVisibilityEnum>
+export const lessonVisibilityPgEnum = pgEnum('lesson_visibility', [
+  'draft',
+  'published',
+  'scheduled',
+])
 export const lessons = pgTable(
   'lessons',
   {
@@ -94,6 +109,16 @@ export const lessons = pgTable(
     videoUrl: varchar('video_url', { length: 500 }),
     sortOrder: smallint('sort_order').notNull().default(0),
     reviewStatus: lessonReviewStatusPgEnum().default('draft'),
+    /**
+     * Per-item visibility. Defaults to `'draft'` so a newly authored item is
+     * invisible until it is explicitly published — a live course never gains a
+     * half-finished item by accident. Migration 0027 backfills lessons of
+     * already-published courses to `'published'` so existing live courses do
+     * not silently lose their content.
+     */
+    visibility: lessonVisibilityPgEnum().notNull().default('draft'),
+    /** When a `scheduled` item becomes visible; nullable, ignored otherwise. */
+    scheduledPublishAt: timestamp('scheduled_publish_at', { withTimezone: true }),
     fileObjectKey: varchar('file_object_key', { length: 500 }),
     fileSizeBytes: bigint('file_size_bytes', { mode: 'number' }),
     mimeType: varchar('mime_type', { length: 100 }),
@@ -173,6 +198,8 @@ export const insertLessonSchema = createInsertSchema(lessons, {
   videoUrl: z.string().max(500).nullable().optional(),
   sortOrder: z.number().int().min(0).default(0),
   reviewStatus: lessonReviewStatusEnum.default('draft'),
+  visibility: lessonVisibilityEnum.default('draft'),
+  scheduledPublishAt: z.date().nullable().optional(),
   fileObjectKey: z.string().max(500).nullable().optional(),
   fileSizeBytes: z.number().int().min(0).nullable().optional(),
   mimeType: z.string().max(100).nullable().optional(),

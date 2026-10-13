@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '#/components/ui/dialog'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { toast } from '#/components/common/toast'
-import { Button, buttonVariants } from '#/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '#/components/ui/dialog'
+import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Spinner } from '#/components/ui/spinner'
 import { ConfirmDialog } from '#/components/common/confirm-dialog'
 import { EmptyState } from '#/components/common/empty-state'
 import { RetryErrorState } from '#/components/common/retry-error-state'
-import { StatusPill } from './courses.status-pill'
+import { CourseWorkspaceShell } from './courses.workspace-shell'
+import { CourseOverview } from './courses.overview-tab'
+import { CurriculumItemPane } from './courses.item-pane'
+import { PublishReadinessPanel } from './courses.readiness-panel'
 import { CurriculumEditor } from './courses.course-wizard'
 import { UnlockRulesSheet } from './courses.unlock-rules-sheet'
 import { DuplicateLessonModal } from './courses.duplicate-lesson-modal'
@@ -23,19 +26,20 @@ import {
   curriculumQueryOptions,
   liveSessionsQueryOptions,
 } from '../hooks/courses.queries'
+import { parseCourseWorkspaceSearch, resolveWorkspaceTab } from '../courses.workspace'
+import type { CourseWorkspaceTab } from '../courses.workspace'
 import { buildCsv } from '#/features/dashboard/dashboard.export-csv'
 import type { CourseStudentRow } from '../courses.types'
 
-// (Dialog re-exports come from the ui barrel above; no extra wiring needed.)
-
-const TABS = ['curriculum', 'students', 'analytics', 'sessions', 'settings'] as const
-type CourseTab = (typeof TABS)[number]
-
 /**
- * S-2.6 Course Detail: header actions (status, preview, edit details,
- * duplicate, archive) + tabs Curriculum / Students / Analytics / Sessions /
- * Settings. Settings hosts S-2.10 completion rules + certificate template
- * and the S-2.14 per-course approval gating toggle.
+ * S-2.6 Course Workspace. The shell owns the identity header, the role-filtered
+ * nav and the lifecycle CTA; this component owns only the **tab content** and
+ * the modals that reach into it.
+ *
+ * The tab set is `WORKSPACE_TABS` from `courses.workspace.ts`, not a local
+ * list — exactly five destinations, `overview` by default, and Support gets
+ * Students only. `resolveWorkspaceTab` keeps a deep link to a tab the role
+ * cannot open on a destination their nav actually renders.
  */
 export function CourseDetail({
   courseId,
@@ -48,13 +52,13 @@ export function CourseDetail({
 }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const search = useSearch({ from: '/_app/courses/$courseId' })
-  const tab: CourseTab = TABS.includes(search.tab as CourseTab)
-    ? (search.tab as CourseTab)
-    : 'curriculum'
+  const search = useWorkspaceSearch()
+  const tab: CourseWorkspaceTab = resolveWorkspaceTab(role, search.tab)
   const isAuthoring = role === 'admin' || role === 'editor'
+  // The readiness panel is opened from the shell's lifecycle CTA and the
+  // Overview banner, so the open state lives here rather than in either.
+  const [readinessOpen, setReadinessOpen] = useState(false)
 
-  const details = useQuery(courseDetailsQueryOptions(courseId))
   const curriculum = useQuery(curriculumQueryOptions(courseId))
   const [confirm, setConfirm] = useState<'archive' | 'delete' | null>(null)
   const [unlockLesson, setUnlockLesson] = useState<string | null>(null)
@@ -91,163 +95,65 @@ export function CourseDetail({
     },
     onError: (cause) => toast.error(cause instanceof Error ? cause.message : 'Failed'),
   })
-  const saveTemplate = useMutation({
-    mutationFn: async (name: string) => {
-      const { saveCourseAsTemplate } = await import('../server/all')
-      return saveCourseAsTemplate({ data: { coursePublicId: courseId, name, category: 'general' } })
-    },
-    onSuccess: () => toast.success('Saved as a workspace template.'),
-    onError: (cause) => toast.error(cause instanceof Error ? cause.message : 'Failed'),
-  })
-
-  if (details.isPending) return <Spinner className="mx-auto my-12" />
-  if (details.isError) {
-    return <RetryErrorState onRetry={() => void details.refetch()} />
-  }
-  const course = details.data
-  const previewHref = previewBaseUrl
-    ? new URL(
-        `courses/${encodeURIComponent(course.slug)}`,
-        `${previewBaseUrl.replace(/\/+$/, '')}/`,
-      ).toString()
-    : undefined
 
   return (
-    <div className="flex flex-col gap-4">
-      {/*
-          No breadcrumb here: the workspace-aware trail is owned by the app shell
-          (S-A.1) so it exists on every screen and stays consistent with the nav.
-        */}
-      <header className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-display text-2xl font-bold">{course.title}</h1>
-            <StatusPill tone={course.status} />
-            <StatusPill tone={course.courseType} />
-            {course.requiresApproval ? (
-              <StatusPill tone="review" label="Approval required" />
-            ) : null}
-          </div>
-          {isAuthoring ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {previewHref ? (
-                <a
-                  href={previewHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
-                >
-                  Preview
-                </a>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled
-                  title="Set COURSE_PREVIEW_URL to preview the student view"
-                >
-                  Preview
-                </Button>
-              )}
-              <Link
-                to="/courses/new"
-                search={{ step: 1, from: courseId }}
-                className={buttonVariants({ variant: 'outline', size: 'sm' })}
-              >
-                Edit Details
-              </Link>
-              <Button variant="outline" size="sm" onClick={() => setConfirm('archive')}>
-                Archive
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="More course actions"
-                onClick={() => {
-                  const name = window.prompt('Save as template (name)', `${course.title} template`)
-                  if (name && name.trim().length >= 3) saveTemplate.mutate(name.trim())
-                }}
-              >
-                ⋯
-              </Button>
-            </div>
-          ) : null}
-        </div>
-        {course.status === 'draft' ? (
-          <p
-            className="rounded-lg border bg-muted/30 p-2 text-sm text-muted-foreground"
-            role="status"
-          >
-            This course is in <strong>Draft</strong> mode. Publish it from the wizard to make it
-            visible.
-          </p>
-        ) : null}
-        {course.status === 'published' ? (
-          <p
-            className="rounded-lg border border-green-300 bg-green-50 p-2 text-sm text-green-800 dark:border-green-700 dark:bg-green-950 dark:text-green-200"
-            role="status"
-          >
-            Published {course.publishedAt ? new Date(course.publishedAt).toLocaleString() : ''}.
-          </p>
-        ) : null}
-      </header>
-
-      <div role="tablist" aria-label="Course sections" className="flex flex-wrap gap-1 border-b">
-        {TABS.map((candidate) => (
-          <button
-            key={candidate}
-            role="tab"
-            aria-selected={tab === candidate}
-            className={
-              'border-b-2 px-3 py-2 text-sm capitalize' +
-              (tab === candidate
-                ? ' border-violet-500 font-medium'
-                : ' border-transparent text-muted-foreground hover:text-foreground')
-            }
-            onClick={() =>
-              void navigate({
-                to: '/courses/$courseId',
-                params: { courseId },
-                search: { tab: candidate },
-              })
-            }
-          >
-            {candidate === 'sessions' ? 'Sessions' : candidate}
-          </button>
-        ))}
-      </div>
+    <CourseWorkspaceShell
+      coursePublicId={courseId}
+      role={role}
+      previewBaseUrl={previewBaseUrl}
+      onOpenReadiness={() => setReadinessOpen(true)}
+    >
+      {tab === 'overview' ? <CourseOverview coursePublicId={courseId} role={role} /> : null}
 
       {tab === 'curriculum' ? (
-        <>
-          {isAuthoring ? (
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-                Import from file
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled
-                title="Selection mode for the Media arrives with spec 05"
-              >
-                Import from Media
-              </Button>
-            </div>
-          ) : null}
-          <CurriculumEditor
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+          <div className="flex flex-col gap-2">
+            {isAuthoring ? (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+                  Import from file
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled
+                  title="Selection mode for the Media arrives with spec 05"
+                >
+                  Import from Media
+                </Button>
+              </div>
+            ) : null}
+            <CurriculumEditor
+              coursePublicId={courseId}
+              queryClient={queryClient}
+              authoring={isAuthoring}
+              onOpenUnlockRules={isAuthoring ? setUnlockLesson : undefined}
+              onDuplicateLesson={isAuthoring ? setDuplicateLesson : undefined}
+            />
+          </div>
+          {/*
+              S-2.17: the item pane lives beside the tree, never on a page of its
+              own. `?item=` is the single source of the selection, so a deep link
+              or a reload reopens the same item inside the shell.
+          */}
+          <CurriculumItemPane
             coursePublicId={courseId}
-            queryClient={queryClient}
+            itemPublicId={search.item}
             authoring={isAuthoring}
-            onOpenUnlockRules={isAuthoring ? setUnlockLesson : undefined}
-            onDuplicateLesson={isAuthoring ? setDuplicateLesson : undefined}
           />
-        </>
+        </div>
       ) : null}
 
       {tab === 'students' ? <StudentsTab courseId={courseId} /> : null}
       {tab === 'analytics' ? <AnalyticsTab courseId={courseId} /> : null}
-      {tab === 'sessions' ? <SessionsTab courseId={courseId} /> : null}
       {tab === 'settings' ? <SettingsTab courseId={courseId} role={role} /> : null}
+
+      {/*
+          S-2.22 Publish Readiness & Course Review. Rendered as a section rather
+          than a sixth nav destination: the spec opens it from the lifecycle CTA,
+          the readiness banner and the review queue, not from the workspace nav.
+      */}
+      {readinessOpen ? <PublishReadinessPanel coursePublicId={courseId} role={role} /> : null}
 
       <UnlockRulesSheet
         lessonPublicId={unlockLesson}
@@ -275,15 +181,25 @@ export function CourseDetail({
         open={confirm === 'delete'}
         onOpenChange={(open) => !open && setConfirm(null)}
         title="Delete this course?"
-        body={`Are you sure you want to delete "${course.title}"? This action cannot be undone.`}
+        body={`Are you sure you want to delete this course? This action cannot be undone.`}
         confirmLabel="Delete course"
         destructive
         onConfirm={() => {
           void removeCourse.mutateAsync()
         }}
       />
-    </div>
+    </CourseWorkspaceShell>
   )
+}
+
+/**
+ * The workspace search params, validated once. `parseCourseWorkspaceSearch`
+ * drops a malformed or out-of-tab `item`/`atab` rather than opening a pane
+ * that cannot render, so a hand-edited URL cannot 500 the tab.
+ */
+function useWorkspaceSearch() {
+  const search = useSearch({ strict: false })
+  return parseCourseWorkspaceSearch(search)
 }
 
 function StudentsTab({ courseId }: { courseId: string }) {
@@ -505,12 +421,22 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
   )
 }
 
-function SessionsTab({ courseId }: { courseId: string }) {
+/**
+ * S-2.20 → _Live sessions_. Extracted from the retired Sessions tab so the
+ * section reads its own sessions and details queries rather than depending on
+ * the parent having fetched them — Settings mounts it whether or not the
+ * completion query has settled.
+ */
+function LiveSessionsSection({
+  courseId,
+  onSchedule,
+}: {
+  courseId: string
+  onSchedule: () => void
+}) {
   const sessions = useQuery(liveSessionsQueryOptions(courseId))
   const details = useQuery(courseDetailsQueryOptions(courseId))
-  const [scheduling, setScheduling] = useState(false)
 
-  if (!courseId) return null
   if (sessions.isPending || details.isPending) return <Spinner className="mx-auto my-8" />
   if (sessions.isError) return <RetryErrorState onRetry={() => void sessions.refetch()} />
 
@@ -529,7 +455,7 @@ function SessionsTab({ courseId }: { courseId: string }) {
             </p>
           ) : null}
         </div>
-        <Button size="sm" onClick={() => setScheduling(true)}>
+        <Button size="sm" onClick={onSchedule}>
           + Schedule
         </Button>
       </div>
@@ -585,10 +511,6 @@ function SessionsTab({ courseId }: { courseId: string }) {
             ))}
           </ul>
         </details>
-      ) : null}
-
-      {scheduling ? (
-        <ScheduleSessionModal courseId={courseId} onClose={() => setScheduling(false)} />
       ) : null}
     </section>
   )
@@ -847,10 +769,18 @@ function ScheduleSessionModal({ courseId, onClose }: { courseId: string; onClose
   )
 }
 
+/**
+ * S-2.20 Settings — every course-level configuration surface in one tab.
+ *
+ * Live sessions live here rather than as their own tab: S-2.9 relocated the
+ * scheduler into S-2.20 → _Live sessions_, so a sixth nav destination would be
+ * a second copy of a screen the spec moved.
+ */
 function SettingsTab({ courseId, role }: { courseId: string; role: string }) {
   const queryClient = useQueryClient()
   const completion = useQuery(completionSettingsQueryOptions(courseId))
   const detailsQuery = useQuery(courseDetailsQueryOptions(courseId))
+  const [scheduling, setScheduling] = useState(false)
   const [rule, setRule] = useState<'all_lessons' | 'min_percent_quiz'>('all_lessons')
   const [minPercent, setMinPercent] = useState(80)
   const [autoIssue, setAutoIssue] = useState(true)
@@ -1039,6 +969,15 @@ function SettingsTab({ courseId, role }: { courseId: string; role: string }) {
           </Link>
         ) : null}
       </section>
+
+      {/*
+          S-2.9 Live Session Scheduler, relocated here by spec 04: the scheduler
+          is a Settings sub-surface, not a sixth nav destination.
+      */}
+      <LiveSessionsSection courseId={courseId} onSchedule={() => setScheduling(true)} />
+      {scheduling ? (
+        <ScheduleSessionModal courseId={courseId} onClose={() => setScheduling(false)} />
+      ) : null}
     </div>
   )
 }

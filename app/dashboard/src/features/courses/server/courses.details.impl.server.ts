@@ -35,6 +35,9 @@ function toDto(
     level: row.level,
     thumbnailObjectKey: row.thumbnailObjectKey,
     status: row.status ?? 'draft',
+    // The fifth lifecycle state is derived from this timestamp, not stored as
+    // its own `status` value — see `deriveCourseLifecycleState`.
+    approvedAt: row.approvedAt?.toISOString() ?? null,
     slug: row.slug,
     requiresApproval: row.requiresApproval,
     scheduledPublishAt: row.scheduledPublishAt?.toISOString() ?? null,
@@ -44,6 +47,10 @@ function toDto(
     isFree: row.isFree,
     priceAmount: row.priceAmount,
     priceCurrency: row.priceCurrency,
+    // NOT NULL with an `en` default (S-2.20), so a row always has one.
+    contentLanguage: row.contentLanguage,
+    version: row.version,
+    rowVersion: row.rowVersion,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }
@@ -130,6 +137,64 @@ export async function saveCourseDetailsImpl(
     .where(eq(courses.id, course.id))
 
   return { coursePublicId: course.publicId }
+}
+
+/**
+ * S-2.6 inline title save.
+ *
+ * Enforces the Field Lock table server-side. The UI disables the control for an
+ * Approved course, but a client that skips the UI must not be able to write the
+ * field anyway — "permission checks are server-side; hiding a control is
+ * convenience, not security."
+ *
+ * A title edit also **clears `approved_at`**: spec 04, "any edit clears
+ * `approved_at`, which is how Approved falls back to Draft." Doing it here
+ * rather than in the UI means the derived fifth state can never disagree with
+ * storage, whichever entry point wrote the title.
+ *
+ * The slug is deliberately left alone. Spec 04: "regenerated only while
+ * `status = 'draft'`; once published the slug is frozen and changing the title
+ * cannot break inbound links."
+ */
+export async function saveCourseTitleImpl(input: {
+  coursePublicId: string
+  title: string
+}): Promise<{ coursePublicId: string; slugRegenerated: boolean }> {
+  await requireAuthoringRole()
+  const course = await resolveCourse(input.coursePublicId)
+
+  if (course.status === 'archived') {
+    throw new Error('COURSE_ARCHIVED: restore the course before editing')
+  }
+  // `resolveCourse` returns the raw row, so `approvedAt` is a `Date`, not the
+  // DTO's ISO string.
+  if (course.approvedAt != null) {
+    throw new Error('COURSE_APPROVED: withdraw the approval before editing the title')
+  }
+
+  const newTitle = input.title.trim()
+  if (newTitle === course.title) {
+    return { coursePublicId: course.publicId, slugRegenerated: false }
+  }
+
+  // Only a Draft regenerates the slug. A published course's inbound links
+  // depend on the slug staying put.
+  const slugRegenerated = course.status === 'draft'
+  const slug = slugRegenerated ? await uniqueCourseSlug(slugifyTitle(newTitle)) : course.slug
+
+  await db
+    .update(courses)
+    .set({
+      title: newTitle,
+      slug,
+      // Any edit clears the approval. Unreachable while `approvedAt` is set
+      // (refused above), but stated explicitly so the invariant holds if the
+      // guard above is ever relaxed for a legitimate flow.
+      approvedAt: null,
+    })
+    .where(eq(courses.id, course.id))
+
+  return { coursePublicId: course.publicId, slugRegenerated }
 }
 
 async function firstActiveExamTypeId(): Promise<number | null> {

@@ -76,11 +76,20 @@ export async function resolveWorkspaceContextImpl(): Promise<WorkspaceContext> {
  * unfiltered and read every workspace's rows.
  */
 export async function requireActiveOrganizationIdImpl(): Promise<string> {
-  const { activeWorkspaceId } = await resolveWorkspaceContextImpl()
-  if (!activeWorkspaceId) {
+  const { workspaces, activeWorkspaceId } = await resolveWorkspaceContextImpl()
+  const fallbackId = activeWorkspaceId ?? workspaces.at(0)?.id ?? null
+  if (!fallbackId) {
     throw new Error('NO_ACTIVE_WORKSPACE')
   }
-  return activeWorkspaceId
+  // Guard against a stale/removed activeOrganizationId on the session: if the
+  // active id no longer matches a real membership, fall back to the first one
+  // instead of turning every workspace-scoped read into a 403.
+  if (!workspaces.some((workspace) => workspace.id === fallbackId)) {
+    const first = workspaces.at(0)?.id
+    if (!first) throw new Error('NO_ACTIVE_WORKSPACE')
+    return first
+  }
+  return fallbackId
 }
 
 /**

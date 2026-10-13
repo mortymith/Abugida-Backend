@@ -41,6 +41,7 @@ export async function getReviewQueueImpl(data: ReviewQueueQuery): Promise<Review
   const rows = await db
     .select({
       review: reviewRequests,
+      entityType: reviewRequests.entityType,
       lessonTitle: lessons.title,
       lessonPublicId: lessons.publicId,
       courseTitle: courses.title,
@@ -48,7 +49,11 @@ export async function getReviewQueueImpl(data: ReviewQueueQuery): Promise<Review
       requesterName: requester.name,
     })
     .from(reviewRequests)
-    .innerJoin(lessons, eq(lessons.id, reviewRequests.lessonId))
+    // A **left** join, not an inner one: S-2.14 covers both entities, and a
+    // course-level request has `lesson_id` NULL. An inner join would silently
+    // drop every course submission from the queue — exactly the Revision 2 bug
+    // the spec says the generalised queue fixes.
+    .leftJoin(lessons, eq(lessons.id, reviewRequests.lessonId))
     .innerJoin(courses, eq(courses.id, reviewRequests.courseId))
     .innerJoin(requester, eq(requester.id, reviewRequests.requestedBy))
     .where(and(...filters))
@@ -68,12 +73,15 @@ export async function getReviewQueueImpl(data: ReviewQueueQuery): Promise<Review
 
   return rows.map((row) => ({
     reviewPublicId: row.review.publicId,
+    // Course-level rows have no lesson: `null` is what tells the queue the
+    // review is whole-course, so it opens S-2.22 instead of S-2.7.
     lessonPublicId: row.lessonPublicId,
     lessonTitle: row.lessonTitle,
     coursePublicId: row.coursePublicId,
     courseTitle: row.courseTitle,
     requesterName: row.requesterName,
     state: row.review.state,
+    entityType: row.review.entityType,
     submissionNote: row.review.submissionNote,
     decisionComment: row.review.decisionComment,
     decidedByName: row.review.decidedBy ? (deciderNames.get(row.review.decidedBy) ?? null) : null,

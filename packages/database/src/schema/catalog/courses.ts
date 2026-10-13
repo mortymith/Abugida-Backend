@@ -59,6 +59,20 @@ export const coursePricingModelPgEnum = pgEnum('course_pricing_model', [
   'one_time',
   'subscription',
 ])
+/**
+ * Default language for this course's authored content (spec 04 S-2.20 →
+ * _Content language_, spec 11 _Localization & Formatting_). Distinct from the
+ * workspace **UI** language: this one decides the `:lang()` line-height class and
+ * the default `lang` on new content, never the chrome around it.
+ */
+export const courseContentLanguageEnum = z.enum(['en', 'am', 'ti', 'gez'])
+export type CourseContentLanguage = z.infer<typeof courseContentLanguageEnum>
+export const courseContentLanguagePgEnum = pgEnum('course_content_language', [
+  'en',
+  'am',
+  'ti',
+  'gez',
+])
 export const courses = pgTable(
   'courses',
   {
@@ -113,6 +127,25 @@ export const courses = pgTable(
     reviewRequestedAt: timestamp('review_requested_at', { withTimezone: true }),
     /** When a reviewer approved or rejected the course; cleared on resubmission. */
     reviewDecidedAt: timestamp('review_decided_at', { withTimezone: true }),
+    /**
+     * The **fifth** lifecycle state (spec 04 Revision 3). A course can sit
+     * *between* review and publication, so `Approved` is not derivable from
+     * `status` alone — it needs its own timestamp, set by an approval decision
+     * and cleared on withdrawal, on any subsequent edit, and on unpublish.
+     *
+     * It deliberately does **not** add a `'approved'` value to `course_status`:
+     * `status` stays `'draft'` so the catalog's Approved filter can match
+     * `review_requests.entity_type = 'course' AND decision = 'approved' AND
+     * courses.status = 'draft'` exactly as the spec states.
+     */
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    /**
+     * Default language for this course's authored content (S-2.20). Explicit
+     * column name for the same reason as `review_requests.entity_type`: without
+     * it drizzle names the column `"contentLanguage"`, breaking the snake_case
+     * convention every sibling column follows.
+     */
+    contentLanguage: courseContentLanguagePgEnum('content_language').notNull().default('en'),
     version: integer('version').notNull().default(1),
     rowVersion: integer('row_version').notNull().default(1),
     sortOrder: smallint('sort_order').notNull().default(0),
@@ -204,6 +237,8 @@ export const insertCourseSchema = createInsertSchema(courses, {
   archivedAt: z.date().nullable().optional(),
   reviewRequestedAt: z.date().nullable().optional(),
   reviewDecidedAt: z.date().nullable().optional(),
+  approvedAt: z.date().nullable().optional(),
+  contentLanguage: courseContentLanguageEnum.default('en'),
   version: z.number().int().min(1).default(1),
   rowVersion: z.number().int().min(1).default(1),
   sortOrder: z.number().int().min(0).default(0),

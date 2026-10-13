@@ -1,6 +1,6 @@
 import { customType } from 'drizzle-orm/pg-core'
 
-export const bytea = customType<{ data: Buffer; default: false }>({
+export const bytea = customType<{ data: Uint8Array; default: false }>({
   dataType() {
     return 'bytea'
   },

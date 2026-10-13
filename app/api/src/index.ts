@@ -8,6 +8,13 @@
  * here reads `process.env` for application configuration.
  */
 
+import dns from 'node:dns'
+try {
+  dns.setDefaultResultOrder('ipv4first')
+} catch {
+  // no-op
+}
+
 import { appConfig } from './config/app_config'
 import { init, shutdown, logger } from './config/observability'
 import { pool } from './config/database'
