@@ -33,6 +33,27 @@ export const waitlistStateEnum = z.enum(['waiting', 'promoted', 'left'])
 export type WaitlistState = z.infer<typeof waitlistStateEnum>
 export const waitlistStatePgEnum = pgEnum('waitlist_state', ['waiting', 'promoted', 'left'])
 
+/**
+ * Bounded denial reasons (spec 06 S-4.6 — "A denial requires a reason, and
+ * the student sees it"). The reason is delivered with the outcome, not
+ * filed silently. `other` requires an optional note in `decision_note`.
+ */
+export const denialReasonEnum = z.enum([
+  'course_full',
+  'prerequisites_not_met',
+  'duplicate_request',
+  'not_eligible',
+  'other',
+])
+export type DenialReason = z.infer<typeof denialReasonEnum>
+export const denialReasonPgEnum = pgEnum('enrollment_denial_reason', [
+  'course_full',
+  'prerequisites_not_met',
+  'duplicate_request',
+  'not_eligible',
+  'other',
+])
+
 export const enrollmentRequests = pgTable(
   'enrollment_requests',
   {
@@ -51,6 +72,12 @@ export const enrollmentRequests = pgTable(
       onUpdate: 'cascade',
     }),
     decisionNote: varchar('decision_note', { length: 500 }),
+    /**
+     * Required bounded reason for a denial (spec 06 S-4.6). NULL for
+     * pending/approved; required for denied. The reason is delivered to
+     * the student with the outcome.
+     */
+    decisionReason: denialReasonPgEnum('decision_reason'),
     decidedAt: timestamp('decided_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
