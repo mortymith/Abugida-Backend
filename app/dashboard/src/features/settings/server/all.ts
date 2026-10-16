@@ -92,3 +92,6 @@ export {
   eraseStudentData,
   getConsentLog,
 } from './settings.privacy'
+
+// S-13.1 Workspace Configuration (spec 13)
+export { getWorkspaceConfig, saveWorkspaceConfig } from './settings.workspace-config'
