@@ -14,6 +14,7 @@ import { MarkdownEditorSurface, useLessonEditor } from './courses.markdown-edito
 import { MarkdownToolbar } from './courses.markdown-toolbar'
 import { MarkdownSourcePane } from './courses.markdown-source'
 import { MarkdownPreview } from './courses.markdown-preview'
+import { MarkdownConflictDialog } from './courses.markdown-conflict-dialog'
 import { LegacyBodyNotice } from './courses.legacy-body-notice'
 import { VIEW_MODE_HINTS, useLessonViewMode } from '../hooks/courses.markdown-views'
 import type { LessonViewMode } from '../hooks/courses.markdown-views'
@@ -87,6 +88,17 @@ export function LessonEditor({
   const [markdown, setMarkdown] = useState('')
   /** Non-null while the author is typing in the source pane. */
   const [sourceDraft, setSourceDraft] = useState<string | null>(null)
+  /**
+   * Spec 12 § 8.2 — three-option conflict state. `localRowVersion` is the
+   * rowVersion the stale save was based on; `serverRowVersion` is what the
+   * server reported back via the 409. `serverBody` is the server's Markdown
+   * body for the diff view. The dialog is open while `conflict` is non-null.
+   */
+  const [conflict, setConflict] = useState<{
+    localRowVersion: number
+    serverRowVersion: number
+    serverBody: string
+  } | null>(null)
 
   const data = lesson.data
   const locked = data?.reviewStatus === 'in_review'
@@ -266,17 +278,109 @@ export function LessonEditor({
   })
 
   // Surface mutation failures once, as a toast, whichever path triggered them.
+  // Spec 12 § 8.2: a VERSION_CONFLICT opens the three-option conflict dialog
+  // instead of a destructive Reload-only toast. The dialog offers Keep mine /
+  // Take theirs / Compare, matching Part 04 S-2.7's Row Conflict state.
   useEffect(() => {
     if (!save.isError) return
     const message = save.error instanceof Error ? save.error.message : 'Save failed'
     if (message.includes('LOCKED_IN_REVIEW')) {
       toast.error('A reviewer is looking at this lesson — editing is locked.')
-    } else if (message.includes('VERSION_CONFLICT')) {
-      toast.error('This lesson was updated elsewhere. Reload to continue.')
-    } else {
-      toast.error(message.replace(/^[A-Z_]+:\s*/, ''))
+      return
     }
-  }, [save.isError, save.error])
+    if (message.includes('VERSION_CONFLICT')) {
+      // Fetch the server's current rowVersion + body so the diff can render.
+      // The dialog stays closed until we have both; the author sees a brief
+      // "Resolving conflict…" toast in the meantime.
+      toast.info('This lesson was updated elsewhere — opening the conflict dialog…')
+      void (async () => {
+        const { getLessonServerRowVersion } = await import('../server/all')
+        const server = await getLessonServerRowVersion({ data: { lessonPublicId: lessonId } })
+        setConflict({
+          localRowVersion: rowVersion,
+          serverRowVersion: server.rowVersion,
+          serverBody: server.body ?? '',
+        })
+      })()
+      return
+    }
+    if (message.includes('MARKDOWN_WRITES_DISABLED')) {
+      toast.error('Markdown authoring is not enabled for this workspace yet.')
+      return
+    }
+    toast.error(message.replace(/^[A-Z_]+:\s*/, ''))
+  }, [save.isError, save.error, lessonId, rowVersion])
+
+  // Spec 12 § 8.2 — resolve the conflict dialog. The three options:
+  //  - Keep mine: re-stamp expectedRowVersion to the server value, write the
+  //    audit-log override, retry the save once. A second 409 re-opens the
+  //    dialog rather than looping.
+  //  - Take theirs: discard the local buffer, hydrate the server body, clear
+  //    the IndexedDB draft. This is the renamed Reload — destructive, so the
+  //    dialog's UI confirms before reaching this branch.
+  //  - Compare: opens the full-width overlay (handled inside the dialog). No
+  //    resolution is recorded; the dialog stays open.
+  async function handleConflictResolve(resolution: 'keep_mine' | 'take_theirs' | 'compare') {
+    if (!conflict) return
+    if (resolution === 'compare') return // handled in-dialog
+
+    if (resolution === 'keep_mine') {
+      const { recordLessonConflictOverride, saveLesson } = await import('../server/all')
+      await recordLessonConflictOverride({
+        data: {
+          lessonPublicId: lessonId,
+          localRowVersion: conflict.localRowVersion,
+          serverRowVersion: conflict.serverRowVersion,
+          resolution: 'keep_mine',
+        },
+      })
+      setRowVersion(conflict.serverRowVersion)
+      setConflict(null)
+      // Single-shot retry. A second 409 re-opens the dialog via the effect
+      // above rather than looping.
+      try {
+        await saveLesson({ data: buildInput() })
+        toast.success('Your changes were saved.')
+      } catch (cause) {
+        const msg = cause instanceof Error ? cause.message : 'Save failed'
+        if (msg.includes('VERSION_CONFLICT')) {
+          toast.error('The lesson was updated again — reopen the conflict dialog.')
+        } else {
+          toast.error(msg.replace(/^[A-Z_]+:\s*/, ''))
+        }
+      }
+      return
+    }
+
+    // take_theirs
+    const { confirmServerBody } = await import('../server/all')
+    const confirmed = await confirmServerBody({
+      data: { lessonPublicId: lessonId, expectedRowVersion: conflict.serverRowVersion },
+    })
+    if (!confirmed.ok) {
+      toast.error('The lesson moved again — reopen the conflict dialog.')
+      setConflict({
+        localRowVersion: conflict.localRowVersion,
+        serverRowVersion: confirmed.rowVersion,
+        serverBody: conflict.serverBody,
+      })
+      return
+    }
+    // Discard the local buffer and hydrate the server body. The IndexedDB
+    // draft is cleared too — Take theirs is destructive, and leaving a
+    // stale draft would re-trigger the restore prompt on next mount.
+    await draftMirror.discardRestore()
+    if (editor) {
+      const serverBody = confirmed.body ?? ''
+      editor.commands.setContent(serverBody, { contentType: 'markdown' })
+      setMarkdown(normalizeMarkdown(editor.getMarkdown()))
+    }
+    setRowVersion(conflict.serverRowVersion)
+    setDirty(false)
+    setConflict(null)
+    void queryClient.invalidateQueries({ queryKey: ['courses', 'lesson-edit', lessonId] })
+    toast.success('Loaded the server version.')
+  }
 
   const submitReview = useMutation({
     mutationFn: async () => {
@@ -739,6 +843,22 @@ export function LessonEditor({
           handleRestoreAccept()
         }}
       />
+
+      {/* Spec 12 § 8.2 — three-option conflict dialog. Opens on a 409 from
+          saveLesson. Keep mine is the default (re-stamp + retry + audit log);
+          Take theirs is the renamed Reload (destructive, last option);
+          Compare opens a full-width overlay of the same diff. */}
+      {conflict ? (
+        <MarkdownConflictDialog
+          open={conflict !== null}
+          mine={sourceDraft ?? markdown}
+          theirs={conflict.serverBody}
+          onResolve={(resolution) => void handleConflictResolve(resolution)}
+          onOpenChange={(open) => {
+            if (!open) setConflict(null)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

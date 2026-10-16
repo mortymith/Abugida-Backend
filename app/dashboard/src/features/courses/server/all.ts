@@ -26,9 +26,12 @@ export { archiveCourse, deleteCourse, duplicateCourse, publishCourse } from './c
 export { getImageReadUrl, getImageUploadUrl } from './courses.storage'
 export { getQuizForLesson, saveQuiz } from './courses.quiz'
 export {
+  confirmServerBody,
   exportLessonMarkdown,
   getLessonForEdit,
+  getLessonServerRowVersion,
   migrateLessonBodyToMarkdown,
+  recordLessonConflictOverride,
   saveLesson,
   submitLessonForReview,
   validateLessonMarkdown,

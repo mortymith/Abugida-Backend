@@ -102,3 +102,52 @@ export const migrateLessonBodyToMarkdown = createServerFn({ method: 'POST' })
     const { migrateLessonBodyImpl } = await import('./courses.markdown-validate.impl.server')
     return migrateLessonBodyImpl(data.lessonPublicId)
   })
+
+/**
+ * Spec 12 § 8.2 — conflict-resolution helpers.
+ *
+ * These three server fns back the three-option conflict dialog. The editor
+ * calls them as the author picks Keep mine / Take theirs / Compare:
+ *  - `getLessonServerRowVersion` re-stamps `expectedRowVersion` for the
+ *    Keep-mine retry.
+ *  - `recordLessonConflictOverride` writes the audit log entry that makes
+ *    a Keep-mine override reviewable after the fact.
+ *  - `confirmServerBody` is the Take-theirs guard: confirms the server body
+ *    the author is about to hydrate is the one the server currently holds
+ *    before the local buffer is discarded.
+ */
+const conflictInputSchema = z.object({
+  lessonPublicId: z.string().uuid(),
+  localRowVersion: z.number().int().positive(),
+  serverRowVersion: z.number().int().positive(),
+  resolution: z.enum(['keep_mine', 'take_theirs']),
+})
+
+export const getLessonServerRowVersion = createServerFn({ method: 'GET' })
+  .validator((input: unknown) => lessonInputSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { getLessonServerRowVersionImpl } = await import('./courses.markdown-conflict.impl.server')
+    return getLessonServerRowVersionImpl(data.lessonPublicId)
+  })
+
+export const recordLessonConflictOverride = createServerFn({ method: 'POST' })
+  .validator((input: unknown) => conflictInputSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { recordLessonConflictOverrideImpl } = await import(
+      './courses.markdown-conflict.impl.server'
+    )
+    await recordLessonConflictOverrideImpl(data)
+    return { ok: true as const }
+  })
+
+const confirmServerBodySchema = z.object({
+  lessonPublicId: z.string().uuid(),
+  expectedRowVersion: z.number().int().positive(),
+})
+
+export const confirmServerBody = createServerFn({ method: 'GET' })
+  .validator((input: unknown) => confirmServerBodySchema.parse(input))
+  .handler(async ({ data }) => {
+    const { confirmServerBodyImpl } = await import('./courses.markdown-conflict.impl.server')
+    return confirmServerBodyImpl(data.lessonPublicId, data.expectedRowVersion)
+  })
