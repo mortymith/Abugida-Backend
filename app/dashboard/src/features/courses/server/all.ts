@@ -77,3 +77,12 @@ export {
   unpublishCourse,
   withdrawCourseReview,
 } from './courses.lifecycle'
+
+// S-13.3 Role Assignment — course-role side (spec 13)
+export {
+  COURSE_ROLE_NAMES,
+  grantCourseRole,
+  listCourseRoles,
+  revokeCourseRole,
+} from './courses.course-roles'
+export type { CourseRoleAssignment, CourseRoleName } from './courses.course-roles'
