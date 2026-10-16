@@ -211,6 +211,20 @@
       "when": 1792178709374,
       "tag": "0029_sudden_leper_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792179955677,
+      "tag": "0030_sharp_paibok",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792179975961,
+      "tag": "0031_moaning_wilson_fisk",
+      "breakpoints": true
     }
   ]
 }

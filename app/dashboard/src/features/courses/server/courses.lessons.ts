@@ -48,6 +48,18 @@ export const saveLessonSchema = z.object({
   assetId: z.string().uuid().nullable().optional(),
   /** Optimistic concurrency: reject stale saves (concurrent edits). */
   expectedRowVersion: z.number().int().positive(),
+  /**
+   * Spec 12 § 14.1 — what triggered the save. Only `explicit` (Ctrl/⌘+S,
+   * context-switch flush) and `submit` (submit for review) write a body
+   * revision. `autosave` (the 60s idle timer) does not — the autosave path
+   * is covered by the IndexedDB mirror (§ 8.1.1) instead, and writing a
+   * revision per autosave would make the history unreadable and unbounded.
+   *
+   * Defaults to `explicit` so a caller that forgets to set it writes a
+   * revision (the safe default — a missing revision loses reviewer
+   * visibility, while an extra revision is just noise).
+   */
+  source: z.enum(['explicit', 'autosave', 'submit']).default('explicit'),
 })
 
 export type SaveLessonInput = z.infer<typeof saveLessonSchema>
@@ -170,4 +182,56 @@ export const auditLessonReferences = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { auditReferencesImpl } = await import('./courses.reference-audit.impl.server')
     return auditReferencesImpl(data.markdown)
+  })
+
+/**
+ * Spec 12 § 14.1 — minimal version history (not Git).
+ *
+ * Spec 12 § 14 deferred revision history entirely, which breaks the
+ * reviewer's job: S-2.14 asks a reviewer to judge a change, and with no prior
+ * version there is nothing to change *from*. These three server fns are the
+ * minimum that satisfies DESIGN.md § 5.10:
+ *
+ *  - `writeLessonBodyRevision` — called by saveLesson (reason `save`),
+ *    submitLessonForReview (reason `save`), the AI Accept action
+ *    (reason `ai_accept`), and the migration runner (reason `migration`).
+ *  - `listLessonBodyRevisions` — the S-2.14 review panel reads newest-first.
+ *  - `restoreLessonBodyRevision` — Restore appends a new `restore` revision;
+ *    it never deletes or truncates history.
+ *
+ * The 60s autosave timer and the context-switch / unmount flush do NOT write a
+ * revision (§ 14.1's table). Retention is 30 revisions per lesson with a
+ * documented prune job.
+ */
+const writeRevisionSchema = z.object({
+  lessonPublicId: z.string().uuid(),
+  body: z.string().max(200_000),
+  bodyFormat: z.enum(['html', 'markdown']),
+  reason: z.enum(['save', 'ai_accept', 'restore', 'migration']),
+})
+
+export const writeLessonBodyRevision = createServerFn({ method: 'POST' })
+  .validator((input: unknown) => writeRevisionSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { writeLessonBodyRevisionImpl } = await import('./courses.lesson-revisions.impl.server')
+    return writeLessonBodyRevisionImpl(data)
+  })
+
+export const listLessonBodyRevisions = createServerFn({ method: 'GET' })
+  .validator((input: unknown) => lessonInputSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { listLessonBodyRevisionsImpl } = await import('./courses.lesson-revisions.impl.server')
+    return listLessonBodyRevisionsImpl(data.lessonPublicId)
+  })
+
+const restoreRevisionSchema = z.object({
+  lessonPublicId: z.string().uuid(),
+  revisionPublicId: z.string().uuid(),
+})
+
+export const restoreLessonBodyRevision = createServerFn({ method: 'POST' })
+  .validator((input: unknown) => restoreRevisionSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { restoreLessonBodyRevisionImpl } = await import('./courses.lesson-revisions.impl.server')
+    return restoreLessonBodyRevisionImpl(data)
   })

@@ -244,6 +244,27 @@ export async function saveLessonImpl(input: SaveLessonInput): Promise<{ rowVersi
     return nextRowVersion
   })
 
+  // Spec 12 § 14.1 — write a body revision for explicit Flush and submit-for-
+  // review, but NOT for the 60s autosave timer. The autosave path is covered
+  // by the IndexedDB mirror (§ 8.1.1) instead; writing a revision per
+  // autosave would make the history unreadable and unbounded.
+  if (input.source === 'explicit' || input.source === 'submit') {
+    try {
+      const { writeLessonBodyRevisionImpl } = await import('./courses.lesson-revisions.impl.server')
+      await writeLessonBodyRevisionImpl({
+        lessonPublicId: input.lessonPublicId,
+        body: input.body ?? '',
+        bodyFormat: 'markdown',
+        reason: 'save',
+      })
+    } catch {
+      // A revision write failure must not fail the save itself — the body is
+      // already persisted. The reviewer loses visibility for this save, but
+      // the author's work is safe. Logged server-side; surfaced to ops via
+      // the standard error path.
+    }
+  }
+
   return { rowVersion }
 }
 

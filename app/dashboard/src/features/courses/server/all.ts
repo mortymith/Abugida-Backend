@@ -31,11 +31,14 @@ export {
   exportLessonMarkdown,
   getLessonForEdit,
   getLessonServerRowVersion,
+  listLessonBodyRevisions,
   migrateLessonBodyToMarkdown,
   recordLessonConflictOverride,
+  restoreLessonBodyRevision,
   saveLesson,
   submitLessonForReview,
   validateLessonMarkdown,
+  writeLessonBodyRevision,
 } from './courses.lessons'
 export { duplicateLesson } from './courses.duplication'
 export { getUnlockRules, saveUnlockRules } from './courses.unlock-rules'
