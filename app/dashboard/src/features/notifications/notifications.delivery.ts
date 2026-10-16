@@ -185,3 +185,14 @@ export function summarizeDispatch(
 
   return { delivered, failed, suppressed, pending }
 }
+
+/**
+ * Whether the recipient has no reachable channel at all — every planned
+ * channel is `disabled` or `unavailable`. The UI surfaces this as the
+ * "no reachable channel" state: the notification cannot be delivered
+ * anywhere, so the send action is blocked with a reason rather than failing
+ * per-channel afterwards.
+ */
+export function hasNoReachableChannel(plans: readonly ChannelPlan[]): boolean {
+  return plans.every((plan) => plan.availability.kind !== 'available')
+}

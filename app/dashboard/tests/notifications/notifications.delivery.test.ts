@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import {
   CHANNEL_LABELS,
+  hasNoReachableChannel,
   isRetryableFailure,
   NOTIFICATION_CHANNELS,
   planChannelDelivery,
@@ -185,5 +186,27 @@ describe('summarizeDispatch', () => {
     expect(summary.delivered).toEqual(['in_app'])
     expect(summary.suppressed).toHaveLength(1)
     expect(summary.suppressed[0].channel).toBe('email')
+  })
+})
+
+describe('hasNoReachableChannel', () => {
+  test('true when every channel is unreachable', () => {
+    const intent: NotificationIntent = {
+      template: 'course.published',
+      channels: ['telegram', 'email'],
+      recipient: NO_TELEGRAM_PROFILE,
+    }
+    const plans = planChannelDelivery(intent)
+    expect(hasNoReachableChannel(plans)).toBe(true)
+  })
+
+  test('false when in-app is available', () => {
+    const intent: NotificationIntent = {
+      template: 'course.published',
+      channels: ['in_app'],
+      recipient: NO_TELEGRAM_PROFILE,
+    }
+    const plans = planChannelDelivery(intent)
+    expect(hasNoReachableChannel(plans)).toBe(false)
   })
 })
