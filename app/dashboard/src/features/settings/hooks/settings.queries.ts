@@ -16,6 +16,7 @@ import {
   getSecurityPolicies,
   getTeamPage,
   getWebhookEndpoints,
+  getWorkspaceConfig,
 } from '../server/all'
 import type { AuditLogQuery } from '../schemas/settings.schema'
 
@@ -42,6 +43,7 @@ export const settingsQueryKeys = {
   privacy: () => ['settings', 'privacy'] as const,
   dataRequests: () => ['settings', 'data-requests'] as const,
   consentLog: (page?: number) => ['settings', 'consent-log', page ?? 1] as const,
+  workspaceConfig: () => ['settings', 'workspace-config'] as const,
 }
 
 const STALE = {
@@ -144,6 +146,14 @@ export function auditLogQueryOptions(query: AuditLogQuery) {
     queryKey: settingsQueryKeys.auditLog(query),
     queryFn: () => getAuditLog({ data: query }),
     staleTime: STALE.audit,
+  })
+}
+
+export function workspaceConfigQueryOptions() {
+  return queryOptions({
+    queryKey: settingsQueryKeys.workspaceConfig(),
+    queryFn: () => getWorkspaceConfig(),
+    staleTime: STALE.settings,
   })
 }
 

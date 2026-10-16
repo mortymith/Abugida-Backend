@@ -34,6 +34,7 @@ import {
   updateProfile,
   updateTeamMemberRole,
   verifyMfaEnrollment,
+  saveWorkspaceConfig,
 } from '../server/all'
 import type { QueryKey } from '@tanstack/react-query'
 import type {
@@ -61,6 +62,7 @@ import type {
   ApiKeyIdInput,
   WebhookIdInput,
 } from '../schemas/settings.schema'
+import type { SaveWorkspaceConfigInput } from '../server/settings.workspace-config'
 
 /**
  * Mutation hooks for the Settings feature (spec 08). Every mutation funnels
@@ -419,5 +421,15 @@ export function useEraseStudentData() {
     mutationFn: (input) => eraseStudentData({ data: input }),
     invalidate: [['settings', 'data-requests']],
     successToast: 'Student data erased. Financial records were retained per tax rules.',
+  })
+}
+
+// ── S-13.1 Workspace Configuration (spec 13) ───────────────────────────────
+
+export function useSaveWorkspaceConfig() {
+  return useSettingsMutation<SaveWorkspaceConfigInput, { ok: true }>({
+    mutationFn: (input) => saveWorkspaceConfig({ data: input }),
+    invalidate: [['settings', 'workspace-config']],
+    successToast: 'Workspace configuration saved.',
   })
 }
