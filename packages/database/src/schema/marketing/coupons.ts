@@ -49,6 +49,13 @@ export const coupons = pgTable(
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     stackable: boolean('stackable').notNull().default(false),
     isActive: boolean('is_active').notNull().default(true),
+    /**
+     * Spec 10 Rev-3: Revocation is distinct from Deactivation. Deactivate =
+     * isActive = false (reversible). Revoke = revokedAt set + required reason
+     * (permanent, audit-logged). A revoked code stops working immediately.
+     */
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokeReason: varchar('revoke_reason', { length: 500 }),
     /** Groups codes generated as one single-use batch (CSV export run). */
     batchId: uuid('batch_id'),
     batchLabel: varchar('batch_label', { length: 200 }),
