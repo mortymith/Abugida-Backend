@@ -232,6 +232,13 @@
       "when": 1792322667334,
       "tag": "0032_chubby_major_mapleleaf",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792323614327,
+      "tag": "0033_bored_ben_parker",
+      "breakpoints": true
     }
   ]
 }
