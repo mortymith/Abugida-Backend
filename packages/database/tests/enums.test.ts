@@ -150,6 +150,25 @@ describe('pgEnum definitions', () => {
         'grade_modified',
         'enrollment_status_changed',
         'bundle_purchased',
+        // Spec 08 settings-specific audit actions
+        'settings_saved',
+        'team_invited',
+        'team_role_changed',
+        'team_member_removed',
+        'api_key_created',
+        'api_key_rotated',
+        'api_key_revoked',
+        'webhook_saved',
+        'webhook_tested',
+        'security_policy_changed',
+        'role_permissions_changed',
+        'retention_policy_changed',
+        'data_erased',
+        'workspace_purged',
+        'workspace_transferred',
+        'workspace_restored',
+        'branding_updated',
+        'billing_changed',
       ])
     })
 

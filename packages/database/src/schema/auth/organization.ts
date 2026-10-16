@@ -1,5 +1,5 @@
-import { relations } from 'drizzle-orm'
-import { index, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import { relations, sql } from 'drizzle-orm'
+import { index, integer, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 import { z } from 'zod'
 
@@ -15,8 +15,27 @@ export const organization = pgTable(
     logo: text('logo'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Danger Zone columns (spec 08 S-6.11). The workspace row IS the
+     * state — no separate table needed. A soft-deleted workspace is
+     * recoverable for 30 days; after that, the purge worker hard-deletes.
+     */
+    purgeScheduledAt: timestamp('purge_scheduled_at', { withTimezone: true }),
+    purgedAt: timestamp('purged_at', { withTimezone: true }),
+    restoreExpiresAt: timestamp('restore_expires_at', { withTimezone: true }),
+    /** Transfer ownership: the target admin who must accept. */
+    transferredToId: text('transferred_to_id'),
+    transferStatus: text('transfer_status'),
+    transferTokenHash: text('transfer_token_hash'),
+    /** Optimistic concurrency for workspace settings (spec 08 IA). */
+    rowVersion: integer('row_version').notNull().default(1),
   },
-  (table) => [index('idx_organization_slug').on(table.slug)],
+  (table) => [
+    index('idx_organization_slug').on(table.slug),
+    index('idx_organization_purge_scheduled')
+      .on(table.purgeScheduledAt)
+      .where(sql`${table.purgeScheduledAt} IS NOT NULL AND ${table.purgedAt} IS NULL`),
+  ],
 )
 
 export const member = pgTable(
@@ -31,6 +50,17 @@ export const member = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     role: text('role').notNull().default('member'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Updated timestamp (spec 08 S-6.2 Conflict). Bumped on every role
+     * change so two Admins cannot silently overwrite each other.
+     */
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Optimistic concurrency version for member edits (spec 08 S-6.2). */
+    rowVersion: integer('row_version').notNull().default(1),
+    /** When the role was last changed, for the "Changed by {actor}" UI. */
+    roleChangedAt: timestamp('role_changed_at', { withTimezone: true }),
+    /** Who changed the role last. */
+    roleChangedBy: text('role_changed_by'),
   },
   (table) => [
     uniqueIndex('idx_member_organization_user').on(table.organizationId, table.userId),
