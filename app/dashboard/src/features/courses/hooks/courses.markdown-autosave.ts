@@ -10,19 +10,43 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * Autosave is suspended whenever the editor is not editable — an `in_review`
  * lesson is locked for editing, and permission-aware UI means a Viewer or
  * Reviewer has no save path at all.
+ *
+ * Spec 12 § 8.1.2 — the autosave matrix. The full state space:
+ *   dirty × online|offline × saving|failed × locked|editable
+ * Each cell has a defined Save action, Indicator, and expectedRowVersion
+ * handling. This hook implements the matrix; the editor renders the
+ * indicators.
+ *
+ * Offline is editable here, unlike most surfaces (Part 04 S-2.7 exception):
+ * because the body is a local buffer with a 1000 ms mirror, locking the
+ * author out would protect nothing and cost the whole session. What is
+ * suspended offline is the **server write path**, not the editor. Writes
+ * queue in order carrying the `rowVersion` they were based on; a stale
+ * queued write resolves to the three-option conflict dialog (Phase A3),
+ * never a silent overwrite.
  */
 
 export const LESSON_AUTOSAVE_IDLE_MS = 60_000
 
-export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
+export type SaveStatus =
+  | 'idle'
+  | 'dirty'
+  | 'saving'
+  | 'saved'
+  | 'error'
+  | 'offline'
+  | 'suspended'
 
 export interface UseLessonAutosaveOptions {
-  /** Whether a save is currently permitted. */
+  /** Whether a save is currently permitted (editable + not locked). */
   enabled: boolean
   /** Persist the current body. Rejects on failure. */
   save: () => Promise<void>
   /** Whether there is anything worth saving. */
   dirty: boolean
+  /** Whether the browser reports an active network connection. */
+  online: boolean
+  /** Override for tests; defaults to LESSON_AUTOSAVE_IDLE_MS. */
   idleMs?: number
 }
 
@@ -30,6 +54,7 @@ export function useLessonAutosave({
   enabled,
   save,
   dirty,
+  online,
   idleMs = LESSON_AUTOSAVE_IDLE_MS,
 }: UseLessonAutosaveOptions) {
   const [status, setStatus] = useState<SaveStatus>('idle')
@@ -42,16 +67,35 @@ export function useLessonAutosave({
   // over stale values.
   const dirtyRef = useRef(dirty)
   const enabledRef = useRef(enabled)
+  const onlineRef = useRef(online)
   const saveRef = useRef(save)
 
   useEffect(() => {
     dirtyRef.current = dirty
-    setStatus((current) => (dirty ? (current === 'saving' ? current : 'dirty') : current))
-  }, [dirty])
+    // Spec 12 § 8.1.2 — derive status from the matrix rather than just
+    // toggling dirty. The matrix cells:
+    //   dirty & online & enabled & not in-flight & not failed → 'dirty'
+    //   dirty & online & enabled & in-flight → 'saving' (preserved)
+    //   dirty & online & enabled & failed → 'error' (preserved)
+    //   dirty & offline & enabled → 'offline'
+    //   dirty & any & !enabled → 'suspended'
+    //   !dirty → 'idle' or 'saved' (preserved)
+    setStatus((current) => {
+      if (!enabled && dirty) return 'suspended'
+      if (!dirty) return current === 'saving' ? current : current === 'error' ? current : current
+      if (!online) return 'offline'
+      if (current === 'saving' || current === 'error') return current
+      return 'dirty'
+    })
+  }, [dirty, enabled, online])
 
   useEffect(() => {
     enabledRef.current = enabled
   }, [enabled])
+
+  useEffect(() => {
+    onlineRef.current = online
+  }, [online])
 
   useEffect(() => {
     saveRef.current = save
@@ -59,6 +103,13 @@ export function useLessonAutosave({
 
   const flush = useCallback(async (): Promise<boolean> => {
     if (!enabledRef.current || !dirtyRef.current || inFlight.current) return false
+    // Spec 12 § 8.1.2 — when offline, the save is enqueued by the editor
+    // (which has the full SaveLessonInput) rather than attempted here. The
+    // hook reports `offline` so the indicator matches the banner.
+    if (!onlineRef.current) {
+      setStatus('offline')
+      return false
+    }
     inFlight.current = true
     setStatus('saving')
     try {
@@ -85,9 +136,10 @@ export function useLessonAutosave({
     }, idleMs)
   }, [flush, idleMs])
 
-  // Restart the idle timer on every edit.
+  // Restart the idle timer on every edit. Spec 12 § 8.1.2: when offline or
+  // suspended, the timer is disarmed — there is nothing to flush.
   useEffect(() => {
-    if (!dirty || !enabled) {
+    if (!dirty || !enabled || !online) {
       if (timer.current) clearTimeout(timer.current)
       return
     }
@@ -95,7 +147,7 @@ export function useLessonAutosave({
     return () => {
       if (timer.current) clearTimeout(timer.current)
     }
-  }, [dirty, enabled, schedule])
+  }, [dirty, enabled, online, schedule])
 
   // `Ctrl/⌘+S` flushes now, anywhere in the editor including inside
   // ProseMirror. It must also suppress the browser's own save dialog, and must
