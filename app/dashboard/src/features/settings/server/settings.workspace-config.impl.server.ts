@@ -10,12 +10,12 @@
  * workspace-configurable** and stored on the organization's `policies` jsonb
  * column. Never import from client code.
  */
-import { eq } from '@abugida/database'
+import { and, eq, count, sql } from '@abugida/database'
 import { member, organization } from '@abugida/database/auth'
 import type { WorkspacePolicies } from '@abugida/database/auth'
 import { db } from '#/config/db.config'
 import { env } from '#/config/app.config'
-import { requireSettingsAdmin } from './settings.server-helpers.server'
+import { requireSettingsAdmin, writeAudit } from './settings.server-helpers.server'
 import {
   ENV_POLICY_KEYS,
   PLUGIN_DEFAULTS,
@@ -26,6 +26,7 @@ import {
   type WorkspaceConfigEntry,
   type WorkspaceConfigResult,
 } from '../settings.workspace-policies'
+import { runAllInterlocks, type InterlockContext } from '../settings.workspace-interlocks'
 
 /**
  * Resolve the active organization for the caller. The dashboard is
@@ -163,8 +164,11 @@ export async function getWorkspaceConfigImpl(): Promise<WorkspaceConfigResult> {
 /**
  * Spec 13 S-13.1 — write workspace policy fields only.
  *
- * The save runs the 5 safety interlocks (Phase B2) before writing. Env-set
- * values are never writable from this path.
+ * The save runs the 5 safety interlocks (§ Safety interlocks) before
+ * writing. A blocked save throws `INTERLOCK_BLOCKED` with the field and
+ * reason so the UI can show the message inline below the offending field.
+ *
+ * Env-set values are never writable from this path.
  */
 export async function saveWorkspaceConfigImpl(input: {
   policies: Partial<WorkspacePolicies>
@@ -172,6 +176,17 @@ export async function saveWorkspaceConfigImpl(input: {
   const adminId = await requireSettingsAdmin()
   const org = await resolveActiveOrganization(adminId)
   if (!org) throw new Error('NO_ACTIVE_WORKSPACE')
+
+  // Compute the interlock context: the workspace state the pure validators
+  // need to decide whether the change is safe.
+  const interlockContext = await buildInterlockContext(org.id, org.policies, input.policies)
+  const interlock = runAllInterlocks(interlockContext)
+  if (!interlock.ok) {
+    // Throw with a structured prefix so the editor can parse the field +
+    // reason and render them inline. The format is:
+    //   INTERLOCK_BLOCKED:<field>:<reason>
+    throw new Error(`INTERLOCK_BLOCKED:${interlock.field}:${interlock.reason}`)
+  }
 
   // Merge the incoming partial over the existing policies. A field set to
   // null in the input means "clear this override" — the plugin default will
@@ -188,7 +203,111 @@ export async function saveWorkspaceConfigImpl(input: {
     .set({ policies: merged, updatedAt: new Date() })
     .where(eq(organization.id, org.id))
 
+  // Spec 13 § Audit — every workspace-config change writes an immutable
+  // audit entry. The `permission_change` action is the closest existing
+  // value; the metadata carries the spec-13 specifics.
+  await writeAudit({
+    actorId: adminId,
+    action: 'permission_change',
+    resourceType: 'user_account',
+    metadata: {
+      screen: 'S-13.1',
+      action: 'workspace_config_changed',
+      organizationId: org.id,
+      changedKeys: Object.keys(input.policies),
+    },
+  })
+
   return { ok: true }
+}
+
+/**
+ * Build the InterlockContext by reading the workspace state the pure
+ * validators need. Kept here (not in the pure module) because it touches the
+ * DB; the pure validators stay testable without a DB shim.
+ */
+async function buildInterlockContext(
+  organizationId: string,
+  currentPolicies: WorkspacePolicies | null,
+  changes: Partial<WorkspacePolicies>,
+): Promise<InterlockContext> {
+  // Member count + owner count in one query.
+  const memberRows = await db
+    .select({ role: member.role })
+    .from(member)
+    .where(eq(member.organizationId, organizationId))
+  const memberCount = memberRows.length
+  let ownerCount = 0
+  for (const row of memberRows) {
+    for (const part of row.role.split(',')) {
+      if (part.trim().toLowerCase() === 'owner') {
+        ownerCount += 1
+        break
+      }
+    }
+  }
+
+  // Max failed-attempt count: read from the user table's failed login
+  // attempts column. Zero when no one has failed recently. The column may
+  // not exist on every user record (legacy users), so coalesce to 0.
+  const { users } = await import('@abugida/database/auth')
+  const failedRows = await db
+    .select({ attempts: users.failedLoginAttempts })
+    .from(users)
+    .innerJoin(member, eq(member.userId, users.id))
+    .where(eq(member.organizationId, organizationId))
+  const maxFailedAttempts = failedRows.reduce((max, row) => {
+    const n = typeof row.attempts === 'number' ? row.attempts : 0
+    return n > max ? n : max
+  }, 0)
+
+  // Active owner session: the spec calls out "mid-operation". We treat any
+  // active session whose user is an owner of this org as a potential
+  // mid-operation. The session table is owned by Better Auth; we read it
+  // directly to avoid pulling the auth API into this query.
+  const { session } = await import('@abugida/database/auth')
+  const activeOwnerSessionRows = await db
+    .select({ sessionId: session.id })
+    .from(session)
+    .innerJoin(member, and(eq(member.userId, session.userId), eq(member.organizationId, organizationId)))
+    .where(
+      and(
+        sql`${session.expiresAt} > NOW()`,
+        sql`${member.role} LIKE '%owner%'`,
+      ),
+    )
+    .limit(1)
+  const hasActiveOwnerSession = activeOwnerSessionRows.length > 0
+
+  // Users over the new organization limit: only meaningful when the change
+  // is a decrease. Count users who are in more workspaces than the proposed
+  // limit allows.
+  let usersOverNewOrganizationLimit = 0
+  if (
+    changes.organizationLimit !== undefined &&
+    changes.organizationLimit !== null &&
+    (currentPolicies?.organizationLimit === null ||
+      currentPolicies?.organizationLimit === undefined ||
+      changes.organizationLimit < currentPolicies.organizationLimit)
+  ) {
+    // Count distinct users who have more memberships than the proposed limit.
+    const overRows = await db
+      .select({ userId: member.userId, count: count() })
+      .from(member)
+      .groupBy(member.userId)
+      .having(sql`COUNT(*) > ${changes.organizationLimit}`)
+    usersOverNewOrganizationLimit = overRows.length
+  }
+
+  return {
+    changes,
+    current: currentPolicies,
+    memberCount,
+    ownerCount,
+    maxFailedAttempts,
+    hasActiveOwnerSession,
+    usersOverNewOrganizationLimit,
+  }
 }
 
 // Re-export the pure helpers so callers can import everything from one place.

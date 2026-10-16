@@ -17,8 +17,8 @@ import {
   resolveWorkspaceEntry,
   resolveEnvironmentEntry,
   formatSessionTimeout,
-  type WorkspacePolicies,
 } from '#/features/settings/settings.workspace-policies'
+import type { WorkspacePolicies } from '@abugida/database/auth'
 
 test('PLUGIN_DEFAULTS matches the spec configurable-values table', () => {
   // Spec 13 § Configurable values — the "Default now" column. Rows marked
