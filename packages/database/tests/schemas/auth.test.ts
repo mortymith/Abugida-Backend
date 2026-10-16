@@ -133,6 +133,7 @@ describe('auth schemas', () => {
         failedLoginAttempts: 0,
         lockedUntil: null,
         lastLoginAt: null,
+        isTest: false,
         deletionRequestedAt: null,
         deletionCompletedAt: null,
         retentionExpiresAt: null,

@@ -98,6 +98,15 @@ export const users = pgTable(
     lockedUntil: timestamp('locked_until', { withTimezone: true }),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
 
+    /**
+     * Test/preview identity flag (spec 07 § Metric Definitions rule 1).
+     * Preview and test identities are excluded from every student-count
+     * metric and from the roster, so a staff preview never inflates
+     * engagement. Set by the platform when a test account is provisioned
+     * or when an enrollment is created with `source = 'preview'`.
+     */
+    isTest: boolean('is_test').notNull().default(false),
+
     // ── App-owned: deletion lifecycle ────────────────────────────────────────
     deletionRequestedAt: timestamp('deletion_requested_at', { withTimezone: true }),
     deletionCompletedAt: timestamp('deletion_completed_at', { withTimezone: true }),
