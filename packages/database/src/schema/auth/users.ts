@@ -103,6 +103,28 @@ export const users = pgTable(
     deletionCompletedAt: timestamp('deletion_completed_at', { withTimezone: true }),
     retentionExpiresAt: timestamp('retention_expires_at', { withTimezone: true }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
+
+    // ── App-owned: Telegram identity (spec 06 Rev 3 — Telegram-first) ────────
+    // Auth is Google + Telegram only, so a student may have no email at all.
+    // These columns are denormalized from the `account` table (providerId=
+    // 'telegram') for directory-query performance — a trigger or app-layer
+    // sync keeps them current. `telegram_verified` mirrors the OAuth verified
+    // state; the directory shows a ✔ marker when true.
+    telegramHandle: varchar('telegram_handle', { length: 100 }),
+    telegramVerified: boolean('telegram_verified').notNull().default(false),
+
+    // ── App-owned: student archive (spec 06 S-4.2) ───────────────────────────
+    // Distinct from `deleted_at`: archive is a reversible hide — the student
+    // leaves the directory but their enrollments, progress, and certificates
+    // stay intact. Reachable from the Archived filter; restored by clearing
+    // `archived_at`.
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+
+    // ── App-owned: optimistic concurrency (spec 06 S-4.2 Conflict) ───────────
+    // Bumped on every profile edit so two Admins cannot silently overwrite
+    // each other's changes. A stale `row_version` opens the field-level diff
+    // (Review changes / Keep mine / Take theirs).
+    rowVersion: integer('row_version').notNull().default(1),
   },
   (table) => [
     // Email uniqueness stays a full (non-partial) index on purpose: Better
@@ -124,6 +146,14 @@ export const users = pgTable(
     index('idx_users_retention')
       .on(table.retentionExpiresAt)
       .where(sql`${table.retentionExpiresAt} IS NOT NULL`),
+
+    // Spec 06 S-4.1 Archived filter — partial index on archived, non-deleted rows.
+    index('idx_users_archived')
+      .on(table.accountStatus, table.archivedAt)
+      .where(sql`${table.deletedAt} IS NULL AND ${table.archivedAt} IS NOT NULL`),
+
+    // Spec 06 S-4.1 Telegram-first directory — index for handle search.
+    index('idx_users_telegram').on(table.telegramHandle),
 
     // ── Integrity: phone trio is all-or-nothing ──────────────────────────────
     check(

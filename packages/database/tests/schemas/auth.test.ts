@@ -139,6 +139,10 @@ describe('auth schemas', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
+        telegramHandle: null,
+        telegramVerified: false,
+        archivedAt: null,
+        rowVersion: 1,
       })
       expect(result.success).toBe(true)
     })
