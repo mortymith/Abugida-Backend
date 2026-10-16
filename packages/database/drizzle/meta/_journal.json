@@ -239,6 +239,13 @@
       "when": 1792323614327,
       "tag": "0033_bored_ben_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792324138418,
+      "tag": "0034_groovy_magik",
+      "breakpoints": true
     }
   ]
 }
