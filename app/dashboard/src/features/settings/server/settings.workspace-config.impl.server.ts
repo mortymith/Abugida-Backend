@@ -204,15 +204,15 @@ export async function saveWorkspaceConfigImpl(input: {
     .where(eq(organization.id, org.id))
 
   // Spec 13 § Audit — every workspace-config change writes an immutable
-  // audit entry. The `permission_change` action is the closest existing
-  // value; the metadata carries the spec-13 specifics.
+  // audit entry. The `workspace_config_changed` action is the spec-13 value;
+  // the metadata carries the changed keys so the S-6.8 trail can filter on
+  // which policy was touched.
   await writeAudit({
     actorId: adminId,
-    action: 'permission_change',
+    action: 'workspace_config_changed',
     resourceType: 'user_account',
     metadata: {
       screen: 'S-13.1',
-      action: 'workspace_config_changed',
       organizationId: org.id,
       changedKeys: Object.keys(input.policies),
     },

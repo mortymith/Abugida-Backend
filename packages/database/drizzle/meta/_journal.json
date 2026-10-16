@@ -232,6 +232,13 @@
       "when": 1792189958684,
       "tag": "0032_ordinary_puck",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792190908353,
+      "tag": "0033_low_goblin_queen",
+      "breakpoints": true
     }
   ]
 }
