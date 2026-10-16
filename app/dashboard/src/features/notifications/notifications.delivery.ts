@@ -196,3 +196,39 @@ export function summarizeDispatch(
 export function hasNoReachableChannel(plans: readonly ChannelPlan[]): boolean {
   return plans.every((plan) => plan.availability.kind !== 'available')
 }
+
+/**
+ * Per-channel audience breakdown for a multi-channel campaign send (spec 10
+ * S-8.1): how many recipients each channel reaches, and how many have no
+ * email at all. `inApp` is the audience size — in-app is always reachable.
+ */
+export interface ChannelBreakdown {
+  readonly inApp: number
+  readonly telegram: number
+  readonly email: number
+  readonly noEmail: number
+  readonly total: number
+}
+
+export function computeChannelBreakdown(
+  recipients: readonly UserChannelProfile[],
+): ChannelBreakdown {
+  let inApp = 0
+  let telegram = 0
+  let email = 0
+  let noEmail = 0
+
+  for (const recipient of recipients) {
+    inApp++
+    if (recipient.hasTelegram && recipient.telegramEnabled) telegram++
+    if (recipient.email && recipient.emailVerified) email++
+    if (!recipient.email || !recipient.emailVerified) noEmail++
+  }
+
+  return { inApp, telegram, email, noEmail, total: recipients.length }
+}
+
+export function formatChannelBreakdown(breakdown: ChannelBreakdown): string {
+  const { total, inApp, telegram, email, noEmail } = breakdown
+  return `${total} recipients — ${inApp} in-app · ${telegram} Telegram · ${email} email (${noEmail} have no email)`
+}

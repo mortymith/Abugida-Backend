@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import {
   CHANNEL_LABELS,
+  computeChannelBreakdown,
+  formatChannelBreakdown,
   hasNoReachableChannel,
   isRetryableFailure,
   NOTIFICATION_CHANNELS,
@@ -208,5 +210,39 @@ describe('hasNoReachableChannel', () => {
     }
     const plans = planChannelDelivery(intent)
     expect(hasNoReachableChannel(plans)).toBe(false)
+  })
+})
+
+describe('computeChannelBreakdown', () => {
+  test('counts recipients reachable per channel', () => {
+    const noEmail: UserChannelProfile = {
+      hasTelegram: true,
+      telegramEnabled: true,
+      email: null,
+      emailVerified: null,
+    }
+    const breakdown = computeChannelBreakdown([FULL_PROFILE, noEmail, NO_TELEGRAM_PROFILE])
+    expect(breakdown.total).toBe(3)
+    expect(breakdown.inApp).toBe(3)
+    expect(breakdown.telegram).toBe(2)
+    expect(breakdown.email).toBe(1)
+    expect(breakdown.noEmail).toBe(2)
+  })
+})
+
+describe('formatChannelBreakdown', () => {
+  test('includes all counts', () => {
+    const label = formatChannelBreakdown({
+      inApp: 1204,
+      telegram: 1180,
+      email: 610,
+      noEmail: 594,
+      total: 1204,
+    })
+    expect(label).toContain('recipients')
+    expect(label).toContain('in-app')
+    expect(label).toContain('Telegram')
+    expect(label).toContain('email')
+    expect(label).toContain('no email')
   })
 })
