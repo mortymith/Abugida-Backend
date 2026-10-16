@@ -60,6 +60,13 @@ export const assetFolders = pgTable(
       onDelete: 'set null',
       onUpdate: 'cascade',
     }),
+    /**
+     * Optimistic-concurrency version (spec 05 § S-3.4 Conflict). Bumped on
+     * every rename / move / delete-restore so two editors cannot silently
+     * overwrite each other's folder changes. A stale `rowVersion` opens the
+     * two-column diff (Review changes / Keep mine / Take theirs).
+     */
+    rowVersion: integer('row_version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()
@@ -109,6 +116,22 @@ export const assetLibrary = pgTable(
       onDelete: 'set null',
       onUpdate: 'cascade',
     }),
+    /**
+     * Set when the asset is archived (spec 05 § S-3.3). Distinct from
+     * `deletedAt`: archive is a reversible hide — the asset leaves the
+     * Media module and the picker but every `asset_usage` row and item
+     * reference stays intact. Reachable from the Archived filter; restored
+     * by clearing `archivedAt`.
+     */
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    /**
+     * Optimistic-concurrency version (spec 05 § S-3.3 Conflict). Bumped on
+     * every metadata edit (name / tags / description / folder move) so two
+     * editors cannot silently overwrite each other's changes. A stale
+     * `rowVersion` opens the two-column diff (Review changes / Keep mine /
+     * Take theirs).
+     */
+    rowVersion: integer('row_version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()
@@ -126,6 +149,10 @@ export const assetLibrary = pgTable(
     index('idx_asset_library_active_list')
       .on(table.folderId, table.createdAt)
       .where(sql`${table.deletedAt} IS NULL`),
+    /** Spec 05 S-3.1 Archived filter — partial index on archived, non-deleted rows. */
+    index('idx_asset_library_archived')
+      .on(table.organizationId, table.archivedAt)
+      .where(sql`${table.deletedAt} IS NULL AND ${table.archivedAt} IS NOT NULL`),
 
     check('asset_size_check', sql`${table.fileSizeBytes} >= 0 OR ${table.fileSizeBytes} IS NULL`),
     check(

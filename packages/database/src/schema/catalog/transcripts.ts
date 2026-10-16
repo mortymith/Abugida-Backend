@@ -18,6 +18,7 @@ import { relations, sql } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { z } from 'zod'
 import { assetLibrary } from './asset-library'
+import { users } from '../auth/users'
 
 /**
  * Transcription & subtitles (spec 05 S-3.6). One transcript per
@@ -40,14 +41,19 @@ export const transcriptSourcePgEnum = pgEnum('transcript_source', [
 ])
 
 export const captionStyleSchema = z.object({
-  font: z.enum(['inter', 'system', 'serif', 'mono']).default('inter'),
+  /**
+   * Spec 05 § S-3.6: the caption font picker offers the Ethiopic face so a
+   * Ge'ez transcript renders in `Noto Sans Ethiopic` at `line-height: 1.6`
+   * with no letter-spacing.
+   */
+  font: z.enum(['inter', 'system', 'serif', 'mono', 'noto_ethiopic']).default('inter'),
   fontSizePx: z.union([z.literal(14), z.literal(16), z.literal(18), z.literal(20)]).default(16),
   background: z.enum(['none', 'semi', 'opaque']).default('semi'),
 })
 export type CaptionStyle = z.infer<typeof captionStyleSchema>
 
 export interface TranscriptCaptionStyle {
-  font: 'inter' | 'system' | 'serif' | 'mono'
+  font: 'inter' | 'system' | 'serif' | 'mono' | 'noto_ethiopic'
   fontSizePx: 14 | 16 | 18 | 20
   background: 'none' | 'semi' | 'opaque'
 }
@@ -75,6 +81,12 @@ export const transcripts = pgTable(
         onUpdate: 'cascade',
       },
     ),
+    /**
+     * Optimistic-concurrency version (spec 05 § S-3.6 Conflict). Bumped on
+     * every metadata edit (status / caption style / show-by-default) so two
+     * editors cannot silently overwrite each other's track-level changes.
+     */
+    rowVersion: integer('row_version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()
@@ -104,6 +116,23 @@ export const transcriptSegments = pgTable(
     endMs: integer('end_ms').notNull(),
     speaker: varchar('speaker', { length: 80 }),
     text: text('text').notNull(),
+    /**
+     * Who last edited this segment (spec 05 § S-3.6 per-segment conflict).
+     * Set on every text/timing edit so the conflict UI can name the actor:
+     * "Changed by {actor} {N} minutes ago."
+     */
+    editedBy: text('edited_by').references(() => users.id, {
+      onDelete: 'set null',
+      onUpdate: 'cascade',
+    }),
+    /**
+     * Optimistic-concurrency version (spec 05 § S-3.6 Conflict — per segment,
+     * not per track). Bumped on every edit so two editors correcting the
+     * same segment cannot silently overwrite each other. A stale
+     * `rowVersion` opens the per-segment Review changes / Keep mine / Take
+     * theirs prompt.
+     */
+    rowVersion: integer('row_version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -128,6 +157,11 @@ export const transcriptSegmentsRelations = relations(transcriptSegments, ({ one 
   transcript: one(transcripts, {
     fields: [transcriptSegments.transcriptId],
     references: [transcripts.id],
+  }),
+  editor: one(users, {
+    fields: [transcriptSegments.editedBy],
+    references: [users.id],
+    relationName: 'segment_editor',
   }),
 }))
 
