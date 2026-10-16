@@ -162,7 +162,13 @@ export function roundTrip(markdown: string): RoundTripResult {
 /* Loss audit — spec 12 § 3.3 / § 9.3                                         */
 /* -------------------------------------------------------------------------- */
 
-export type MarkdownIssueCode = 'loses_content' | 'unstable_round_trip' | 'empty_body'
+export type MarkdownIssueCode =
+  | 'loses_content'
+  | 'unstable_round_trip'
+  | 'empty_body'
+  | 'heading_h1_reserved'
+  | 'image_alt_missing'
+  | 'inline_html_unsupported'
 
 export interface MarkdownIssue {
   code: MarkdownIssueCode
@@ -170,6 +176,12 @@ export interface MarkdownIssue {
   message: string
   /** Up to this many source words that the editor would drop. */
   examples: string[]
+  /**
+   * 1-based line number in the Markdown source, where meaningful. Used by the
+   * editor to render a click-to-jump from the construct audit error to the
+   * offending line in the source pane (spec 12 § 9.3).
+   */
+  line?: number
 }
 
 const WORD_RE = /[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu
@@ -318,6 +330,74 @@ export function auditMarkdown(markdown: string): MarkdownIssue[] {
       message:
         'This Markdown re-serializes differently on every save, which would create a change on every autosave. Simplify the affected syntax or rewrite it in the source view.',
       examples: [],
+    })
+  }
+
+  // Spec 12 § 7.9 — H1 is reserved for the item title. An H1 in the body
+  // (typed, pasted, or imported) is rejected by the construct audit with a
+  // 1-based line number, so the editor can render a click-to-jump from the
+  // error to the offending line in the source pane.
+  const lines = markdown.split('\n')
+  for (let i = 0; i < lines.length; i += 1) {
+    const match = lines[i].match(/^[ \t]{0,3}#[ \t]+(.*)$/)
+    if (match) {
+      issues.push({
+        code: 'heading_h1_reserved',
+        message:
+          "Level 1 is the lesson title. Use level 2 (##) for the first section. The toolbar offers H2 and H3 only; H4–H6 are accepted on paste and import but not produced by the toolbar.",
+        examples: [`# ${match[1].trim()}`],
+        line: i + 1,
+      })
+    }
+  }
+
+  // Spec 12 § 7.5 — alt text is a gate, not a suggestion. An image without
+  // alt text cannot reach students; the construct audit rejects it as
+  // IMAGE_ALT_MISSING with a 1-based line number, surfaced as a click-to-jump
+  // in the source pane. The same gate applies to a hand-typed `![](…)` in
+  // the source pane (§ 7.5).
+  const imageRe = /!\[([^\]]*)\]\(([^)]*)\)/g
+  let imageMatch: RegExpExecArray | null
+  while ((imageMatch = imageRe.exec(markdown)) !== null) {
+    const alt = imageMatch[1].trim()
+    if (alt === '') {
+      // Find the 1-based line number for this match.
+      const upTo = markdown.slice(0, imageMatch.index)
+      const line = upTo.split('\n').length
+      issues.push({
+        code: 'image_alt_missing',
+        message:
+          'Every image needs alt text (≤ 200 characters). Alt text is what screen readers read aloud and what displays when the image fails to load. Add a description between the brackets.',
+        examples: [],
+        line,
+      })
+    }
+  }
+
+  // Spec 12 § 7.4 — per-block `lang` is stored as `<span lang="am">` in
+  // HTML-derived content and is the only inline-HTML subset the audit
+  // accepts. Any other raw HTML block is reported as
+  // INLINE_HTML_UNSUPPORTED so the author learns at save time rather than
+  // discovering a diff later. The student render path disables HTML
+  // entirely (streamdown, HTML off), so unsupported HTML is inert in
+  // production — but it would still produce a confusing diff.
+  const htmlBlockRe = /^[ \t]{0,3}<([a-zA-Z][\w-]*)\b[^>]*>[\s\S]*?<\/\1>/gm
+  let htmlMatch: RegExpExecArray | null
+  while ((htmlMatch = htmlBlockRe.exec(markdown)) !== null) {
+    const tag = htmlMatch[1].toLowerCase()
+    if (tag === 'span') {
+      // `<span lang="...">` is the validated subset. Anything else on a span
+      // is unsupported.
+      const langAttr = /lang\s*=\s*["']?[a-zA-Z-]+["']?/i.test(htmlMatch[0])
+      if (langAttr) continue
+    }
+    const upTo = markdown.slice(0, htmlMatch.index)
+    const line = upTo.split('\n').length
+    issues.push({
+      code: 'inline_html_unsupported',
+      message: `Raw <${tag}> blocks are not supported in lesson bodies. The student renderer disables HTML for safety. Use Markdown syntax instead — for example, **bold** for emphasis, > for a quote, or a fenced code block for code.`,
+      examples: [htmlMatch[0].slice(0, 80)],
+      line,
     })
   }
 

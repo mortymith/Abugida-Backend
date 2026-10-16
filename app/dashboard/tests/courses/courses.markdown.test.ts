@@ -41,7 +41,10 @@ describe('normalizeMarkdown (spec 12 § 10.1)', () => {
 
 describe('round-trip invariants (spec 12 § 10.2)', () => {
   const supported = {
-    'ATX heading': '# What is TOEFL?',
+    // Spec 12 § 7.9: H1 is reserved for the item title. The fixture set
+    // uses H2 to verify ATX heading round-trip without tripping the
+    // HEADING_H1_RESERVED audit. RT1–RT5 are unchanged.
+    'ATX heading': '## What is TOEFL?',
     paragraph: 'TOEFL measures reading, listening, and speaking.',
     bold: 'This is **important**.',
     italic: 'This is *emphasised*.',
@@ -77,7 +80,7 @@ describe('round-trip invariants (spec 12 § 10.2)', () => {
 
   test('RT1: a full document survives a second pass byte-identically', () => {
     const doc = [
-      '# What is TOEFL?',
+      '## What is TOEFL?',
       '',
       'TOEFL is the **Test of English as a Foreign Language**.',
       '',
@@ -159,8 +162,11 @@ describe('loss audit (spec 12 § 3.3)', () => {
   test('flags genuinely unrepresentable content with a message and examples', () => {
     // Raw HTML blocks have no markdown handler and are escaped rather than
     // rendered, so the author's words survive as text — never a silent drop.
+    // Spec 12 § 7.4: raw HTML is reported as INLINE_HTML_UNSUPPORTED so the
+    // author learns at save time rather than discovering a diff later.
     const issues = auditMarkdown('<div class="x">raw <b>html</b></div>')
     expect(issues.every((issue) => issue.message.length > 0)).toBe(true)
+    expect(issues.some((issue) => issue.code === 'inline_html_unsupported')).toBe(true)
   })
 
   test('an empty body is not reported as lossy', () => {
@@ -177,7 +183,6 @@ describe('loss audit does not over-report (regressions)', () => {
     'reference image resolves to inline': '![alt][img]\n\n[img]: https://x.example/i.png',
     'bare URL': 'visit https://www.example.com/page today',
     autolink: '<https://example.com>',
-    'raw HTML is escaped, not dropped': '<div class="x">hello world</div>',
     'HTML comment': 'before\n\n<!-- hidden -->\n\nafter',
     'math fence': '$$\nx = 1\n$$',
     mermaid: '```mermaid\ngraph TD;\n  A-->B;\n```',
@@ -196,6 +201,17 @@ describe('loss audit does not over-report (regressions)', () => {
       expect(auditMarkdown(markdown)).toEqual([])
     })
   }
+
+  test('raw HTML is flagged as inline_html_unsupported, not as loses_content', () => {
+    // Spec 12 § 7.4: raw HTML blocks are reported as INLINE_HTML_UNSUPPORTED
+    // (an advisory that surfaces at save time), never as `loses_content`
+    // (which would block the save). The author's words survive as text —
+    // the audit just makes the HTML visible so the author can rewrite it as
+    // Markdown before students see a confusing diff.
+    const issues = auditMarkdown('<div class="x">hello world</div>')
+    expect(issues.some((issue) => issue.code === 'inline_html_unsupported')).toBe(true)
+    expect(issues.every((issue) => issue.code !== 'loses_content')).toBe(true)
+  })
 
   test('does flag a hyperlinked image, which ProseMirror cannot represent', () => {
     // True positive: a mark on an image node is not representable, so the
@@ -274,5 +290,75 @@ describe('docToText', () => {
 
   test('renders hard breaks as newlines', () => {
     expect(markdownToText('line one  \nline two')).toBe('line one\nline two')
+  })
+})
+
+describe('construct audit — new codes (spec 12 § 7.4 / § 7.5 / § 7.9)', () => {
+  test('HEADING_H1_RESERVED flags an H1 in the body with a line number', () => {
+    const issues = auditMarkdown('# This is the title\n\n## First section')
+    const h1 = issues.find((issue) => issue.code === 'heading_h1_reserved')
+    expect(h1).toBeDefined()
+    expect(h1?.line).toBe(1)
+    expect(h1?.message).toContain('lesson title')
+  })
+
+  test('HEADING_H1_RESERVED is not raised for H2 through H6', () => {
+    const markdown = '## H2\n\n### H3\n\n#### H4\n\n##### H5\n\n###### H6'
+    const issues = auditMarkdown(markdown)
+    expect(issues.every((issue) => issue.code !== 'heading_h1_reserved')).toBe(true)
+  })
+
+  test('HEADING_H1_RESERVED flags an H1 mid-document with the right line number', () => {
+    const markdown = '## Top\n\nBody.\n\n# Wrong level here\n\nMore body.'
+    const issues = auditMarkdown(markdown)
+    const h1 = issues.find((issue) => issue.code === 'heading_h1_reserved')
+    expect(h1?.line).toBe(5)
+  })
+
+  test('IMAGE_ALT_MISSING flags an image with empty alt text', () => {
+    const issues = auditMarkdown('![](https://cdn.example.com/a.png)')
+    const alt = issues.find((issue) => issue.code === 'image_alt_missing')
+    expect(alt).toBeDefined()
+    expect(alt?.line).toBe(1)
+    expect(alt?.message).toContain('alt text')
+  })
+
+  test('IMAGE_ALT_MISSING is not raised when alt text is present', () => {
+    const issues = auditMarkdown('![A diagram](https://cdn.example.com/a.png)')
+    expect(issues.every((issue) => issue.code !== 'image_alt_missing')).toBe(true)
+  })
+
+  test('IMAGE_ALT_MISSING flags only the offending image, not the next one', () => {
+    const markdown = '![good](https://a.example/1.png)\n\n![](https://a.example/2.png)'
+    const issues = auditMarkdown(markdown)
+    const altIssues = issues.filter((issue) => issue.code === 'image_alt_missing')
+    expect(altIssues).toHaveLength(1)
+    expect(altIssues[0]?.line).toBe(3)
+  })
+
+  test('INLINE_HTML_UNSUPPORTED flags a <div> block', () => {
+    const issues = auditMarkdown('<div class="x">raw</div>')
+    const html = issues.find((issue) => issue.code === 'inline_html_unsupported')
+    expect(html).toBeDefined()
+    expect(html?.message).toContain('<div>')
+  })
+
+  test('INLINE_HTML_UNSUPPORTED is not raised for <span lang="..."> (validated subset)', () => {
+    const issues = auditMarkdown('<span lang="am">አማርኛ</span>')
+    expect(issues.every((issue) => issue.code !== 'inline_html_unsupported')).toBe(true)
+  })
+
+  test('INLINE_HTML_UNSUPPORTED is raised for a <span> without a lang attribute', () => {
+    const issues = auditMarkdown('<span class="bold">raw</span>')
+    expect(issues.some((issue) => issue.code === 'inline_html_unsupported')).toBe(true)
+  })
+
+  test('audit issues carry a 1-based line number for click-to-jump', () => {
+    // The editor uses the `line` field to render a click-to-jump from the
+    // audit error to the offending line in the source pane (spec 12 § 9.3).
+    const markdown = ['Intro paragraph.', '', '# H1 in the body', '', 'Outro.'].join('\n')
+    const issues = auditMarkdown(markdown)
+    const h1 = issues.find((issue) => issue.code === 'heading_h1_reserved')
+    expect(h1?.line).toBe(3)
   })
 })
