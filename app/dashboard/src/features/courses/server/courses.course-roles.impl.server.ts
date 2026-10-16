@@ -33,10 +33,11 @@ import {
 import { writeAudit } from '../../settings/server/settings.server-helpers.server'
 import {
   COURSE_ROLE_NAMES,
-  isCourseRoleName,
-  type CourseRoleAssignment,
-  type CourseRoleName,
+  isCourseRoleName
+  
+  
 } from '../courses.course-roles'
+import type {CourseRoleAssignment, CourseRoleName} from '../courses.course-roles';
 
 // Re-export the pure helpers so callers can import everything from one place.
 export { COURSE_ROLE_NAMES, isCourseRoleName }

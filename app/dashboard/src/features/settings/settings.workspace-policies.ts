@@ -123,21 +123,21 @@ export function resolveWorkspaceEntry(input: {
 }): WorkspaceConfigEntry {
   const workspaceValue = input.policies?.[input.key] ?? null
   const defaultValue = PLUGIN_DEFAULTS[input.key]
-  if (workspaceValue !== null && workspaceValue !== undefined) {
+  if (workspaceValue !== null) {
     return {
-      key: input.key as string,
-      value: workspaceValue as WorkspacePolicyValue,
+      key: input.key,
+      value: workspaceValue,
       source: 'workspace',
-      defaultValue: defaultValue as WorkspacePolicyValue,
+      defaultValue: defaultValue,
       label: input.label,
       range: input.range,
     }
   }
   return {
-    key: input.key as string,
-    value: defaultValue as WorkspacePolicyValue,
+    key: input.key,
+    value: defaultValue,
     source: 'plugin_default',
-    defaultValue: defaultValue as WorkspacePolicyValue,
+    defaultValue: defaultValue,
     label: input.label,
     range: input.range,
   }
