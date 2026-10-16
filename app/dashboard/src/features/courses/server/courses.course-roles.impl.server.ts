@@ -128,11 +128,10 @@ export async function grantCourseRoleImpl(input: {
 
   await writeAudit({
     actorId: granterId,
-    action: 'permission_change',
+    action: 'course_role_granted',
     resourceType: 'course',
     metadata: {
       screen: 'S-13.3',
-      action: 'course_role_granted',
       coursePublicId: input.coursePublicId,
       userPublicId: input.userPublicId,
       roleName: input.roleName,
@@ -204,11 +203,10 @@ export async function revokeCourseRoleImpl(input: {
 
   await writeAudit({
     actorId: callerId,
-    action: 'permission_change',
+    action: 'course_role_revoked',
     resourceType: 'course',
     metadata: {
       screen: 'S-13.3',
-      action: 'course_role_revoked',
       courseRolePublicId: input.courseRolePublicId,
       roleName: assignment.roleName,
     },

@@ -52,6 +52,26 @@ export const auditActionEnum = z.enum([
   'workspace_restored',
   'branding_updated',
   'billing_changed',
+  // Spec 13 § Audit — the identity & workspace actions the spec names.
+  // Each value is a discrete save-point kind the S-6.8 audit trail can filter
+  // on, so a reviewer can answer "who changed this member's role?" without
+  // reading every `admin_action` row.
+  'auth_mfa_enabled',
+  'auth_mfa_disabled',
+  'auth_mfa_recovery_used',
+  'auth_lockout',
+  'workspace_created',
+  'workspace_switched',
+  'workspace_config_changed',
+  'workspace_deleted',
+  'member_invited',
+  'member_joined',
+  'member_removed',
+  'member_role_changed',
+  'course_role_granted',
+  'course_role_revoked',
+  'owner_transfer_initiated',
+  'owner_transfer_accepted',
 ])
 export type AuditAction = z.infer<typeof auditActionEnum>
 export const auditActionPgEnum = pgEnum('audit_action', [
@@ -85,6 +105,22 @@ export const auditActionPgEnum = pgEnum('audit_action', [
   'workspace_restored',
   'branding_updated',
   'billing_changed',
+  'auth_mfa_enabled',
+  'auth_mfa_disabled',
+  'auth_mfa_recovery_used',
+  'auth_lockout',
+  'workspace_created',
+  'workspace_switched',
+  'workspace_config_changed',
+  'workspace_deleted',
+  'member_invited',
+  'member_joined',
+  'member_removed',
+  'member_role_changed',
+  'course_role_granted',
+  'course_role_revoked',
+  'owner_transfer_initiated',
+  'owner_transfer_accepted',
 ])
 export const auditResourceTypeEnum = z.enum([
   'course',

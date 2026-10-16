@@ -281,6 +281,13 @@
       "when": 1792398382757,
       "tag": "0039_keen_jocasta",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1792398533574,
+      "tag": "0040_robust_white_tiger",
+      "breakpoints": true
     }
   ]
 }
