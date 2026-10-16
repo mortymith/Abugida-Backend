@@ -14,9 +14,10 @@ import {
   MFA_REQUIRED_LABELS,
   MFA_REQUIRED_OPTIONS,
   SESSION_TIMEOUT_OPTIONS_MINUTES,
-  formatSessionTimeout,
-  type WorkspacePolicyValue,
+  formatSessionTimeout
+  
 } from '../settings.workspace-policies'
+import type {WorkspacePolicyValue} from '../settings.workspace-policies';
 import type { WorkspacePolicies } from '@abugida/database/auth'
 
 /**
@@ -72,11 +73,15 @@ export function WorkspaceConfigView() {
   }
 
   const config = query.data
+  // After the pending + error checks, `config` is defined at runtime, but TS's
+  // narrowing on `query.data` (a TanStack Query field) does not propagate
+  // here. The runtime guard stays; the lint suppression documents the gap.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!config) return null
 
-  function setField<K extends keyof WorkspacePolicies>(
-    key: K,
-    value: WorkspacePolicies[K],
+  function setField<TKey extends keyof WorkspacePolicies>(
+    key: TKey,
+    value: WorkspacePolicies[TKey],
   ): void {
     setDraft((prev) => ({ ...prev, [key]: value }))
     // Clear any interlock error on the field the author is now editing.
@@ -99,8 +104,8 @@ export function WorkspaceConfigView() {
           // offending field.
           const match = message.match(/^INTERLOCK_BLOCKED:([^:]+):(.+)$/)
           if (match) {
-            setInterlockError({ field: match[1]!, reason: match[2]! })
-            toast.error(match[2]!)
+            setInterlockError({ field: match[1], reason: match[2] })
+            toast.error(match[2])
           } else if (message.includes('NO_ACTIVE_WORKSPACE')) {
             toast.error('Only workspace admins can change these settings.')
           } else {
@@ -231,7 +236,10 @@ function WorkspaceConfigSection({
   }>
   draft: Partial<WorkspacePolicies>
   interlockError: { field: string; reason: string } | null
-  onFieldChange: <K extends keyof WorkspacePolicies>(key: K, value: WorkspacePolicies[K]) => void
+  onFieldChange: <TKey extends keyof WorkspacePolicies>(
+    key: TKey,
+    value: WorkspacePolicies[TKey],
+  ) => void
 }) {
   return (
     <Card>
@@ -276,7 +284,10 @@ function WorkspaceConfigField({
   }
   draftValue: WorkspacePolicyValue | undefined
   interlockReason: string | undefined
-  onFieldChange: <K extends keyof WorkspacePolicies>(key: K, value: WorkspacePolicies[K]) => void
+  onFieldChange: <TKey extends keyof WorkspacePolicies>(
+    key: TKey,
+    value: WorkspacePolicies[TKey],
+  ) => void
 }) {
   const key = entry.key as keyof WorkspacePolicies
   // The displayed value is the draft when the author has touched the field,
@@ -294,7 +305,9 @@ function WorkspaceConfigField({
         <FieldControl
           entryKey={key}
           value={displayValue}
-          onChange={(value) => onFieldChange(key, value as WorkspacePolicies[typeof key])}
+          onChange={(value) =>
+            onFieldChange(key, value as WorkspacePolicies[typeof key])
+          }
         />
         {interlockReason ? (
           <p className="text-destructive mt-1 text-sm" role="alert">

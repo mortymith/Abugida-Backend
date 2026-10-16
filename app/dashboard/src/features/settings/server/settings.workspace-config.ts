@@ -37,5 +37,5 @@ export const saveWorkspaceConfig = createServerFn({ method: 'POST' })
   .validator((input: unknown) => saveWorkspaceConfigSchema.parse(input))
   .handler(async ({ data }): Promise<{ ok: true }> => {
     const { saveWorkspaceConfigImpl } = await import('./settings.workspace-config.impl.server')
-    return saveWorkspaceConfigImpl(data as { policies: Partial<WorkspacePolicies> })
+    return saveWorkspaceConfigImpl(data)
   })

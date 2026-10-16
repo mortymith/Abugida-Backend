@@ -21,12 +21,14 @@ import {
   PLUGIN_DEFAULTS,
   WORKSPACE_CONFIG_FIELDS,
   resolveEnvironmentEntry,
-  resolveWorkspaceEntry,
-  type EnvPolicyKey,
-  type WorkspaceConfigEntry,
-  type WorkspaceConfigResult,
+  resolveWorkspaceEntry
+  
+  
+  
 } from '../settings.workspace-policies'
-import { runAllInterlocks, type InterlockContext } from '../settings.workspace-interlocks'
+import type {EnvPolicyKey, WorkspaceConfigEntry, WorkspaceConfigResult} from '../settings.workspace-policies';
+import { runAllInterlocks  } from '../settings.workspace-interlocks'
+import type {InterlockContext} from '../settings.workspace-interlocks';
 
 /**
  * Resolve the active organization for the caller. The dashboard is
@@ -52,7 +54,7 @@ async function resolveActiveOrganization(
   return {
     id: row.id,
     name: row.name,
-    policies: (row.policies as WorkspacePolicies | null) ?? null,
+    policies: (row.policies) ?? null,
   }
 }
 
@@ -109,11 +111,13 @@ function readEnvPolicies(): WorkspaceConfigEntry[] {
           range: '3–10 attempts',
         }),
       )
-    } else if (key === 'accountLockoutDurationSeconds') {
+    } else {
+      // The only remaining EnvPolicyKey is accountLockoutDurationSeconds.
+      // TS narrows the union so the explicit comparison is redundant.
       const secondsPerMinute = 60
       entries.push(
         resolveEnvironmentEntry({
-          key,
+          key: 'accountLockoutDurationSeconds',
           envValue: Math.round(env.ACCOUNT_LOCKOUT_DURATION / secondsPerMinute),
           defaultValue: 10,
           label: 'Lock duration',
