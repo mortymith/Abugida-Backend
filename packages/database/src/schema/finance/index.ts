@@ -1,6 +1,7 @@
 export * from './content-licenses'
 export * from './content-license-grants'
 export * from './payment-gateways'
+export * from './payment-gateway-settings'
 export * from './purchase-options'
 export * from './purchases'
 export * from './purchase-transactions'

@@ -1,0 +1,1 @@
+ALTER TABLE "lessons" ALTER COLUMN "bodyFormat" SET DEFAULT 'markdown';

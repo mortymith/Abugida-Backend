@@ -20,6 +20,7 @@ import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { z } from 'zod'
 import { examTypes } from './exam-types'
+import { courseContentLanguageEnum, courseContentLanguagePgEnum } from './content-language'
 import { users } from '../auth/users'
 import { organization } from '../auth/organization'
 import { courseStats } from './course-stats'
@@ -59,20 +60,10 @@ export const coursePricingModelPgEnum = pgEnum('course_pricing_model', [
   'one_time',
   'subscription',
 ])
-/**
- * Default language for this course's authored content (spec 04 S-2.20 →
- * _Content language_, spec 11 _Localization & Formatting_). Distinct from the
- * workspace **UI** language: this one decides the `:lang()` line-height class and
- * the default `lang` on new content, never the chrome around it.
- */
-export const courseContentLanguageEnum = z.enum(['en', 'am', 'ti', 'gez'])
-export type CourseContentLanguage = z.infer<typeof courseContentLanguageEnum>
-export const courseContentLanguagePgEnum = pgEnum('course_content_language', [
-  'en',
-  'am',
-  'ti',
-  'gez',
-])
+// Re-export so existing imports from `./courses` keep working. The enum itself
+// lives in `./content-language` to break the courses↔lessons circular import.
+export { courseContentLanguageEnum, courseContentLanguagePgEnum }
+export type { CourseContentLanguage } from './content-language'
 export const courses = pgTable(
   'courses',
   {

@@ -20,6 +20,7 @@ import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { z } from 'zod'
 import { modules } from './modules'
 import { courses } from './courses'
+import { lessonLanguagePgEnum } from './content-language'
 import { users } from '../auth/users'
 import { lessonCompletions } from '../learning/lesson-completions'
 import { quizQuestions } from '../learning/quiz-questions'
@@ -104,7 +105,13 @@ export const lessons = pgTable(
     description: text('description'),
     contentType: contentTypePgEnum(),
     body: text('body'),
-    bodyFormat: lessonBodyFormatPgEnum().notNull().default('html'),
+    /**
+     * Serialization format of `lessons.body` (spec 12). Legacy rows hold HTML;
+     * the Part 12 § 5.3 migration backfilled them to 'markdown'. The DB
+     * default is 'markdown' (decision D8) so inserts that omit the column
+     * land in the Markdown world the editor writes.
+     */
+    bodyFormat: lessonBodyFormatPgEnum().notNull().default('markdown'),
     tags: jsonb('tags').notNull().default([]),
     videoUrl: varchar('video_url', { length: 500 }),
     sortOrder: smallint('sort_order').notNull().default(0),
@@ -119,6 +126,12 @@ export const lessons = pgTable(
     visibility: lessonVisibilityPgEnum().notNull().default('draft'),
     /** When a `scheduled` item becomes visible; nullable, ignored otherwise. */
     scheduledPublishAt: timestamp('scheduled_publish_at', { withTimezone: true }),
+    /**
+     * Per-item language override (spec 04 S-2.7 → _Translations_). NULL means
+     * "inherit `courses.content_language`". Setting it changes the base
+     * variant's language; translation variants live in `lesson_variants`.
+     */
+    language: lessonLanguagePgEnum(),
     fileObjectKey: varchar('file_object_key', { length: 500 }),
     fileSizeBytes: bigint('file_size_bytes', { mode: 'number' }),
     mimeType: varchar('mime_type', { length: 100 }),
