@@ -15,6 +15,7 @@ import {
 } from '#/features/media/server/media.usage.impl.server'
 import { categoryForMime } from '#/features/media/media.asset-category'
 import { readBodyFormat } from '../schemas/courses.markdown.schema'
+import { isMarkdownWritesEnabledImpl } from '#/features/workspaces/server/workspaces.impl.server'
 import type { SaveLessonInput } from './courses.lessons'
 
 export interface LessonEditDTO {
@@ -31,6 +32,14 @@ export interface LessonEditDTO {
    * legacy notice and converts on next save.
    */
   bodyFormat: 'html' | 'markdown'
+  /**
+   * Spec 12 § 12.0 — whether the active workspace permits Markdown writes.
+   * Surfaced on the DTO so the editor can decide between the Markdown
+   * authoring surface and the legacy HTML path without a second round-trip.
+   * When `false`, `saveLesson` will reject Markdown payloads with
+   * `MARKDOWN_WRITES_DISABLED` regardless of what the client sends.
+   */
+  markdownWritesEnabled: boolean
   contentType: 'pdf' | 'video' | 'quiz' | 'exercise' | 'link'
   videoUrl: string | null
   /** Media asset backing this lesson's media (spec 05). */
@@ -117,6 +126,7 @@ export async function getLessonForEditImpl(lessonPublicId: string): Promise<Less
     title: lesson.title,
     body: lesson.body,
     bodyFormat: readBodyFormat(lesson.bodyFormat),
+    markdownWritesEnabled: await isMarkdownWritesEnabledImpl(),
     contentType: lesson.contentType ?? 'video',
     videoUrl: lesson.videoUrl,
     assetId: assetPublicId,
@@ -138,6 +148,18 @@ export async function saveLessonImpl(input: SaveLessonInput): Promise<{ rowVersi
   if (lesson.reviewStatus === 'in_review') {
     throw new Error(
       'LOCKED_IN_REVIEW: this lesson is locked while under review — wait for a decision or withdraw it',
+    )
+  }
+
+  // Spec 12 § 12.0 — the Markdown rollout gate. The client always sends
+  // `bodyFormat: 'markdown'` (D-3 boundary), so the gate is enforced here on
+  // the workspace record. With the flag off, Markdown writes are rejected
+  // loudly so a partial rollout never leaves rows the reader cannot parse.
+  // Dual hydration (§ 5.2) keeps every row readable regardless of state.
+  const markdownEnabled = await isMarkdownWritesEnabledImpl()
+  if (!markdownEnabled) {
+    throw new Error(
+      'MARKDOWN_WRITES_DISABLED: Markdown authoring is not enabled for this workspace yet',
     )
   }
 

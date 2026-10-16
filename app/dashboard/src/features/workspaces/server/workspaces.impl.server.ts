@@ -102,3 +102,24 @@ export async function resolveActiveWorkspaceRoleImpl(): Promise<WorkspaceContext
   const { role } = await resolveWorkspaceContextImpl()
   return role
 }
+
+/**
+ * Spec 12 § 12.0 — the Markdown rollout gate.
+ *
+ * Returns `true` when the active workspace has been enrolled in Markdown writes.
+ * Defaults to `false` (the column's NOT NULL default) so the rollout is opt-in
+ * per workspace and a rollback is a flag flip rather than a deploy-revert. This
+ * is the single load-bearing piece that makes the § 12.0 flag-state matrix
+ * work: with the flag off, `saveLesson` writes the legacy HTML serialization
+ * and dual hydration (§ 5.2) keeps every row readable regardless of which side
+ * of step 5/7 the workspace is on.
+ */
+export async function isMarkdownWritesEnabledImpl(): Promise<boolean> {
+  const orgId = await requireActiveOrganizationIdImpl()
+  const rows = await db
+    .select({ enabled: organization.markdownWritesEnabled })
+    .from(organization)
+    .where(eq(organization.id, orgId))
+    .limit(1)
+  return rows.at(0)?.enabled === true
+}
