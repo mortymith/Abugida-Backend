@@ -1,0 +1,1 @@
+ALTER TABLE "organization" ADD COLUMN "markdown_writes_enabled" boolean DEFAULT false NOT NULL;

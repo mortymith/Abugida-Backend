@@ -204,6 +204,13 @@
       "when": 1791794260563,
       "tag": "0028_famous_landau",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792178709374,
+      "tag": "0029_sudden_leper_queen",
+      "breakpoints": true
     }
   ]
 }

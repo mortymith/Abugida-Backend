@@ -32,6 +32,12 @@ export const saveLessonSchema = z.object({
    * format it produced. Accepting only 'markdown' means a client that forgets
    * to call `getMarkdown()` fails loudly here instead of silently writing HTML
    * into a column that is supposed to hold Markdown.
+   *
+   * The § 12.0 rollout gate is enforced server-side in `saveLessonImpl`: when
+   * the workspace has `markdownWritesEnabled = false`, the impl rejects a
+   * Markdown payload with `MARKDOWN_WRITES_DISABLED` so a partial rollout
+   * never leaves rows the reader cannot parse. The schema does not relax the
+   * literal — the gate is a workspace policy, not a per-call format choice.
    */
   bodyFormat: z.literal('markdown'),
   contentType: z.enum(['pdf', 'video', 'quiz', 'exercise', 'link']),

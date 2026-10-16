@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm'
-import { index, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import { boolean, index, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 import { z } from 'zod'
 
@@ -13,6 +13,16 @@ export const organization = pgTable(
     slug: text('slug').notNull().unique(),
     useCase: text('use_case').notNull(),
     logo: text('logo'),
+    /**
+     * Spec 12 § 12.0 — the Markdown rollout gate.
+     *
+     * Defaults to `false` so that `saveLesson` keeps writing the legacy HTML
+     * serialization until the workspace has been explicitly enrolled. The
+     * flag-state matrix in § 12.0 is what makes the rollout reversible: a
+     * rollback is a flag flip, never a deploy-revert, so a partial rollout
+     * never leaves rows the reader cannot parse.
+     */
+    markdownWritesEnabled: boolean('markdown_writes_enabled').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
