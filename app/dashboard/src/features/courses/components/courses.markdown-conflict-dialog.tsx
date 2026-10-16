@@ -34,9 +34,10 @@ import {
 import { Button } from '#/components/ui/button'
 import {
   diffMarkdown,
-  summarizeDiff,
-  type ConflictResolution,
+  summarizeDiff
+  
 } from '../courses.markdown-conflict'
+import type {ConflictResolution} from '../courses.markdown-conflict';
 
 export interface MarkdownConflictDialogProps {
   open: boolean

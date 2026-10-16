@@ -250,7 +250,10 @@ export function useLessonDraftMirror({
     const key = draftKey(itemPublicId, rowVersion)
     void (async () => {
       const draft = await readDraft(key)
-      if (cancelled) return
+      // `cancelled` is set by the cleanup function below. TS's control-flow
+      // analysis narrows it to `false` here because it cannot see the async
+      // reassignment; the cast keeps the runtime check.
+      if ((cancelled as boolean)) return
       if (!draft) {
         setRestore({ kind: 'none' })
         return
@@ -266,7 +269,6 @@ export function useLessonDraftMirror({
     }
     // We deliberately re-run only when the (item, rowVersion) pair changes.
     // Body / title / dirty changes must NOT re-trigger the mount-time read.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemPublicId, rowVersion])
 
   // ---- 2. Debounced write while dirty & enabled -------------------------

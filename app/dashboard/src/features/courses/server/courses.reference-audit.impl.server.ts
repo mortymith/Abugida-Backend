@@ -41,10 +41,11 @@ import {
   ASSET_MISSING,
   LINK_UNREACHABLE,
   extractImageUrls,
-  extractLinkUrls,
-  type ReferenceAuditCode,
-  type ReferenceAuditFinding,
+  extractLinkUrls
+  
+  
 } from '../courses.reference-audit'
+import type {ReferenceAuditCode, ReferenceAuditFinding} from '../courses.reference-audit';
 
 // Re-export the pure helpers so callers can import everything from one place.
 export {
