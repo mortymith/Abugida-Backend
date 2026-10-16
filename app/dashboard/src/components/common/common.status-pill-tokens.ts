@@ -58,3 +58,25 @@ export function getStatusPillTokens(type: StatusPillType): StatusPillTokens {
 export function getStatusPillLabel(type: StatusPillType): string {
   return STATUS_PILL_LABELS[type]
 }
+
+/**
+ * Course lifecycle → StatusPill type mapping (spec 11 § Status Colour
+ * Mapping + DESIGN.md §3.4).
+ */
+export const COURSE_STATUS_TO_PILL: Record<string, StatusPillType> = {
+  draft: 'neutral',
+  in_review: 'info',
+  approved: 'success',
+  published: 'success',
+  archived: 'archived',
+}
+
+/**
+ * Lesson review status → StatusPill type mapping (spec 11).
+ */
+export const REVIEW_STATUS_TO_PILL: Record<string, StatusPillType> = {
+  draft: 'neutral',
+  in_review: 'info',
+  changes_requested: 'warning',
+  approved: 'success',
+}

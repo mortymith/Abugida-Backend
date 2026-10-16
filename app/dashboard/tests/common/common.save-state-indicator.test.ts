@@ -1,12 +1,15 @@
 import { describe, expect, test } from 'bun:test'
 import {
+  AUTOSAVE_IDLE_MS,
   isReloadActionAvailable,
   isRetryActionAvailable,
   isSaveActionAvailable,
   saveStateAriaLive,
   saveStateLabel,
   SAVE_STATE_LABELS,
+  shouldGuardBeforeUnload,
   shouldNeverShowBothVariants,
+  shouldShowSaved,
   shouldShowSavingMinDuration,
   shouldTransitionToIdle,
 } from '#/components/common/common.save-state-indicator'
@@ -81,5 +84,23 @@ describe('shouldNeverShowBothVariants', () => {
   })
   test('false when both mounted (violation)', () => {
     expect(shouldNeverShowBothVariants(true, true)).toBe(false)
+  })
+})
+
+describe('autosave invariants (spec 11)', () => {
+  test('autosave idle window is 60s after the last edit', () => {
+    expect(AUTOSAVE_IDLE_MS).toBe(60_000)
+  })
+  test('"Saved" only after the server confirms', () => {
+    expect(shouldShowSaved(true)).toBe(true)
+    expect(shouldShowSaved(false)).toBe(false)
+  })
+  test('beforeunload is guarded while work is unsaved or in flight', () => {
+    expect(shouldGuardBeforeUnload('dirty')).toBe(true)
+    expect(shouldGuardBeforeUnload('saving')).toBe(true)
+    expect(shouldGuardBeforeUnload('error')).toBe(true)
+    expect(shouldGuardBeforeUnload('conflict')).toBe(true)
+    expect(shouldGuardBeforeUnload('idle')).toBe(false)
+    expect(shouldGuardBeforeUnload('saved')).toBe(false)
   })
 })

@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import type { StatusPillType } from '#/components/common/common.status-pill-tokens'
 import {
+  COURSE_STATUS_TO_PILL,
   getStatusPillLabel,
   getStatusPillTokens,
+  REVIEW_STATUS_TO_PILL,
   STATUS_PILL_TOKENS,
 } from '#/components/common/common.status-pill-tokens'
 
@@ -38,4 +40,16 @@ describe('getStatusPillLabel', () => {
     expect(getStatusPillLabel('success')).toBe('Success')
     expect(getStatusPillLabel('danger')).toBe('Danger')
   })
+})
+
+describe('COURSE_STATUS_TO_PILL', () => {
+  test('published → success', () => expect(COURSE_STATUS_TO_PILL.published).toBe('success'))
+  test('draft → neutral', () => expect(COURSE_STATUS_TO_PILL.draft).toBe('neutral'))
+  test('archived → archived', () => expect(COURSE_STATUS_TO_PILL.archived).toBe('archived'))
+})
+
+describe('REVIEW_STATUS_TO_PILL', () => {
+  test('changes_requested → warning', () =>
+    expect(REVIEW_STATUS_TO_PILL.changes_requested).toBe('warning'))
+  test('approved → success', () => expect(REVIEW_STATUS_TO_PILL.approved).toBe('success'))
 })

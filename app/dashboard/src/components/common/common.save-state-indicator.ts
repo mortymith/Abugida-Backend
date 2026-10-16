@@ -80,3 +80,25 @@ export function shouldNeverShowBothVariants(
   // The two variants are never shown simultaneously for the same buffer.
   return !(fullMounted && compactMounted)
 }
+
+/**
+ * Spec 11 § Auto-save: "Content editing autosaves 60s after the last edit;
+ * structural changes commit immediately with optimistic UI + rollback."
+ */
+export const AUTOSAVE_IDLE_MS = 60_000
+
+/**
+ * Spec 11 § Auto-save: "The word 'Saved' appears only after the server
+ * confirms — never on an optimistic write."
+ */
+export function shouldShowSaved(serverConfirmed: boolean): boolean {
+  return serverConfirmed
+}
+
+/**
+ * Spec 11 § Resilience: the `beforeunload` guard. A dirty buffer is never
+ * discarded silently, and a flush still in flight must not be lost.
+ */
+export function shouldGuardBeforeUnload(state: SaveState): boolean {
+  return state === 'dirty' || state === 'saving' || state === 'error' || state === 'conflict'
+}
