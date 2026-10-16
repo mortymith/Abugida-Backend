@@ -201,10 +201,65 @@ export interface TwoFactorConfig {
 /**
  * Organization behaviour. The plugin itself is always registered — its tables
  * are part of the shared schema — so this block only tunes behaviour.
+ *
+ * Spec 13 § Configuration Surface / S-13.1: each of these values is a
+ * workspace-configurable policy. They are passed through to Better Auth's
+ * `organization()` plugin in `plugins/server.ts`; the workspace can also
+ * override them per-organization via the `policies` jsonb column on
+ * `organization` (added in migration 0032). The runtime precedence is:
+ * workspace policy > plugin config > plugin default.
  */
 export interface OrganizationConfig {
   /** Whether a signed-in user may create their own workspace. Default: true. */
   allowUserToCreateOrganization?: boolean
+  /**
+   * Maximum number of members per workspace. Range: 1–500. When unset, the
+   * plugin's own default applies. Spec 13 S-13.1.
+   */
+  membershipLimit?: number
+  /**
+   * Maximum number of pending invitations per workspace. Range: 0–200. When
+   * unset, the plugin allows unlimited pending invitations. Spec 13 S-13.1.
+   */
+  invitationLimit?: number
+  /**
+   * Invitation link expiry in seconds. Range: 1–30 days (86400–2592000 s).
+   * Plugin default is 48 h (172800 s). Spec 13 S-13.1.
+   */
+  invitationExpiresIn?: number
+  /**
+   * Maximum number of workspaces a single user may belong to. Range: 1–20.
+   * When unset, defaults to 1. Spec 13 S-13.1.
+   */
+  organizationLimit?: number
+  /**
+   * When true, re-inviting a member cancels their previous pending invitation.
+   * Default: false. Spec 13 S-13.1.
+   */
+  cancelPendingInvitationsOnReInvite?: boolean
+  /**
+   * Callback invoked when an invitation is created. Spec 13 GAP-3: must route
+   * through the Notification Delivery channels (in-app first, Telegram second,
+   * email only where verified) — never email alone. The callback receives the
+   * invitation payload from Better Auth; the implementation decides the channel.
+   *
+   * The signature matches Better Auth's `sendInvitationEmail` exactly so it can
+   * be passed through verbatim.
+   */
+  sendInvitationEmail?: (data: {
+    /** The invitation id. */
+    id: string
+    /** The role being granted to the invitee. */
+    role: string
+    /** The invitee's email. */
+    email: string
+    /** The organization the user is invited to join. */
+    organization: unknown
+    /** The invitation object. */
+    invitation: unknown
+    /** The member who is inviting the user, with their user record. */
+    inviter: unknown
+  }) => Promise<void>
 }
 
 export interface AuthConfig<TSchema extends AuthDatabaseSchema = AuthDatabaseSchema> {
