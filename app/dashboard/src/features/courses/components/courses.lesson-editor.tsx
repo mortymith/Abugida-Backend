@@ -18,6 +18,7 @@ import { LegacyBodyNotice } from './courses.legacy-body-notice'
 import { VIEW_MODE_HINTS, useLessonViewMode } from '../hooks/courses.markdown-views'
 import type { LessonViewMode } from '../hooks/courses.markdown-views'
 import { LESSON_AUTOSAVE_IDLE_MS, useLessonAutosave } from '../hooks/courses.markdown-autosave'
+import { useLessonDraftMirror } from '../hooks/courses.markdown-draft-mirror'
 import { courseQueryKeys } from '../hooks/courses.queries'
 import { REVIEW_STATE_LABELS } from '../courses.review-state'
 import { LESSON_MIN_TEXT_LENGTH, normalizeMarkdown, summarizeMarkdown } from '../courses.markdown'
@@ -102,11 +103,47 @@ export function LessonEditor({
     editor?.setEditable(editable)
   }, [editor, editable])
 
+  // Spec 12 § 8.1.1 — IndexedDB draft mirror. Declared before the hydration
+  // effect because hydration is gated on the restore-prompt state. The mirror
+  // is the durability layer behind every session-expiry and reload guarantee:
+  // an author who types for 40 seconds and closes the tab has an
+  // in-memory-only buffer under the 60s autosave timer, and the mirror is what
+  // recovers it. The hook also owns the `beforeunload` guard, which fires
+  // whenever `dirty` is true regardless of the mirror.
+  //
+  // `markdown` and `title` are intentionally read live here: the hook debounces
+  // writes to 1000ms, so this does not race the editor's update events.
+  const draftMirror = useLessonDraftMirror({
+    itemPublicId: lessonId,
+    rowVersion,
+    body: markdown,
+    title,
+    dirty,
+    // Mirror only while the author can actually edit. A locked lesson has no
+    // buffer to recover, and a Viewer/Reviewer has no save path. `hydrated`
+    // gates the initial burst so we don't mirror the server body before the
+    // author has touched anything.
+    enabled: hydrated && editable,
+  })
+
   // Hydrate once, after mount. Markdown bodies go through `contentType:
   // 'markdown'`; legacy HTML bodies keep the previous path so an un-migrated
   // lesson still opens and saves (spec 12 § 5.2).
+  //
+  // Spec 12 § 8.1.1: hydration is gated on the IndexedDB restore prompt. If a
+  // draft exists at the current rowVersion, the editor must ask the author
+  // Restore / Discard **before** hydrating from the server body. The prompt is
+  // never silent and never auto-applied. A stale draft (rowVersion < server's)
+  // routes to the conflict dialog and is handled in Phase A3.
   useEffect(() => {
     if (hydrated || !data || !editor) return
+    // Wait until the mirror has finished its mount-time check.
+    if (draftMirror.restore.kind === 'checking') return
+    // A pending draft blocks hydration until the author picks Restore or
+    // Discard. A stale draft routes to the conflict flow (Phase A3) and also
+    // blocks hydration.
+    if (draftMirror.restore.kind === 'pending' || draftMirror.restore.kind === 'stale') return
+
     setTitle(data.title)
     setContentType(data.contentType)
     setVideoUrl(data.videoUrl ?? '')
@@ -115,7 +152,6 @@ export function LessonEditor({
     setMediaSource(data.assetId ? 'media' : 'url')
     setDurationMinutes(data.durationMinutes?.toString() ?? '')
     setTagsDraft(data.tags.join(', '))
-    setRowVersion(data.rowVersion)
 
     const body = data.body ?? ''
     if (data.bodyFormat === 'markdown') {
@@ -126,7 +162,36 @@ export function LessonEditor({
     editor.setEditable(!(data.reviewStatus === 'in_review'))
     setMarkdown(normalizeMarkdown(editor.getMarkdown()))
     setHydrated(true)
-  }, [hydrated, data, editor])
+  }, [hydrated, data, editor, draftMirror.restore])
+
+  // Spec 12 § 8.1.1 — when the author accepts the restore prompt, hydrate
+  // from the draft instead of the server body. The draft's Markdown is the
+  // same string the editor would have produced, so the parse path is
+  // identical and there is no second normalization to drift on.
+  function handleRestoreAccept() {
+    const draft = draftMirror.acceptRestore()
+    if (!draft || !data || !editor) return
+    setTitle(draft.title)
+    setContentType(data.contentType)
+    setVideoUrl(data.videoUrl ?? '')
+    setAssetId(data.assetId ?? null)
+    setAssetName(data.assetName)
+    setMediaSource(data.assetId ? 'media' : 'url')
+    setDurationMinutes(data.durationMinutes?.toString() ?? '')
+    setTagsDraft(data.tags.join(', '))
+    editor.commands.setContent(draft.body, { contentType: 'markdown' })
+    editor.setEditable(!(data.reviewStatus === 'in_review'))
+    setMarkdown(normalizeMarkdown(editor.getMarkdown()))
+    setDirty(true)
+    setHydrated(true)
+  }
+
+  // Spec 12 § 8.1.1 — Discard clears the mirror and proceeds with the server
+  // body via the normal hydration effect (the mirror state transitions to
+  // 'none', which unblocks the effect).
+  async function handleRestoreDiscard() {
+    await draftMirror.discardRestore()
+  }
 
   // Mirror the editor's Markdown whenever it changes, so the stats, the preview
   // and the source pane all read the same canonical value.
@@ -149,6 +214,10 @@ export function LessonEditor({
     onSuccess: (result) => {
       setRowVersion(result.rowVersion)
       setDirty(false)
+      // Spec 12 § 8.1.1 — clear the IndexedDB mirror only on a confirmed
+      // save. A failed or conflicted save leaves the mirror intact, because
+      // the work is not yet safe.
+      void draftMirror.onConfirmedSave()
       void queryClient.invalidateQueries({ queryKey: ['courses', 'lesson-edit', lessonId] })
       void queryClient.invalidateQueries({ queryKey: courseQueryKeys.curriculum(courseId) })
     },
@@ -643,6 +712,31 @@ export function LessonEditor({
           setConfirmClose(false)
           setDirty(false)
           void navigate({ to: '/courses/$courseId', params: { courseId: courseId } })
+        }}
+      />
+
+      {/* Spec 12 § 8.1.1 — IndexedDB restore prompt. Surfaced before the
+          editor hydrates from the server body when a local draft exists at
+          the current rowVersion. The prompt is never silent and never
+          auto-applied. */}
+      <ConfirmDialog
+        open={draftMirror.restore.kind === 'pending'}
+        onOpenChange={(open) => {
+          if (!open) void handleRestoreDiscard()
+        }}
+        title="Restore unsaved draft?"
+        body={
+          draftMirror.restore.kind === 'pending'
+            ? `You have unsaved changes to this lesson from ${new Date(
+                draftMirror.restore.draft.updatedAt,
+              ).toLocaleString()}. Restore them?`
+            : ''
+        }
+        confirmLabel="Restore draft"
+        cancelLabel="Discard"
+        destructive={false}
+        onConfirm={() => {
+          handleRestoreAccept()
         }}
       />
     </div>
