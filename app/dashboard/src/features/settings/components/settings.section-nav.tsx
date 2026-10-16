@@ -18,6 +18,7 @@ const TABS: Array<{ to: string; label: string; roles: readonly string[] | null }
   { to: '/settings/security', label: 'Security', roles: ['admin'] },
   { to: '/settings/roles', label: 'Roles & Permissions', roles: ['admin'] },
   { to: '/settings/privacy', label: 'Privacy', roles: ['admin'] },
+  { to: '/settings/workspace-config', label: 'Workspace Config', roles: ['admin'] },
 ]
 
 export const SETTINGS_SECTION_NAV = TABS

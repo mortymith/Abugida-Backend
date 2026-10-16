@@ -51,6 +51,7 @@ import { Route as AppSettingsProfileRouteImport } from './routes/_app/settings/p
 import { Route as AppSettingsRolesRouteImport } from './routes/_app/settings/roles'
 import { Route as AppSettingsSecurityRouteImport } from './routes/_app/settings/security'
 import { Route as AppSettingsTeamRouteImport } from './routes/_app/settings/team'
+import { Route as AppSettingsWorkspaceConfigRouteImport } from './routes/_app/settings/workspace-config'
 import { Route as AppStudentsIndexRouteImport } from './routes/_app/students/index'
 import { Route as AppStudentsBadgesRouteImport } from './routes/_app/students/badges'
 import { Route as AppStudentsCohortsRouteImport } from './routes/_app/students/cohorts'
@@ -277,6 +278,12 @@ const AppSettingsTeamRoute = AppSettingsTeamRouteImport.update({
   path: '/team',
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
+const AppSettingsWorkspaceConfigRoute =
+  AppSettingsWorkspaceConfigRouteImport.update({
+    id: '/workspace-config',
+    path: '/workspace-config',
+    getParentRoute: () => AppSettingsRouteRoute,
+  } as any)
 const AppStudentsIndexRoute = AppStudentsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -401,6 +408,7 @@ export interface FileRoutesByFullPath {
   '/settings/roles': typeof AppSettingsRolesRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/settings/team': typeof AppSettingsTeamRoute
+  '/settings/workspace-config': typeof AppSettingsWorkspaceConfigRoute
   '/students/badges': typeof AppStudentsBadgesRoute
   '/students/cohorts': typeof AppStudentsCohortsRoute
   '/students/messaging': typeof AppStudentsMessagingRoute
@@ -452,6 +460,7 @@ export interface FileRoutesByTo {
   '/settings/roles': typeof AppSettingsRolesRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/settings/team': typeof AppSettingsTeamRoute
+  '/settings/workspace-config': typeof AppSettingsWorkspaceConfigRoute
   '/students/badges': typeof AppStudentsBadgesRoute
   '/students/cohorts': typeof AppStudentsCohortsRoute
   '/students/messaging': typeof AppStudentsMessagingRoute
@@ -513,6 +522,7 @@ export interface FileRoutesById {
   '/_app/settings/roles': typeof AppSettingsRolesRoute
   '/_app/settings/security': typeof AppSettingsSecurityRoute
   '/_app/settings/team': typeof AppSettingsTeamRoute
+  '/_app/settings/workspace-config': typeof AppSettingsWorkspaceConfigRoute
   '/_app/students/badges': typeof AppStudentsBadgesRoute
   '/_app/students/cohorts': typeof AppStudentsCohortsRoute
   '/_app/students/messaging': typeof AppStudentsMessagingRoute
@@ -573,6 +583,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings/security'
     | '/settings/team'
+    | '/settings/workspace-config'
     | '/students/badges'
     | '/students/cohorts'
     | '/students/messaging'
@@ -624,6 +635,7 @@ export interface FileRouteTypes {
     | '/settings/roles'
     | '/settings/security'
     | '/settings/team'
+    | '/settings/workspace-config'
     | '/students/badges'
     | '/students/cohorts'
     | '/students/messaging'
@@ -684,6 +696,7 @@ export interface FileRouteTypes {
     | '/_app/settings/roles'
     | '/_app/settings/security'
     | '/_app/settings/team'
+    | '/_app/settings/workspace-config'
     | '/_app/students/badges'
     | '/_app/students/cohorts'
     | '/_app/students/messaging'
@@ -1010,6 +1023,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsTeamRouteImport
       parentRoute: typeof AppSettingsRouteRoute
     }
+    '/_app/settings/workspace-config': {
+      id: '/_app/settings/workspace-config'
+      path: '/workspace-config'
+      fullPath: '/settings/workspace-config'
+      preLoaderRoute: typeof AppSettingsWorkspaceConfigRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
     '/_app/students/': {
       id: '/_app/students/'
       path: '/'
@@ -1265,6 +1285,7 @@ interface AppSettingsRouteRouteChildren {
   AppSettingsRolesRoute: typeof AppSettingsRolesRoute
   AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
   AppSettingsTeamRoute: typeof AppSettingsTeamRoute
+  AppSettingsWorkspaceConfigRoute: typeof AppSettingsWorkspaceConfigRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
 
@@ -1279,6 +1300,7 @@ const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
   AppSettingsRolesRoute: AppSettingsRolesRoute,
   AppSettingsSecurityRoute: AppSettingsSecurityRoute,
   AppSettingsTeamRoute: AppSettingsTeamRoute,
+  AppSettingsWorkspaceConfigRoute: AppSettingsWorkspaceConfigRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
 
@@ -1364,12 +1386,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

@@ -11,6 +11,7 @@ export { ApiWebhooksView } from './components/settings.api-webhooks-view'
 export { SecurityView } from './components/settings.security-view'
 export { RolesView } from './components/settings.roles-view'
 export { PrivacyView } from './components/settings.privacy-view'
+export { WorkspaceConfigView } from './components/settings.workspace-config-view'
 export {
   useSaveGeneralSettings,
   useInviteTeamMember,
@@ -45,6 +46,7 @@ export {
   useCreateDataRequest,
   useCompleteDataExport,
   useEraseStudentData,
+  useSaveWorkspaceConfig,
 } from './hooks/settings.mutations'
 export {
   generalSettingsQueryOptions,
@@ -63,5 +65,6 @@ export {
   privacyQueryOptions,
   dataRequestsQueryOptions,
   consentLogQueryOptions,
+  workspaceConfigQueryOptions,
   settingsQueryKeys,
 } from './hooks/settings.queries'
