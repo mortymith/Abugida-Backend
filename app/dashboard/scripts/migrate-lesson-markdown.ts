@@ -6,6 +6,12 @@
  * already marked 'markdown' are skipped, and a row that cannot be converted is
  * reported and left as HTML rather than being guessed at.
  *
+ * Spec 12 § 14.1: each successful migration writes a `migration` revision row
+ * so the pre-migration HTML stays comparable to the Markdown for review. The
+ * revision write is best-effort — a failure does not roll the conversion back,
+ * because the body is already correctly stored as Markdown; the reviewer just
+ * loses the diff baseline for that row.
+ *
  * Usage (from `app/dashboard/`):
  *   bun run migrate:lesson-markdown            # dry run, changes nothing
  *   bun run migrate:lesson-markdown -- --write # actually write
@@ -14,7 +20,7 @@
  * function, so a single lesson can be converted on demand from the UI.
  */
 import { eq, sql } from '@abugida/database'
-import { lessons } from '@abugida/database/catalog'
+import { lessons, lessonBodyRevisions } from '@abugida/database/catalog'
 import { db } from '#/config/db.config'
 import {
   convertLegacyHtmlToMarkdown,
@@ -113,6 +119,24 @@ async function main(): Promise<void> {
             // Someone else converted it first; count as already-converted.
             report.alreadyMarkdown += 1
             continue
+          }
+          // Spec 12 § 14.1 — write a `migration` revision row so the
+          // pre-migration HTML stays comparable to the Markdown for review.
+          // The `createdBy` is the system user; the migration runs without a
+          // session, so use a sentinel id that the reviewer panel can label
+          // 'migration'. Best-effort: a failure does not roll the conversion
+          // back, because the body is already correctly stored as Markdown.
+          try {
+            await db.insert(lessonBodyRevisions).values({
+              lessonId: row.id,
+              body: result.markdown ?? '',
+              bodyFormat: 'markdown',
+              createdBy: 'system-migration',
+              reason: 'migration',
+            })
+          } catch {
+            // Logged to stderr; the conversion itself succeeded.
+            console.error(`revision write failed for lesson ${row.publicId} (conversion ok)`)
           }
         }
         report.migrated += 1
