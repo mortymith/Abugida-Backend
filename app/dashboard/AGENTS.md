@@ -80,7 +80,11 @@ features/<domain>/
 - Components: PascalCase export inside a dot-named file (`auth.login-form.tsx` → `export function LoginForm()`).
 - Route files: TanStack Router naming (`__root.tsx`, `route.tsx`, `$param.tsx`, `index.tsx`).
 - `src/components/ui/` is kebab-case and shadcn-managed — add components via shadcn, don't hand-convert.
-- Tests: `tests/<domain>.<purpose>.test.ts`, colocated in the flat `tests/` dir, not next to source. Run with `pnpm test` (bun test).
+- Tests: `tests/<domain>/<domain>.<purpose>.test.ts` — one folder per feature domain, mirroring `src/features/`, and never next to source. Two folders are not domains: `tests/common/` (cross-cutting `src/components/common`) and `tests/_guards/` (repo-wide structural scans). The filename prefix repeats the folder on purpose, so a file is self-describing wherever it surfaces. Prefer the `#/` alias for imports — never a relative `../src/…`, which silently breaks the next time a test moves. Run with `pnpm test` (bun test), which discovers nested folders automatically.
+- **A test is named after what it tests.** Two tiers, and picking the wrong one is the usual naming bug:
+  - _Single-module suite_ → name it after the module, verbatim: `courses.import-rows.test.ts` covers `courses/courses.import-rows.ts`. Same for a `schemas/*.schema.ts` file — `settings.schema.test.ts` covers `settings/schemas/settings.schema.ts`. One module gets **one** test file; if you need a second, that's a sign the module should split, not the test.
+  - _Cross-cutting suite_ (spans several modules, or scans source text) → name it for the concern, not a module: `courses.spec-04.test.ts`, `navigation.shell.test.ts`, `onboarding.tour.test.ts`, `_guards/hooks-order.test.ts`.
+  - A name is wrong when it matches no module and no real concern — `courses.import.test.ts` looked like `courses.import.ts`, which never existed, so it silently read as coverage of a module it did not touch. Check the file's actual imports before renaming, and rename the module or the test together so the pair never drifts.
 - Seed/migration scripts: `scripts/<app>.<purpose>.ts`.
 
 ## Config and singletons

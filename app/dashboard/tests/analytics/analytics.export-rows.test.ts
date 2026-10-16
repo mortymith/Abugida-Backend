@@ -6,8 +6,8 @@ import {
   buildQuizSection,
   buildStudentProgressSection,
   buildTrendSection,
-} from '../src/features/analytics/analytics.export-rows'
-import type { CohortComparison } from '../src/features/analytics/analytics.types'
+} from '#/features/analytics/analytics.export-rows'
+import type { CohortComparison } from '#/features/analytics/analytics.types'
 
 describe('buildCoursePerformanceSection', () => {
   test('includes a Revenue column only when revenue data exists', () => {

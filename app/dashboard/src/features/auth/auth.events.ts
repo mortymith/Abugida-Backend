@@ -20,7 +20,7 @@
  * the call site rather than a silently mislabelled series.
  *
  * Pure module: no React, no env, no db, no OTel. Tested by
- * `tests/auth.events.test.ts`.
+ * `tests/auth/auth.events.test.ts`.
  */
 
 import type { SigninBlockedReason } from './auth.signin-state'

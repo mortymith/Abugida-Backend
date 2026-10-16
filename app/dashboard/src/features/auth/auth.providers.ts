@@ -16,7 +16,7 @@
  *     hidden button teaches a user nothing.
  *
  * Pure module: no React, no env, no db. Unit-tested directly by
- * `tests/auth.providers.test.ts`.
+ * `tests/auth/auth.providers.test.ts`.
  */
 
 export const PROVIDERS = ['google', 'telegram-oidc'] as const

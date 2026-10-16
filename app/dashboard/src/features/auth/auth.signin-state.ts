@@ -13,7 +13,7 @@
  *  2. **Which state the screen is in**, so the component is a renderer rather
  *     than a decision tree.
  *
- * Pure module: no React, no env, no db. Tested by `tests/auth.signin-state.test.ts`.
+ * Pure module: no React, no env, no db. Tested by `tests/auth/auth.signin-state.test.ts`.
  */
 
 /** The `auth.signin_blocked{reason}` analytics reasons the spec enumerates. */

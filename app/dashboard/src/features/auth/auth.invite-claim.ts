@@ -25,7 +25,7 @@
  *    `1/I/L` — a code that fails to type is indistinguishable from a dead link
  *    to the person holding it.
  *
- * Pure module: no React, no env, no db. Tested by `tests/auth.invite-claim.test.ts`.
+ * Pure module: no React, no env, no db. Tested by `tests/auth/auth.invite-claim.test.ts`.
  */
 
 /** Spec S-0.1: the manual code is exactly 8 characters. */

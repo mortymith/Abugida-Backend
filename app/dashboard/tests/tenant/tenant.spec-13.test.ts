@@ -16,7 +16,7 @@ import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
-const SRC_ROOT = join(import.meta.dir, '..', 'src')
+const SRC_ROOT = join(import.meta.dir, '..', '..', 'src')
 
 function sourceFiles(dir = SRC_ROOT): string[] {
   const out: string[] = []

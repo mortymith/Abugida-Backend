@@ -13,7 +13,7 @@
  * exists for this user — request an admin reset when a second verified Admin
  * is reachable, support recovery when they are the only Admin.
  *
- * Pure module: no React, no env, no db. Tested by `tests/auth.mfa-lockout.test.ts`.
+ * Pure module: no React, no env, no db. Tested by `tests/auth/auth.mfa-lockout.test.ts`.
  */
 
 /** Server-configured budget. Mirrors `ACCOUNT_LOCKOUT_MAX_ATTEMPTS` (5). */

@@ -15,8 +15,8 @@ import {
   findBiggestDrop,
   pctDelta,
   selectLikelyCause,
-} from '../src/features/analytics/analytics.metric-math'
-import type { LessonEngagementRow } from '../src/features/analytics/analytics.types'
+} from '#/features/analytics/analytics.metric-math'
+import type { LessonEngagementRow } from '#/features/analytics/analytics.types'
 
 describe('pctDelta', () => {
   test('computes percentage change', () => {

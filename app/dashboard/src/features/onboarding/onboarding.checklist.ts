@@ -15,7 +15,7 @@
  * sign-up wizard, the dashboard card and the tests all agree on what each
  * choice means.
  *
- * Pure module: no React, no env, no db. Tested by `tests/onboarding.checklist.test.ts`.
+ * Pure module: no React, no env, no db. Tested by `tests/onboarding/onboarding.checklist.test.ts`.
  */
 
 /**

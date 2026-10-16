@@ -10,7 +10,7 @@
  * The set below is load-bearing. Removing any of image / table / task-list
  * silently re-enables the content loss catalogued in spec 12 § 3.3:
  * `![alt](url)` degrades to `alt`, GFM tables degrade to an empty document, and
- * `- [x] done` degrades to `- done`. `tests/courses.markdown.test.ts` pins every
+ * `- [x] done` degrades to `- done`. `tests/courses/courses.markdown.test.ts` pins every
  * one of those cases, so the failure will be loud rather than silent.
  */
 import StarterKit from '@tiptap/starter-kit'

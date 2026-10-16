@@ -18,7 +18,7 @@ import { join } from 'node:path'
  * block, a ternary branch, behind `&&`, or after an early `return` is not.
  */
 
-const COMPONENT_ROOT = join(import.meta.dir, '..', 'src')
+const COMPONENT_ROOT = join(import.meta.dir, '..', '..', 'src')
 const GENERATED_FILES = new Set(['routeTree.gen.ts'])
 
 /** Keywords whose block or parenthesis is only entered on some renders. */

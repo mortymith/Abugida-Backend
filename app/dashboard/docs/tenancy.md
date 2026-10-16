@@ -34,7 +34,7 @@ drift on the rule.
 Every insert path stamps the active workspace (`courses`: details, import,
 duplication, templates; `asset_library`: upload, duplicate — a duplicate keeps
 the source's workspace so it is only ever reachable to members who could already
-see the original). `tests/tenancy.spec-13.test.ts` fails the build if a new
+see the original). `tests/tenant/tenant.spec-13.test.ts` fails the build if a new
 insert site forgets.
 
 ## Scoped reads (enforced)

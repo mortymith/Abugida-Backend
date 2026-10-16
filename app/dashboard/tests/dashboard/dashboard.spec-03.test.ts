@@ -107,7 +107,7 @@ describe('validateCustomRange', () => {
  * (`AT TIME ZONE ${zone}`) instead.
  */
 describe('server SQL never quotes a bound interpolation', () => {
-  const appRoot = `${import.meta.dir}/..`
+  const appRoot = `${import.meta.dir}/../..`
   const roots = ['src/features/dashboard/server', 'src/features/analytics/server']
 
   /** Every `sql` / `sql<...>` template body in a source file. */

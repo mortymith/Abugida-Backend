@@ -7,7 +7,7 @@
  * step machine so that invariant is expressed once, and owns the manual-key
  * formatting so the recovery path never depends on a QR render.
  *
- * Pure module: no React, no env, no db. Tested by `tests/auth.mfa-enrollment.test.ts`.
+ * Pure module: no React, no env, no db. Tested by `tests/auth/auth.mfa-enrollment.test.ts`.
  */
 
 export const ENROLLMENT_STEPS = ['scan', 'confirm', 'backup_codes'] as const
