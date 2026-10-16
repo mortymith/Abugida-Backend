@@ -9,6 +9,7 @@ import { Spinner } from '#/components/ui/spinner'
 import { Badge } from '#/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { ConfirmDialog } from '#/components/common/confirm-dialog'
+import { OfflineBanner } from '#/components/common/offline-banner'
 import { StatusPill } from './courses.status-pill'
 import { MarkdownEditorSurface, useLessonEditor } from './courses.markdown-editor'
 import { MarkdownToolbar } from './courses.markdown-toolbar'
@@ -20,6 +21,12 @@ import { VIEW_MODE_HINTS, useLessonViewMode } from '../hooks/courses.markdown-vi
 import type { LessonViewMode } from '../hooks/courses.markdown-views'
 import { LESSON_AUTOSAVE_IDLE_MS, useLessonAutosave } from '../hooks/courses.markdown-autosave'
 import { useLessonDraftMirror } from '../hooks/courses.markdown-draft-mirror'
+import { useOnlineState } from '../hooks/courses.online-state'
+import {
+  clearQueuedSave,
+  enqueueSave,
+  readQueuedSave,
+} from '../hooks/courses.markdown-offline-queue'
 import { courseQueryKeys } from '../hooks/courses.queries'
 import { REVIEW_STATE_LABELS } from '../courses.review-state'
 import { LESSON_MIN_TEXT_LENGTH, normalizeMarkdown, summarizeMarkdown } from '../courses.markdown'
@@ -61,6 +68,11 @@ export function LessonEditor({
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { mode, setMode } = useLessonViewMode()
+  // Spec 12 § 8.1.2 — offline detection. The editor is the documented
+  // exception to Part 11's "offline = read-only" rule: the canvas stays
+  // editable because the IndexedDB mirror keeps taking writes every 1000ms.
+  // What is suspended offline is the server write path, not the editor.
+  const onlineState = useOnlineState()
 
   const lesson = useQuery({
     queryKey: ['courses', 'lesson-edit', lessonId],
@@ -272,10 +284,72 @@ export function LessonEditor({
   const autosave = useLessonAutosave({
     enabled: editable,
     dirty,
+    online: onlineState.online,
     save: async () => {
+      // Spec 12 § 8.1.2 — when offline, the hook reports `offline` and does
+      // not call `save`. This branch only fires when online. The editor's
+      // offline-queue helper (Phase A4) is invoked from a separate effect
+      // that watches `online` and `dirty`.
       await save.mutateAsync(buildInput())
     },
   })
+
+  // Spec 12 § 8.1.2 — offline queue. When the editor is offline and dirty,
+  // enqueue the save rather than attempting it. On reconnect, flush the
+  // queue in order; a stale rowVersion resolves to the three-option
+  // conflict dialog (Phase A3), never a silent overwrite.
+  useEffect(() => {
+    if (onlineState.online || !dirty || !editable || !hydrated) return
+    const input = buildInput()
+    void enqueueSave({
+      lessonPublicId: lessonId,
+      body: input.body ?? '',
+      bodyFormat: 'markdown',
+      expectedRowVersion: input.expectedRowVersion,
+      queuedAt: new Date().toISOString(),
+      input: {
+        title: input.title,
+        contentType: input.contentType,
+        videoUrl: input.videoUrl,
+        durationMinutes: input.durationMinutes,
+        tags: input.tags,
+        assetId: input.assetId ?? null,
+      },
+    })
+  }, [onlineState.online, dirty, editable, hydrated, lessonId, buildInput])
+
+  // Flush the queue on reconnect. A 409 surfaces the conflict dialog via the
+  // save error effect above; the queue entry is cleared on success.
+  useEffect(() => {
+    if (!onlineState.online || !hydrated) return
+    void (async () => {
+      const queued = await readQueuedSave(lessonId)
+      if (!queued) return
+      try {
+        const { saveLesson } = await import('../server/all')
+        await saveLesson({
+          data: {
+            lessonPublicId: queued.lessonPublicId,
+            title: queued.input.title,
+            body: queued.body === '' ? null : queued.body,
+            bodyFormat: 'markdown',
+            contentType: queued.input.contentType,
+            videoUrl: queued.input.videoUrl,
+            durationMinutes: queued.input.durationMinutes,
+            tags: queued.input.tags,
+            assetId: queued.input.assetId,
+            expectedRowVersion: queued.expectedRowVersion,
+          },
+        })
+        await clearQueuedSave(lessonId)
+        void queryClient.invalidateQueries({ queryKey: ['courses', 'lesson-edit', lessonId] })
+        toast.success('Your offline changes were saved.')
+      } catch {
+        // A 409 will surface the conflict dialog; a network failure leaves
+        // the queue entry intact so the next reconnect retries.
+      }
+    })()
+  }, [onlineState.online, hydrated, lessonId, queryClient])
 
   // Surface mutation failures once, as a toast, whichever path triggered them.
   // Spec 12 § 8.2: a VERSION_CONFLICT opens the three-option conflict dialog
@@ -523,6 +597,11 @@ export function LessonEditor({
         </div>
       ) : null}
       {isLegacy ? <LegacyBodyNotice lessonTitle={data.title} /> : null}
+      {/* Spec 12 § 8.1.2 — offline banner. The editor is the documented
+          exception to Part 11's "offline = read-only" rule: the canvas stays
+          editable because the IndexedDB mirror keeps taking writes. The
+          banner names the consequence and the queue depth. */}
+      {!onlineState.online ? <OfflineBanner /> : null}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <section className="rounded-xl border bg-card p-4 shadow-sm" aria-label="Content editor">
@@ -867,23 +946,32 @@ function SaveIndicator({
   status,
   savedAt,
 }: {
-  status: 'idle' | 'dirty' | 'saving' | 'saved' | 'error'
+  status: 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'offline' | 'suspended'
   savedAt: Date | null
 }) {
+  // Spec 12 § 8.1.2 — the autosave matrix's indicator column. Each cell has
+  // a defined status string. `offline` and `suspended` use `aria-live=
+  // "assertive"` per Part 11 / S-7.8 (error / conflict / offline are
+  // assertive; idle / dirty / saving / saved are polite).
+  const isAssertive = status === 'error' || status === 'offline' || status === 'suspended'
   const text =
     status === 'saving'
       ? 'Saving…'
       : status === 'error'
-        ? 'Save failed — retry'
+        ? 'Save failed — Retry'
         : status === 'dirty'
           ? 'Unsaved changes'
-          : status === 'saved' && savedAt
-            ? `All changes saved at ${savedAt.toLocaleTimeString()}`
-            : 'All changes saved'
+          : status === 'offline'
+            ? 'Offline — changes queued'
+            : status === 'suspended'
+              ? 'Autosave paused (in review)'
+              : status === 'saved' && savedAt
+                ? `All changes saved at ${savedAt.toLocaleTimeString()}`
+                : 'All changes saved'
   return (
     <p
       className="text-xs text-muted-foreground"
-      aria-live="polite"
+      aria-live={isAssertive ? 'assertive' : 'polite'}
       role="status"
       data-testid="lesson-save-indicator"
     >
