@@ -70,9 +70,34 @@ export function buildTwoFactorPlugin(config: AuthConfig): BetterAuthPlugin | nul
 export function buildOrganizationPlugin(config: AuthConfig): BetterAuthPlugin {
   const organizationConfig: OrganizationConfig = config.organization ?? {}
 
+  // Spec 13 § Configuration Surface — pass every workspace-configurable
+  // policy through to the plugin. Each is optional; omitting one lets the
+  // plugin's own default apply, which is what `source: 'plugin_default'`
+  // means on S-13.1.
   return organization({
     ...(organizationConfig.allowUserToCreateOrganization !== undefined
       ? { allowUserToCreateOrganization: organizationConfig.allowUserToCreateOrganization }
+      : {}),
+    ...(organizationConfig.membershipLimit !== undefined
+      ? { membershipLimit: organizationConfig.membershipLimit }
+      : {}),
+    ...(organizationConfig.invitationLimit !== undefined
+      ? { invitationLimit: organizationConfig.invitationLimit }
+      : {}),
+    ...(organizationConfig.invitationExpiresIn !== undefined
+      ? { invitationExpiresIn: organizationConfig.invitationExpiresIn }
+      : {}),
+    ...(organizationConfig.organizationLimit !== undefined
+      ? { organizationLimit: organizationConfig.organizationLimit }
+      : {}),
+    ...(organizationConfig.cancelPendingInvitationsOnReInvite !== undefined
+      ? {
+          cancelPendingInvitationsOnReInvite:
+            organizationConfig.cancelPendingInvitationsOnReInvite,
+        }
+      : {}),
+    ...(organizationConfig.sendInvitationEmail
+      ? { sendInvitationEmail: organizationConfig.sendInvitationEmail }
       : {}),
     schema: {
       organization: {

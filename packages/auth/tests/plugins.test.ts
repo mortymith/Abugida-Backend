@@ -103,6 +103,52 @@ describe('server plugin registry', () => {
     })
   })
 
+  it('passes every spec-13 workspace policy through to the organization plugin', () => {
+    // Spec 13 § Configuration Surface — every OrganizationConfig field is
+    // forwarded to the plugin. Omitting one lets the plugin default apply; the
+    // test pins the passthrough so a regression cannot silently drop a policy.
+    const sendInvitationEmail = async () => {}
+    const plugin = buildOrganizationPlugin(
+      baseConfig({
+        organization: {
+          allowUserToCreateOrganization: false,
+          membershipLimit: 50,
+          invitationLimit: 25,
+          invitationExpiresIn: 7 * 24 * 60 * 60,
+          organizationLimit: 5,
+          cancelPendingInvitationsOnReInvite: true,
+          sendInvitationEmail,
+        },
+      }),
+    ) as unknown as { options: Record<string, unknown> }
+
+    expect(plugin.options).toMatchObject({
+      allowUserToCreateOrganization: false,
+      membershipLimit: 50,
+      invitationLimit: 25,
+      invitationExpiresIn: 7 * 24 * 60 * 60,
+      organizationLimit: 5,
+      cancelPendingInvitationsOnReInvite: true,
+      sendInvitationEmail,
+    })
+  })
+
+  it('omits unset organization options so the plugin default applies', () => {
+    // When OrganizationConfig is empty, none of the policy options should be
+    // forwarded — the plugin's own defaults take over, which is what
+    // `source: 'plugin_default'` means on S-13.1.
+    const plugin = buildOrganizationPlugin(baseConfig()) as unknown as {
+      options: Record<string, unknown>
+    }
+
+    expect(plugin.options).not.toHaveProperty('membershipLimit')
+    expect(plugin.options).not.toHaveProperty('invitationLimit')
+    expect(plugin.options).not.toHaveProperty('invitationExpiresIn')
+    expect(plugin.options).not.toHaveProperty('organizationLimit')
+    expect(plugin.options).not.toHaveProperty('cancelPendingInvitationsOnReInvite')
+    expect(plugin.options).not.toHaveProperty('sendInvitationEmail')
+  })
+
   it('ignores an additionalPlugins escape hatch, if one is passed at runtime', () => {
     const plugin = { id: 'smuggled-plugin' }
     const config = { ...baseConfig(), additionalPlugins: [plugin] } as AuthConfig
