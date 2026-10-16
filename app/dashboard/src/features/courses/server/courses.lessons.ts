@@ -151,3 +151,23 @@ export const confirmServerBody = createServerFn({ method: 'GET' })
     const { confirmServerBodyImpl } = await import('./courses.markdown-conflict.impl.server')
     return confirmServerBodyImpl(data.lessonPublicId, data.expectedRowVersion)
   })
+
+/**
+ * Spec 12 § 9.4 — reference audit. Returns advisory findings for images whose
+ * media asset is missing/archived (ASSET_MISSING) and links whose host fails a
+ * HEAD check (LINK_UNREACHABLE). Both are advisory: they never block autosave
+ * (§ 8.1.2) and never produce a 409. They DO block publish readiness, because
+ * a broken image in a Published lesson is a student-facing defect.
+ *
+ * The audit runs on flush (Ctrl/⌘+S, context switch, 60s idle timer) and on
+ * publish-readiness re-check — never per keystroke. The 24h link cache is
+ * what makes this affordable.
+ */
+const referenceAuditSchema = z.object({ markdown: z.string().max(200_000) })
+
+export const auditLessonReferences = createServerFn({ method: 'POST' })
+  .validator((input: unknown) => referenceAuditSchema.parse(input))
+  .handler(async ({ data }) => {
+    const { auditReferencesImpl } = await import('./courses.reference-audit.impl.server')
+    return auditReferencesImpl(data.markdown)
+  })
