@@ -204,6 +204,13 @@
       "when": 1791794260563,
       "tag": "0028_famous_landau",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792166492473,
+      "tag": "0029_unique_doctor_strange",
+      "breakpoints": true
     }
   ]
 }
