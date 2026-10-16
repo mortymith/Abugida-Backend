@@ -274,6 +274,13 @@
       "when": 1792397724040,
       "tag": "0038_dapper_mandarin",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792398382757,
+      "tag": "0039_keen_jocasta",
+      "breakpoints": true
     }
   ]
 }
