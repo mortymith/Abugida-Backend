@@ -1,9 +1,50 @@
 import { relations } from 'drizzle-orm'
-import { boolean, index, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import { boolean, index, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
 import { z } from 'zod'
 
 import { users } from './users'
+
+/**
+ * Spec 13 § Configuration Surface — the workspace-configurable policy
+ * payload. Stored as a single jsonb column on `organization` so a policy
+ * read is one indexed query, not a join, and a policy write is one row
+ * update, not a transaction over six rows in a sibling table.
+ *
+ * Every field is optional. A field that is `null` or absent means
+ * "unconfigured" — the plugin's own default applies, and S-13.1 reports
+ * `source: 'plugin_default'`. A field that is set means "the workspace
+ * chose this value" and S-13.1 reports `source: 'workspace'`.
+ *
+ * The runtime precedence is: workspace policy > plugin config > plugin
+ * default. Env-overridable values (TOTP_ISSUER, TWO_FACTOR_COOKIE_MAX_AGE,
+ * TRUST_DEVICE_MAX_AGE, ACCOUNT_LOCKOUT_*) are read-only on S-13.1 and
+ * reported as `source: 'environment'`.
+ */
+export const workspacePoliciesSchema = z
+  .object({
+    /** Range 1–500. When null, the plugin default applies. */
+    membershipLimit: z.number().int().min(1).max(500).nullable(),
+    /** Range 0–200. When null, the plugin allows unlimited pending invitations. */
+    invitationLimit: z.number().int().min(0).max(200).nullable(),
+    /** Range 1–30 days (86400–2592000 s). When null, the plugin default (48h) applies. */
+    invitationExpiresInDays: z.number().int().min(1).max(30).nullable(),
+    /** Range 1–20. When null, defaults to 1. */
+    organizationLimit: z.number().int().min(1).max(20).nullable(),
+    /** Default false. When null, the plugin default (false) applies. */
+    cancelPendingInvitationsOnReInvite: z.boolean().nullable(),
+    /** Default true. When null, the plugin default (true) applies. */
+    allowUserToCreateOrganization: z.boolean().nullable(),
+    /** 'everyone' | 'editors+reviewers' | 'no_one'. Default 'no_one' (off). */
+    requireMfaFor: z.enum(['everyone', 'editors+reviewers', 'no_one']).nullable(),
+    /** One of 15 / 60 / 480 / 1440 / 10080 (minutes). When null, unconfigured. */
+    sessionTimeoutMinutes: z.number().int().nullable(),
+    /** Default false. When null, unconfigured (sessions stay alive on role change). */
+    sessionRevocationOnRoleChange: z.boolean().nullable(),
+  })
+  .strict()
+
+export type WorkspacePolicies = z.infer<typeof workspacePoliciesSchema>
 
 export const organization = pgTable(
   'organization',
@@ -23,6 +64,13 @@ export const organization = pgTable(
      * never leaves rows the reader cannot parse.
      */
     markdownWritesEnabled: boolean('markdown_writes_enabled').notNull().default(false),
+    /**
+     * Spec 13 § Configuration Surface — per-workspace policy overrides. NULL
+     * means "unconfigured"; the plugin's own default applies. See
+     * `workspacePoliciesSchema` for the shape and `getWorkspaceConfigImpl`
+     * for the precedence resolution.
+     */
+    policies: jsonb('policies').$type<WorkspacePolicies>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
