@@ -266,6 +266,11 @@ export function LessonEditor({
         .filter(Boolean)
         .slice(0, 10),
       expectedRowVersion: rowVersion,
+      // Spec 12 § 14.1 — the 60s autosave timer does NOT write a body
+      // revision. The editor's autosave path passes `source: 'autosave'` so
+      // `saveLessonImpl` skips the revision write. Explicit Flush
+      // (Ctrl/⌘+S) and context-switch flush pass `source: 'explicit'`.
+      source: 'explicit',
     }
   }, [
     contentType,
@@ -281,6 +286,14 @@ export function LessonEditor({
     assetId,
   ])
 
+  // Spec 12 § 14.1 — the autosave mutation carries `source: 'autosave'` so
+  // `saveLessonImpl` skips the revision write. Explicit flushes (Ctrl/⌘+S
+  // and context-switch) use the `buildInput()` above and write a revision.
+  const buildAutosaveInput = useCallback((): SaveLessonInput => {
+    const input = buildInput()
+    return { ...input, source: 'autosave' }
+  }, [buildInput])
+
   const autosave = useLessonAutosave({
     enabled: editable,
     dirty,
@@ -290,7 +303,12 @@ export function LessonEditor({
       // not call `save`. This branch only fires when online. The editor's
       // offline-queue helper (Phase A4) is invoked from a separate effect
       // that watches `online` and `dirty`.
-      await save.mutateAsync(buildInput())
+      //
+      // Spec 12 § 14.1 — the autosave path uses `buildAutosaveInput` so the
+      // server skips the revision write. Explicit Flush (Ctrl/⌘+S) goes
+      // through `save.mutateAsync(buildInput())` directly, with
+      // `source: 'explicit'`, and writes a revision.
+      await save.mutateAsync(buildAutosaveInput())
     },
   })
 
@@ -339,6 +357,11 @@ export function LessonEditor({
             tags: queued.input.tags,
             assetId: queued.input.assetId,
             expectedRowVersion: queued.expectedRowVersion,
+            // Spec 12 § 14.1 — a queued offline save is a transport event,
+            // not a declared save point. It does NOT write a body revision;
+            // the revision is written when the author next does an explicit
+            // Flush or a submit-for-review.
+            source: 'autosave',
           },
         })
         await clearQueuedSave(lessonId)

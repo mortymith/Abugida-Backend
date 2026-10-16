@@ -267,6 +267,13 @@
       "when": 1792397447971,
       "tag": "0037_complex_praxagora",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792397724040,
+      "tag": "0038_dapper_mandarin",
+      "breakpoints": true
     }
   ]
 }
