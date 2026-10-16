@@ -8,7 +8,7 @@
    is the final source of every token it declares. See the PRECEDENCE note
    below — @import forces this file to be emitted after theme.css, so the
    ordering here is not on its own sufficient. */
-@import '../theme.css';
+@import './theme.css';
 
 @custom-variant dark (&:is(.dark *));
 

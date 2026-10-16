@@ -7,7 +7,7 @@ TanStack Start admin/instructor app for the Abugida platform (port 3000). Repo-w
 | File                                  | Owns                                                                                                                                                                                                          | Read when                                   |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
 | `DESIGN.md`                           | Design system of record: tokens, layout, components, roles, a11y, i18n, resilience, spec-conflict register (§15)                                                                                              | Any UI, layout, copy, or state decision     |
-| `theme.css`                           | Tailwind v4 implementation of those tokens — **not wired in yet, see below**                                                                                                                                  | Picking a token value                       |
+| `src/theme.css`                       | Tailwind v4 implementation of those tokens — imported by `src/styles.css`, **see below**                                                                                                                      | Picking a token value                       |
 | `spec /` (trailing space in the name) | Product specs `00`–`13`. Owns **screen behaviour**. Read `00` § _How to Read This Specification_ first — it holds the precedence rules, the screen template, the glossary, and the Revision 3 change register | Building or changing a screen               |
 | `spec /13-Identity-and-Workspaces.md` | **Identity authority** — workspace model, the two role systems, effective role, what is configurable where. Read before writing any role or permission check                                                  | Touching roles, workspaces, invites, or MFA |
 | `spec /archive/`                      | Superseded snapshots (Rev 1 HTML export). Never a source of truth                                                                                                                                             | Checking what changed across revisions      |
@@ -38,6 +38,7 @@ src/
 ├── integrations/      # TanStack Query root provider
 ├── default-entry/     # Server entry — auth path dispatch, then the Start handler
 ├── styles.css         # The only live global stylesheet
+├── theme.css          # DESIGN.md token layer, imported by styles.css
 └── router.tsx
 ```
 
@@ -129,12 +130,14 @@ Auth is Google + Telegram only. The `twoFactor` and `organization` plugins are r
 
 ## Design-system migration state
 
-`theme.css` is the token target but is **not imported anywhere**. `src/styles.css` is the only live stylesheet, so:
+`src/theme.css` is imported last by `src/styles.css`, so **both** token systems currently compile. `src/theme.css` sits in `src/` because that is the only directory the Dockerfile copies into the build stage — a stylesheet at the app root resolves in dev and fails the Docker build.
 
-- **The only tokens that resolve today are the shadcn `base-maia` ones** in `styles.css`: `bg-background`, `text-foreground`, `text-muted-foreground`, `bg-primary`, `border-border`, `bg-card`, `bg-chart-*`, etc.
-- The `theme.css` utilities — `bg-surface`, `bg-app`, `text-ink`, `border-hairline`, `.pill-*`, `.btn-*`, `.card`, `.input`, `.skeleton`, `.nav-item`, `min-w-target`, `num`, `z-toast` — **do not exist yet**. Using them ships unstyled markup.
-- Current fonts are Outfit Variable + Raleway Variable. `theme.css` targets Inter + Noto Sans Ethiopic + JetBrains Mono; the swap is pending with the import.
-- To land the migration: `@import '../../theme.css';` after `@import 'tailwindcss';` in `src/styles.css`, then migrate component by component. Don't fork a copy into `src/`, and don't add a new hardcoded colour to either system while the split exists.
+- The `theme.css` utilities — `bg-surface`, `bg-app`, `text-ink`, `border-hairline`, `.pill-*`, `.btn-*`, `.card`, `.input`, `.skeleton`, `.nav-item`, `min-w-target`, `num`, `z-toast` — **do resolve now**. Using them is safe; `styles.css` holds no higher-specificity override of any of them.
+- Roughly 70 files still use the shadcn `base-maia` names (`bg-background`, `text-foreground`, `text-muted-foreground`, `bg-card`, `border-border`, `bg-chart-*`). Those still resolve too — `styles.css` keeps every name `theme.css` doesn't claim, so the two systems coexist.
+- The 18 names **both** files claimed are owned by `theme.css` by elimination (`styles.css` simply omits them). Its PRECEDENCE comment is load-bearing: because `@import` forces `styles.css` to be emitted _after_ `theme.css`, anything both declare is silently won by `styles.css`. Check it before renaming a token.
+- One deliberate exception, documented inline in `styles.css`: `--color-muted` maps to `--subtle`, not `theme.css`'s `--muted`, because base-maia used `--muted` as a light _surface_. Follow-up: migrate `bg-muted` → `bg-subtle` and delete the shim.
+- Fonts are Inter + Noto Sans Ethiopic + JetBrains Mono (the `theme.css` stacks), already imported by `styles.css`.
+- Don't add a new hardcoded colour to either system while the split exists, and don't fork `theme.css` into a second copy.
 - Dark mode is a scaffolded token set, not a finished theme. Don't add dark-only styling.
 
 Rules that hold on either palette — details in `DESIGN.md` §§3, 5, 7, 9, 10, 12:
