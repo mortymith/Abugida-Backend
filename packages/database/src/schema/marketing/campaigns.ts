@@ -82,6 +82,17 @@ export const campaigns = pgTable(
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     /** Recipient snapshot captured when the send fired (reporting stability). */
     recipientCount: integer('recipient_count'),
+    /**
+     * Spec 10 Rev-3: recipients excluded by consent suppression, bounces,
+     * or missing verified channels. The composer shows the split.
+     */
+    excludedCount: integer('excluded_count').notNull().default(0),
+    /** Per-reason exclusion breakdown (e.g. { unsubscribed: 12, no_verified_channel: 3 }). */
+    exclusionReasons: jsonb('exclusion_reasons').notNull().default({}),
+    /** Spec 10 Rev-3: optimistic concurrency for conflict resolution. */
+    rowVersion: integer('row_version').notNull().default(1),
+    /** Spec 10 Rev-3: links a "Send to failures only" retry campaign to its parent. */
+    parentCampaignId: bigint('parent_campaign_id', { mode: 'number' }),
     duplicatedFromId: bigint('duplicated_from_id', { mode: 'number' }),
     createdBy: text('created_by').references(() => users.id, {
       onDelete: 'set null',
@@ -130,6 +141,13 @@ export const campaignSends = pgTable(
     email: varchar('email', { length: 320 }).notNull(),
     status: campaignSendStatusPgEnum().notNull().default('queued'),
     sentAt: timestamp('sent_at', { withTimezone: true }),
+    /**
+     * Spec 10 Rev-3 multi-channel delivery timestamps. In-app is always
+     * delivered; Telegram when linked; email when verified. Each channel
+     * has its own delivery state.
+     */
+    inAppDeliveredAt: timestamp('in_app_delivered_at', { withTimezone: true }),
+    telegramDeliveredAt: timestamp('telegram_delivered_at', { withTimezone: true }),
     failureReason: text('failure_reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

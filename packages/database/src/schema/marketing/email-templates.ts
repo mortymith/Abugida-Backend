@@ -104,6 +104,8 @@ export const emailTemplates = pgTable(
     draftSubject: varchar('draft_subject', { length: 150 }),
     draftPreheader: varchar('draft_preheader', { length: 300 }),
     currentVersion: integer('current_version').notNull().default(0),
+    /** Spec 10 Rev-3: block-level conflict merge needs optimistic concurrency. */
+    rowVersion: integer('row_version').notNull().default(1),
     createdBy: text('created_by').references(() => users.id, {
       onDelete: 'set null',
       onUpdate: 'cascade',

@@ -5,6 +5,7 @@ import {
   varchar,
   text,
   smallint,
+  integer,
   boolean,
   timestamp,
   uniqueIndex,
@@ -70,6 +71,23 @@ export const testimonials = pgTable(
     editedAt: timestamp('edited_at', { withTimezone: true }),
     editNote: varchar('edit_note', { length: 200 }),
     heavyEdit: boolean('heavy_edit').notNull().default(false),
+    /**
+     * Spec 10 Rev-3: 3-way edit classification replacing the binary
+     * heavyEdit flag. typo = no word added/removed; light = minor wording;
+     * heavy = substantial change requiring re-confirmation.
+     */
+    editClassification: varchar('edit_classification', { length: 10 }),
+    /** Spec 10 Rev-3: the original quote is never destroyed. */
+    originalQuote: text('original_quote'),
+    /** Spec 10 Rev-3: language of the student's text (en/am/ti/gez). */
+    lang: varchar('lang', { length: 10 }),
+    /** Spec 10 Rev-3: re-confirmation flow for heavy edits. */
+    reconfirmationSentAt: timestamp('reconfirmation_sent_at', { withTimezone: true }),
+    reconfirmationStatus: varchar('reconfirmation_status', { length: 20 }),
+    reconfirmationRespondedAt: timestamp('reconfirmation_responded_at', { withTimezone: true }),
+    /** Spec 10 Rev-3: opt-out (student/staff/system). */
+    optedOutAt: timestamp('opted_out_at', { withTimezone: true }),
+    optedOutBy: varchar('opted_out_by', { length: 20 }),
     rejectionReason: text('rejection_reason'),
     /** Request that spawned this submission (manual collects are null). */
     requestId: bigint('request_id', { mode: 'number' }),
@@ -98,6 +116,39 @@ export const testimonials = pgTable(
       'testimonial_consent_check',
       sql`${table.status} <> 'published' OR ${table.consentConfirmed}`,
     ),
+  ],
+)
+
+/**
+ * Testimonial edit log (spec 10 Rev-3 S-8.5). Every intermediate version of
+ * a testimonial quote is retained here; the original is never destroyed.
+ * A heavy edit is reversible and the original is one click away.
+ */
+export const testimonialEditLog = pgTable(
+  'testimonial_edit_log',
+  {
+    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    publicId: uuid('public_id').notNull().defaultRandom().unique(),
+    testimonialId: bigint('testimonial_id', { mode: 'number' })
+      .notNull()
+      .references(() => testimonials.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    version: integer('version').notNull(),
+    quote: text('quote').notNull(),
+    editedBy: text('edited_by').references(() => users.id, {
+      onDelete: 'set null',
+      onUpdate: 'cascade',
+    }),
+    editedAt: timestamp('edited_at', { withTimezone: true }).notNull().defaultNow(),
+    classification: varchar('classification', { length: 10 }),
+    changeSummary: varchar('change_summary', { length: 200 }),
+  },
+  (table) => [
+    uniqueIndex('idx_testimonial_edit_log_public').on(table.publicId),
+    uniqueIndex('idx_testimonial_edit_log_testimonial_version').on(
+      table.testimonialId,
+      table.version,
+    ),
+    index('idx_testimonial_edit_log_testimonial').on(table.testimonialId),
   ],
 )
 

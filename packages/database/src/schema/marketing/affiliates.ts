@@ -8,6 +8,7 @@ import {
   numeric,
   jsonb,
   boolean,
+  integer,
   timestamp,
   uniqueIndex,
   index,
@@ -224,6 +225,19 @@ export const payouts = pgTable(
     status: payoutStatusPgEnum().notNull().default('pending'),
     reference: varchar('reference', { length: 200 }),
     notes: text('notes'),
+    /**
+     * Spec 10 Rev-3 reconciliation columns.
+     * expectedAmount = sum of owed commissions; payableAmount = expectedAmount
+     * + negative balance carry; varianceAmount = expectedAmount -
+     * payableAmount; deferredAmount = commissions held back.
+     */
+    expectedAmount: numeric('expected_amount', { precision: 19, scale: 4 }),
+    payableAmount: numeric('payable_amount', { precision: 19, scale: 4 }),
+    varianceAmount: numeric('variance_amount', { precision: 19, scale: 4 }),
+    deferredAmount: numeric('deferred_amount', { precision: 19, scale: 4 }),
+    /** USD-denominated run conversion rate frozen on the day of the run. */
+    conversionRate: numeric('conversion_rate', { precision: 10, scale: 4 }),
+    conversionDate: timestamp('conversion_date', { withTimezone: true }),
     processedBy: text('processed_by').references(() => users.id, {
       onDelete: 'set null',
       onUpdate: 'cascade',
@@ -236,6 +250,72 @@ export const payouts = pgTable(
     index('idx_payouts_affiliate').on(table.affiliateId, table.createdAt),
     index('idx_payouts_status').on(table.status),
     check('payout_amount_check', sql`${table.amount} > 0`),
+  ],
+)
+
+/**
+ * Payout attempts (spec 10 Rev-3 S-8.4). Each retry — as-is or with new
+ * details — writes a row here. Capped at 3 attempts; retry-with-new-details
+ * is the primary action. Each attempt carries the bank's reason code and
+ * reference for audit.
+ */
+export const payoutAttemptStatusEnum = z.enum(['pending', 'processing', 'succeeded', 'failed'])
+export type PayoutAttemptStatus = z.infer<typeof payoutAttemptStatusEnum>
+export const payoutAttemptStatusPgEnum = pgEnum('payout_attempt_status', [
+  'pending',
+  'processing',
+  'succeeded',
+  'failed',
+])
+
+export const payoutAttempts = pgTable(
+  'payout_attempts',
+  {
+    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    publicId: uuid('public_id').notNull().defaultRandom().unique(),
+    payoutId: bigint('payout_id', { mode: 'number' })
+      .notNull()
+      .references(() => payouts.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    attemptNumber: integer('attempt_number').notNull(),
+    method: varchar('method', { length: 60 }).notNull(),
+    details: jsonb('details').notNull().default({}),
+    status: payoutAttemptStatusPgEnum().notNull().default('pending'),
+    failureReason: text('failure_reason'),
+    bankReference: varchar('bank_reference', { length: 200 }),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('idx_payout_attempts_public').on(table.publicId),
+    uniqueIndex('idx_payout_attempts_payout_number').on(table.payoutId, table.attemptNumber),
+    index('idx_payout_attempts_payout').on(table.payoutId),
+    index('idx_payout_attempts_status').on(table.status),
+  ],
+)
+
+/**
+ * Commission balances (spec 10 Rev-3 S-8.4). A refund after a payout creates
+ * a negative balance that offsets the next payout. One row per affiliate.
+ */
+export const commissionBalances = pgTable(
+  'commission_balances',
+  {
+    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    publicId: uuid('public_id').notNull().defaultRandom().unique(),
+    affiliateId: bigint('affiliate_id', { mode: 'number' })
+      .notNull()
+      .references(() => affiliates.id, { onDelete: 'cascade', onUpdate: 'cascade' }),
+    balanceAmount: numeric('balance_amount', { precision: 19, scale: 4 }).notNull().default('0'),
+    balanceCurrency: char('balance_currency', { length: 3 }).notNull().default('ETB'),
+    lastPayoutId: bigint('last_payout_id', { mode: 'number' }),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex('idx_commission_balances_public').on(table.publicId),
+    uniqueIndex('idx_commission_balances_affiliate').on(table.affiliateId),
   ],
 )
 

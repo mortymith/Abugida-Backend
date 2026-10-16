@@ -253,6 +253,13 @@
       "when": 1792395470522,
       "tag": "0035_tired_alex_wilder",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792396036507,
+      "tag": "0036_vengeful_vindicator",
+      "breakpoints": true
     }
   ]
 }
