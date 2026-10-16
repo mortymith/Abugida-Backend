@@ -138,7 +138,7 @@ export async function countQueuedSaves(): Promise<number> {
   if (!store) return 0
   return new Promise((resolve) => {
     const request = store.count()
-    request.onsuccess = () => resolve(request.result ?? 0)
+    request.onsuccess = () => resolve(Number(request.result) || 0)
     request.onerror = () => resolve(0)
   })
 }

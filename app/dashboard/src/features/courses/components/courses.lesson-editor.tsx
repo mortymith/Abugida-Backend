@@ -952,7 +952,7 @@ export function LessonEditor({
           Compare opens a full-width overlay of the same diff. */}
       {conflict ? (
         <MarkdownConflictDialog
-          open={conflict !== null}
+          open
           mine={sourceDraft ?? markdown}
           theirs={conflict.serverBody}
           onResolve={(resolution) => void handleConflictResolve(resolution)}

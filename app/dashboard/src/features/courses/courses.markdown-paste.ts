@@ -59,7 +59,10 @@ function stripAttributes(attrString: string): string {
     // parser.
     if (/^[ovw]:/i.test(lower)) continue
     // Reconstruct the attribute. Use double quotes consistently.
-    const value = match[2] ?? match[3] ?? match[4] ?? ''
+    // RegExpExecArray extends Array<string>, so the match groups are typed
+    // as `string` (not `string | undefined`); use direct indexing and let
+    // the empty-string fallback handle missing captures.
+    const value = match[2] || match[3] || match[4] || ''
     kept.push(value === '' ? name : `${name}="${value}"`)
   }
   return kept.length > 0 ? ' ' + kept.join(' ') : ''
