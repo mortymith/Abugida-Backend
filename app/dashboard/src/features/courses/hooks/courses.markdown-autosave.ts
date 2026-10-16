@@ -152,17 +152,36 @@ export function useLessonAutosave({
   // `Ctrl/⌘+S` flushes now, anywhere in the editor including inside
   // ProseMirror. It must also suppress the browser's own save dialog, and must
   // not be swallowed by the editor surface (spec 12 § 7.3, Q on ⌘K).
+  //
+  // The handler is split into a pure `shouldFlushOnSaveKey` predicate so
+  // `bun test` can exercise the keymap wiring without a DOM or React renderer.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
-        event.preventDefault()
-        if (timer.current) clearTimeout(timer.current)
-        void flush()
-      }
+      if (!shouldFlushOnSaveKey(event)) return
+      event.preventDefault()
+      if (timer.current) clearTimeout(timer.current)
+      void flush()
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [flush])
 
   return { status, savedAt, error, flush, schedule }
+}
+
+/**
+ * Pure predicate: does this keyboard event look like a Ctrl/⌘+S save shortcut?
+ *
+ * Exported so `courses.markdown.keymap.test.ts` can pin the keymap wiring
+ * without a DOM. The predicate matches the spec 12 § 7.3 contract: Ctrl+S
+ * on Windows/Linux, ⌘+S on macOS, and the key is matched case-insensitively
+ * so caps lock does not break the shortcut.
+ */
+export function shouldFlushOnSaveKey(event: {
+  key: string
+  metaKey: boolean
+  ctrlKey: boolean
+}): boolean {
+  if (!(event.metaKey || event.ctrlKey)) return false
+  return event.key.toLowerCase() === 's'
 }
