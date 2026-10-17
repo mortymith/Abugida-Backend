@@ -90,12 +90,34 @@ export function applyMiddleware(app: AppHono, deps: MiddlewareDependencies): voi
   app.use('*', corsMiddleware())
   app.use('*', timeout(REQUEST_TIMEOUT_MS, requestTimedOut))
 
+  // Tenant context propagation: after the session resolves, copy
+  // `activeOrganizationId` onto `tenantOrgId` so every repository can scope
+  // by it without re-reading the session. Runs after `optionalSessionMiddleware`
+  // on feature routes; for webhook routes it runs after `apiKeyAuthMiddleware`.
+  // This is a lightweight propagation, not a hostname-based resolver — the API
+  // runs on a platform host (`api.*`), so tenant identity comes from the
+  // session or API key, not the `Host` header.
+  const propagateTenant = async (c: Context<AppEnv>, next: () => Promise<void>) => {
+    const orgId = c.get('activeOrganizationId')
+    c.set('tenantOrgId', orgId)
+    await next()
+  }
+
   // Reject cross-origin cookie-authenticated mutations before resolving a
   // session or touching application handlers. Better Auth's own endpoints are
   // excluded because it performs OAuth state and origin validation itself.
+  // Requests carrying an `Authorization` header (bearer token) or an
+  // `X-API-Key` header are also excluded: bearer/API-key requests are immune
+  // to CSRF by construction, and the CSRF guard would reject them because
+  // non-browser clients do not send an `Origin` header.
   app.use('*', async (c, next) => {
     if (c.req.path === '/auth' || c.req.path.startsWith('/auth/')) return next()
     if (c.req.path === '/webhooks' || c.req.path.startsWith('/webhooks/')) return next()
+    // Bearer token → not a cookie-authenticated request; CSRF does not apply.
+    const authHeader = c.req.header('Authorization')
+    if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) return next()
+    // API key → not a cookie-authenticated request; CSRF does not apply.
+    if (c.req.header('X-API-Key')) return next()
     return csrfProtection(deps.auth)(c, next)
   })
 
@@ -105,6 +127,7 @@ export function applyMiddleware(app: AppHono, deps: MiddlewareDependencies): voi
       prefix,
       bodyLimit({ maxSize: BODY_LIMIT_BYTES, onError: bodyTooLarge }),
       optionalSessionMiddleware(deps.auth),
+      propagateTenant,
       rateLimitMiddleware(deps.limiters),
       requireAuthMiddleware(deps.auth),
     )
@@ -113,6 +136,7 @@ export function applyMiddleware(app: AppHono, deps: MiddlewareDependencies): voi
   // ── Webhook routes (API-key authenticated) ───────────────────────────────
   app.use('/webhooks/*', bodyLimit({ maxSize: BODY_LIMIT_BYTES, onError: bodyTooLarge }))
   app.use('/webhooks/*', apiKeyAuthMiddleware(deps.db))
+  app.use('/webhooks/*', propagateTenant)
   app.use('/webhooks/*', rateLimitMiddleware(deps.limiters))
 
   // ── Final catch-alls ─────────────────────────────────────────────────────
