@@ -6,7 +6,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import type { WorkspaceConfigResult } from '../settings.workspace-policies'
-import type { WorkspacePolicies } from '@abugida/database/auth'
 
 export const getWorkspaceConfig = createServerFn({ method: 'GET' }).handler(
   async (): Promise<WorkspaceConfigResult> => {
