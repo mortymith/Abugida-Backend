@@ -208,8 +208,9 @@ supporting examination preparation across multiple education segments.
 
 ## API Versioning
 
-All endpoints are versioned via the URL path prefix \`/api/v1/\`. Breaking changes will
-increment the version number. Non-breaking additions may be introduced within v1.
+Routes mount at the API root (e.g. \`/courses/{courseId}\`, \`/users/me/bookmarks\`).
+There is no \`/api/v1/\` path prefix; breaking changes are introduced via content
+negotiation and feature flags rather than URL versioning.
 
 ## Authentication
 
@@ -223,16 +224,12 @@ Webhook endpoints use **API Key** authentication via the \`X-API-Key\` header.
 
 ## Response Envelope
 
-All successful responses follow a consistent envelope:
+All successful responses follow a consistent envelope.
 
 **Single resource:**
 \`\`\`json
 {
-  "data": { ... },
-  "meta": {
-    "requestId": "uuid-v7",
-    "timestamp": "2026-04-30T10:30:00Z"
-  }
+  "data": { ... }
 }
 \`\`\`
 
@@ -241,25 +238,28 @@ All successful responses follow a consistent envelope:
 {
   "data": [ ... ],
   "meta": {
-    "requestId": "uuid-v7",
-    "timestamp": "2026-04-30T10:30:00Z",
-    "hasNextPage": true,
-    "nextCursor": "base64url-encoded-cursor",
+    "cursor": "base64url-encoded-cursor-or-null",
+    "hasMore": true,
     "limit": 20
   }
 }
 \`\`\`
 
+The \`cursor\` field is \`null\` when there is no next page (or when no items were
+returned). Pass the returned \`cursor\` back as the \`?cursor=\` query parameter to
+fetch the next page. \`hasMore\` indicates whether more items exist beyond the
+current page.
+
 ## Error Format
 
-All errors follow [RFC 7807 Problem Details](https://tools.ietf.org/html/rfc7807):
+All errors follow [RFC 9457 Problem Details](https://tools.ietf.org/html/rfc9457):
 \`\`\`json
 {
   "type": "https://api.example.com/errors/invalid-parameter",
   "title": "Invalid Parameter",
   "status": 400,
   "detail": "The 'email' field must be a valid email address.",
-  "instance": "/api/v1/users/me",
+  "instance": "/users/me",
   "correlationId": "01JQXYZ..."
 }
 \`\`\`
@@ -283,7 +283,8 @@ All collection endpoints use **cursor-based pagination**:
 - \`?cursor=<opaque-cursor>&limit=<1-100>\`
 - Default limit: 20
 - Maximum limit: 100
-- Response includes \`nextCursor\` when more results exist
+- The response \`meta.cursor\` field holds the next-page cursor (or \`null\` when
+  the end of the collection has been reached)
 
 ## Enum Serialization Convention
 

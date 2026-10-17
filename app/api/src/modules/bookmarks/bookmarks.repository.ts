@@ -4,11 +4,11 @@
  * Database operations for the bookmarks feature module.
  */
 
-import { eq, and, desc, lt } from 'drizzle-orm'
+import { eq, and, desc, lt, isNull } from 'drizzle-orm'
 import type { DatabaseClient } from '@abugida/database/client'
 import { users } from '@abugida/database/auth'
 import { bookmarks } from '@abugida/database/learning'
-import { courses } from '@abugida/database/catalog'
+import { courses, lessons } from '@abugida/database/catalog'
 
 // ── Cursor helpers ─────────────────────────────────────────────────────────
 
@@ -45,11 +45,21 @@ export interface BookmarkWithCourse extends BookmarkRow {
 
 export interface BookmarksRepository {
   findUserIdByPublicId(publicId: string): Promise<string | undefined>
+  /**
+   * Resolve an external public UUID to the internal numeric id stored on the
+   * `bookmarks.item_id` column. Returns `undefined` when the referenced row
+   * does not exist (or has been soft-deleted).
+   */
+  resolveItemIdByPublicId(itemType: string, publicId: string): Promise<number | undefined>
+  /** Look up the public UUID of a course from its internal id. */
+  findCoursePublicIdById(id: number): Promise<string | undefined>
+  /** Look up the public UUID of a lesson from its internal id. */
+  findLessonPublicIdById(id: number): Promise<string | undefined>
   getBookmarks(
     userId: string,
     opts: { cursor: string | undefined; limit: number },
   ): Promise<{ rows: BookmarkWithCourse[]; hasMore: boolean }>
-  createBookmark(userId: string, itemType: string, itemId: string): Promise<BookmarkRow>
+  createBookmark(userId: string, itemType: string, itemId: number): Promise<BookmarkRow>
   deleteBookmark(userId: string, itemPublicId: string): Promise<boolean>
   findBookmarkByItemId(
     userId: string,
@@ -69,6 +79,52 @@ export function createBookmarksRepository(db: DatabaseClient): BookmarksReposito
         .where(eq(users.id, publicId))
         .limit(1)
       return row?.id
+    },
+
+    async resolveItemIdByPublicId(itemType, publicId) {
+      if (itemType === 'course') {
+        const [row] = await db
+          .select({ id: courses.id })
+          .from(courses)
+          .where(and(eq(courses.publicId, publicId), isNull(courses.deletedAt)))
+          .limit(1)
+        return row?.id
+      }
+      // `itemType === 'resource'` (or the legacy `'lesson'` spelling) resolves
+      // to a lesson row. The bookmarks schema only allows `'course' | 'resource'`
+      // at the API boundary, but we accept `'lesson'` defensively in case a
+      // legacy client or migration sends it.
+      const [row] = await db
+        .select({ id: lessons.id })
+        .from(lessons)
+        .where(
+          and(
+            eq(lessons.publicId, publicId),
+            isNull(lessons.deletedAt),
+            eq(lessons.visibility, 'published'),
+            isNull(lessons.archivedAt),
+          ),
+        )
+        .limit(1)
+      return row?.id
+    },
+
+    async findCoursePublicIdById(id) {
+      const [row] = await db
+        .select({ publicId: courses.publicId })
+        .from(courses)
+        .where(eq(courses.id, id))
+        .limit(1)
+      return row?.publicId
+    },
+
+    async findLessonPublicIdById(id) {
+      const [row] = await db
+        .select({ publicId: lessons.publicId })
+        .from(lessons)
+        .where(eq(lessons.id, id))
+        .limit(1)
+      return row?.publicId
     },
 
     async getBookmarks(userId, opts) {
@@ -107,13 +163,12 @@ export function createBookmarksRepository(db: DatabaseClient): BookmarksReposito
     },
 
     async createBookmark(userId, itemType, itemId) {
-      const itemIdNum = Number.parseInt(itemId, 10)
       const [bookmark] = await db
         .insert(bookmarks)
         .values({
           userId,
           itemType: itemType as 'course' | 'resource',
-          itemId: itemIdNum,
+          itemId,
         })
         .returning()
       return bookmark!

@@ -24,6 +24,19 @@ export class ConflictError extends Error {
   }
 }
 
+/**
+ * Thrown when a bookmark request references an item that doesn't exist (or has
+ * been soft-deleted). Distinct from `BookmarkNotFoundError` so the handler can
+ * return 422 instead of 404 — the bookmark itself doesn't exist yet because the
+ * referenced item doesn't.
+ */
+export class BookmarkItemNotFoundError extends Error {
+  constructor(message = 'Referenced item not found.') {
+    super(message)
+    this.name = 'BookmarkItemNotFoundError'
+  }
+}
+
 // ── Service ────────────────────────────────────────────────────────────────
 
 export interface BookmarksService {
@@ -50,12 +63,23 @@ export function createBookmarksService(repo: BookmarksRepository): BookmarksServ
         limit,
       })
 
-      const data = rows.map((row) => ({
-        id: row.publicId,
-        itemType: row.itemType,
-        itemId: String(row.itemId),
-        createdAt: row.createdAt.toISOString(),
-      }))
+      // Resolve the internal numeric `itemId` back to the public UUID the API
+      // exposes. N+1 lookups are acceptable here because the typical bookmark
+      // list is small (default limit 20) and avoids a wider join on every list.
+      const data = await Promise.all(
+        rows.map(async (row) => {
+          const itemId =
+            row.itemType === 'course'
+              ? await repo.findCoursePublicIdById(row.itemId)
+              : await repo.findLessonPublicIdById(row.itemId)
+          return {
+            id: row.publicId,
+            itemType: row.itemType,
+            itemId: itemId ?? '',
+            createdAt: row.createdAt.toISOString(),
+          }
+        }),
+      )
 
       const lastRow = rows[rows.length - 1]
       return {
@@ -72,18 +96,31 @@ export function createBookmarksService(repo: BookmarksRepository): BookmarksServ
       const userId = await repo.findUserIdByPublicId(publicId)
       if (!userId) throw new BookmarkNotFoundError('User not found.')
 
+      // `itemId` arrives as a public UUID; the `bookmarks.item_id` column is a
+      // bigint referencing `courses.id` or `lessons.id`. Resolve to the internal
+      // id before checking for an existing bookmark / inserting.
+      const internalItemId = await repo.resolveItemIdByPublicId(
+        fields.itemType,
+        fields.itemId,
+      )
+      if (internalItemId === undefined) throw new BookmarkItemNotFoundError()
+
       const existing = await repo.findBookmarkByItemId(
         userId,
         fields.itemType,
-        Number.parseInt(fields.itemId, 10),
+        internalItemId,
       )
       if (existing) throw new ConflictError('Item is already bookmarked.')
 
-      const bookmark = await repo.createBookmark(userId, fields.itemType, fields.itemId)
+      const bookmark = await repo.createBookmark(userId, fields.itemType, internalItemId)
+      const bookmarkItemId =
+        bookmark.itemType === 'course'
+          ? await repo.findCoursePublicIdById(bookmark.itemId)
+          : await repo.findLessonPublicIdById(bookmark.itemId)
       return {
         id: bookmark.publicId,
         itemType: bookmark.itemType,
-        itemId: String(bookmark.itemId),
+        itemId: bookmarkItemId ?? '',
         createdAt: bookmark.createdAt.toISOString(),
       }
     },

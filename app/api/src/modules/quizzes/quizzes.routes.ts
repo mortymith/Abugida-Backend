@@ -31,7 +31,7 @@ export const getQuizQuestionsRoute = createRoute({
   description:
     'Returns all quiz questions for a lesson with content_type=quiz. Does NOT include correct answers. Only accessible to enrolled students.',
   operationId: 'getQuizQuestions',
-  security: [{ bearerAuth: [] }],
+  security: [{ Bearer: [] }],
   request: {
     params: GetQuizParamsSchema,
   },
@@ -67,7 +67,7 @@ export const submitQuizRoute = createRoute({
   description:
     'Submits answers for a quiz attempt. Creates records in quiz_attempts and quiz_answers. Grading is server-side.',
   operationId: 'submitQuizAttempt',
-  security: [{ bearerAuth: [] }],
+  security: [{ Bearer: [] }],
   request: {
     params: SubmitQuizParamsSchema,
     body: {
@@ -106,7 +106,7 @@ export const listQuizAttemptsRoute = createRoute({
   summary: 'List quiz attempts for a lesson',
   description: 'Returns all quiz attempts by the current user for a specific lesson.',
   operationId: 'listQuizAttempts',
-  security: [{ bearerAuth: [] }],
+  security: [{ Bearer: [] }],
   request: {
     params: ListQuizAttemptsParamsSchema,
     query: ListQuizAttemptsQuerySchema,
@@ -142,7 +142,7 @@ export const getQuizAttemptRoute = createRoute({
   summary: 'Get quiz attempt details with answers',
   description: 'Returns a specific quiz attempt with all answers and explanations.',
   operationId: 'getQuizAttempt',
-  security: [{ bearerAuth: [] }],
+  security: [{ Bearer: [] }],
   request: {
     params: GetQuizAttemptParamsSchema,
   },

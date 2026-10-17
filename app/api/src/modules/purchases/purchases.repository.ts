@@ -4,10 +4,10 @@
  * Database operations for the purchases feature module.
  */
 
-import { eq, and, desc, lt, isNull, sql } from 'drizzle-orm'
+import { eq, and, desc, lt, isNull, sql, or } from 'drizzle-orm'
 import type { DatabaseClient } from '@abugida/database/client'
 import { users } from '@abugida/database/auth'
-import { courses } from '@abugida/database/catalog'
+import { courses, courseBundles } from '@abugida/database/catalog'
 import { purchases, purchaseOptions, paymentGateways } from '@abugida/database/finance'
 import { enrollments } from '@abugida/database/learning'
 
@@ -151,7 +151,26 @@ export function createPurchasesRepository(db: DatabaseClient): PurchasesReposito
           isActive: purchaseOptions.isActive,
         })
         .from(purchaseOptions)
-        .where(and(eq(purchaseOptions.publicId, publicId), isNull(purchaseOptions.deletedAt)))
+        .leftJoin(courses, eq(purchaseOptions.courseId, courses.id))
+        .leftJoin(courseBundles, eq(purchaseOptions.bundleId, courseBundles.id))
+        .where(
+          and(
+            eq(purchaseOptions.publicId, publicId),
+            isNull(purchaseOptions.deletedAt),
+            or(
+              and(
+                eq(purchaseOptions.courseId, courses.id),
+                eq(courses.status, 'published'),
+                isNull(courses.deletedAt),
+              ),
+              and(
+                eq(purchaseOptions.bundleId, courseBundles.id),
+                eq(courseBundles.status, 'published'),
+                isNull(courseBundles.deletedAt),
+              ),
+            ),
+          ),
+        )
         .limit(1)
       return row
     },

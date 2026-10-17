@@ -198,7 +198,14 @@ export function createBundlesRepository(db: DatabaseClient): BundlesRepository {
         })
         .from(bundleCourses)
         .innerJoin(courses, eq(bundleCourses.courseId, courses.id))
-        .where(and(eq(bundleCourses.bundleId, bundleId), eq(bundleCourses.isIncluded, true)))
+        .where(
+          and(
+            eq(bundleCourses.bundleId, bundleId),
+            eq(bundleCourses.isIncluded, true),
+            eq(courses.status, 'published'),
+            isNull(courses.deletedAt),
+          ),
+        )
         .orderBy(bundleCourses.sortOrder, bundleCourses.id)
     },
 

@@ -10,6 +10,10 @@ import type { QueueClient } from '@abugida/queue'
 import { JobType } from '@abugida/queue'
 import type { EnrollmentsRepository } from './enrollments.repository'
 import { encodeCursor as encode } from './enrollments.repository'
+import { LessonNotFoundError } from './enrollments.repository'
+// `LessonNotFoundError` is re-exported so the handlers continue to import it
+// from the service while the repository can throw the same class instance.
+export { LessonNotFoundError }
 import type {
   ProgressStats,
   EnrollmentView,
@@ -26,13 +30,6 @@ export class EnrollmentNotFoundError extends Error {
   constructor(message = 'Enrollment not found.') {
     super(message)
     this.name = 'EnrollmentNotFoundError'
-  }
-}
-
-export class LessonNotFoundError extends Error {
-  constructor(message = 'Lesson not found.') {
-    super(message)
-    this.name = 'LessonNotFoundError'
   }
 }
 

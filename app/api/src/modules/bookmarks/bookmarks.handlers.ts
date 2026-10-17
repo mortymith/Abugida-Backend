@@ -6,7 +6,11 @@
 
 import type { Context } from 'hono'
 import type { BookmarksService } from './bookmarks.service'
-import { BookmarkNotFoundError, ConflictError } from './bookmarks.service'
+import {
+  BookmarkNotFoundError,
+  ConflictError,
+  BookmarkItemNotFoundError,
+} from './bookmarks.service'
 import type { AppEnv } from '@/middleware/types'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -50,6 +54,19 @@ function conflict(c: Context<AppEnv>, detail: string) {
   )
 }
 
+function unprocessableEntity(c: Context<AppEnv>, detail: string) {
+  return c.json(
+    {
+      type: 'https://api.abugida.com/errors/unprocessable-entity',
+      title: 'Unprocessable Entity',
+      status: 422,
+      detail,
+      instance: c.req.path,
+    } as const,
+    422,
+  )
+}
+
 // ── Handlers ───────────────────────────────────────────────────────────────
 
 export function createBookmarksHandlers(service: BookmarksService) {
@@ -81,6 +98,8 @@ export function createBookmarksHandlers(service: BookmarksService) {
         return c.json({ data: bookmark }, 201)
       } catch (error) {
         if (error instanceof BookmarkNotFoundError) return notFound(c, error.message)
+        if (error instanceof BookmarkItemNotFoundError)
+          return unprocessableEntity(c, error.message)
         if (error instanceof ConflictError) return conflict(c, error.message)
         throw error
       }

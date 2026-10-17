@@ -11,6 +11,8 @@ import {
   LessonNotQuizTypeError,
   EnrollmentRequiredError,
   QuizAttemptNotFoundError,
+  QuizNotFoundError,
+  QuizMaxAttemptsExceededError,
 } from './quizzes.service'
 import type { AppEnv } from '@/middleware/types'
 
@@ -97,6 +99,9 @@ export function createQuizzesHandlers(service: QuizzesService) {
           return unprocessableEntity(c, 'Lesson is not a quiz type.')
         if (error instanceof EnrollmentRequiredError)
           return notFound(c, 'You must be enrolled in this course to access the quiz.')
+        if (error instanceof QuizNotFoundError) return notFound(c, error.message)
+        if (error instanceof QuizMaxAttemptsExceededError)
+          return unprocessableEntity(c, error.message)
         throw error
       }
     },
