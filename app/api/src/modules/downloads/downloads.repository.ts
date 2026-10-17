@@ -41,7 +41,13 @@ export function createDownloadsRepository(db: DatabaseClient): DownloadsReposito
       const [row] = await db
         .select({ id: courses.id })
         .from(courses)
-        .where(eq(courses.publicId, coursePublicId))
+        .where(
+          and(
+            eq(courses.publicId, coursePublicId),
+            isNull(courses.deletedAt),
+            eq(courses.status, 'published'),
+          ),
+        )
         .limit(1)
       return row?.id
     },
@@ -85,6 +91,8 @@ export function createDownloadsRepository(db: DatabaseClient): DownloadsReposito
           and(
             eq(lessons.courseId, courseId),
             eq(lessons.isDownloadable, true),
+            eq(lessons.visibility, 'published'),
+            isNull(lessons.archivedAt),
             isNull(lessons.deletedAt),
           ),
         )

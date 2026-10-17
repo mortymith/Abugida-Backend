@@ -58,8 +58,12 @@ export function createSystemHandlers() {
         checkPaymentGateway(),
       ])
 
+      // Readiness is `ok` only when every dependency reports `ok`. The SMS and
+      // payment-gateway checks are stubs that return `'unavailable'`, so this
+      // correctly yields 503 until they're wired up; do NOT treat `'unavailable'`
+      // as passing here, or the probe stops protecting rollout.
       const allAvailable = [database, smsProvider, paymentGateway].every(
-        (v) => v === 'ok' || v === 'unavailable',
+        (v) => v === 'ok',
       )
 
       return c.json(

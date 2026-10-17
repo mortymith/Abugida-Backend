@@ -10,6 +10,7 @@ import type {
   CourseListView,
   CourseDetailView,
   CourseCurriculumView,
+  CurriculumLessonView,
   ModuleSummaryView,
   LessonSummaryView,
   ResourceDetailView,
@@ -126,6 +127,20 @@ export function createResourcesService(repo: ResourcesRepository): ResourcesServ
       if (!course) throw new NotFoundError('Course not found.')
 
       const modules = await repo.findModulesByCourse(course.id)
+      const lessons = await repo.findLessonsByCourse(course.id)
+
+      const lessonsByModuleId = new Map<number, CurriculumLessonView[]>()
+      for (const lesson of lessons) {
+        const bucket = lessonsByModuleId.get(lesson.moduleId) ?? []
+        bucket.push({
+          lessonId: lesson.publicId,
+          title: lesson.title,
+          contentType: lesson.contentType,
+          durationSeconds: lesson.durationSeconds,
+          isDownloadable: lesson.isDownloadable,
+        })
+        lessonsByModuleId.set(lesson.moduleId, bucket)
+      }
 
       return {
         courseId: course.publicId,
@@ -136,7 +151,7 @@ export function createResourcesService(repo: ResourcesRepository): ResourcesServ
           description: mod.description,
           sortOrder: mod.sortOrder,
           estimatedDurationMinutes: mod.estimatedDurationMinutes,
-          lessons: [],
+          lessons: lessonsByModuleId.get(mod.id) ?? [],
         })),
       }
     },
@@ -194,11 +209,14 @@ export function createResourcesService(repo: ResourcesRepository): ResourcesServ
 
       return {
         lessonId: row.publicId,
-        moduleId: String(row.moduleId),
-        courseId: String(row.courseId),
+        moduleId: row.modulePublicId,
+        courseId: row.coursePublicId,
         title: row.title,
         description: row.description,
         contentType: row.contentType,
+        body: row.body,
+        videoUrl: row.videoUrl,
+        fileObjectKey: row.fileObjectKey,
         fileSizeBytes: row.fileSizeBytes,
         mimeType: row.mimeType,
         durationSeconds: row.durationSeconds,

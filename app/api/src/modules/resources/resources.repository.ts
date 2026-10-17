@@ -76,9 +76,14 @@ export interface LessonRow {
   publicId: string
   moduleId: number
   courseId: number
+  modulePublicId: string
+  coursePublicId: string
   title: string
   description: string | null
   contentType: string | null
+  body: string | null
+  videoUrl: string | null
+  fileObjectKey: string | null
   fileSizeBytes: number | null
   mimeType: string | null
   durationSeconds: number | null
@@ -97,6 +102,7 @@ export interface ResourcesRepository {
     opts: { cursor: string | undefined; limit: number; sort: string | undefined },
   ): Promise<{ rows: CourseWithStats[]; hasMore: boolean }>
   findModulesByCourse(courseId: number): Promise<ModuleWithCount[]>
+  findLessonsByCourse(courseId: number): Promise<LessonRow[]>
   findLessonsByModule(
     moduleId: number,
     opts: { cursor: string | undefined; limit: number },
@@ -140,7 +146,13 @@ export function createResourcesRepository(db: DatabaseClient): ResourcesReposito
         })
         .from(courses)
         .leftJoin(courseStats, eq(courses.id, courseStats.courseId))
-        .where(and(eq(courses.publicId, publicId), isNull(courses.deletedAt)))
+        .where(
+          and(
+            eq(courses.publicId, publicId),
+            isNull(courses.deletedAt),
+            eq(courses.status, 'published'),
+          ),
+        )
         .limit(1)
       return row as CourseWithStats | undefined
     },
@@ -227,19 +239,82 @@ export function createResourcesRepository(db: DatabaseClient): ResourcesReposito
           lessonCount: sql<number>`count(${lessons.id})::int`,
         })
         .from(modules)
-        .leftJoin(lessons, and(eq(modules.id, lessons.moduleId), isNull(lessons.deletedAt)))
-        .where(and(eq(modules.courseId, courseId), isNull(modules.deletedAt)))
+        .innerJoin(courses, eq(modules.courseId, courses.id))
+        .leftJoin(
+          lessons,
+          and(
+            eq(modules.id, lessons.moduleId),
+            isNull(lessons.deletedAt),
+            eq(lessons.visibility, 'published'),
+            isNull(lessons.archivedAt),
+          ),
+        )
+        .where(
+          and(
+            eq(modules.courseId, courseId),
+            isNull(modules.deletedAt),
+            eq(courses.status, 'published'),
+            isNull(courses.deletedAt),
+          ),
+        )
         .groupBy(modules.id)
         .orderBy(asc(modules.sortOrder))
 
       return rows as ModuleWithCount[]
     },
 
+    async findLessonsByCourse(courseId) {
+      const rows = await db
+        .select({
+          id: lessons.id,
+          publicId: lessons.publicId,
+          moduleId: lessons.moduleId,
+          courseId: lessons.courseId,
+          title: lessons.title,
+          description: lessons.description,
+          contentType: lessons.contentType,
+          body: lessons.body,
+          videoUrl: lessons.videoUrl,
+          fileObjectKey: lessons.fileObjectKey,
+          fileSizeBytes: lessons.fileSizeBytes,
+          mimeType: lessons.mimeType,
+          durationSeconds: lessons.durationSeconds,
+          pageCount: lessons.pageCount,
+          isDownloadable: lessons.isDownloadable,
+          rowVersion: lessons.rowVersion,
+          modulePublicId: modules.publicId,
+          coursePublicId: courses.publicId,
+        })
+        .from(lessons)
+        .innerJoin(modules, eq(lessons.moduleId, modules.id))
+        .innerJoin(courses, eq(lessons.courseId, courses.id))
+        .where(
+          and(
+            eq(lessons.courseId, courseId),
+            isNull(lessons.deletedAt),
+            eq(lessons.visibility, 'published'),
+            isNull(lessons.archivedAt),
+            eq(courses.status, 'published'),
+            isNull(courses.deletedAt),
+          ),
+        )
+        .orderBy(asc(modules.sortOrder), asc(lessons.sortOrder), asc(lessons.id))
+
+      return rows as LessonRow[]
+    },
+
     async findLessonsByModule(moduleId, opts) {
       const { cursor, limit } = opts
       const effectiveLimit = limit + 1
 
-      const conditions = [eq(lessons.moduleId, moduleId), isNull(lessons.deletedAt)]
+      const conditions = [
+        eq(lessons.moduleId, moduleId),
+        isNull(lessons.deletedAt),
+        eq(lessons.visibility, 'published'),
+        isNull(lessons.archivedAt),
+        eq(courses.status, 'published'),
+        isNull(courses.deletedAt),
+      ]
 
       const cursorId = decodeCursor(cursor)
       if (cursorId !== undefined) {
@@ -247,8 +322,29 @@ export function createResourcesRepository(db: DatabaseClient): ResourcesReposito
       }
 
       const rows = await db
-        .select()
+        .select({
+          id: lessons.id,
+          publicId: lessons.publicId,
+          moduleId: lessons.moduleId,
+          courseId: lessons.courseId,
+          title: lessons.title,
+          description: lessons.description,
+          contentType: lessons.contentType,
+          body: lessons.body,
+          videoUrl: lessons.videoUrl,
+          fileObjectKey: lessons.fileObjectKey,
+          fileSizeBytes: lessons.fileSizeBytes,
+          mimeType: lessons.mimeType,
+          durationSeconds: lessons.durationSeconds,
+          pageCount: lessons.pageCount,
+          isDownloadable: lessons.isDownloadable,
+          rowVersion: lessons.rowVersion,
+          modulePublicId: modules.publicId,
+          coursePublicId: courses.publicId,
+        })
         .from(lessons)
+        .innerJoin(modules, eq(lessons.moduleId, modules.id))
+        .innerJoin(courses, eq(lessons.courseId, courses.id))
         .where(and(...conditions))
         .orderBy(asc(lessons.id))
         .limit(effectiveLimit)
@@ -261,9 +357,39 @@ export function createResourcesRepository(db: DatabaseClient): ResourcesReposito
 
     async findLessonByPublicId(publicId) {
       const [row] = await db
-        .select()
+        .select({
+          id: lessons.id,
+          publicId: lessons.publicId,
+          moduleId: lessons.moduleId,
+          courseId: lessons.courseId,
+          title: lessons.title,
+          description: lessons.description,
+          contentType: lessons.contentType,
+          body: lessons.body,
+          videoUrl: lessons.videoUrl,
+          fileObjectKey: lessons.fileObjectKey,
+          fileSizeBytes: lessons.fileSizeBytes,
+          mimeType: lessons.mimeType,
+          durationSeconds: lessons.durationSeconds,
+          pageCount: lessons.pageCount,
+          isDownloadable: lessons.isDownloadable,
+          rowVersion: lessons.rowVersion,
+          modulePublicId: modules.publicId,
+          coursePublicId: courses.publicId,
+        })
         .from(lessons)
-        .where(and(eq(lessons.publicId, publicId), isNull(lessons.deletedAt)))
+        .innerJoin(modules, eq(lessons.moduleId, modules.id))
+        .innerJoin(courses, eq(lessons.courseId, courses.id))
+        .where(
+          and(
+            eq(lessons.publicId, publicId),
+            isNull(lessons.deletedAt),
+            eq(lessons.visibility, 'published'),
+            isNull(lessons.archivedAt),
+            eq(courses.status, 'published'),
+            isNull(courses.deletedAt),
+          ),
+        )
         .limit(1)
       return row as LessonRow | undefined
     },

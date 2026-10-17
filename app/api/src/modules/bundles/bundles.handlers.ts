@@ -70,6 +70,7 @@ export function createBundlesHandlers(service: BundlesService) {
         return c.json(result)
       } catch (error) {
         if (error instanceof BundleNotFoundError) return notFound(c, 'Bundle not found.')
+        if (error instanceof BundleGoneError) return gone(c, 'Bundle is no longer available.')
         throw error
       }
     },
@@ -83,6 +84,7 @@ export function createBundlesHandlers(service: BundlesService) {
         })
       } catch (error) {
         if (error instanceof BundleNotFoundError) return notFound(c, 'Bundle not found.')
+        if (error instanceof BundleGoneError) return gone(c, 'Bundle is no longer available.')
         throw error
       }
     },

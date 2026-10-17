@@ -149,6 +149,7 @@ export function createBundlesService(repo: BundlesRepository): BundlesService {
     async listBundleCourses(bundleId) {
       const row = await repo.findByPublicId(bundleId)
       if (!row) throw new BundleNotFoundError()
+      if (row.status !== 'published') throw new BundleGoneError()
 
       const courseRows = await repo.findCoursesByBundleId(row.id)
       return {
@@ -159,6 +160,7 @@ export function createBundlesService(repo: BundlesRepository): BundlesService {
     async getBundlePurchaseOptions(bundleId) {
       const row = await repo.findByPublicId(bundleId)
       if (!row) throw new BundleNotFoundError()
+      if (row.status !== 'published') throw new BundleGoneError()
 
       const optionRows = await repo.findPurchaseOptionsByBundleId(row.id)
       return {

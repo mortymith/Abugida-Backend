@@ -4,10 +4,10 @@
  * Database operations for the quizzes feature module.
  */
 
-import { eq, and, desc, lt, isNull, sql } from 'drizzle-orm'
+import { eq, and, desc, lt, isNull, sql, count } from 'drizzle-orm'
 import type { DatabaseClient } from '@abugida/database/client'
 import { users } from '@abugida/database/auth'
-import { lessons } from '@abugida/database/catalog'
+import { lessons, quizzes } from '@abugida/database/catalog'
 import { enrollments } from '@abugida/database/learning'
 import { quizQuestions, quizAttempts, quizAnswers } from '@abugida/database/learning'
 
@@ -61,6 +61,18 @@ export interface QuizAttemptRow {
   createdAt: Date
 }
 
+export interface QuizAttemptWithLessonRow extends QuizAttemptRow {
+  lessonPublicId: string
+}
+
+export interface QuizRow {
+  id: number
+  publicId: string
+  passingScorePercent: number
+  maxAttempts: number | null
+  isPublished: boolean
+}
+
 export interface QuizAnswerRow {
   id: number
   publicId: string
@@ -78,10 +90,12 @@ export interface QuizAnswerRow {
 export interface QuizzesRepository {
   findUserIdByPublicId(publicId: string): Promise<string | undefined>
   findLessonByPublicId(publicId: string): Promise<LessonRow | undefined>
+  findQuizByLessonId(lessonId: number): Promise<QuizRow | undefined>
   findQuizQuestions(lessonId: number): Promise<QuizQuestionRow[]>
   findQuizQuestionsWithAnswers(lessonId: number): Promise<QuizQuestionWithAnswerRow[]>
   checkEnrollment(studentId: string, lessonId: number): Promise<boolean>
   getNextAttemptNumber(studentId: string, lessonId: number): Promise<number>
+  countAttemptsByStudentAndLesson(studentId: string, lessonId: number): Promise<number>
   createAttempt(row: {
     studentId: string
     lessonId: number
@@ -108,7 +122,7 @@ export interface QuizzesRepository {
     lessonId: number,
     opts: { cursor: string | undefined; limit: number },
   ): Promise<{ rows: QuizAttemptRow[]; hasMore: boolean }>
-  findAttemptByPublicId(publicId: string): Promise<QuizAttemptRow | undefined>
+  findAttemptByPublicId(publicId: string): Promise<QuizAttemptWithLessonRow | undefined>
   findAnswersByAttemptId(attemptId: number): Promise<QuizAnswerRow[]>
 }
 
@@ -133,9 +147,41 @@ export function createQuizzesRepository(db: DatabaseClient): QuizzesRepository {
           contentType: lessons.contentType,
         })
         .from(lessons)
-        .where(and(eq(lessons.publicId, publicId), isNull(lessons.deletedAt)))
+        .where(
+          and(
+            eq(lessons.publicId, publicId),
+            isNull(lessons.deletedAt),
+            eq(lessons.visibility, 'published'),
+            isNull(lessons.archivedAt),
+          ),
+        )
         .limit(1)
       return row
+    },
+
+    async findQuizByLessonId(lessonId) {
+      const [row] = await db
+        .select({
+          id: quizzes.id,
+          publicId: quizzes.publicId,
+          passingScorePercent: quizzes.passingScorePercent,
+          maxAttempts: quizzes.maxAttempts,
+          isPublished: quizzes.isPublished,
+        })
+        .from(quizzes)
+        .where(and(eq(quizzes.lessonId, lessonId), isNull(quizzes.deletedAt)))
+        .limit(1)
+      return row
+    },
+
+    async countAttemptsByStudentAndLesson(studentId, lessonId) {
+      const [result] = await db
+        .select({ count: count() })
+        .from(quizAttempts)
+        .where(
+          and(eq(quizAttempts.studentId, studentId), eq(quizAttempts.lessonId, lessonId)),
+        )
+      return result?.count ?? 0
     },
 
     async findQuizQuestions(lessonId) {
@@ -276,8 +322,24 @@ export function createQuizzesRepository(db: DatabaseClient): QuizzesRepository {
 
     async findAttemptByPublicId(publicId) {
       const [row] = await db
-        .select()
+        .select({
+          id: quizAttempts.id,
+          publicId: quizAttempts.publicId,
+          studentId: quizAttempts.studentId,
+          lessonId: quizAttempts.lessonId,
+          attemptNumber: quizAttempts.attemptNumber,
+          totalQuestions: quizAttempts.totalQuestions,
+          correctAnswers: quizAttempts.correctAnswers,
+          quizScorePercentage: quizAttempts.quizScorePercentage,
+          isPassed: quizAttempts.isPassed,
+          durationSeconds: quizAttempts.durationSeconds,
+          startedAt: quizAttempts.startedAt,
+          completedAt: quizAttempts.completedAt,
+          createdAt: quizAttempts.createdAt,
+          lessonPublicId: lessons.publicId,
+        })
         .from(quizAttempts)
+        .innerJoin(lessons, eq(quizAttempts.lessonId, lessons.id))
         .where(eq(quizAttempts.publicId, publicId))
         .limit(1)
       return row

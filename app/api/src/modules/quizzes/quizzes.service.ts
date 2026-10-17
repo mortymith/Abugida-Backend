@@ -46,6 +46,20 @@ export class QuizAttemptNotFoundError extends Error {
   }
 }
 
+export class QuizNotFoundError extends Error {
+  constructor(message = 'Quiz not found or not published.') {
+    super(message)
+    this.name = 'QuizNotFoundError'
+  }
+}
+
+export class QuizMaxAttemptsExceededError extends Error {
+  constructor(message = 'Maximum attempts for this quiz have been exceeded.') {
+    super(message)
+    this.name = 'QuizMaxAttemptsExceededError'
+  }
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function toQuizQuestionView(row: QuizQuestionRow): QuizQuestionView {
@@ -139,6 +153,19 @@ export function createQuizzesService(repo: QuizzesRepository): QuizzesService {
       const enrolled = await repo.checkEnrollment(studentId, lesson.id)
       if (!enrolled) throw new EnrollmentRequiredError()
 
+      // Read the quiz configuration: `maxAttempts`, `passingScorePercent`, and
+      // `isPublished`. An unpublished quiz is treated as not found so students
+      // can't submit answers to a quiz the instructor hasn't released yet.
+      const quiz = await repo.findQuizByLessonId(lesson.id)
+      if (!quiz || !quiz.isPublished) throw new QuizNotFoundError()
+
+      // Enforce the configured attempt cap. `maxAttempts` is nullable on the
+      // column; null means unlimited.
+      if (quiz.maxAttempts !== null) {
+        const attemptCount = await repo.countAttemptsByStudentAndLesson(studentId, lesson.id)
+        if (attemptCount >= quiz.maxAttempts) throw new QuizMaxAttemptsExceededError()
+      }
+
       const questionsWithAnswers = await repo.findQuizQuestionsWithAnswers(lesson.id)
       const questionMap = new Map(questionsWithAnswers.map((q) => [q.publicId, q]))
 
@@ -193,7 +220,7 @@ export function createQuizzesService(repo: QuizzesRepository): QuizzesService {
         totalQuestions,
         correctAnswers: correctCount,
         quizScorePercentage: scorePercentage.toFixed(2),
-        isPassed: scorePercentage >= 60,
+        isPassed: scorePercentage >= quiz.passingScorePercent,
         durationSeconds,
         startedAt,
         completedAt,
@@ -259,7 +286,7 @@ export function createQuizzesService(repo: QuizzesRepository): QuizzesService {
 
       return {
         id: attempt.publicId,
-        lessonId: '',
+        lessonId: attempt.lessonPublicId,
         attemptNumber: attempt.attemptNumber,
         totalQuestions: attempt.totalQuestions,
         correctAnswers: attempt.correctAnswers,

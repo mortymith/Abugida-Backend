@@ -5,7 +5,7 @@
  * CRUD, lesson completion tracking, and progress aggregation queries.
  */
 
-import { eq, and, desc, sql, lt, count } from 'drizzle-orm'
+import { eq, and, desc, sql, lt, count, isNull } from 'drizzle-orm'
 import type { DatabaseClient } from '@abugida/database/client'
 import { users } from '@abugida/database/auth'
 import { enrollments } from '@abugida/database/learning'
@@ -14,6 +14,15 @@ import { courses } from '@abugida/database/catalog'
 import { lessons } from '@abugida/database/catalog'
 import { courseBundles } from '@abugida/database/catalog'
 import { purchases } from '@abugida/database/finance'
+
+// ── Errors ────────────────────────────────────────────────────────────────
+
+export class LessonNotFoundError extends Error {
+  constructor(message = 'Lesson not found.') {
+    super(message)
+    this.name = 'LessonNotFoundError'
+  }
+}
 
 // ── Cursor helpers ─────────────────────────────────────────────────────────
 
@@ -289,8 +298,9 @@ export function createEnrollmentsRepository(db: DatabaseClient): EnrollmentsRepo
       const enrollment = await getEnrollmentInternal(db, studentId, enrollmentPublicId)
       if (!enrollment) return undefined
 
-      const lessonId = await getLessonIdByPublicId(db, lessonPublicId)
-      if (!lessonId) return undefined
+      const lesson = await getLessonIdByPublicId(db, lessonPublicId)
+      if (!lesson) return undefined
+      const lessonId = lesson.id
 
       const [row] = await db
         .select({
@@ -332,8 +342,16 @@ export function createEnrollmentsRepository(db: DatabaseClient): EnrollmentsRepo
       const enrollment = await getEnrollmentInternal(db, studentId, enrollmentPublicId)
       if (!enrollment) throw new Error('Enrollment not found')
 
-      const lessonId = await getLessonIdByPublicId(db, lessonPublicId)
-      if (!lessonId) throw new Error('Lesson not found')
+      const lesson = await getLessonIdByPublicId(db, lessonPublicId)
+      if (!lesson) throw new LessonNotFoundError()
+
+      // Verify the lesson belongs to the enrollment's course. Without this,
+      // a student could toggle completion for a lesson in a course they aren't
+      // enrolled in. `lessons.courseId` mirrors `modules.courseId`, so the join
+      // to `modules` the spec mentions is implicit.
+      if (lesson.courseId !== enrollment.courseId) throw new LessonNotFoundError()
+
+      const lessonId = lesson.id
 
       const existing = await db
         .select()
@@ -460,20 +478,37 @@ async function getEnrollmentInternal(
   return row
 }
 
-async function getLessonIdByPublicId(db: DatabaseClient, publicId: string) {
+async function getLessonIdByPublicId(
+  db: DatabaseClient,
+  publicId: string,
+): Promise<{ id: number; courseId: number } | undefined> {
   const [row] = await db
-    .select({ id: lessons.id })
+    .select({ id: lessons.id, courseId: lessons.courseId })
     .from(lessons)
-    .where(eq(lessons.publicId, publicId))
+    .where(
+      and(
+        eq(lessons.publicId, publicId),
+        eq(lessons.visibility, 'published'),
+        isNull(lessons.archivedAt),
+        isNull(lessons.deletedAt),
+      ),
+    )
     .limit(1)
-  return row?.id
+  return row
 }
 
 async function getLessonCountForCourse(db: DatabaseClient, courseId: number) {
   const [result] = await db
     .select({ count: count() })
     .from(lessons)
-    .where(eq(lessons.courseId, courseId))
+    .where(
+      and(
+        eq(lessons.courseId, courseId),
+        eq(lessons.visibility, 'published'),
+        isNull(lessons.archivedAt),
+        isNull(lessons.deletedAt),
+      ),
+    )
   return result?.count ?? 0
 }
 

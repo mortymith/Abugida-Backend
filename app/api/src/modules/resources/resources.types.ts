@@ -89,6 +89,9 @@ export interface ResourceDetailView {
   title: string
   description: string | null
   contentType: string | null
+  body: string | null
+  videoUrl: string | null
+  fileObjectKey: string | null
   fileSizeBytes: number | null
   mimeType: string | null
   durationSeconds: number | null
