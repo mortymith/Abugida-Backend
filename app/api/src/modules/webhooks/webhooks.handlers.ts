@@ -6,7 +6,7 @@
 
 import type { Context } from 'hono'
 import type { WebhooksService } from './webhooks.service'
-import { WebhookStorageError } from './webhooks.service'
+import { WebhookStorageError, WebhookValidationError } from './webhooks.service'
 import type { AppEnv } from '@/middleware/types'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -48,6 +48,7 @@ export function createWebhooksHandlers(service: WebhooksService) {
         const result = await service.handleTelebirrWebhook(payload, headers)
         return c.json(result, 200)
       } catch (error) {
+        if (error instanceof WebhookValidationError) return badRequest(c, error.message)
         if (error instanceof WebhookStorageError)
           return internalError(c, 'Failed to process webhook.')
         if (error instanceof SyntaxError) return badRequest(c, 'Invalid JSON payload.')

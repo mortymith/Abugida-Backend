@@ -154,6 +154,29 @@ export function createPurchasesService(repo: PurchasesRepository): PurchasesServ
         )
       }
 
+      // Validate body.courseId matches option.courseId (and bundle)
+      if (hasCourse && body.courseId) {
+        const requestedCourseId = await repo.findCourseIdByPublicId(body.courseId)
+        if (requestedCourseId !== option.courseId) {
+          throw new InvalidPurchaseRequestError(
+            'Purchase option does not match the requested course.',
+          )
+        }
+      }
+
+      // Idempotency: check for an existing pending purchase for the same
+      // student + course/bundle. A duplicate initiation returns the existing
+      // purchase instead of creating a second one, preventing double-charge
+      // scenarios on retry.
+      const existing = await repo.findPendingPurchaseByStudentAndItem(
+        userId,
+        option.courseId,
+        option.bundleId,
+      )
+      if (existing) {
+        throw new ConflictPurchaseError()
+      }
+
       // Resolve the active Telebirr gateway (server-side, not client-provided)
       const gateway = await repo.findActiveTelebirrGateway()
       if (!gateway) {
