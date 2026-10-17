@@ -8,21 +8,7 @@ import type { Context } from 'hono'
 import type { ExamTypesService } from './exam-types.service'
 import { ExamTypeNotFoundError } from './exam-types.service'
 import type { AppEnv } from '@/middleware/types'
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function notFound(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/not-found',
-      title: 'Not Found',
-      status: 404,
-      detail,
-      instance: c.req.path,
-    } as const,
-    404,
-  )
-}
+import { problemResponse } from '@/middleware'
 
 // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -45,7 +31,8 @@ export function createExamTypesHandlers(service: ExamTypesService) {
         const examType = await service.getExamType(examTypeId, query.include_children !== 'false')
         return c.json({ data: examType })
       } catch (error) {
-        if (error instanceof ExamTypeNotFoundError) return notFound(c, 'Exam type not found.')
+        if (error instanceof ExamTypeNotFoundError)
+          return problemResponse(c, { status: 404, detail: 'Exam type not found.' })
         throw error
       }
     },
@@ -59,7 +46,7 @@ export function createExamTypesHandlers(service: ExamTypesService) {
         return c.json(result)
       } catch (error) {
         if (error instanceof ExamTypeNotFoundError)
-          return notFound(c, 'Parent exam type not found.')
+          return problemResponse(c, { status: 404, detail: 'Parent exam type not found.' })
         throw error
       }
     },

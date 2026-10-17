@@ -13,47 +13,7 @@ import {
   ConflictPurchaseError,
 } from './purchases.service'
 import type { AppEnv } from '@/middleware/types'
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function notFound(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/not-found',
-      title: 'Not Found',
-      status: 404,
-      detail,
-      instance: c.req.path,
-    } as const,
-    404,
-  )
-}
-
-function badRequest(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/invalid-parameter',
-      title: 'Invalid Parameter',
-      status: 400,
-      detail,
-      instance: c.req.path,
-    } as const,
-    400,
-  )
-}
-
-function conflict(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/conflict',
-      title: 'Conflict',
-      status: 409,
-      detail,
-      instance: c.req.path,
-    } as const,
-    409,
-  )
-}
+import { problemResponse } from '@/middleware'
 
 // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -67,25 +27,15 @@ export function createPurchasesHandlers(service: PurchasesService) {
           'X-Platform-Payment-Methods': '["telebirr"]',
         })
       } catch (error) {
-        if (error instanceof PurchaseOptionNotFoundError) return notFound(c, 'Course not found.')
+        if (error instanceof PurchaseOptionNotFoundError)
+          return problemResponse(c, { status: 404, detail: 'Course not found.' })
         throw error
       }
     },
 
     async listPurchases(c: Context<AppEnv>) {
       const user = c.get('user')
-      if (!user) {
-        return c.json(
-          {
-            type: 'https://api.abugida.com/errors/unauthorized',
-            title: 'Unauthorized',
-            status: 401,
-            detail: 'Authentication required.',
-            instance: c.req.path,
-          } as const,
-          401,
-        )
-      }
+      if (!user) return problemResponse(c, { status: 401, detail: 'Authentication required.' })
 
       const query = c.req.query()
       const result = await service.listPurchases(user.id, {
@@ -98,18 +48,7 @@ export function createPurchasesHandlers(service: PurchasesService) {
 
     async initiatePurchase(c: Context<AppEnv>) {
       const user = c.get('user')
-      if (!user) {
-        return c.json(
-          {
-            type: 'https://api.abugida.com/errors/unauthorized',
-            title: 'Unauthorized',
-            status: 401,
-            detail: 'Authentication required.',
-            instance: c.req.path,
-          } as const,
-          401,
-        )
-      }
+      if (!user) return problemResponse(c, { status: 401, detail: 'Authentication required.' })
 
       try {
         const body = await c.req.json()
@@ -117,34 +56,26 @@ export function createPurchasesHandlers(service: PurchasesService) {
         return c.json({ data: result }, 201)
       } catch (error) {
         if (error instanceof PurchaseOptionNotFoundError)
-          return notFound(c, 'Purchase option not found.')
-        if (error instanceof InvalidPurchaseRequestError) return badRequest(c, error.message)
-        if (error instanceof ConflictPurchaseError) return conflict(c, error.message)
+          return problemResponse(c, { status: 404, detail: 'Purchase option not found.' })
+        if (error instanceof InvalidPurchaseRequestError)
+          return problemResponse(c, { status: 400, detail: error.message })
+        if (error instanceof ConflictPurchaseError)
+          return problemResponse(c, { status: 409, detail: error.message })
         throw error
       }
     },
 
     async getPurchase(c: Context<AppEnv>) {
       const user = c.get('user')
-      if (!user) {
-        return c.json(
-          {
-            type: 'https://api.abugida.com/errors/unauthorized',
-            title: 'Unauthorized',
-            status: 401,
-            detail: 'Authentication required.',
-            instance: c.req.path,
-          } as const,
-          401,
-        )
-      }
+      if (!user) return problemResponse(c, { status: 401, detail: 'Authentication required.' })
 
       const purchaseId = c.req.param('purchaseId') as string
       try {
         const purchase = await service.getPurchase(user.id, purchaseId)
         return c.json({ data: purchase })
       } catch (error) {
-        if (error instanceof PurchaseNotFoundError) return notFound(c, 'Purchase not found.')
+        if (error instanceof PurchaseNotFoundError)
+          return problemResponse(c, { status: 404, detail: 'Purchase not found.' })
         throw error
       }
     },

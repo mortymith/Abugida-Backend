@@ -8,34 +8,7 @@ import type { Context } from 'hono'
 import type { WebhooksService } from './webhooks.service'
 import { WebhookStorageError, WebhookValidationError } from './webhooks.service'
 import type { AppEnv } from '@/middleware/types'
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function badRequest(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/invalid-parameter',
-      title: 'Invalid Parameter',
-      status: 400,
-      detail,
-      instance: c.req.path,
-    } as const,
-    400,
-  )
-}
-
-function internalError(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/internal',
-      title: 'Internal Server Error',
-      status: 500,
-      detail,
-      instance: c.req.path,
-    } as const,
-    500,
-  )
-}
+import { problemResponse } from '@/middleware'
 
 // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -48,10 +21,12 @@ export function createWebhooksHandlers(service: WebhooksService) {
         const result = await service.handleTelebirrWebhook(payload, headers)
         return c.json(result, 200)
       } catch (error) {
-        if (error instanceof WebhookValidationError) return badRequest(c, error.message)
+        if (error instanceof WebhookValidationError)
+          return problemResponse(c, { status: 400, detail: error.message })
         if (error instanceof WebhookStorageError)
-          return internalError(c, 'Failed to process webhook.')
-        if (error instanceof SyntaxError) return badRequest(c, 'Invalid JSON payload.')
+          return problemResponse(c, { status: 500, detail: 'Failed to process webhook.' })
+        if (error instanceof SyntaxError)
+          return problemResponse(c, { status: 400, detail: 'Invalid JSON payload.' })
         throw error
       }
     },
@@ -64,8 +39,9 @@ export function createWebhooksHandlers(service: WebhooksService) {
         return c.json(result, 200)
       } catch (error) {
         if (error instanceof WebhookStorageError)
-          return internalError(c, 'Failed to process webhook.')
-        if (error instanceof SyntaxError) return badRequest(c, 'Invalid JSON payload.')
+          return problemResponse(c, { status: 500, detail: 'Failed to process webhook.' })
+        if (error instanceof SyntaxError)
+          return problemResponse(c, { status: 400, detail: 'Invalid JSON payload.' })
         throw error
       }
     },
