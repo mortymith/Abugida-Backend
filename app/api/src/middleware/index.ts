@@ -28,6 +28,7 @@ import { errorHandler, notFoundHandler, problemResponse } from './error-handler.
 import { rateLimitMiddleware } from './rate-limit.middleware'
 import { optionalSessionMiddleware, requireAuthMiddleware } from './auth.middleware'
 import { apiKeyAuthMiddleware } from './api-key-auth.middleware'
+import { requireApiKeyScope } from './api-key-auth.middleware'
 import { csrfProtection } from '@abugida/auth/hono'
 import type { AppEnv, AppHono } from './types'
 
@@ -133,11 +134,21 @@ export function applyMiddleware(app: AppHono, deps: MiddlewareDependencies): voi
     )
   }
 
-  // ── Webhook routes (API-key authenticated) ───────────────────────────────
-  app.use('/webhooks/*', bodyLimit({ maxSize: BODY_LIMIT_BYTES, onError: bodyTooLarge }))
-  app.use('/webhooks/*', apiKeyAuthMiddleware(deps.db))
-  app.use('/webhooks/*', propagateTenant)
-  app.use('/webhooks/*', rateLimitMiddleware(deps.limiters))
+  // ── Webhook routes (API-key authenticated + scope-enforced) ──────────────
+  // Each webhook source requires its own scope: `webhooks:telebirr` for
+  // payment callbacks, `webhooks:sms` for SMS delivery receipts. A key with
+  // the wrong scope gets 403 — the documented but previously dead-code path.
+  app.use('/webhooks/telebirr', bodyLimit({ maxSize: BODY_LIMIT_BYTES, onError: bodyTooLarge }))
+  app.use('/webhooks/telebirr', apiKeyAuthMiddleware(deps.db))
+  app.use('/webhooks/telebirr', requireApiKeyScope('webhooks:telebirr'))
+  app.use('/webhooks/telebirr', propagateTenant)
+  app.use('/webhooks/telebirr', rateLimitMiddleware(deps.limiters))
+
+  app.use('/webhooks/sms-delivery', bodyLimit({ maxSize: BODY_LIMIT_BYTES, onError: bodyTooLarge }))
+  app.use('/webhooks/sms-delivery', apiKeyAuthMiddleware(deps.db))
+  app.use('/webhooks/sms-delivery', requireApiKeyScope('webhooks:sms'))
+  app.use('/webhooks/sms-delivery', propagateTenant)
+  app.use('/webhooks/sms-delivery', rateLimitMiddleware(deps.limiters))
 
   // ── Final catch-alls ─────────────────────────────────────────────────────
   app.notFound(notFoundHandler())

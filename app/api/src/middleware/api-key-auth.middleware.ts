@@ -10,6 +10,11 @@
  * principal is stored as `c.get("apiKey")` for downstream handlers and the
  * rate limiter. `last_used_at` is refreshed best-effort.
  *
+ * Scope enforcement: `requireApiKeyScope` returns a middleware that checks
+ * whether the resolved API key has the required scope. Without this, any
+ * active key — regardless of its `scopes` array — can call any webhook,
+ * which is a privilege-escalation surface.
+ *
  * Note: the spec describes keys with `principal_type = 'integration'`, but the
  * current `api_keys` table has no such column — it links keys to a user via
  * `user_id`. Validation here relies on `is_active`/`expires_at` until that
@@ -84,6 +89,32 @@ export function apiKeyAuthMiddleware(db: DatabaseClient): MiddlewareHandler<AppE
         logger.warn({ err, apiKeyId: row.publicId }, 'Failed to update API key last_used_at')
       })
 
+    return next()
+  }
+}
+
+/**
+ * Middleware that checks whether the resolved API key has the required scope.
+ * Must be mounted after `apiKeyAuthMiddleware`. Returns 403 when the key
+ * lacks the scope — the documented but previously dead-code 403 path.
+ *
+ * A key with an empty `scopes` array (the DB default) is rejected by every
+ * scope check, which is the correct default-deny posture.
+ */
+export function requireApiKeyScope(scope: string): MiddlewareHandler<AppEnv> {
+  return async (c, next) => {
+    const apiKey = c.get('apiKey')
+    if (!apiKey) {
+      // apiKeyAuthMiddleware should have run first; if it didn't, the request
+      // is unauthenticated and the 401 has already been sent.
+      return problemResponse(c, { status: 401, detail: 'Missing API key principal.' })
+    }
+    if (!apiKey.scopes.includes(scope)) {
+      return problemResponse(c, {
+        status: 403,
+        detail: `API key lacks required scope: ${scope}.`,
+      })
+    }
     return next()
   }
 }

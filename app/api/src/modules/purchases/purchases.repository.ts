@@ -74,6 +74,17 @@ export interface PurchasesRepository {
   ): Promise<{ rows: PurchaseRow[]; hasMore: boolean }>
   findPurchaseByPublicId(publicId: string): Promise<PurchaseRow | undefined>
   findEnrollmentsByPurchaseId(purchaseId: number): Promise<PurchaseEnrollmentRow[]>
+  /**
+   * Find an existing purchase in `initiated` or `payment_pending` status for
+   * the same student + course/bundle. Used for idempotency: a duplicate
+   * initiation request returns the existing purchase instead of creating a
+   * second one, preventing double-charge scenarios on retry.
+   */
+  findPendingPurchaseByStudentAndItem(
+    studentId: string,
+    courseId: number | null,
+    bundleId: number | null,
+  ): Promise<PurchaseRow | undefined>
   createPurchase(data: {
     studentId: string
     courseId: number | null
@@ -258,6 +269,33 @@ export function createPurchasesRepository(db: DatabaseClient): PurchasesReposito
         .select({ enrollmentPublicId: enrollments.publicId })
         .from(enrollments)
         .where(eq(enrollments.purchaseId, purchaseId))
+    },
+
+    async findPendingPurchaseByStudentAndItem(studentId, courseId, bundleId) {
+      // Look for an existing purchase in 'initiated' or 'payment_pending'
+      // status for the same student + course/bundle. This is the idempotency
+      // check: a duplicate initiation returns the existing purchase instead
+      // of creating a second one.
+      const conditions = [
+        eq(purchases.studentId, studentId),
+        or(
+          eq(purchases.status, 'initiated'),
+          eq(purchases.status, 'payment_pending'),
+        ),
+      ]
+      if (courseId !== null) {
+        conditions.push(eq(purchases.courseId, courseId))
+      }
+      if (bundleId !== null) {
+        conditions.push(eq(purchases.bundleId, bundleId))
+      }
+      const [row] = await db
+        .select()
+        .from(purchases)
+        .where(and(...conditions))
+        .orderBy(desc(purchases.createdAt))
+        .limit(1)
+      return row
     },
 
     async createPurchase(data) {

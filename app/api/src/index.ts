@@ -54,6 +54,16 @@ async function shutdownServer(): Promise<void> {
 
   logger.info('Shutting down API server…')
 
+  // Stop accepting new connections and wait for in-flight requests to
+  // complete before closing the database pool. Without this, a handler
+  // mid-query can hit a closed pool and surface a 500.
+  try {
+    server.stop(true)
+    logger.info('HTTP server stopped accepting new connections')
+  } catch (err) {
+    logger.warn({ err }, 'Error stopping HTTP server during shutdown')
+  }
+
   try {
     await queue?.close()
   } catch (err) {

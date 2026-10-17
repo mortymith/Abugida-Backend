@@ -263,7 +263,7 @@ export function createApp(): ApiApplication {
 
   // Webhooks module — incoming webhooks from payment providers and SMS service
   const webhooksRepo = createWebhooksRepository(db)
-  const webhooksService = createWebhooksService(webhooksRepo, queue)
+  const webhooksService = createWebhooksService(webhooksRepo, queue, db)
   const webhooksHandlers = createWebhooksHandlers(webhooksService)
   for (const { route, handler } of createWebhooksRouteMap(webhooksHandlers)) {
     app.openapi(route, handler)
