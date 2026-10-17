@@ -13,73 +13,7 @@ import {
   StorageUnavailableError,
 } from './downloads.service'
 import type { AppEnv } from '@/middleware/types'
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function unauthorized(c: Context<AppEnv>, detail = 'Authentication required.') {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/unauthorized',
-      title: 'Unauthorized',
-      status: 401,
-      detail,
-      instance: c.req.path,
-    } as const,
-    401,
-  )
-}
-
-function forbidden(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/forbidden',
-      title: 'Forbidden',
-      status: 403,
-      detail,
-      instance: c.req.path,
-    } as const,
-    403,
-  )
-}
-
-function notFound(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/not-found',
-      title: 'Not Found',
-      status: 404,
-      detail,
-      instance: c.req.path,
-    } as const,
-    404,
-  )
-}
-
-function conflict(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/conflict',
-      title: 'Conflict',
-      status: 409,
-      detail,
-      instance: c.req.path,
-    } as const,
-    409,
-  )
-}
-
-function serviceUnavailable(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/service-unavailable',
-      title: 'Service Unavailable',
-      status: 503,
-      detail,
-      instance: c.req.path,
-    } as const,
-    503,
-  )
-}
+import { problemResponse } from '@/middleware'
 
 // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -87,54 +21,63 @@ export function createDownloadsHandlers(service: DownloadsService) {
   return {
     async initiateDownload(c: Context<AppEnv>) {
       const user = c.get('user')
-      if (!user) return unauthorized(c)
+      if (!user) return problemResponse(c, { status: 401, detail: 'Authentication required.' })
 
       const courseId = c.req.param('courseId')
-      if (!courseId) return notFound(c, 'Course ID is required.')
+      if (!courseId) return problemResponse(c, { status: 404, detail: 'Course ID is required.' })
 
       try {
         const result = await service.initiateDownload(user.id, courseId)
         return c.json({ data: result })
       } catch (error) {
-        if (error instanceof NotFoundError) return notFound(c, error.message)
-        if (error instanceof ForbiddenError) return forbidden(c, error.message)
-        if (error instanceof DownloadLimitExceededError) return conflict(c, error.message)
+        if (error instanceof NotFoundError)
+          return problemResponse(c, { status: 404, detail: error.message })
+        if (error instanceof ForbiddenError)
+          return problemResponse(c, { status: 403, detail: error.message })
+        if (error instanceof DownloadLimitExceededError)
+          return problemResponse(c, { status: 409, detail: error.message })
         throw error
       }
     },
 
     async getDownloadStatus(c: Context<AppEnv>) {
       const user = c.get('user')
-      if (!user) return unauthorized(c)
+      if (!user) return problemResponse(c, { status: 401, detail: 'Authentication required.' })
 
       const courseId = c.req.param('courseId')
-      if (!courseId) return notFound(c, 'Course ID is required.')
+      if (!courseId) return problemResponse(c, { status: 404, detail: 'Course ID is required.' })
 
       try {
         const result = await service.getDownloadStatus(user.id, courseId)
         return c.json({ data: result })
       } catch (error) {
-        if (error instanceof NotFoundError) return notFound(c, error.message)
-        if (error instanceof ForbiddenError) return forbidden(c, error.message)
+        if (error instanceof NotFoundError)
+          return problemResponse(c, { status: 404, detail: error.message })
+        if (error instanceof ForbiddenError)
+          return problemResponse(c, { status: 403, detail: error.message })
         throw error
       }
     },
 
     async getPresignedUrl(c: Context<AppEnv>) {
       const user = c.get('user')
-      if (!user) return unauthorized(c)
+      if (!user) return problemResponse(c, { status: 401, detail: 'Authentication required.' })
 
       const courseId = c.req.param('courseId')
-      if (!courseId) return notFound(c, 'Course ID is required.')
+      if (!courseId) return problemResponse(c, { status: 404, detail: 'Course ID is required.' })
 
       try {
         const result = await service.getPresignedUrl(user.id, courseId)
         return c.json({ data: result })
       } catch (error) {
-        if (error instanceof NotFoundError) return notFound(c, error.message)
-        if (error instanceof ForbiddenError) return forbidden(c, error.message)
-        if (error instanceof DownloadLimitExceededError) return conflict(c, error.message)
-        if (error instanceof StorageUnavailableError) return serviceUnavailable(c, error.message)
+        if (error instanceof NotFoundError)
+          return problemResponse(c, { status: 404, detail: error.message })
+        if (error instanceof ForbiddenError)
+          return problemResponse(c, { status: 403, detail: error.message })
+        if (error instanceof DownloadLimitExceededError)
+          return problemResponse(c, { status: 409, detail: error.message })
+        if (error instanceof StorageUnavailableError)
+          return problemResponse(c, { status: 503, detail: error.message })
         throw error
       }
     },

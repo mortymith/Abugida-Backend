@@ -15,47 +15,7 @@ import {
   QuizMaxAttemptsExceededError,
 } from './quizzes.service'
 import type { AppEnv } from '@/middleware/types'
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function unauthorized(c: Context<AppEnv>, detail = 'Authentication required.') {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/unauthorized',
-      title: 'Unauthorized',
-      status: 401,
-      detail,
-      instance: c.req.path,
-    } as const,
-    401,
-  )
-}
-
-function notFound(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/not-found',
-      title: 'Not Found',
-      status: 404,
-      detail,
-      instance: c.req.path,
-    } as const,
-    404,
-  )
-}
-
-function unprocessableEntity(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/unprocessable-entity',
-      title: 'Unprocessable Entity',
-      status: 422,
-      detail,
-      instance: c.req.path,
-    } as const,
-    422,
-  )
-}
+import { problemResponse } from '@/middleware'
 
 // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -63,7 +23,7 @@ export function createQuizzesHandlers(service: QuizzesService) {
   return {
     async getQuizQuestions(c: Context<AppEnv>) {
       const user = c.get('user')
-      if (!user) return unauthorized(c)
+      if (!user) return problemResponse(c, { status: 401, detail: 'Authentication required.' })
 
       const resourceId = c.req.param('resourceId') as string
 
@@ -71,18 +31,22 @@ export function createQuizzesHandlers(service: QuizzesService) {
         const result = await service.getQuizQuestions(user.id, resourceId)
         return c.json({ data: result })
       } catch (error) {
-        if (error instanceof LessonNotFoundError) return notFound(c, 'Lesson not found.')
+        if (error instanceof LessonNotFoundError)
+          return problemResponse(c, { status: 404, detail: 'Lesson not found.' })
         if (error instanceof LessonNotQuizTypeError)
-          return unprocessableEntity(c, 'Lesson is not a quiz type.')
+          return problemResponse(c, { status: 422, detail: 'Lesson is not a quiz type.' })
         if (error instanceof EnrollmentRequiredError)
-          return notFound(c, 'You must be enrolled in this course to access the quiz.')
+          return problemResponse(c, {
+            status: 404,
+            detail: 'You must be enrolled in this course to access the quiz.',
+          })
         throw error
       }
     },
 
     async submitQuiz(c: Context<AppEnv>) {
       const user = c.get('user')
-      if (!user) return unauthorized(c)
+      if (!user) return problemResponse(c, { status: 401, detail: 'Authentication required.' })
 
       const resourceId = c.req.param('resourceId') as string
       const body = await c.req.json()
@@ -94,21 +58,26 @@ export function createQuizzesHandlers(service: QuizzesService) {
         })
         return c.json({ data: result }, 201)
       } catch (error) {
-        if (error instanceof LessonNotFoundError) return notFound(c, 'Lesson not found.')
+        if (error instanceof LessonNotFoundError)
+          return problemResponse(c, { status: 404, detail: 'Lesson not found.' })
         if (error instanceof LessonNotQuizTypeError)
-          return unprocessableEntity(c, 'Lesson is not a quiz type.')
+          return problemResponse(c, { status: 422, detail: 'Lesson is not a quiz type.' })
         if (error instanceof EnrollmentRequiredError)
-          return notFound(c, 'You must be enrolled in this course to access the quiz.')
-        if (error instanceof QuizNotFoundError) return notFound(c, error.message)
+          return problemResponse(c, {
+            status: 404,
+            detail: 'You must be enrolled in this course to access the quiz.',
+          })
+        if (error instanceof QuizNotFoundError)
+          return problemResponse(c, { status: 404, detail: error.message })
         if (error instanceof QuizMaxAttemptsExceededError)
-          return unprocessableEntity(c, error.message)
+          return problemResponse(c, { status: 422, detail: error.message })
         throw error
       }
     },
 
     async listQuizAttempts(c: Context<AppEnv>) {
       const user = c.get('user')
-      if (!user) return unauthorized(c)
+      if (!user) return problemResponse(c, { status: 401, detail: 'Authentication required.' })
 
       const resourceId = c.req.param('resourceId') as string
       const query = c.req.query()
@@ -120,16 +89,17 @@ export function createQuizzesHandlers(service: QuizzesService) {
         })
         return c.json(result)
       } catch (error) {
-        if (error instanceof LessonNotFoundError) return notFound(c, 'Lesson not found.')
+        if (error instanceof LessonNotFoundError)
+          return problemResponse(c, { status: 404, detail: 'Lesson not found.' })
         if (error instanceof LessonNotQuizTypeError)
-          return unprocessableEntity(c, 'Lesson is not a quiz type.')
+          return problemResponse(c, { status: 422, detail: 'Lesson is not a quiz type.' })
         throw error
       }
     },
 
     async getQuizAttempt(c: Context<AppEnv>) {
       const user = c.get('user')
-      if (!user) return unauthorized(c)
+      if (!user) return problemResponse(c, { status: 401, detail: 'Authentication required.' })
 
       const attemptId = c.req.param('attemptId') as string
 
@@ -137,7 +107,8 @@ export function createQuizzesHandlers(service: QuizzesService) {
         const result = await service.getQuizAttempt(user.id, attemptId)
         return c.json({ data: result })
       } catch (error) {
-        if (error instanceof QuizAttemptNotFoundError) return notFound(c, 'Quiz attempt not found.')
+        if (error instanceof QuizAttemptNotFoundError)
+          return problemResponse(c, { status: 404, detail: 'Quiz attempt not found.' })
         throw error
       }
     },

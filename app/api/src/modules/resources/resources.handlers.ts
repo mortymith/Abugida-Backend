@@ -8,21 +8,7 @@ import type { Context } from 'hono'
 import type { ResourcesService } from './resources.service'
 import { NotFoundError } from './resources.service'
 import type { AppEnv } from '@/middleware/types'
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function notFound(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/not-found',
-      title: 'Not Found',
-      status: 404,
-      detail,
-      instance: c.req.path,
-    } as const,
-    404,
-  )
-}
+import { problemResponse } from '@/middleware'
 
 // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -39,7 +25,8 @@ export function createResourcesHandlers(service: ResourcesService) {
         })
         return c.json(result)
       } catch (error) {
-        if (error instanceof NotFoundError) return notFound(c, error.message)
+        if (error instanceof NotFoundError)
+          return problemResponse(c, { status: 404, detail: error.message })
         throw error
       }
     },
@@ -56,7 +43,8 @@ export function createResourcesHandlers(service: ResourcesService) {
           'Cache-Control': 'private, max-age=300',
         })
       } catch (error) {
-        if (error instanceof NotFoundError) return notFound(c, error.message)
+        if (error instanceof NotFoundError)
+          return problemResponse(c, { status: 404, detail: error.message })
         throw error
       }
     },
@@ -67,7 +55,8 @@ export function createResourcesHandlers(service: ResourcesService) {
         const curriculum = await service.getCourseCurriculum(courseId)
         return c.json({ data: curriculum })
       } catch (error) {
-        if (error instanceof NotFoundError) return notFound(c, error.message)
+        if (error instanceof NotFoundError)
+          return problemResponse(c, { status: 404, detail: error.message })
         throw error
       }
     },
@@ -78,7 +67,8 @@ export function createResourcesHandlers(service: ResourcesService) {
         const result = await service.listModules(courseId)
         return c.json(result)
       } catch (error) {
-        if (error instanceof NotFoundError) return notFound(c, error.message)
+        if (error instanceof NotFoundError)
+          return problemResponse(c, { status: 404, detail: error.message })
         throw error
       }
     },
@@ -93,7 +83,8 @@ export function createResourcesHandlers(service: ResourcesService) {
         })
         return c.json(result)
       } catch (error) {
-        if (error instanceof NotFoundError) return notFound(c, error.message)
+        if (error instanceof NotFoundError)
+          return problemResponse(c, { status: 404, detail: error.message })
         throw error
       }
     },
@@ -110,7 +101,8 @@ export function createResourcesHandlers(service: ResourcesService) {
           'Cache-Control': 'private, max-age=300',
         })
       } catch (error) {
-        if (error instanceof NotFoundError) return notFound(c, error.message)
+        if (error instanceof NotFoundError)
+          return problemResponse(c, { status: 404, detail: error.message })
         throw error
       }
     },

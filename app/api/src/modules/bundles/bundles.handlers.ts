@@ -8,34 +8,7 @@ import type { Context } from 'hono'
 import type { BundlesService } from './bundles.service'
 import { BundleNotFoundError, BundleGoneError } from './bundles.service'
 import type { AppEnv } from '@/middleware/types'
-
-// ── Helpers ────────────────────────────────────────────────────────────────
-
-function notFound(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/not-found',
-      title: 'Not Found',
-      status: 404,
-      detail,
-      instance: c.req.path,
-    } as const,
-    404,
-  )
-}
-
-function gone(c: Context<AppEnv>, detail: string) {
-  return c.json(
-    {
-      type: 'https://api.abugida.com/errors/gone',
-      title: 'Gone',
-      status: 410,
-      detail,
-      instance: c.req.path,
-    } as const,
-    410,
-  )
-}
+import { problemResponse } from '@/middleware'
 
 // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -57,8 +30,10 @@ export function createBundlesHandlers(service: BundlesService) {
         const bundle = await service.getBundle(bundleId)
         return c.json({ data: bundle })
       } catch (error) {
-        if (error instanceof BundleNotFoundError) return notFound(c, 'Bundle not found.')
-        if (error instanceof BundleGoneError) return gone(c, 'Bundle is no longer available.')
+        if (error instanceof BundleNotFoundError)
+          return problemResponse(c, { status: 404, detail: 'Bundle not found.' })
+        if (error instanceof BundleGoneError)
+          return problemResponse(c, { status: 410, detail: 'Bundle is no longer available.' })
         throw error
       }
     },
@@ -69,8 +44,10 @@ export function createBundlesHandlers(service: BundlesService) {
         const result = await service.listBundleCourses(bundleId)
         return c.json(result)
       } catch (error) {
-        if (error instanceof BundleNotFoundError) return notFound(c, 'Bundle not found.')
-        if (error instanceof BundleGoneError) return gone(c, 'Bundle is no longer available.')
+        if (error instanceof BundleNotFoundError)
+          return problemResponse(c, { status: 404, detail: 'Bundle not found.' })
+        if (error instanceof BundleGoneError)
+          return problemResponse(c, { status: 410, detail: 'Bundle is no longer available.' })
         throw error
       }
     },
@@ -83,8 +60,10 @@ export function createBundlesHandlers(service: BundlesService) {
           'X-Platform-Payment-Methods': '["telebirr"]',
         })
       } catch (error) {
-        if (error instanceof BundleNotFoundError) return notFound(c, 'Bundle not found.')
-        if (error instanceof BundleGoneError) return gone(c, 'Bundle is no longer available.')
+        if (error instanceof BundleNotFoundError)
+          return problemResponse(c, { status: 404, detail: 'Bundle not found.' })
+        if (error instanceof BundleGoneError)
+          return problemResponse(c, { status: 410, detail: 'Bundle is no longer available.' })
         throw error
       }
     },

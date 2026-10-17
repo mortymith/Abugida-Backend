@@ -37,5 +37,12 @@
     "prettier-plugin-astro": "^0.14.1",
     "turbo": "^2.11.4",
     "typescript": "^6.0.3"
+  },
+  "workspaces": [
+    "app/*",
+    "packages/*"
+  ],
+  "patchedDependencies": {
+    "@tanstack/react-router@1.170.38": "patches/@tanstack__react-router@1.170.38.patch"
   }
 }
