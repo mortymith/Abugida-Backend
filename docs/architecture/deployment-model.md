@@ -4,7 +4,7 @@ Three-environment Compose assembly, blue-green deployments, and CI/CD pipeline a
 
 ## Modular Compose Assembly
 
-The project uses a **12-file modular Docker Compose structure** in the `docker/compose/` directory. Instead of monolithic overlay files, services are split by concern (infrastructure, application, observability, edge, scaling, security) and assembled per environment using Docker Compose's multi-file merge strategy. Base modules define services without ports or resource limits; environment-specific overrides in `profiles/*.override.yml` add those.
+The project uses an **11-file modular Docker Compose structure** in the `docker/compose/` directory. Instead of monolithic overlay files, services are split by concern (infrastructure, application, observability, edge, scaling, security) and assembled per environment using Docker Compose's multi-file merge strategy. Base modules define services without ports or resource limits; environment-specific overrides in `profiles/*.override.yml` add those.
 
 ### File Inventory
 

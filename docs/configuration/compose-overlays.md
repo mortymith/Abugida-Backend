@@ -1,6 +1,6 @@
 # Compose Overlays
 
-This project uses Docker Compose's multi-file merge strategy with a **12-file modular structure** in the `docker/compose/` directory. Instead of monolithic overlay files, services are split by concern and assembled per environment. Base modules define services without ports or resource limits; environment-specific overrides in `profiles/*.override.yml` add those.
+This project uses Docker Compose's multi-file merge strategy with an **11-file modular structure** in the `docker/compose/` directory. Instead of monolithic overlay files, services are split by concern and assembled per environment. Base modules define services without ports or resource limits; environment-specific overrides in `profiles/*.override.yml` add those.
 
 ## File Structure
 
