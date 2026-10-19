@@ -3,41 +3,15 @@
  * @description Unit tests for the queue client.
  */
 
-import { describe, test, expect, beforeEach, mock } from 'bun:test'
+import { describe, test, expect } from 'bun:test'
+import { mockBullMQ } from '../helpers/bullmq-mock.js'
 
 // ---------------------------------------------------------------------------
-// Mock BullMQ (before importing our modules)
+// Mock BullMQ (before importing our modules) — complete surface via the
+// shared helper; see tests/helpers/bullmq-mock.ts for why it must be whole.
 // ---------------------------------------------------------------------------
 
-const mockAdd = mock(() => ({
-  id: 'test-job-id',
-  name: 'PURCHASE_INITIATE',
-}))
-
-const mockAddBulk = mock(() => [{ id: 'bulk-job-1' }, { id: 'bulk-job-2' }])
-
-const mockGetJobCounts = mock(() =>
-  Promise.resolve({
-    waiting: 5,
-    active: 2,
-    completed: 100,
-    failed: 3,
-    delayed: 1,
-  }),
-)
-
-const mockClose = mock(() => Promise.resolve())
-
-mock.module('bullmq', () => ({
-  Queue: mock(() => ({
-    add: mockAdd,
-    addBulk: mockAddBulk,
-    getJobCounts: mockGetJobCounts,
-    close: mockClose,
-  })),
-  Worker: mock(() => ({})),
-  createBunRedisClient: mock(() => ({ on: mock(() => {}) })),
-}))
+mockBullMQ()
 
 // ---------------------------------------------------------------------------
 // Tests
