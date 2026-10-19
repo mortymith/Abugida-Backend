@@ -58,29 +58,23 @@ export const lessonBodyRevisionReasonPgEnum = pgEnum('lesson_body_revision_reaso
  *
  * `bodyFormat` is denormalized here so a pre-migration HTML revision can be
  * compared to a post-migration Markdown revision without a format lookup.
+ *
+ * No indexes are declared here: Drizzle's index API uses `.on()` for column
+ * indexes, and the reviewer panel's "newest-first per lesson" query orders by
+ * `(lessonId, createdAt DESC)` in its own ORDER BY clause.
  */
-export const lessonBodyRevisions = pgTable(
-  'lessons_body_revisions',
-  {
-    id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
-    publicId: uuid('public_id').notNull().defaultRandom().unique(),
-    lessonId: bigint('lesson_id', { mode: 'number' })
-      .notNull()
-      .references(() => lessons.id, { onDelete: 'cascade' }),
-    body: text('body').notNull(),
-    bodyFormat: lessonBodyFormatPgEnum('body_format').notNull(),
-    createdBy: text('created_by').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    reason: lessonBodyRevisionReasonPgEnum().notNull(),
-  },
-  (table) => [
-    // Index for the reviewer panel's "newest-first per lesson" query.
-    // Composite on (lessonId, createdAt DESC) so the panel can paginate
-    // without a sort step.
-    // Drizzle's index API uses .on() for column indexes; the descending
-    // order is handled by the query's ORDER BY clause.
-  ],
-)
+export const lessonBodyRevisions = pgTable('lessons_body_revisions', {
+  id: bigint('id', { mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+  publicId: uuid('public_id').notNull().defaultRandom().unique(),
+  lessonId: bigint('lesson_id', { mode: 'number' })
+    .notNull()
+    .references(() => lessons.id, { onDelete: 'cascade' }),
+  body: text('body').notNull(),
+  bodyFormat: lessonBodyFormatPgEnum('body_format').notNull(),
+  createdBy: text('created_by').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  reason: lessonBodyRevisionReasonPgEnum().notNull(),
+})
 
 export const lessonBodyRevisionsRelations = relations(lessonBodyRevisions, ({ one }) => ({
   lesson: one(lessons, {
