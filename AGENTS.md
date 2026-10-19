@@ -70,6 +70,7 @@ Rules:
 
 - `pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm typecheck` / `pnpm test` — all via turbo.
 - Tests use **bun** as the runner (`bun test`), not vitest/jest. `app/api` uses `bun test --pass-with-no-tests`.
+- Unit tests need no exported env vars: `bun test` sets `NODE_ENV=test` and auto-loads the workspace `.env.test`. Copy committed placeholders once (`cp app/api/.env.test.example app/api/.env.test`); never put real secrets there.
 - Database scripts live in `packages/database`: `pnpm --filter @abugida/database db:generate|db:migrate|db:push|db:pull|db:studio`.
 - Env is per-app and git-ignored; examples live at `app/*/.env.example`.
 - The root `format` script also runs `shfmt` on shell scripts.

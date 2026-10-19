@@ -9,23 +9,40 @@ cd ~/my-project
 
 ## Step 2 — Install Required Tools
 
+### Option A (recommended): Devbox
+
+[Devbox](https://www.jetify.com/devbox) provisions the exact JS toolchain — Bun, pnpm, just, shfmt, git — at the versions pinned in `devbox.json` / `devbox.lock` (the same Bun version as `.bun-version`), without touching your system:
+
+```bash
+curl -fsSL https://get.jetify.com/devbox | bash
+devbox shell      # or: eval "$(devbox shellenv)" in your rc file
+```
+
+Docker is intentionally **not** part of the Devbox shell — the Compose-managed infrastructure runs on your host Docker. Docker Compose v2 (`docker compose …`) is what the justfile expects.
+
+### Option B: manual install
+
 Install the following tools manually (see each project's official installation docs):
 
-| Tool                       | Version | Purpose            |
-| -------------------------- | ------- | ------------------ |
-| Docker CE + Compose plugin | 27.x    | Container runtime  |
-| Just                       | 1.40.0  | Task runner        |
-| Bun                        | 1.2.x   | JavaScript runtime |
-| Trivy                      | 0.58.x  | Security scanner   |
+| Tool                       | Version | Purpose                                              |
+| -------------------------- | ------- | ---------------------------------------------------- |
+| Docker CE + Compose plugin | 27.x    | Container runtime (v2 CLI)                           |
+| Just                       | 1.40.0+ | Task runner                                          |
+| Bun                        | 1.4.2   | JavaScript runtime (`.bun-version`)                  |
+| pnpm                       | 12.8.1  | Package manager (`packageManager` in `package.json`) |
+| Trivy                      | 0.58.x  | Security scanner                                     |
 
 Verify installation:
 
 ```bash
 docker --version    # Docker CE 27.x
-just --version     # just 1.40.0
-bun --version      # Bun 1.2.x
+just --version     # just 1.40.0+
+bun --version      # 1.4.2
+pnpm --version     # 12.8.1 inside the repo (see note)
 trivy --version    # Trivy 0.58.x
 ```
+
+> pnpm enforces the version pinned in the root `package.json` `packageManager` field: any pnpm ≥ 9.5 run inside the repository self-switches to the pinned version (`manage-package-manager-versions`, on by default). A system pnpm that differs from the pin is therefore fine — inside the repo it always resolves to 12.8.1.
 
 ## Step 3 — Configure Environment
 
@@ -38,8 +55,10 @@ Edit `.env` to set database passwords, API keys, and other environment-specific 
 ## Step 4 — Start the Dev Environment
 
 ```bash
-just dev
+just dev-up
 ```
+
+> First boot: run `just setup-dev` instead — it creates `.env` from the example, starts the dev tier and runs initialization in one step.
 
 This command assembles and starts the modular Compose files for development:
 

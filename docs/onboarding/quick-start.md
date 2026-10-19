@@ -6,11 +6,12 @@ Get the full development stack running in under five minutes.
 
 ```bash
 git clone <repository-url> ~/my-project && cd ~/my-project
-just prerequisites
-cp .env.example .env
-just dev
+curl -fsSL https://get.jetify.com/devbox | bash && devbox shell   # Bun + pnpm + just (see docs/onboarding/installation.md)
+just setup-dev          # creates .env, starts the dev tier, runs init
 just health
 ```
+
+Already have Bun 1.4.2, pnpm 12.8.1 and just installed? Skip Devbox and run `cp .env.example .env && just dev-up && just health`.
 
 > **Before first boot:** replace every `change-me` value in `.env` (9 secrets). Passwords are baked into storage volumes on first start — changing them later requires `just dev-clean`, which destroys local data. See [Environment Variables Reference](../configuration/environment-variables.md).
 
@@ -54,15 +55,15 @@ All dev ports plus:
 
 ## Common Just Recipes
 
-| Recipe                   | Description                                       |
-| ------------------------ | ------------------------------------------------- |
-| `just dev`               | Start dev environment (5 infrastructure services) |
-| `just staging`           | Start staging environment (20 services)           |
-| `just health`            | Check health status of every service              |
-| `just logs <svc>`        | Stream logs for a service                         |
-| `just restart <svc>`     | Restart a single service                          |
-| `just stop`              | Stop all services without removing volumes        |
-| `just down`              | Stop and remove containers, networks              |
-| `just scan`              | Run Trivy vulnerability scan on built images      |
-| `just backup-db`         | Create a PostgreSQL backup                        |
-| `just restore-db <file>` | Restore PostgreSQL from a backup file             |
+| Recipe                         | Description                                          |
+| ------------------------------ | ---------------------------------------------------- |
+| `just setup-dev`               | First boot: create `.env`, start dev tier, init      |
+| `just dev-up`                  | Start dev environment (5 infrastructure services)    |
+| `just dev-down`                | Stop and remove dev containers, networks             |
+| `just staging-up`              | Start staging environment (20 services)              |
+| `just health`                  | Check health status of every service                 |
+| `just logs <svc>`              | Stream logs for a service                            |
+| `just shell <svc>`             | Shell into a running container                       |
+| `just security-audit`          | Config checks + dependency audit + secret validation |
+| `just backup-postgres`         | Create a PostgreSQL backup                           |
+| `just restore-postgres <file>` | Restore PostgreSQL from a backup file                |

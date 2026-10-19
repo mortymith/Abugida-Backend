@@ -77,7 +77,7 @@ The 8 Docker secrets previously defined in `docker/compose/secrets.yml` are bein
 
 ### Positive
 
-- **Developer experience**: `just dev` in dev works immediately after setting up `.env`. No Vault setup required, no Docker secrets to generate.
+- **Developer experience**: `just dev-up` in dev works immediately after setting up `.env`. No Vault setup required, no Docker secrets to generate.
 - **Production security**: All production credentials are dynamic, time-limited, and auditable through Vault's audit log device.
 - **Simplicity**: Removed the Docker secrets infrastructure entirely for dev. One less moving part, one less file to manage.
 - **Rotation**: Dynamic credentials expire automatically. No manual rotation process for database passwords or API keys.

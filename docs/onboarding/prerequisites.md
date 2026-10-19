@@ -14,17 +14,20 @@ A **Linux host is required**. Keepalived (VRRP) and iptables-persistent do not r
 
 ## Tool Versions
 
-| Tool           | Minimum Version | Purpose                                 |
-| -------------- | --------------- | --------------------------------------- |
-| Docker CE      | 27.0+           | Container runtime                       |
-| Docker Compose | v2.24.0+        | Multi-service orchestration             |
-| Just           | 1.40.0          | Task runner / CLI                       |
-| Bun            | 1.2.1           | App runtime (API, Dashboard, Marketing) |
-| Trivy          | 0.58.0          | Container image scanning                |
-| jq             | 1.6+            | JSON processing                         |
-| nmap           | 7.80+           | Port verification                       |
+| Tool           | Minimum Version | Purpose                                      |
+| -------------- | --------------- | -------------------------------------------- |
+| Docker CE      | 27.0+           | Container runtime                            |
+| Docker Compose | v2.24.0+        | Multi-service orchestration (v2 CLI)         |
+| Just           | 1.40.0          | Task runner / CLI                            |
+| Bun            | 1.4.2           | App runtime (API, Dashboard, Marketing)      |
+| pnpm           | 12.8.1          | Package manager (pinned in `packageManager`) |
+| Trivy          | 0.58.0          | Container image scanning                     |
+| jq             | 1.6+            | JSON processing                              |
+| nmap           | 7.80+           | Port verification                            |
 
-All required tools are installed automatically by the prerequisites script (see [Installation](installation.md)).
+Install the tools manually per [Installation](installation.md), or provision the JS
+toolchain (Bun, pnpm, just, shfmt, git) at the pinned versions through Devbox
+(`devbox shell`) — Docker and the optional scanners stay on the host either way.
 
 ## Port Requirements
 

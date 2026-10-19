@@ -1,6 +1,26 @@
 # Testing
 
-This project uses three test categories: integration, security, and performance. Each serves a distinct purpose and is run differently.
+## Workspace Unit Tests (`bun test`)
+
+**Runner:** `bun test`, orchestrated per workspace by `pnpm test` (Turborepo).
+
+```bash
+pnpm test                        # every workspace
+pnpm --filter @abugida/api test  # one workspace
+bun test tests/unit/             # one directory, from a workspace
+```
+
+### Test environment (`NODE_ENV=test`)
+
+`bun test` sets `NODE_ENV=test` and automatically loads a workspace-level `.env.test` file when present (real environment variables still win over file values). Workspaces whose modules validate configuration at import time ship a committed `.env.test.example` with safe, non-secret placeholders:
+
+```bash
+cp app/api/.env.test.example app/api/.env.test   # once; .env.test is gitignored
+```
+
+After this, all unit tests run with no exported variables and no shell setup. The file only satisfies format validation — unit tests never open database, Redis, or OAuth connections. Placeholders live in `.env.test.example` (committed) so a missing file is one `cp` away, not a debugging session. A workspace that later needs more test-time configuration adds its variables to its own `.env.test.example` — there is no shared loader to keep in sync.
+
+Production configuration keeps its strict validation (https origins, real providers, secret strength); `.env.test` cannot weaken it because Bun only reads it when `NODE_ENV=test`.
 
 ## Integration Tests
 
@@ -40,7 +60,7 @@ Validates that SigNoz is reachable through the Cloudflare Tunnel and that Vault 
 **Invoke:** `just audit-dependencies`
 **Script:** `scripts/security/audit-dependencies.sh`
 
-Runs Trivy against Dockerfiles, lockfiles (`bun.lockb`), and built images. Fails on CRITICAL or HIGH CVEs. Also invoked by `security.yml` in CI.
+Runs Trivy against Dockerfiles, lockfiles (`pnpm-lock.yaml`), and built images. Fails on CRITICAL or HIGH CVEs. Also invoked by `security.yml` in CI.
 
 ## Compose Validation
 

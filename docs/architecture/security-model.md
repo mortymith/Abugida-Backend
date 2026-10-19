@@ -145,7 +145,7 @@ Dangerous commands (`FLUSHALL`, `FLUSHDB`, `DEBUG`) are renamed to empty strings
 - **Base images**: All services use Alpine or distroless variants to minimize attack surface.
 - **No `:latest` tags**: Every image is pinned to a specific version (e.g., `postgres:17-alpine`, `caddy:2.8.4-alpine`).
 - **Trivy scanning**: CI pipeline runs `trivy image` on every build; high/critical CVEs block the merge.
-- **Runtime**: Bun 1.2.1-alpine replaces Node.js for API, Dashboard, and Marketing — smaller image, faster startup.
+- **Runtime**: Bun 1.4.2-alpine replaces Node.js for API, Dashboard, and Marketing — smaller image, faster startup.
 - **Dockerfile location**: App Dockerfiles live at `app/<name>/Dockerfile` (built with a repo-root build context); infrastructure Dockerfiles remain under `docker/dockerfiles/<service>/Dockerfile`.
 
 ## Firewall Layers

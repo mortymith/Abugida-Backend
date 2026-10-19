@@ -128,10 +128,10 @@ All operations use [Just](https://github.com/casey/just) (v1.40.0):
 
 ```
 just                    # List all recipes
-just dev                 # Start dev environment (5 services)
-just staging             # Start staging environment (20 services)
-just deploy prod         # Deploy to production (25 services)
-just status              # Service health overview
-just vault:init          # Bootstrap Vault (prod)
-just secrets:rotate      # Rotate dynamic credentials
+just dev-up             # Start dev environment (5 infrastructure services)
+just staging-up         # Start staging environment (staging services)
+just deploy-prod        # Deploy to production
+just health-all         # Service health overview
+just vault-init         # Bootstrap Vault (prod)
+just rotate-secrets     # Rotate dynamic credentials
 ```

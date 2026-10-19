@@ -97,6 +97,12 @@ Docker 27.0+, Docker Compose v2.24.0+, just 1.40.0+. `trivy`, `jq`, and `nmap` a
 and only used by security and diagnostics recipes. See
 [`docs/onboarding/prerequisites.md`](docs/onboarding/prerequisites.md).
 
+The JS toolchain (Bun, pnpm, just, shfmt, git) can be provisioned at its exact pinned
+versions with [Devbox](https://www.jetify.com/devbox) instead of installing each tool:
+`devbox shell` after `curl -fsSL https://get.jetify.com/devbox | bash` — see
+[`docs/onboarding/installation.md`](docs/onboarding/installation.md). Docker stays on the
+host; the Devbox shell deliberately does not manage Compose services.
+
 ### 1. Install
 
 ```bash
@@ -420,7 +426,10 @@ pnpm test         # bun test
 ```
 
 - **Tests run on Bun**, not Vitest or Jest. `app/api` and `app/dashboard` pass
-  `--pass-with-no-tests`.
+  `--pass-with-no-tests`. Unit tests need no exported variables: `bun test` sets
+  `NODE_ENV=test` and loads a workspace `.env.test` automatically — copy the committed
+  `.env.test.example` once (`cp app/api/.env.test.example app/api/.env.test`). Details in
+  [`docs/development/testing.md`](docs/development/testing.md).
 - **After adding or renaming dashboard routes**, run
   `pnpm --filter @abugida/dashboard generate-routes`.
 - **Code style** is Prettier with no semicolons, single quotes, trailing commas,

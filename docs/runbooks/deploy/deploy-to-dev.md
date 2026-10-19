@@ -13,7 +13,7 @@
 1. **Start the dev environment.** This assembles the modular Compose files for development (networks + volumes + base + dev.override) and starts 5 infrastructure services: PostgreSQL, PgBouncer, Redis, MinIO, and PowerSync.
 
    ```bash
-   just dev
+   just dev-up
    ```
 
    For subsequent starts after the initial setup, the same command works — Docker Compose handles idempotent restarts.

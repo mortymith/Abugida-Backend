@@ -45,13 +45,12 @@
 
 ### Setup & Lifecycle
 
-| Recipe         | Description                                                                                         |
-| -------------- | --------------------------------------------------------------------------------------------------- |
-| `just dev`     | Start dev environment (6 infrastructure services)                                                   |
-| `just staging` | Start staging environment (10 services)                                                             |
-| `just stop`    | Stop all services without removing volumes                                                          |
-| `just down`    | Stop and remove containers, networks                                                                |
-| _(manual)_     | Install required tools: Docker CE, Compose plugin, Just, Bun, Trivy — see each tool's official docs |
+| Recipe            | Description                                                                                                                                                             |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `just dev-up`     | Start dev environment (5 infrastructure services)                                                                                                                       |
+| `just staging-up` | Start staging environment (staging services)                                                                                                                            |
+| `just dev-down`   | Stop and remove dev containers, networks                                                                                                                                |
+| _(manual)_        | Install required tools: Docker CE, Compose plugin (v2 CLI), Just, Bun 1.4.2, pnpm 12.8.1, Trivy — or use Devbox (`devbox shell`), see `docs/onboarding/installation.md` |
 
 ### Health & Observability
 
