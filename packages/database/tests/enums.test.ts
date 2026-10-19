@@ -169,6 +169,23 @@ describe('pgEnum definitions', () => {
         'workspace_restored',
         'branding_updated',
         'billing_changed',
+        // Spec 13 § Audit — identity & workspace actions
+        'auth_mfa_enabled',
+        'auth_mfa_disabled',
+        'auth_mfa_recovery_used',
+        'auth_lockout',
+        'workspace_created',
+        'workspace_switched',
+        'workspace_config_changed',
+        'workspace_deleted',
+        'member_invited',
+        'member_joined',
+        'member_removed',
+        'member_role_changed',
+        'course_role_granted',
+        'course_role_revoked',
+        'owner_transfer_initiated',
+        'owner_transfer_accepted',
       ])
     })
 
