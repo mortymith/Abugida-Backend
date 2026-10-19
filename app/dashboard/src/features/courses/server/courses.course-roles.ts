@@ -6,12 +6,7 @@
  */
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
-import {
-  COURSE_ROLE_NAMES,
-  grantCourseRoleImpl,
-  listCourseRolesImpl,
-  revokeCourseRoleImpl,
-} from './courses.course-roles.impl.server'
+import { COURSE_ROLE_NAMES } from '../courses.course-roles'
 import type { CourseRoleAssignment, CourseRoleName } from '../courses.course-roles'
 
 export type { CourseRoleAssignment, CourseRoleName }
@@ -26,6 +21,7 @@ const grantSchema = z.object({
 export const grantCourseRole = createServerFn({ method: 'POST' })
   .validator((input: unknown) => grantSchema.parse(input))
   .handler(async ({ data }): Promise<CourseRoleAssignment> => {
+    const { grantCourseRoleImpl } = await import('./courses.course-roles.impl.server')
     return grantCourseRoleImpl({
       coursePublicId: data.coursePublicId,
       userPublicId: data.userPublicId,
@@ -38,6 +34,7 @@ const revokeSchema = z.object({ courseRolePublicId: z.string().uuid() })
 export const revokeCourseRole = createServerFn({ method: 'POST' })
   .validator((input: unknown) => revokeSchema.parse(input))
   .handler(async ({ data }): Promise<{ ok: true }> => {
+    const { revokeCourseRoleImpl } = await import('./courses.course-roles.impl.server')
     return revokeCourseRoleImpl({ courseRolePublicId: data.courseRolePublicId })
   })
 
@@ -46,5 +43,6 @@ const listSchema = z.object({ coursePublicId: z.string().uuid().optional() })
 export const listCourseRoles = createServerFn({ method: 'GET' })
   .validator((input: unknown) => listSchema.parse(input))
   .handler(async ({ data }): Promise<CourseRoleAssignment[]> => {
+    const { listCourseRolesImpl } = await import('./courses.course-roles.impl.server')
     return listCourseRolesImpl({ coursePublicId: data.coursePublicId })
   })
