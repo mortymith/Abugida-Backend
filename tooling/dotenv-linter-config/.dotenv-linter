@@ -1,0 +1,16 @@
+# Shared dotenv-linter policy for the Abugida monorepo (canonical reference).
+#
+# dotenv-linter 3.x discovers this file only via CWD-walk-up, so the root
+# `lint:env` script passes the same skips as explicit flags. Keep both in
+# sync — this file is the documented source of truth.
+#
+# - KeyShouldBeFormatted: the template groups keys with section headers and
+#   comments; strict key formatting is not enforced across sections.
+# - QuoteCharacterMismatch: the template carries quoted multi-word defaults
+#   (e.g. OTEL resource attributes) alongside unquoted values.
+# - UnorderedKey: keys are intentionally grouped by functional section
+#   (identity, domains, ports, services), not alphabetically.
+disable:
+  - KeyShouldBeFormatted
+  - QuoteCharacterMismatch
+  - UnorderedKey

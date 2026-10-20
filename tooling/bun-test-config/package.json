@@ -1,0 +1,16 @@
+{
+  "name": "@abugida/bun-test-config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared bun test preload and custom matchers for the Abugida monorepo.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    "./preload": "./preload.ts",
+    "./matchers": "./matchers.ts"
+  },
+  "files": [
+    "preload.ts",
+    "matchers.ts"
+  ]
+}

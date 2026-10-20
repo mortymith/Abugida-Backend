@@ -17,3 +17,5 @@ coverage
 
 # Editor / OS cruft
 .agents/*
+.vscode/*
+!.vscode/extensions.json

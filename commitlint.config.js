@@ -1,7 +1,3 @@
-export default {
-  extends: ['@commitlint/config-conventional'],
-  rules: {
-    'body-max-line-length': [0, 'always', Infinity],
-    'footer-max-line-length': [0, 'always', Infinity],
-  },
-}
+// Root commitlint configuration is a thin consumer of the shared tooling
+// layer. The rules live in tooling/commitlint-config.
+export { default } from '@abugida/commitlint-config'

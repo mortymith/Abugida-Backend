@@ -1,0 +1,30 @@
+{
+  "//": [
+    "Shared editorconfig-checker configuration for the Abugida monorepo.",
+    "Consumed from root scripts: editorconfig-checker -config tooling/editorconfig-checker-config/.ecrc.json",
+    "Generated, vendored, and lockfile content is excluded; everything else",
+    "must satisfy .editorconfig (LF, UTF-8, final newline, 2-space indent)."
+  ],
+  "Verbose": false,
+  "Disable": {
+    "MaxLineLength": true,
+    "TrimTrailingWhitespace": false,
+    "InsertFinalNewline": false,
+    "Indentation": true
+  },
+  "Ignore": [
+    "node_modules/**",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.turbo/**",
+    "**/.astro/**",
+    "**/*.gen.ts",
+    "**/*.map",
+    "pnpm-lock.yaml",
+    "patches/**",
+    ".agents/**",
+    ".git/**",
+    "**/*.svg",
+    "**/*.md"
+  ]
+}

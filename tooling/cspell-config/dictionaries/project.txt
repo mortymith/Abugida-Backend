@@ -1,0 +1,22 @@
+# Abugida project terminology — product, domain, and workspace names.
+# Keep short; add a word only when it is legitimate project vocabulary.
+abugida
+Abugida
+Alemayehu
+Tigist
+Telebirr
+Chapa
+AratKilo
+Gebeya
+hugeicons
+Raleway
+Ollama
+IELTS
+TOEFL
+TOTP
+waitlist
+Waitlist
+Backblaze
+journeyapps
+bunfig
+waitlists

@@ -1,0 +1,10 @@
+{
+  "name": "@abugida/gitleaks-config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared Gitleaks configuration for the Abugida monorepo. Configuration only \u2014 the tool binary is consumed from root scripts.",
+  "license": "MIT",
+  "files": [
+    ".gitleaks.toml"
+  ]
+}
