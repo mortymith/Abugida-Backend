@@ -14,10 +14,9 @@ import {
   MFA_REQUIRED_LABELS,
   MFA_REQUIRED_OPTIONS,
   SESSION_TIMEOUT_OPTIONS_MINUTES,
-  formatSessionTimeout
-  
+  formatSessionTimeout,
 } from '../settings.workspace-policies'
-import type {WorkspacePolicyValue} from '../settings.workspace-policies';
+import type { WorkspacePolicyValue } from '../settings.workspace-policies'
 import type { WorkspacePolicies } from '@abugida/database/auth'
 
 /**
@@ -72,12 +71,10 @@ export function WorkspaceConfigView() {
     return <RetryErrorState onRetry={() => void query.refetch()} isRetrying={query.isFetching} />
   }
 
+  // The pending and error checks above narrow `query.data` to a defined
+  // value: TanStack Query returns a discriminated union, so `config` is
+  // always present from here on.
   const config = query.data
-  // After the pending + error checks, `config` is defined at runtime, but TS's
-  // narrowing on `query.data` (a TanStack Query field) does not propagate
-  // here. The runtime guard stays; the lint suppression documents the gap.
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  if (!config) return null
 
   function setField<TKey extends keyof WorkspacePolicies>(
     key: TKey,
@@ -127,18 +124,12 @@ export function WorkspaceConfigView() {
     ['membershipLimit', 'allowUserToCreateOrganization', 'organizationLimit'].includes(entry.key),
   )
   const invitationsEntries = config.workspace.filter((entry) =>
-    [
-      'invitationExpiresInDays',
-      'invitationLimit',
-      'cancelPendingInvitationsOnReInvite',
-    ].includes(entry.key),
+    ['invitationExpiresInDays', 'invitationLimit', 'cancelPendingInvitationsOnReInvite'].includes(
+      entry.key,
+    ),
   )
   const securityEntries = config.workspace.filter((entry) =>
-    [
-      'requireMfaFor',
-      'sessionTimeoutMinutes',
-      'sessionRevocationOnRoleChange',
-    ].includes(entry.key),
+    ['requireMfaFor', 'sessionTimeoutMinutes', 'sessionRevocationOnRoleChange'].includes(entry.key),
   )
 
   return (
@@ -305,9 +296,7 @@ function WorkspaceConfigField({
         <FieldControl
           entryKey={key}
           value={displayValue}
-          onChange={(value) =>
-            onFieldChange(key, value as WorkspacePolicies[typeof key])
-          }
+          onChange={(value) => onFieldChange(key, value as WorkspacePolicies[typeof key])}
         />
         {interlockReason ? (
           <p className="text-destructive mt-1 text-sm" role="alert">
