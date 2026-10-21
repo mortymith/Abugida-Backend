@@ -24,11 +24,16 @@ if [ -z "${MINIO_ROOT_PASSWORD}" ] && [ -f ".env" ]; then
 fi
 BUCKET="${MINIO_BUCKET_NAME:-app-data}"
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# shellcheck source=scripts/lib/common.sh
+source "${SCRIPT_DIR}/../lib/common.sh"
+
 BACKUP_PATH="${1:-}"
 
 # ── Find latest backup if not specified ────────────────────────────
 if [ -z "${BACKUP_PATH}" ]; then
-  BACKUP_PATH=$(ls -dt "${BACKUP_DIR}"/*/ 2> /dev/null | head -1)
+  BACKUP_PATH=$(latest_dir "${BACKUP_DIR}")
   if [ -z "${BACKUP_PATH}" ]; then
     echo "[restore-minio][ERROR] No backup directories found in ${BACKUP_DIR}"
     exit 1

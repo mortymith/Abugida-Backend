@@ -80,11 +80,22 @@ notify() {
 # ── Cleanup old deployment artifacts (keep last 3) ────────────────────
 cleanup_artifacts() {
   mkdir -p "${DEPLOY_HISTORY_DIR}"
-  ARTIFACT_COUNT=$(ls -1d "${DEPLOY_HISTORY_DIR}"/*/ 2> /dev/null | wc -l)
+  local artifacts=() artifact
+  shopt -s nullglob
+  for artifact in "${DEPLOY_HISTORY_DIR}"/*/; do
+    artifacts+=("${artifact%/}")
+  done
+  shopt -u nullglob
+
+  ARTIFACT_COUNT=${#artifacts[@]}
   if [ "${ARTIFACT_COUNT}" -gt "${MAX_DEPLOY_ARTIFACTS}" ]; then
     REMOVE_COUNT=$((ARTIFACT_COUNT - MAX_DEPLOY_ARTIFACTS))
-    ls -1dt "${DEPLOY_HISTORY_DIR}"/*/ | tail -n ${REMOVE_COUNT} | while read -r OLD_DIR; do
-      echo "  Removing old artifact: $(basename ${OLD_DIR})"
+    # Newest artifacts first, then drop the ones beyond the retention limit.
+    mapfile -t SORTED_ARTIFACTS < <(printf '%s\n' "${artifacts[@]}" | sort -r)
+    local index
+    for ((index = 0; index < REMOVE_COUNT; index++)); do
+      OLD_DIR="${SORTED_ARTIFACTS[index]}"
+      echo "  Removing old artifact: ${OLD_DIR##*/}"
       rm -rf "${OLD_DIR}"
     done
   fi

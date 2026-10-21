@@ -64,7 +64,7 @@ check_file() {
   local desc="$2"
   local severity="$3"
   local pattern="$4"
-  local relpath="${file#${PROJECT_ROOT}/}"
+  local relpath="${file#"${PROJECT_ROOT}"/}"
 
   [ ! -f "$file" ] && return 0
 
@@ -268,7 +268,7 @@ echo -e "${BOLD}── PowerSync / PgBouncer Bypass ──${RESET}"
 # to the first compose file's directory, not the caller's cwd.
 PS_ENV_FILE_ARGS=""
 [ -f "${PROJECT_ROOT}/.env" ] && PS_ENV_FILE_ARGS="--env-file ${PROJECT_ROOT}/.env"
-POWERSYNC_COMPOSE_CONFIG=$(docker compose --project-directory . ${PS_ENV_FILE_ARGS} -f docker/compose/networks.yml -f docker/compose/volumes.yml -f docker/compose/base.yml config 2> /dev/null || true)
+POWERSYNC_COMPOSE_CONFIG=$(docker compose --project-directory . "${PS_ENV_FILE_ARGS}" -f docker/compose/networks.yml -f docker/compose/volumes.yml -f docker/compose/base.yml config 2> /dev/null || true)
 if [ -z "${POWERSYNC_COMPOSE_CONFIG}" ]; then
   log_high "Could not render compose config (missing .env?) — PowerSync PgBouncer bypass check skipped"
 elif echo "${POWERSYNC_COMPOSE_CONFIG}" | grep -q 'powersync-sync'; then
@@ -326,7 +326,7 @@ HARDCODED_IPS=$(rg -l '172\.(20|21|22)\.\d+\.\d+' \
   grep -v 'networking.md' | grep -v 'redis-firewall.sh' | grep -v 'check-configs.sh' || true)
 if [ -n "$HARDCODED_IPS" ]; then
   echo "$HARDCODED_IPS" | while read -r f; do
-    relpath="${f#${PROJECT_ROOT}/}"
+    relpath="${f#"${PROJECT_ROOT}"/}"
     log_low "${relpath}: contains hardcoded subnet IPs (use env vars per ADR-004)"
   done
 fi
@@ -339,7 +339,7 @@ SECRET_IN_CONFIG=$(rg -l '(PASSWORD|SECRET|TOKEN|API_KEY|PRIVATE_KEY)\s*[=:]\s*[
   grep -v 'vault-config.hcl' | grep -v 'pg_hba.conf' || true)
 if [ -n "$SECRET_IN_CONFIG" ]; then
   echo "$SECRET_IN_CONFIG" | while read -r f; do
-    relpath="${f#${PROJECT_ROOT}/}"
+    relpath="${f#"${PROJECT_ROOT}"/}"
     log_high "${relpath}: may contain hardcoded secret values"
   done
 fi

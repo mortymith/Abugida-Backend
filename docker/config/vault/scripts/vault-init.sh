@@ -145,48 +145,58 @@ fi
 
 # ── 8. Create AppRole roles ────────────────────────────────────────
 # API service role
-vault write auth/approle/role/api \
+if vault write auth/approle/role/api \
   token_policies="app,pki" \
   token_ttl=1h \
   token_max_ttl=4h \
-  secret_id_ttl=0 2> /dev/null &&
-  log_ok "Created AppRole role: api" ||
+  secret_id_ttl=0 2> /dev/null; then
+  log_ok "Created AppRole role: api"
+else
   log_info "AppRole role 'api' already exists."
+fi
 
 # Dashboard service role
-vault write auth/approle/role/dashboard \
+if vault write auth/approle/role/dashboard \
   token_policies="app,pki" \
   token_ttl=1h \
   token_max_ttl=4h \
-  secret_id_ttl=0 2> /dev/null &&
-  log_ok "Created AppRole role: dashboard" ||
+  secret_id_ttl=0 2> /dev/null; then
+  log_ok "Created AppRole role: dashboard"
+else
   log_info "AppRole role 'dashboard' already exists."
+fi
 
 # ── 9. Configure PKI roles ─────────────────────────────────────────
 # Internal server role (for backend services)
-vault write pki/roles/internal-server \
+if vault write pki/roles/internal-server \
   allowed_domains="${COMPOSE_PROJECT_NAME:-infra}.local,*.${COMPOSE_PROJECT_NAME:-infra}.local" \
   allow_subdomains=true \
-  max_ttl=72h 2> /dev/null &&
-  log_ok "Created PKI role: internal-server" ||
+  max_ttl=72h 2> /dev/null; then
+  log_ok "Created PKI role: internal-server"
+else
   log_info "PKI role 'internal-server' already exists."
+fi
 
 # Internal client role (for mTLS)
-vault write pki/roles/internal-client \
+if vault write pki/roles/internal-client \
   allowed_domains="${COMPOSE_PROJECT_NAME:-infra}.local,*.${COMPOSE_PROJECT_NAME:-infra}.local" \
   allow_subdomains=true \
   max_ttl=72h \
-  client_flag=true 2> /dev/null &&
-  log_ok "Created PKI role: internal-client" ||
+  client_flag=true 2> /dev/null; then
+  log_ok "Created PKI role: internal-client"
+else
   log_info "PKI role 'internal-client' already exists."
+fi
 
 # App-internal role (for API/Dashboard cert issuance)
-vault write pki/roles/app-internal \
+if vault write pki/roles/app-internal \
   allowed_domains="*.${COMPOSE_PROJECT_NAME:-infra}.local" \
   allow_subdomains=true \
-  max_ttl=72h 2> /dev/null &&
-  log_ok "Created PKI role: app-internal" ||
+  max_ttl=72h 2> /dev/null; then
+  log_ok "Created PKI role: app-internal"
+else
   log_info "PKI role 'app-internal' already exists."
+fi
 
 # ── 10. Generate AppRole secret IDs (save to output file) ──────────
 API_ROLE_ID=$(vault read -format=json auth/approle/role/api/role-id | jq -r '.data.role_id')

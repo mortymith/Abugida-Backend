@@ -173,32 +173,38 @@ echo "[vault-secrets] Configuring database secrets engine..."
 # Configure PostgreSQL connection (used by dynamic credential roles)
 # The plugin connects to PgBouncer for credential generation.
 if [ -n "${PG_PASS}" ]; then
-  vault write database/config/app \
+  if vault write database/config/app \
     plugin_name=postgresql-database-plugin \
     allowed_roles="app-readonly,app-readwrite" \
     connection_url="postgresql://{{username}}:{{password}}@pgbouncer:6432/app?sslmode=require" \
     username="app" \
-    password="${PG_PASS}" 2> /dev/null &&
-    log_ok "database/config/app (PostgreSQL connection)" ||
+    password="${PG_PASS}" 2> /dev/null; then
+    log_ok "database/config/app (PostgreSQL connection)"
+  else
     log_skip "database/config/app (may already exist)"
+  fi
 
   # Readonly role: 1h TTL, max 24h
-  vault write database/roles/app-readonly \
+  if vault write database/roles/app-readonly \
     db_name=app \
     creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" \
     default_ttl="1h" \
-    max_ttl="24h" 2> /dev/null &&
-    log_ok "database/roles/app-readonly" ||
+    max_ttl="24h" 2> /dev/null; then
+    log_ok "database/roles/app-readonly"
+  else
     log_skip "database/roles/app-readonly"
+  fi
 
   # Readwrite role: 1h TTL, max 4h
-  vault write database/roles/app-readwrite \
+  if vault write database/roles/app-readwrite \
     db_name=app \
     creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" \
     default_ttl="1h" \
-    max_ttl="4h" 2> /dev/null &&
-    log_ok "database/roles/app-readwrite" ||
+    max_ttl="4h" 2> /dev/null; then
+    log_ok "database/roles/app-readwrite"
+  else
     log_skip "database/roles/app-readwrite"
+  fi
 fi
 
 # ═══════════════════════════════════════════════════════════════════

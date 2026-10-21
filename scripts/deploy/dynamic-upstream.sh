@@ -40,18 +40,18 @@ write_weighted_upstreams() {
   # Build weighted upstream blocks
   local api_block=""
   if [ "${api_blue_weight}" -gt 0 ] && [ -n "${api_blue_target}" ]; then
-    api_block+="    upstream ${api_blue_target} lb_weight ${api_blue_weight}\n"
+    api_block+="    upstream ${api_blue_target} lb_weight ${api_blue_weight}"$'\n'
   fi
   if [ "${api_green_weight}" -gt 0 ] && [ -n "${api_green_target}" ]; then
-    api_block+="    upstream ${api_green_target} lb_weight ${api_green_weight}\n"
+    api_block+="    upstream ${api_green_target} lb_weight ${api_green_weight}"$'\n'
   fi
 
   local dashboard_block=""
   if [ "${dashboard_blue_weight}" -gt 0 ] && [ -n "${dashboard_blue_target}" ]; then
-    dashboard_block+="    upstream ${dashboard_blue_target} lb_weight ${dashboard_blue_weight}\n"
+    dashboard_block+="    upstream ${dashboard_blue_target} lb_weight ${dashboard_blue_weight}"$'\n'
   fi
   if [ "${dashboard_green_weight}" -gt 0 ] && [ -n "${dashboard_green_target}" ]; then
-    dashboard_block+="    upstream ${dashboard_green_target} lb_weight ${dashboard_green_weight}\n"
+    dashboard_block+="    upstream ${dashboard_green_target} lb_weight ${dashboard_green_weight}"$'\n'
   fi
 
   cat > "${UPSTREAMS_FILE}" << EOF
@@ -83,6 +83,15 @@ EOF
 write_upstreams() {
   local api_targets="$1"
   local dashboard_targets="$2"
+  local api_block="" dashboard_block="" target
+
+  # One `upstream` line per target (targets are space separated).
+  for target in ${api_targets}; do
+    api_block+="    upstream ${target}"$'\n'
+  done
+  for target in ${dashboard_targets}; do
+    dashboard_block+="    upstream ${target}"$'\n'
+  done
 
   cat > "${UPSTREAMS_FILE}" << EOF
 # ═════════════════════════════════════════════════════════════════════
@@ -93,11 +102,11 @@ write_upstreams() {
 
 # API upstream — load balanced across replicas
 set_upstream api {
-$(printf '    upstream %s\n' ${api_targets})}
+${api_block}}
 
 # Dashboard upstream — load balanced across replicas
 set_upstream dashboard {
-$(printf '    upstream %s\n' ${dashboard_targets})}
+${dashboard_block}}
 EOF
 
   chmod 644 "${UPSTREAMS_FILE}"
@@ -110,16 +119,20 @@ EOF
 # C-03 Fix: Reload via Caddy admin API (enabled on 127.0.0.1:2019)
 reload_caddy() {
   log_info "Reloading caddy-active via admin API..."
-  docker exec "${COMPOSE_PROJECT}_caddy-active" \
-    caddy reload --config /etc/caddy/Caddyfile --address 127.0.0.1:2019 2>&1 &&
-    log_ok "caddy-active reloaded" ||
+  if docker exec "${COMPOSE_PROJECT}_caddy-active" \
+    caddy reload --config /etc/caddy/Caddyfile --address 127.0.0.1:2019 2>&1; then
+    log_ok "caddy-active reloaded"
+  else
     log_info "caddy-active reload failed (will retry via signal)"
+  fi
 
   log_info "Reloading caddy-standby via admin API..."
-  docker exec "${COMPOSE_PROJECT}_caddy-standby" \
-    caddy reload --config /etc/caddy/Caddyfile --address 127.0.0.1:2019 2>&1 &&
-    log_ok "caddy-standby reloaded" ||
+  if docker exec "${COMPOSE_PROJECT}_caddy-standby" \
+    caddy reload --config /etc/caddy/Caddyfile --address 127.0.0.1:2019 2>&1; then
+    log_ok "caddy-standby reloaded"
+  else
     log_info "caddy-standby reload failed (will retry via signal)"
+  fi
 }
 
 # ── Main ────────────────────────────────────────────────────────────

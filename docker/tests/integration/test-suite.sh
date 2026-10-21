@@ -64,7 +64,7 @@ assert_json_field() {
 
 assert_container_cmd() {
   local name="$1" container="$2" cmd="$3" expected="$4"
-  RESULT=$(docker exec "${container}" ${cmd} 2> /dev/null || echo '')
+  RESULT=$(docker exec "${container}" sh -c "${cmd}" 2> /dev/null || echo '')
   if echo "${RESULT}" | grep -qi "${expected}"; then
     test_pass "${name}"
   else
@@ -240,7 +240,7 @@ esac
 
 echo ""
 echo "════════════════════════════════════════════════════════════"
-printf "  Results: ${PASSED} passed, ${FAILED} failed (of ${TOTAL})\n"
+printf '  Results: %s passed, %s failed (of %s)\n' "${PASSED}" "${FAILED}" "${TOTAL}"
 echo "════════════════════════════════════════════════════════════"
 
 if [ ${FAILED} -gt 0 ]; then

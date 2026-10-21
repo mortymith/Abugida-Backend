@@ -97,7 +97,7 @@ dc() {
   shift
   require_tier "${tier}"
   require_cmd docker "install Docker Engine + the compose v2 plugin (see scripts/setup/prerequisites.sh)"
-  cd "${PROJECT_ROOT}"
+  cd "${PROJECT_ROOT}" || return 1
   # shellcheck disable=SC2046
   docker compose --project-directory . $(compose_files "${tier}") "$@"
 }

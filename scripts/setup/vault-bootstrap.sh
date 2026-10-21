@@ -40,7 +40,8 @@ run_vault_unseal() {
 
 run_vault_secrets() {
   if [ -z "${VAULT_TOKEN:-}" ]; then
-    export VAULT_TOKEN="$(jq -r '.root_token' "${INIT_OUTPUT_FILE}")"
+    VAULT_TOKEN="$(jq -r '.root_token' "${INIT_OUTPUT_FILE}")"
+    export VAULT_TOKEN
   fi
   log_info "Populating Vault with secrets..."
   bash "${VAULT_SCRIPTS}/vault-secrets.sh"

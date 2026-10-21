@@ -142,12 +142,15 @@ if [ "${ENV}" = "production" ] && [ -n "${MINIO_BACKUP_ENDPOINT}" ]; then
   fi
 
   # Add replication rule (idempotent — mc replicate add is safe to re-run)
-  mc replicate add myminio/${BUCKET} myminio-backup/${BUCKET} \
+  if mc replicate add "myminio/${BUCKET}" "myminio-backup/${BUCKET}" \
     --priority "1" \
     --sync \
     --remove-delete-marker \
-    2> /dev/null && log_ok "CRR rule configured." ||
+    2> /dev/null; then
+    log_ok "CRR rule configured."
+  else
     log_skip "CRR rule already exists or could not be added."
+  fi
 else
   log_skip "CRR skipped (not production or MINIO_BACKUP_ENDPOINT not set)."
 fi

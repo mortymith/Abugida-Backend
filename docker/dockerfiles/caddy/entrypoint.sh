@@ -22,7 +22,7 @@ echo "[caddy-entrypoint] Role: ${ROLE}"
 wait_for() {
   local host="$1" port="$2" name="$3" timeout="${4:-30}"
   local elapsed=0
-  while [ $elapsed -lt $timeout ]; do
+  while [ "${elapsed}" -lt "${timeout}" ]; do
     if (echo > "/dev/tcp/${host}/${port}") 2> /dev/null; then
       return 0
     fi

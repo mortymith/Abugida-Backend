@@ -19,6 +19,11 @@ BACKUP_DIR="./data/backups/postgres"
 POSTGRES_USER="${POSTGRES_USER:-app}"
 POSTGRES_DB="${POSTGRES_DB:-app}"
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# shellcheck source=scripts/lib/common.sh
+source "${SCRIPT_DIR}/../lib/common.sh"
+
 BACKUP_FILE="${1:-}"
 
 # ── Logging ───────────────────────────────────────────────────────
@@ -28,7 +33,7 @@ log_err() { echo "[restore-postgres][ERROR] $*" >&2; }
 
 # ── Find latest backup if not specified ────────────────────────────
 if [ -z "${BACKUP_FILE}" ]; then
-  BACKUP_FILE=$(ls -t "${BACKUP_DIR}"/pg_backup_*.dump 2> /dev/null | head -1)
+  BACKUP_FILE=$(latest_file "${BACKUP_DIR}" 'pg_backup_*.dump')
   if [ -z "${BACKUP_FILE}" ]; then
     log_err "No backup files found in ${BACKUP_DIR}"
     exit 1

@@ -31,7 +31,7 @@ wait_for() {
   local host="$1" port="$2" name="$3" timeout="${4:-60}"
   local elapsed=0
   echo "[entrypoint] Waiting for ${name} (${host}:${port})..."
-  while [ $elapsed -lt $timeout ]; do
+  while [ "${elapsed}" -lt "${timeout}" ]; do
     if (echo > "/dev/tcp/${host}/${port}") 2> /dev/null; then
       echo "[entrypoint] ${name} is ready."
       return 0

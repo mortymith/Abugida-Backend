@@ -34,6 +34,9 @@ CHECKED=0
 MODE="${1:-verify}"
 FILTER_TYPE="${2:-all}"
 
+# shellcheck source=scripts/lib/common.sh
+source "${SCRIPT_DIR}/../lib/common.sh"
+
 TELEGRAM_SH="${SCRIPT_DIR}/telegram-notify.sh"
 
 check_ok() {
@@ -52,7 +55,7 @@ check_fail() {
 # ═════════════════════════════════════════════════════════════════════
 verify_checksums() {
   echo "==> Verifying checksums..."
-  for SHA_FILE in $(find "${BACKUP_BASE}" -name "*.sha256" 2> /dev/null); do
+  while IFS= read -r -d '' SHA_FILE; do
     DATA_FILE="${SHA_FILE%.sha256}"
     if [ ! -f "${DATA_FILE}" ]; then
       check_fail "Missing data file: ${DATA_FILE}"
@@ -63,7 +66,7 @@ verify_checksums() {
     else
       check_fail "${DATA_FILE} (checksum mismatch)"
     fi
-  done
+  done < <(find "${BACKUP_BASE}" -name "*.sha256" -print0 2> /dev/null)
 }
 
 # ═════════════════════════════════════════════════════════════════════
@@ -71,7 +74,7 @@ verify_checksums() {
 # ═════════════════════════════════════════════════════════════════════
 verify_postgres() {
   echo "==> Verifying PostgreSQL backup..."
-  LATEST=$(ls -t "${BACKUP_BASE}/postgres/"pg_backup_*.dump 2> /dev/null | head -1)
+  LATEST=$(latest_file "${BACKUP_BASE}/postgres" 'pg_backup_*.dump')
   if [ -z "${LATEST}" ]; then
     check_fail "No PostgreSQL backup found"
     return
@@ -98,7 +101,7 @@ verify_postgres() {
 # ═════════════════════════════════════════════════════════════════════
 verify_redis() {
   echo "==> Verifying Redis backup..."
-  LATEST=$(ls -t "${BACKUP_BASE}/redis/"redis_*.rdb.gz 2> /dev/null | head -1)
+  LATEST=$(latest_file "${BACKUP_BASE}/redis" 'redis_*.rdb.gz')
   if [ -z "${LATEST}" ]; then
     check_fail "No Redis backup found"
     return
@@ -137,7 +140,7 @@ verify_redis() {
 # ═════════════════════════════════════════════════════════════════════
 verify_config() {
   echo "==> Verifying config backup..."
-  LATEST=$(ls -t "${BACKUP_BASE}/config/"config_*.tar.gz 2> /dev/null | head -1)
+  LATEST=$(latest_file "${BACKUP_BASE}/config" 'config_*.tar.gz')
   if [ -z "${LATEST}" ]; then
     check_fail "No config backup found"
     return
@@ -157,7 +160,7 @@ restore_test() {
   echo "==> Running restore test against scratch environment..."
 
   # Test PG restore into a temporary database
-  LATEST_PG=$(ls -t "${BACKUP_BASE}/postgres/"pg_backup_*.dump 2> /dev/null | head -1)
+  LATEST_PG=$(latest_file "${BACKUP_BASE}/postgres" 'pg_backup_*.dump')
   CONTAINER="${COMPOSE_PROJECT}_postgres-primary"
 
   if [ -n "${LATEST_PG}" ] && docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
@@ -183,7 +186,7 @@ restore_test() {
   fi
 
   # Test Redis restore
-  LATEST_REDIS=$(ls -t "${BACKUP_BASE}/redis/"redis_*.rdb.gz 2> /dev/null | head -1)
+  LATEST_REDIS=$(latest_file "${BACKUP_BASE}/redis" 'redis_*.rdb.gz')
   if [ -n "${LATEST_REDIS}" ]; then
     TEMP_RDB="/tmp/redis_restore_test_$$.rdb"
     gunzip -c "${LATEST_REDIS}" > "${TEMP_RDB}" 2> /dev/null
@@ -252,7 +255,7 @@ esac
 
 echo ""
 echo "════════════════════════════════════════════════════════════"
-printf "  Results:  ${PASSED} passed,  ${FAILED} failed  (of ${CHECKED})\n"
+printf '  Results:  %s passed,  %s failed  (of %s)\n' "${PASSED}" "${FAILED}" "${CHECKED}"
 echo "════════════════════════════════════════════════════════════"
 
 # ── Notify (§9.1 TelegramNotify node) ──────────────────────────

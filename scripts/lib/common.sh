@@ -103,3 +103,30 @@ require_secret() {
   fi
   printf '%s' "${val}"
 }
+
+# ─── Filesystem helpers ─────────────────────────────────────────────
+# Newest file in <dir> matching <pattern> (by modification time).
+# Pure bash so it behaves identically on Linux and macOS.
+latest_file() {
+  local dir="$1" pattern="$2" newest="" candidate
+  for candidate in "${dir}"/${pattern}; do
+    [ -f "${candidate}" ] || continue
+    if [ -z "${newest}" ] || [ "${candidate}" -nt "${newest}" ]; then
+      newest="${candidate}"
+    fi
+  done
+  printf '%s' "${newest}"
+}
+
+# Newest directory in <dir> (by modification time). Pure bash, like
+# latest_file — no `ls`, so it works the same on Linux and macOS.
+latest_dir() {
+  local dir="$1" newest="" candidate
+  for candidate in "${dir}"/*/; do
+    [ -d "${candidate}" ] || continue
+    if [ -z "${newest}" ] || [ "${candidate}" -nt "${newest}" ]; then
+      newest="${candidate}"
+    fi
+  done
+  printf '%s' "${newest%/}"
+}

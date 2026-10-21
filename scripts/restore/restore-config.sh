@@ -15,12 +15,17 @@ set -euo pipefail
 
 BACKUP_DIR="./data/backups/config"
 REVIEW_DIR="./data/backups/docker/config/.review"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# shellcheck source=scripts/lib/common.sh
+source "${SCRIPT_DIR}/../lib/common.sh"
+
 TIMESTAMP="${1:-}"
 APPLY="${2:-}"
 
 # ── Find latest backup if not specified ──────────────────────────
 if [ -z "${TIMESTAMP}" ]; then
-  BACKUP_FILE=$(ls -t "${BACKUP_DIR}"/config_*.tar.gz 2> /dev/null | head -1)
+  BACKUP_FILE=$(latest_file "${BACKUP_DIR}" 'config_*.tar.gz')
 else
   BACKUP_FILE="${BACKUP_DIR}/config_${TIMESTAMP}.tar.gz"
 fi

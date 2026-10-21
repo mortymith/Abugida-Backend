@@ -50,7 +50,7 @@ echo "[backup-minio] Backing up s3://${BUCKET} to ${BACKUP_DIR}/${TIMESTAMP}/...
 docker exec "${CONTAINER}" mc alias set local "${MINIO_ENDPOINT}" "${MINIO_ROOT_USER}" "${MINIO_ROOT_PASSWORD}" > /dev/null 2>&1
 
 # 2.2 Fix: Do not silence errors — fail on mirror failure
-if ! docker exec "${CONTAINER}" mc mirror local/${BUCKET} /backup-data/ 2>&1; then
+if ! docker exec "${CONTAINER}" mc mirror "local/${BUCKET}" /backup-data/ 2>&1; then
   echo "[backup-minio][ERROR] mc mirror failed."
   LEVEL=error CONTEXT=backup TASK=backup-minio bash "${TELEGRAM_SH}" "MinIO backup FAILED: mc mirror error." 2> /dev/null || true
   exit 1
@@ -66,18 +66,18 @@ docker exec "${CONTAINER}" rm -rf /backup-data/ 2> /dev/null || true
 BACKUP_SIZE_BYTES=$(du -sb "${BACKUP_DIR}/${TIMESTAMP}" | cut -f1)
 if [ "${BACKUP_SIZE_BYTES}" -lt "${MINIMUM_BACKUP_SIZE}" ]; then
   echo "[backup-minio][ERROR] Backup is suspiciously small (${BACKUP_SIZE_BYTES} bytes). Likely empty or corrupt."
-  rm -rf "${BACKUP_DIR}/${TIMESTAMP}"
+  rm -rf "${BACKUP_DIR}/${TIMESTAMP:?}"
   LEVEL=error CONTEXT=backup TASK=backup-minio bash "${TELEGRAM_SH}" "MinIO backup FAILED: backup too small (${BACKUP_SIZE_BYTES}B)." 2> /dev/null || true
   exit 1
 fi
 
 # Generate checksum
 CHECKSUM_FILE="${BACKUP_DIR}/${TIMESTAMP}/.checksum"
-find "${BACKUP_DIR}/${TIMESTAMP}" -type f -not -name '.checksum' -exec sha256sum {} \; > "${CHECKSUM_FILE}"
+find "${BACKUP_DIR}/${TIMESTAMP:?}" -type f -not -name '.checksum' -exec sha256sum {} \; > "${CHECKSUM_FILE}"
 CHECKSUM_COUNT=$(wc -l < "${CHECKSUM_FILE}")
 
 SIZE=$(du -sh "${BACKUP_DIR}/${TIMESTAMP}" | cut -f1)
 echo "[backup-minio][OK] Backup complete: ${BACKUP_DIR}/${TIMESTAMP}/ (${SIZE}, ${CHECKSUM_COUNT} files verified)"
 
 # Save timestamp
-echo "$(date -Iseconds)" > "${BACKUP_DIR}/.last-backup"
+date -Iseconds > "${BACKUP_DIR}/.last-backup"

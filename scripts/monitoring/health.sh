@@ -19,6 +19,11 @@
 #
 # Exit codes: 0 = all probed services healthy, 1 = at least one failure.
 # ═════════════════════════════════════════════════════════════════════
+
+# The probe functions below are invoked indirectly: `run_probe` receives the
+# function name as an argument and calls it through "${fn}". ShellCheck
+# cannot follow that indirection.
+# shellcheck disable=SC2329
 set -euo pipefail
 
 COMPOSE_PROJECT="${COMPOSE_PROJECT_NAME:-infra}"
@@ -150,6 +155,7 @@ probe_redis() {
   # Credentials come from the container env (base.yml injects REDIS_PASSWORD);
   # matches the ACL setup where the default user is disabled.
   local out
+  # shellcheck disable=SC2016 # $REDIS_PASSWORD is expanded inside the container, on purpose.
   out=$(timeout "${PROBE_TIMEOUT}" docker exec "${COMPOSE_PROJECT}_redis-primary" sh -c \
     'exec redis-cli --no-auth-warning -u "redis://app:$REDIS_PASSWORD@127.0.0.1:6379" ping') ||
     {
@@ -164,13 +170,13 @@ probe_redis() {
 }
 
 probe_minio() {
-  timeout "${PROBE_TIMEOUT}" curl -sf -o /dev/null \
-    "http://localhost:${MINIO_API_PORT_VAL}/minio/health/live" &&
-    echo "live endpoint responding" ||
-    {
-      echo "GET /minio/health/live failed"
-      return 1
-    }
+  if timeout "${PROBE_TIMEOUT}" curl -sf -o /dev/null \
+    "http://localhost:${MINIO_API_PORT_VAL}/minio/health/live"; then
+    echo "live endpoint responding"
+  else
+    echo "GET /minio/health/live failed"
+    return 1
+  fi
 }
 
 probe_powersync() {
@@ -214,36 +220,36 @@ probe_marketing() {
 probe_otel() {
   # signoz-otel-collector image ships bash but no wget — probe the
   # health extension via /dev/tcp.
-  timeout "${PROBE_TIMEOUT}" docker exec "${COMPOSE_PROJECT}_otel-collector" \
-    bash -c 'echo > /dev/tcp/127.0.0.1/13133' > /dev/null 2>&1 &&
-    echo "health extension responding" ||
-    {
-      echo "collector :13133 not responding"
-      return 1
-    }
+  if timeout "${PROBE_TIMEOUT}" docker exec "${COMPOSE_PROJECT}_otel-collector" \
+    bash -c 'echo > /dev/tcp/127.0.0.1/13133' > /dev/null 2>&1; then
+    echo "health extension responding"
+  else
+    echo "collector :13133 not responding"
+    return 1
+  fi
 }
 
 probe_signoz() {
   # Consolidated SigNoz serves UI + API on :8080.
-  timeout "${PROBE_TIMEOUT}" docker exec "${COMPOSE_PROJECT}_signoz-frontend" \
-    wget -qO- http://localhost:8080/api/v1/health > /dev/null &&
-    echo "API responding" ||
-    {
-      echo "signoz :8080 not responding"
-      return 1
-    }
+  if timeout "${PROBE_TIMEOUT}" docker exec "${COMPOSE_PROJECT}_signoz-frontend" \
+    wget -qO- http://localhost:8080/api/v1/health > /dev/null; then
+    echo "API responding"
+  else
+    echo "signoz :8080 not responding"
+    return 1
+  fi
 }
 
 probe_clickhouse() {
   local ch_client=(clickhouse-client)
   [ -n "${CLICKHOUSE_PASSWORD:-}" ] && ch_client+=(--password "${CLICKHOUSE_PASSWORD}")
-  [ "$(timeout "${PROBE_TIMEOUT}" docker exec "${COMPOSE_PROJECT}_clickhouse" \
-    "${ch_client[@]}" --query 'SELECT 1')" = "1" ] &&
-    echo "SELECT 1 → 1" ||
-    {
-      echo "query failed"
-      return 1
-    }
+  if [ "$(timeout "${PROBE_TIMEOUT}" docker exec "${COMPOSE_PROJECT}_clickhouse" \
+    "${ch_client[@]}" --query 'SELECT 1')" = "1" ]; then
+    echo "SELECT 1 → 1"
+  else
+    echo "query failed"
+    return 1
+  fi
 }
 
 probe_vault() {

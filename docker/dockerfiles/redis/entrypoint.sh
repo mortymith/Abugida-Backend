@@ -45,10 +45,15 @@ chown redis:redis "${ACL_FILE}"
 
 # ── 3.1 Fix: TLS configuration ────────────────────────────────────
 TLS_ENABLED="${REDIS_TLS_ENABLED:-0}"
-TLS_EXTRA_ARGS=""
+TLS_EXTRA_ARGS=()
 if [ "${TLS_ENABLED}" = "1" ] && [ -f /etc/redis/tls/redis.crt ]; then
   # redis.conf has tls-port 6379 and port 0 — keep as-is for TLS mode
-  TLS_EXTRA_ARGS="--tls-cert-file /etc/redis/tls/redis.crt --tls-key-file /etc/redis/tls/redis.key --tls-ca-cert-file /etc/redis/tls/ca.crt --tls-auth-clients optional"
+  TLS_EXTRA_ARGS=(
+    --tls-cert-file /etc/redis/tls/redis.crt
+    --tls-key-file /etc/redis/tls/redis.key
+    --tls-ca-cert-file /etc/redis/tls/ca.crt
+    --tls-auth-clients optional
+  )
 else
   # Switch: enable plain port, disable tls-port
   sed -i 's/^port 0$/port 6379/' /usr/local/etc/redis/redis.conf
@@ -67,11 +72,11 @@ fi
 # ── Memory ceiling from environment (REDIS_MAXMEMORY / REDIS_MAXMEMORY_POLICY) ──
 # redis.conf ships a static default (2gb); when .env/Vault provides values they
 # win. Applied to server roles only — sentinels don't load redis.conf.
-MEMORY_ARGS=""
+MEMORY_ARGS=()
 if [ -n "${REDIS_MAXMEMORY:-}" ]; then
-  MEMORY_ARGS="--maxmemory ${REDIS_MAXMEMORY}"
+  MEMORY_ARGS=(--maxmemory "${REDIS_MAXMEMORY}")
   if [ -n "${REDIS_MAXMEMORY_POLICY:-}" ]; then
-    MEMORY_ARGS="${MEMORY_ARGS} --maxmemory-policy ${REDIS_MAXMEMORY_POLICY}"
+    MEMORY_ARGS+=(--maxmemory-policy "${REDIS_MAXMEMORY_POLICY}")
   fi
   echo "[entrypoint] Applying memory limit: ${REDIS_MAXMEMORY} (${REDIS_MAXMEMORY_POLICY:-config default})"
 fi
@@ -93,8 +98,8 @@ replica)
     --masterauth "${REDIS_PASSWORD}" \
     --replica-serve-stale-data yes \
     --replica-read-only yes \
-    ${MEMORY_ARGS} \
-    ${TLS_EXTRA_ARGS}
+    "${MEMORY_ARGS[@]}" \
+    "${TLS_EXTRA_ARGS[@]}"
   ;;
 
 primary | *)
@@ -104,7 +109,7 @@ primary | *)
   exec redis-server /usr/local/etc/redis/redis.conf \
     --min-replicas-to-write "${REDIS_MIN_REPLICAS:-0}" \
     --min-replicas-max-lag "${REDIS_MIN_REPLICAS_MAX_LAG:-10}" \
-    ${MEMORY_ARGS} \
-    ${TLS_EXTRA_ARGS}
+    "${MEMORY_ARGS[@]}" \
+    "${TLS_EXTRA_ARGS[@]}"
   ;;
 esac

@@ -27,12 +27,15 @@ SCRATCH_CONTAINER="${COMPOSE_PROJECT}_postgres-pitr"
 POSTGRES_USER="${POSTGRES_USER:-app}"
 POSTGRES_DB="${POSTGRES_DB:-app}"
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TELEGRAM_SH="${SCRIPT_DIR}/../backup/telegram-notify.sh"
+
+# shellcheck source=scripts/lib/common.sh
+source "${SCRIPT_DIR}/../lib/common.sh"
+
 # Target recovery time (default: 24 hours ago)
 TARGET_TIME="${1:-$(date -d '24 hours ago' '+%Y-%m-%d %H:%M:%S' 2> /dev/null || date -v-24H '+%Y-%m-%d %H:%M:%S')}"
 SCRATCH_MODE="${2:-}"
-
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TELEGRAM_SH="${SCRIPT_DIR}/../backup/telegram-notify.sh"
 
 if [ "${SCRATCH_MODE}" = "--scratch" ]; then
   echo "==> PITR in scratch mode (new container)"
@@ -45,7 +48,7 @@ else
 fi
 
 # ── Find latest backup before target time ────────────────────────
-LATEST_BACKUP=$(ls -t "${BACKUP_DIR}"/pg_backup_*.dump 2> /dev/null | head -1)
+LATEST_BACKUP=$(latest_file "${BACKUP_DIR}" 'pg_backup_*.dump')
 if [ -z "${LATEST_BACKUP}" ]; then
   echo "[restore-pitr][ERROR] No pg_dump backup found."
   LEVEL=error CONTEXT=restore TASK=postgres-pitr bash "${TELEGRAM_SH}" "PITR FAILED: no base backup" 2> /dev/null || true
@@ -84,14 +87,20 @@ docker exec -i "${TARGET_CONTAINER}" pg_restore \
 
 # ── Create recovery signal + configure WAL replay ──────────────────
 echo "==> Configuring point-in-time recovery to: ${TARGET_TIME}..."
+# The recovery target time is passed as an argument (not interpolated into
+# the script body) so the quoting stays intact.
 docker exec "${TARGET_CONTAINER}" bash -c '
+    set -e
+    target_time="$1"
     # Create recovery signal
     touch /var/lib/postgresql/data/recovery.signal
     # Add recovery settings to postgresql.auto.conf
-    echo "restore_command = \"cp /var/lib/postgresql/wal_archive/%f %p\"" >> /var/lib/postgresql/data/postgresql.auto.conf
-    echo "recovery_target_time = \"'"'"${TARGET_TIME}"'"'"\"" >> /var/lib/postgresql/data/postgresql.auto.conf
-    echo "recovery_target_action = \"promote\"" >> /var/lib/postgresql/data/postgresql.auto.conf
-'
+    {
+        echo "restore_command = \"cp /var/lib/postgresql/wal_archive/%f %p\""
+        echo "recovery_target_time = \"${target_time}\""
+        echo "recovery_target_action = \"promote\""
+    } >> /var/lib/postgresql/data/postgresql.auto.conf
+' bash "${TARGET_TIME}"
 
 # ── Copy WAL segments into the container ──────────────────────────
 echo "==> Copying WAL segments for replay..."
@@ -109,8 +118,8 @@ sleep 15
 
 # ── Check recovery status ────────────────────────────────────────
 echo "==> Checking recovery status..."
-docker exec "${TARGET_CONTAINER}" psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "\n    SELECT pg_is_in_recovery(), 
-           current_timestamp, 
+docker exec "${TARGET_CONTAINER}" psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "\n    SELECT pg_is_in_recovery(),
+           current_timestamp,
            pg_last_xact_replay_timestamp() AS recovered_to;\n" 2> /dev/null || true
 
 SIZE=$(docker exec "${TARGET_CONTAINER}" psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -tAc "SELECT pg_size_pretty(pg_database_size('${POSTGRES_DB}'));" 2> /dev/null || echo 'unknown')

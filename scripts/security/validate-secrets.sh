@@ -171,7 +171,7 @@ if [ -f "$ENV_FILE" ]; then
     [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
     if [ -z "${!key:-}" ]; then
       printf -v "$key" '%s' "$value"
-      export "$key"
+      export "${key?}"
     fi
   done < <(grep -v '^[[:space:]]*#' "$ENV_FILE" | grep -v '^[[:space:]]*$')
 else

@@ -17,6 +17,11 @@ CONTAINER="${COMPOSE_PROJECT}_redis-primary"
 BACKUP_DIR="./data/backups/redis"
 COMPOSE_CMD="docker compose --project-directory . -f docker/compose/networks.yml -f docker/compose/volumes.yml -f docker/compose/base.yml -f docker/compose/profiles/dev.override.yml"
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# shellcheck source=scripts/lib/common.sh
+source "${SCRIPT_DIR}/../lib/common.sh"
+
 BACKUP_FILE="${1:-}"
 
 # ── Logging ───────────────────────────────────────────────────────
@@ -27,10 +32,10 @@ log_err() { echo "[restore-redis][ERROR] $*" >&2; }
 # ── Find latest backup if not specified ────────────────────────────
 if [ -z "${BACKUP_FILE}" ]; then
   # Match actual backup filenames: redis_YYYYMMDD_HHMMSS.rdb.gz
-  BACKUP_FILE=$(ls -t "${BACKUP_DIR}"/redis_*.rdb.gz 2> /dev/null | head -1)
+  BACKUP_FILE=$(latest_file "${BACKUP_DIR}" 'redis_*.rdb.gz')
   if [ -z "${BACKUP_FILE}" ]; then
     # Fallback: uncompressed RDB
-    BACKUP_FILE=$(ls -t "${BACKUP_DIR}"/redis_*.rdb 2> /dev/null | head -1)
+    BACKUP_FILE=$(latest_file "${BACKUP_DIR}" 'redis_*.rdb')
   fi
   if [ -z "${BACKUP_FILE}" ]; then
     log_err "No backup files found in ${BACKUP_DIR}"

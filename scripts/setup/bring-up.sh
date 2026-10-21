@@ -41,7 +41,8 @@ push_schema() {
     pnpm --filter @abugida/database db:push
   else
     # staging/prod keep DATABASE_URL in .env; export it for the child process
-    export DATABASE_URL="$(env_or_dotenv DATABASE_URL)"
+    DATABASE_URL="$(env_or_dotenv DATABASE_URL)"
+    export DATABASE_URL
     if [ -z "${DATABASE_URL}" ]; then
       die "DATABASE_URL is not set — add it to ${ENV_FILE} before bringing up ${TIER}"
     fi

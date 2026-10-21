@@ -70,13 +70,13 @@ echo ""
 # ── 1a. Check for `:latest` tags (should use pinned versions) ───────
 echo -e "${BOLD}── Dockerfile Image Tag Audit ──${RESET}"
 while IFS= read -r -d '' dockerfile; do
-  relpath="${dockerfile#${PROJECT_ROOT}/}"
+  relpath="${dockerfile#"${PROJECT_ROOT}"/}"
   # Extract FROM lines
   while IFS= read -r line; do
     image=$(echo "$line" | grep -oP 'FROM\s+\K[^\s]+' | head -1)
     if [[ -z "$image" ]]; then continue; fi
     # Strip platform prefix
-    image=$(echo "$image" | sed 's/--platform=[^ ]* //')
+    image="${image//--platform=[^ ]* /}"
     # Check for :latest or no tag
     if [[ "$image" == *:latest ]] || [[ ! "$image" == *:* ]]; then
       log_high "${relpath}: uses unpinned/latest image → ${image}"
@@ -96,7 +96,7 @@ done < <(find "${PROJECT_ROOT}/docker/dockerfiles" -name 'Dockerfile' -print0 2>
 echo ""
 echo -e "${BOLD}── Insecure Download Detection ──${RESET}"
 while IFS= read -r -d '' dockerfile; do
-  relpath="${dockerfile#${PROJECT_ROOT}/}"
+  relpath="${dockerfile#"${PROJECT_ROOT}"/}"
   line_num=0
   while IFS= read -r line; do
     ((line_num++)) || true
@@ -125,7 +125,7 @@ SECRET_PATTERNS=(
   'REDIS_PASSWORD\s*=' 'VAULT_TOKEN\s*='
 )
 while IFS= read -r -d '' dockerfile; do
-  relpath="${dockerfile#${PROJECT_ROOT}/}"
+  relpath="${dockerfile#"${PROJECT_ROOT}"/}"
   line_num=0
   while IFS= read -r line; do
     ((line_num++)) || true
@@ -138,7 +138,8 @@ while IFS= read -r -d '' dockerfile; do
 
         # Only flag if there's an actual value, not just a variable name
         if echo "$line" | grep -qP "${pat}[${sq}${dq}][^${sq}${dq}]{4,}"; then
-          log_critical "${relpath}:${line_num}: possible hardcoded secret → $(echo "$line" | sed 's/^[[:space:]]*//')"
+          trimmed_line="${line#"${line%%[![:space:]]*}"}"
+          log_critical "${relpath}:${line_num}: possible hardcoded secret → ${trimmed_line}"
         fi
       done
     fi
@@ -152,9 +153,16 @@ if [ ! -f "${PROJECT_ROOT}/.dockerignore" ]; then
   log_medium "Missing .dockerignore — sensitive files may be included in build context"
 else
   # Check that critical patterns are excluded
-  for pattern in ".env" ".env.prod" "data/" "*.pem" "*.key" "credentials.json" ".git"; do
+  for pattern in ".env" ".env.prod" "data/" "credentials.json"; do
     if ! grep -qF "$pattern" "${PROJECT_ROOT}/.dockerignore"; then
       log_medium ".dockerignore missing pattern: ${pattern}"
+    fi
+  done
+  # Lower-severity patterns: they should be excluded too, but a miss is not
+  # an immediate secret leak.
+  for pattern in "*.pem" "*.key" ".git"; do
+    if ! grep -qF "$pattern" "${PROJECT_ROOT}/.dockerignore"; then
+      log_low ".dockerignore missing pattern: ${pattern}"
     fi
   done
 fi

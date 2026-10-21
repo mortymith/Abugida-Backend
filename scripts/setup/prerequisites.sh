@@ -259,7 +259,7 @@ for CHECK in "${CHECKS[@]}"; do
       log_err "  ${DESC}  →  NOT FOUND"
       FAIL=1
     fi
-  elif command -v ${CMD%% *} &> /dev/null; then
+  elif command -v "${CMD%% *}" &> /dev/null; then
     VERSION=$("${CMD%% *}" --version 2> /dev/null | head -1 || echo "installed")
     log_ok "  ${DESC}  →  ${VERSION}"
   else

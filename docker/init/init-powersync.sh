@@ -39,7 +39,7 @@ PSQL=(psql --host "$PGHOST" --port "$PGPORT" --username "$POSTGRES_USER" --dbnam
 
 # ── Connectivity + version check ────────────────────────────────────────
 for attempt in $(seq 1 30); do
-  if pg_version="$(${PSQL[@]} -t -A -c 'SHOW server_version;' 2> /dev/null)"; then
+  if pg_version="$("${PSQL[@]}" -t -A -c 'SHOW server_version;' 2> /dev/null)"; then
     break
   fi
   log "Postgres not ready (attempt $attempt/30), retrying in 2s..."
@@ -52,7 +52,7 @@ log "Connected to ${PGHOST}:${PGPORT} (PostgreSQL ${pg_version})"
 
 # ── Apply roles, grants, publication (idempotent) ───────────────────────
 log "Applying PowerSync roles and grants..."
-${PSQL[@]} << EOSQL
+"${PSQL[@]}" << EOSQL
 -- Replication role: ensure it exists, then set password from env
 -- (covers both fresh installs and credential rotation).
 DO \$\$
@@ -107,11 +107,11 @@ EOSQL
 
 # ── Verification report ────────────────────────────────────────────────
 log "Verification:"
-${PSQL[@]} -c "
+"${PSQL[@]}" -c "
 SELECT rolname, rolreplication, rolbypassrls, rolcanlogin
 FROM pg_roles
 WHERE rolname IN ('powersync', 'powersync_storage');"
-${PSQL[@]} -c "
+"${PSQL[@]}" -c "
 SELECT pubname, puballtables FROM pg_publication WHERE pubname = 'powersync';"
 
 log "PowerSync initialization complete."

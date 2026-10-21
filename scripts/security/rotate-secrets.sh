@@ -164,11 +164,13 @@ if [ "$ROTATE_DB" = true ]; then
     else
       log_info "Requesting new dynamic database credentials from Vault..."
       # This generates a new lease — old lease remains valid until TTL expires
-      VAULT_ADDR="${VAULT_ADDR:-https://127.0.0.1:8200}" \
+      if VAULT_ADDR="${VAULT_ADDR:-https://127.0.0.1:8200}" \
         VAULT_SKIP_VERIFY="${VAULT_SKIP_VERIFY:-1}" \
-        vault read -format=json database/creds/app-readwrite 2> /dev/null &&
-        log_info "New dynamic credentials obtained" ||
+        vault read -format=json database/creds/app-readwrite 2> /dev/null; then
+        log_info "New dynamic credentials obtained"
+      else
         log_warn "Vault dynamic credentials failed — falling back to manual rotation"
+      fi
     fi
   else
     # Development: rotate the value in .env
@@ -212,11 +214,13 @@ if [ "$ROTATE_VAULT" = true ]; then
     if [ "$DRY_RUN" = true ]; then
       log_dry "Would rotate Vault dynamic database credentials"
     else
-      VAULT_ADDR="${VAULT_ADDR:-https://127.0.0.1:8200}" \
+      if VAULT_ADDR="${VAULT_ADDR:-https://127.0.0.1:8200}" \
         VAULT_SKIP_VERIFY="${VAULT_SKIP_VERIFY:-1}" \
-        vault read -format=json database/creds/app-readwrite 2> /dev/null &&
-        log_info "Vault dynamic database credentials rotated" ||
+        vault read -format=json database/creds/app-readwrite 2> /dev/null; then
+        log_info "Vault dynamic database credentials rotated"
+      else
         log_warn "Vault rotation failed — check Vault is unsealed"
+      fi
     fi
   else
     log_info "Vault rotation skipped in development (no Vault running)"

@@ -40,28 +40,28 @@ PSQL=(psql --host "$PGHOST" --port "$PGPORT" --username "$POSTGRES_USER" --dbnam
 
 # ── Connectivity check ──────────────────────────────────────────────────
 for attempt in $(seq 1 30); do
-  if ${PSQL[@]} -tAc 'SELECT 1;' > /dev/null 2>&1; then
+  if "${PSQL[@]}" -tAc 'SELECT 1;' > /dev/null 2>&1; then
     break
   fi
   log "Postgres not ready (attempt $attempt/30), retrying in 2s..."
   sleep 2
 done
-${PSQL[@]} -tAc 'SELECT 1;' > /dev/null || die "Could not connect to ${PGHOST}:${PGPORT}"
+"${PSQL[@]}" -tAc 'SELECT 1;' > /dev/null || die "Could not connect to ${PGHOST}:${PGPORT}"
 log "Connected to ${PGHOST}:${PGPORT}"
 
 # ── Remove legacy auth_query-era objects ────────────────────────────────
 # Older volumes carry the retired 'pgbouncer' auth_user role and the
 # 'pgbouncer_users' credentials table (which also stored a stale SCRAM
 # verifier). Neither is used by the auth_file pass-through design.
-legacy_role="$(${PSQL[@]} -tAc "SELECT 1 FROM pg_roles WHERE rolname = 'pgbouncer'")"
+legacy_role="$("${PSQL[@]}" -tAc "SELECT 1 FROM pg_roles WHERE rolname = 'pgbouncer'")"
 if [ "${legacy_role}" = "1" ]; then
   log "Removing legacy 'pgbouncer' auth_user role and its grants..."
-  ${PSQL[@]} -c 'DROP OWNED BY pgbouncer;'
-  ${PSQL[@]} -c 'DROP ROLE IF EXISTS pgbouncer;'
+  "${PSQL[@]}" -c 'DROP OWNED BY pgbouncer;'
+  "${PSQL[@]}" -c 'DROP ROLE IF EXISTS pgbouncer;'
 fi
-if ${PSQL[@]} -tAc "SELECT to_regclass('public.pgbouncer_users') IS NOT NULL" | grep -q t; then
+if "${PSQL[@]}" -tAc "SELECT to_regclass('public.pgbouncer_users') IS NOT NULL" | grep -q t; then
   log "Dropping legacy 'pgbouncer_users' credentials table..."
-  ${PSQL[@]} -c 'DROP TABLE IF EXISTS public.pgbouncer_users;'
+  "${PSQL[@]}" -c 'DROP TABLE IF EXISTS public.pgbouncer_users;'
 fi
 
 # ── Write userlist.txt from PostgreSQL's own SCRAM verifiers ────────────
@@ -70,7 +70,7 @@ mkdir -p "${AUTH_DIR}"
 tmp_file=$(mktemp)
 
 for user in $(echo "${users}" | tr ',' ' '); do
-  verifier="$(${PSQL[@]} -tAc "SELECT rolpassword FROM pg_authid WHERE rolname = '${user}'")"
+  verifier="$("${PSQL[@]}" -tAc "SELECT rolpassword FROM pg_authid WHERE rolname = '${user}'")"
   [ -n "${verifier}" ] || die "No password stored for role '${user}' — cannot expose it through PgBouncer"
   case "${verifier}" in
   SCRAM-SHA-256\$*) ;;

@@ -127,7 +127,7 @@ for ENV_SRC in .env.prod .env; do
       [[ "${key}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
       [ -n "${!key:-}" ] && continue
       printf -v "${key}" '%s' "${value}"
-      export "${key}"
+      export "${key?}"
     done < <(grep -v '^[[:space:]]*#' "${ENV_SRC}" | grep -v '^[[:space:]]*$')
   fi
 done
