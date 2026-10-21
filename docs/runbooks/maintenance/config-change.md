@@ -41,9 +41,11 @@ Modify service configuration files in `docker/config/` and reload affected servi
    ```
 
 4. **Verify logs after reload**
+
    ```bash
    just logs postgres --tail 50
    ```
+
    Look for `FATAL`, `ERROR`, or config-rejection messages.
 
 ## Verification

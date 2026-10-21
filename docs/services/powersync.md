@@ -85,7 +85,7 @@ Rules of thumb:
 
 - Parameterise per-user data with `auth.user_id()` (cast when comparing to bigint PKs)
 - Respect soft deletes (`deleted_at IS NULL`)
-- Follow https://docs.powersync.com/maintenance-ops/deploying-schema-changes for rule rollouts
+- Follow <https://docs.powersync.com/maintenance-ops/deploying-schema-changes> for rule rollouts
 
 ---
 
@@ -155,7 +155,7 @@ healthcheck:
       'CMD',
       'node',
       '-e',
-      "fetch('http://localhost:8085/probes/liveness').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+      "fetch('<http://localhost:8085/probes/liveness'>).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
     ]
   interval: 15s
   timeout: 5s
