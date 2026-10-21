@@ -31,7 +31,10 @@
     "pnpm --dir packages/storage exec eslint --fix --no-warn-ignored",
     "prettier --write"
   ],
-  "*.astro": ["eslint --fix --no-warn-ignored", "prettier --write"],
+  "app/marketing/**/*.astro": [
+    "pnpm --dir app/marketing exec eslint --fix --no-warn-ignored",
+    "prettier --write"
+  ],
   "*.{sh,bash,ksh,zsh}": ["shfmt -w -i 2 -sr -ln bash"],
   "*.{json,jsonc,md,mdx,yaml,yml,css,scss,html,graphql}": ["prettier --write"]
 }

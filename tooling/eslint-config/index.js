@@ -37,16 +37,20 @@ export const globalIgnores = [
 /**
  * Type-aware block for workspaces that lint with a tsconfig project.
  *
+ * Returns an ARRAY of resolved flat-config objects (the `extends` list is
+ * flattened here via tseslint.config). Consumers spread it into their config
+ * array: `...typescriptProject({ ... })`.
+ *
  * @param {object} options
  * @param {string[]} [options.files] - glob(s) this block applies to
  * @param {string | boolean | string[]} [options.project] - passed to
  *   parserOptions.project (`true` finds the nearest tsconfig, or a path)
  * @param {string} [options.tsconfigRootDir] - usually `import.meta.dirname`
  *   of the consuming config file
- * @returns {import('eslint').Linter.Config}
+ * @returns {import('eslint').Linter.Config[]}
  */
 export function typescriptProject({ files, project = true, tsconfigRootDir } = {}) {
-  return {
+  return tseslint.config({
     ...(files ? { files } : {}),
     extends: [...tseslint.configs.recommended],
     languageOptions: {
@@ -56,7 +60,7 @@ export function typescriptProject({ files, project = true, tsconfigRootDir } = {
         ...(tsconfigRootDir ? { tsconfigRootDir } : {}),
       },
     },
-  }
+  })
 }
 
 /**

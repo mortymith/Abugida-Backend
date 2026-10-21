@@ -97,12 +97,13 @@ just validate-compose   # Validate all three compose tiers
 
 ## Tooling layer (`tooling/`)
 
-Shared per-tool configuration packages (`@abugida/*-config`, part of the pnpm workspace) — one source of truth per tool. Root configs (`eslint.config.js`, `prettier.config.js`, `tsconfig.json`, `commitlint.config.js`, `lint-staged.config.js`, `knip.config.js`, `cspell.json`) are thin consumers; workspaces extend/depend on the packages. See `tooling/README.md` for the package table, commands, system-binary list, and exceptions. Highlights:
+Only truly shared, multi-consumer configuration packages live in `tooling/` (`@abugida/typescript-config`, `@abugida/eslint-config`, `@abugida/prettier-config`, `@abugida/bun-test-config`). Tools consumed from a single place live at the repo root instead: root `commitlint.config.js`, `cspell.json` (+ `.cspell/dictionaries/`), `knip.config.js`, `syncpack.config.js` and the CLI linter dotfiles (`.shellcheckrc`, `.hadolint.yaml`, `.yamllint.yaml`, `.markdownlint.json`, `.ecrc.json`, `.gitleaks.toml`, `.dotenv-linter`). See `tooling/README.md` for the consumer table, commands, system-binary list, and exceptions. Highlights:
 
-- TypeScript presets: `@abugida/typescript-config/{base,node,library}.json`. Path options (`outDir`/`rootDir`/`include`) stay in each consuming tsconfig (relative paths in shared presets resolve against the preset file).
-- ESLint: shared base via `@abugida/eslint-config` (typescript-eslint pinned 8.69.0). Framework plugins stay in the owning workspace (Astro in `app/marketing`, `@tanstack/eslint-config` in `app/dashboard`).
+- TypeScript presets: `@abugida/typescript-config/{base,library}.json`. `app/api` extends `base.json`; `packages/*` extend `library.json`. Path options (`outDir`/`rootDir`/`include`) stay in each consuming tsconfig (relative paths in shared presets resolve against the preset file).
+- ESLint: workspaces import the shared base via `@abugida/eslint-config` (typescript-eslint pinned 8.69.0, re-exported) and add a type-aware `typescriptProject(...)` block with their own `tsconfigRootDir`. Framework plugins stay in the owning workspace (Astro in `app/marketing`, `@tanstack/eslint-config` in `app/dashboard`) — those two do not consume the shared base.
 - `bun test` preload: root + workspace `bunfig.toml` wire `@abugida/bun-test-config/preload` (safe env defaults — `pnpm test` needs no exported secrets).
 - Repo-wide quality scripts: `lint:spelling`, `lint:docker`, `lint:yaml`, `lint:markdown`, `lint:editorconfig`, `lint:env`, `lint:secrets` (blocking) and `lint:shell`, `lint:deps`, `knip` (advisory). Some require system binaries (shellcheck, hadolint, yamllint, gitleaks, dotenv-linter, editorconfig-checker, shfmt) — see `tooling/README.md`.
+- CI (`.github/workflows/ci.yml`) installs with pnpm and runs turbo tasks under Bun.
 
 ## Git workflow (enforced by husky hooks — don't bypass)
 

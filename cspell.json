@@ -1,4 +1,49 @@
 {
-  "//": "Root spelling config is a thin consumer of the shared tooling layer. Dictionaries and ignore policy live in tooling/cspell-config.",
-  "import": ["@abugida/cspell-config/cspell.json"]
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
+  "//": [
+    "Root spelling configuration. cspell runs from the repo root only",
+    "(pnpm lint:spelling), so the policy lives here rather than in a shared",
+    "tooling package.",
+    "Project dictionaries live in .cspell/dictionaries/ and cover legitimate",
+    "project terminology only (product names, Ethiopian education terms,",
+    "package and infrastructure names). Do not grow them to silence one-off",
+    "typos — fix the typo instead."
+  ],
+  "version": "0.2",
+  "language": "en",
+  "dictionaries": ["abugida-project", "abugida-infra", "en-gb"],
+  "dictionaryDefinitions": [
+    {
+      "name": "abugida-project",
+      "path": "./.cspell/dictionaries/project.txt",
+      "addWords": true
+    },
+    {
+      "name": "abugida-infra",
+      "path": "./.cspell/dictionaries/infra.txt",
+      "addWords": true
+    }
+  ],
+  "ignorePaths": [
+    "node_modules/**",
+    "**/node_modules/**",
+    "dist/**",
+    "**/dist/**",
+    ".turbo/**",
+    "**/.turbo/**",
+    ".astro/**",
+    "**/.astro/**",
+    "coverage/**",
+    "pnpm-lock.yaml",
+    "bun.lockb",
+    "**/*.gen.ts",
+    "**/*.tsbuildinfo",
+    ".agents/**",
+    ".vscode/**",
+    ".git/**",
+    "patches/**",
+    "**/.env",
+    "**/.env.*",
+    "**/spec /**"
+  ]
 }

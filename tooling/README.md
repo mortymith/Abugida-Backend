@@ -1,40 +1,49 @@
 # Tooling Layer
 
-Shared, per-tool configuration packages. **One source of truth per tool, consumed consistently across the monorepo.**
+Shared, multi-consumer tool configuration packages. **One source of truth per tool: shared bases live here, single-consumer configs live at the repo root.**
 
 - Runtime: **Bun** (>= 1.4.2, see `.bun-version`). Package manager: **pnpm** (`tooling/*` is part of the pnpm workspace).
 - Tooling packages are `private: true` configuration packages — no runtime code, no app dependencies.
 
-## Naming and ownership
+## Ownership rule
 
-All tooling packages use the repository's established `@abugida/*` scope. Every tool has exactly one owning package; consumers depend on the package (JS modules) or reference the config file path (CLI configs consumed from root scripts).
+A tool configuration belongs in `tooling/` only when more than one workspace consumes it. Tools consumed from exactly one place (almost always the repo root — git hooks and repo-wide CLI scripts) live at the repo root instead of being wrapped in a single-consumer package:
 
-| Package                               | Tool                 | Consumed by                                               | Blocking gate               |
-| ------------------------------------- | -------------------- | --------------------------------------------------------- | --------------------------- |
-| `tooling/typescript-config`           | tsc                  | root `tsconfig.json`, `app/api`, `packages/*` (`extends`) | `pnpm typecheck`            |
-| `tooling/eslint-config`               | eslint               | root `eslint.config.js`, `app/*`, `packages/*`            | `pnpm lint`                 |
-| `tooling/prettier-config`             | prettier             | root `prettier.config.js` (serves all workspaces)         | `pnpm format` / lint-staged |
-| `tooling/bun-test-config`             | bun test             | root + workspace `bunfig.toml` (`[test] preload`)         | `pnpm test`                 |
-| `tooling/lint-staged-config`          | lint-staged          | root `lint-staged.config.js`                              | husky `pre-commit`          |
-| `tooling/commitlint-config`           | commitlint           | root `commitlint.config.js`                               | husky `commit-msg`          |
-| `tooling/cspell-config`               | cspell               | root `cspell.json` (`import`) + `pnpm lint:spelling`      | yes                         |
-| `tooling/knip-config`                 | knip                 | root `knip.config.js` + `pnpm knip`                       | advisory                    |
-| `tooling/shellcheck-config`           | shellcheck           | `pnpm lint:shell` (config path)                           | advisory                    |
-| `tooling/hadolint-config`             | hadolint             | `pnpm lint:docker` (config path)                          | yes                         |
-| `tooling/yamllint-config`             | yamllint             | `pnpm lint:yaml` (config path)                            | yes                         |
-| `tooling/markdownlint-config`         | markdownlint         | `pnpm lint:markdown` (config path)                        | yes                         |
-| `tooling/editorconfig-checker-config` | editorconfig-checker | `pnpm lint:editorconfig` (config path)                    | yes                         |
-| `tooling/gitleaks-config`             | gitleaks             | `pnpm lint:secrets` (config path)                         | yes                         |
-| `tooling/dotenv-linter-config`        | dotenv-linter        | `pnpm lint:env` (policy + flags)                          | yes                         |
-| `tooling/syncpack-config`             | syncpack             | `pnpm lint:deps` (config path)                            | advisory                    |
+| Config at root                                                        | Tool                 | Consumed by                       | Blocking gate               |
+| --------------------------------------------------------------------- | -------------------- | --------------------------------- | --------------------------- |
+| `commitlint.config.js`                                                | commitlint           | husky `commit-msg` hook           | yes                         |
+| `cspell.json` + `.cspell/dictionaries/`                               | cspell               | `pnpm lint:spelling`              | yes                         |
+| `knip.config.js`                                                      | knip                 | `pnpm knip`                       | advisory                    |
+| `syncpack.config.js`                                                  | syncpack             | `pnpm lint:deps`                  | advisory                    |
+| `.shellcheckrc`                                                       | shellcheck           | `pnpm lint:shell`                 | advisory                    |
+| `.hadolint.yaml`                                                      | hadolint             | `pnpm lint:docker`                | yes                         |
+| `.yamllint.yaml`                                                      | yamllint             | `pnpm lint:yaml`                  | yes                         |
+| `.markdownlint.json`                                                  | markdownlint         | `pnpm lint:markdown`              | yes                         |
+| `.ecrc.json`                                                          | editorconfig-checker | `pnpm lint:editorconfig`          | yes                         |
+| `.gitleaks.toml`                                                      | gitleaks             | `pnpm lint:secrets`               | yes                         |
+| `.dotenv-linter` (documented policy; flags passed by `pnpm lint:env`) | dotenv-linter        | `pnpm lint:env`                   | yes                         |
+| `.lintstagedrc.json`                                                  | lint-staged          | husky `pre-commit` hook           | yes                         |
+| `.prettierignore` + root `prettier.config.js` (re-export)             | prettier             | root lint-staged + config walk-up | `pnpm format` / lint-staged |
+| `.editorconfig`                                                       | editorconfig         | editors + editorconfig-checker    | yes                         |
 
-"Advisory" tools run and exit non-zero on real findings that pre-date this layer (see Known limitations); they are verified working and their reports are actionable, but they are not merge-blocking yet.
+## Shared packages (`tooling/`)
+
+| Package                     | Tool     | Consumed by                                                                                  | Blocking gate    |
+| --------------------------- | -------- | -------------------------------------------------------------------------------------------- | ---------------- |
+| `tooling/typescript-config` | tsc      | `app/api` (`extends` `base.json`), `packages/*` (`extends` `library.json`)                   | `pnpm typecheck` |
+| `tooling/eslint-config`     | eslint   | root-less: `app/api` + `packages/*` import the base and their `typescriptProject(...)` block | `pnpm lint`      |
+| `tooling/prettier-config`   | prettier | root `prettier.config.js` (serves all workspaces via config walk-up and lint-staged)         | lint-staged      |
+| `tooling/bun-test-config`   | bun test | root + workspace `bunfig.toml` (`[test] preload`)                                            | `pnpm test`      |
+
+Framework-specific ESLint configs stay in the owning workspace and intentionally do **not** consume the shared base: `app/marketing` owns the Astro plugins/parsers, `app/dashboard` owns `@tanstack/eslint-config`.
 
 ## How consumption works
 
-- **JS-module configs** (eslint, prettier, commitlint, lint-staged, knip): root config files are thin re-exports, e.g. `eslint.config.js` → `export { default } from '@abugida/eslint-config'`. Workspaces that need the package add `"@abugida/eslint-config": "workspace:*"` to `devDependencies`.
-- **JSON presets** (typescript): `"extends": "@abugida/typescript-config/library.json"`. Note that _path-based_ options (`outDir`, `rootDir`, `include`) must stay in the consuming tsconfig — relative paths in a shared preset resolve against the preset file, not the consumer.
-- **Config-file packages** (shellcheck, hadolint, yamllint, markdownlint, editorconfig-checker, gitleaks, dotenv-linter, syncpack): root `package.json` scripts pass the config path explicitly, e.g. `hadolint -c tooling/hadolint-config/.hadolint.yaml`. The CLI-config packages are also declared as root `devDependencies` for workspace identity and future tooling.
+- **typescript**: workspaces add `"@abugida/typescript-config": "workspace:*"` and use `"extends": "@abugida/typescript-config/library.json"` (or `base.json`). Path-based options (`outDir`, `rootDir`, `include`) stay in the consuming tsconfig — relative paths in a shared preset resolve against the preset file, not the consumer.
+- **eslint**: workspaces add `"@abugida/eslint-config": "workspace:*"` and compose `import base, { typescriptProject } from '@abugida/eslint-config'`. The base is non-type-aware; type-aware workspaces add a `typescriptProject(...)` block with their own `tsconfigRootDir` (usually `import.meta.dirname`). The package re-exports `tseslint` so consumers never declare their own (drifting) copy — typescript-eslint is pinned here once.
+- **prettier**: the root `prettier.config.js` is a thin re-export of `@abugida/prettier-config`. Workspaces do not carry their own prettier configs; prettier's config walk-up finds the root policy for every workspace.
+- **bun test preload**: `bunfig.toml` (root and per-workspace) wires `preload = ["@abugida/bun-test-config/preload"]` via the package import.
+- **CLI linters**: root `package.json` scripts pass the config path explicitly, e.g. `hadolint -c .hadolint.yaml`.
 
 ## Commands
 
@@ -58,7 +67,7 @@ pnpm lint:deps          # syncpack version-drift report         (advisory)
 pnpm knip               # knip unused files/dependencies/exports (advisory)
 ```
 
-The developer fast path (only staged files) is `lint-staged` via the husky `pre-commit` hook; repository validation always uses the full-repo commands above.
+The developer fast path (only staged files) is `lint-staged` via the husky `pre-commit` hook; repository validation always uses the full-repo commands above. CI (`.github/workflows/ci.yml`) runs lint, typecheck, build, test and the npm-only gates (`lint:spelling`, `lint:markdown`, `lint:deps`) under Bun.
 
 ## Formatting ownership
 
@@ -84,29 +93,29 @@ The infrastructure linters are system packages (no npm wrappers — the wrappers
 
 `pnpm lint` / `format` / `typecheck` / `test` / `build` / `lint:spelling` / `lint:markdown` / `lint:deps` / `knip` need no system binaries beyond Node/pnpm/Bun.
 
-There is no CI in this repository yet. When CI is added, the system binaries above are the documented dependency list; everything else is installed by `pnpm install`.
-
 ## Adding a new shared tooling configuration
 
-1. Create `tooling/<tool>-config/` with the config file (and a `package.json` following the existing pattern — `@abugida/<tool>-config`, `private: true`).
-2. Add `tooling/*` globs already cover the directory; run `pnpm install`.
-3. Wire consumption: root thin config (JS) or root script referencing the config path (CLI).
-4. Add the tool to the tables above and to the CI dependency list if it needs a system binary.
-5. Keep framework-specific rules OUT of shared packages — framework extensions belong to the consuming workspace (`app/marketing` owns Astro ESLint plugins, `app/dashboard` owns `@tanstack/eslint-config`).
+1. Ask first: is it consumed by **more than one** workspace? If not, put the config at the repo root instead of creating a `tooling/` package.
+2. Create `tooling/<tool>-config/` with the config file (and a `package.json` following the existing pattern — `@abugida/<tool>-config`, `private: true`).
+3. Add `tooling/*` globs already cover the directory; run `pnpm install`.
+4. Wire consumption: consumers add the package to `devDependencies` (workspace `extends`/import) or the root script references the config path (CLI).
+5. Add the tool to the tables above and to the CI dependency list if it needs a system binary.
+6. Keep framework-specific rules OUT of shared packages — framework extensions belong to the consuming workspace (`app/marketing` owns Astro ESLint plugins, `app/dashboard` owns `@tanstack/eslint-config`).
 
 ## Tool-specific exceptions
 
 - **typescript-config**: `library.json` intentionally does not enable `allowImportingTsExtensions`; libraries emit JS+declarations via `tsc`, and that flag is only legal with `noEmit`/`emitDeclarationOnly` (the previously-identified conflict). Declaration-only consumers must set `emitDeclarationOnly` explicitly.
-- **eslint-config**: base config is non-type-aware (it backs lint-staged across all workspaces). Type-aware workspaces add `typescriptProject(...)` blocks with their own `tsconfigRootDir`. The parser anchor (`tsconfigRootDir`) is set in every config that parses TS without a project — typescript-eslint 8.69 refuses to infer when multiple candidate roots are visible in one process.
+- **eslint-config**: base config is non-type-aware (it is composed by every TS workspace). Type-aware workspaces add `typescriptProject(...)` blocks with their own `tsconfigRootDir`. The parser anchor (`tsconfigRootDir`) is set in the base config and replaced by type-aware blocks — typescript-eslint 8.69 refuses to infer when multiple candidate roots are visible in one process.
 - **bun-test-config**: the preload provides deterministic env fallbacks (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `DATABASE_URL`) only when unset. Turbo strips undeclared env vars from task processes (no `globalEnv` in `turbo.json`), which is why `pnpm test` previously failed for `@abugida/api` when run through turbo while direct `bun test` passed.
-- **cspell-config**: `app/dashboard/spec /` wireframes are excluded — they contain intentional UI truncations (shortened mockup labels) that are not fixable spelling.
-- **markdownlint-config**: `.agents/**` vendored skill docs are excluded.
-- **gitleaks-config**: `[extend] useDefault = true` is required — a custom config without it silently _replaces_ the rule set and scans nothing. The allowlist covers committed `.env.example` placeholders (ADR-006 dev-only defaults), test fixtures, and API doc examples; every entry is individually justified inline.
-- **dotenv-linter-config**: dotenv-linter 3.x only discovers its config via CWD walk-up, so `lint:env` passes the skips as explicit flags; `.dotenv-linter` in the package is the canonical documented policy. Only `.env.example` files are ever scanned — real `.env` files (actual secrets) are never passed to the linter.
+- **cspell** (root `cspell.json`): `app/dashboard/spec /` wireframes are excluded — they contain intentional UI truncations (shortened mockup labels) that are not fixable spelling.
+- **markdownlint** (root `.markdownlint.json`): `.agents/**` vendored skill docs are excluded.
+- **gitleaks** (root `.gitleaks.toml`): `[extend] useDefault = true` is required — a custom config without it silently _replaces_ the rule set and scans nothing. The allowlist covers committed `.env.example` placeholders (ADR-006 dev-only defaults), test fixtures, and API doc examples; every entry is individually justified inline.
+- **dotenv-linter** (root `.dotenv-linter`): dotenv-linter 3.x only discovers its config via CWD walk-up, so `lint:env` passes the skips as explicit flags; `.dotenv-linter` is the canonical documented policy. Only `.env.example` files are ever scanned — real `.env` files (actual secrets) are never passed to the linter.
 
 ## Known limitations
 
 - `pnpm lint:shell` (advisory): ~166 pre-existing shellcheck findings across the ops scripts (backup/restore/firewall) — mostly quoting idioms (`SC2086`, `SC2015`, `SC2317`). Fixing them touches production-critical scripts and should be its own reviewed PR.
-- `pnpm knip` (advisory): 6 unused files + ~24 unused dependencies reported against master (dashboard deps awaiting the open dashboard PR chain, plus a handful of unreferenced config/server-function files). Triage + removal is follow-up work; unused-export triage (280+) likewise.
-- `pnpm lint:deps` (advisory): syncpack reports real dev-range drift (`@types/bun`, `@types/node`, `hono`, `drizzle-orm`, TanStack packages). TypeScript is intentionally left per-workspace until each consumer is verified against ^6.0.3 (peer ceiling `<6.1.0`).
+- `pnpm knip` (advisory): 12 unused files + 13 unused dependencies reported (dashboard deps awaiting the open dashboard PR chain, plus a handful of unreferenced config/server-function files — all pre-existing on master). Triage + removal is follow-up work; unused-export triage (280+) likewise.
+- `pnpm lint:deps` (advisory): syncpack reports the remaining runtime-range drift — `hono` (^4.6–^4.7 vs ^4.12.32 across packages), `react`/`react-dom`/`zod`/`dotenv` (pinned vs caret in dashboard/auth/tenant) and `@tanstack/react-*` in packages/auth. Runtime dependency bumps need their own verified PR. The types/tooling ranges were unified in this layer: `typescript` → 6.0.3 everywhere (verified by typecheck + build), `@types/bun` → ^1.4.2 (no more `latest`), `eslint` → ^10.8.1, and `typescript-eslint` pinned once in `tooling/eslint-config`.
 - husky `pre-commit` runs `lint-staged --concurrent false`: parallel prettier/eslint over the whole staged set OOM-killed the hook in memory-constrained environments.
+- Pre-existing master issues, out of scope for the tooling layer: `@abugida/dashboard` build fails (TanStack Start import-protection: client bundle imports a `.server.ts` module) and `@abugida/api` has failing tests (middleware barrel exports / auth module).
