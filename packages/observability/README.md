@@ -307,12 +307,12 @@ export default defineConfig({
 
 ```astro
 ---
-import { withPageSpan } from "@abugida/observability/astro";
+import { withPageSpan } from '@abugida/observability/astro'
 
-const data = await withPageSpan("page.home", (span) => {
-  span.setAttribute("astro.page", "/");
-  return fetchHomeData();
-});
+const data = await withPageSpan('page.home', (span) => {
+  span.setAttribute('astro.page', '/')
+  return fetchHomeData()
+})
 ---
 ```
 
@@ -632,21 +632,21 @@ Wrap data fetching inside individual page components. The span inherits the requ
 
 ```astro
 ---
-import { withPageSpan, recordAstroError } from "@abugida/observability/astro";
-import { logger } from "@abugida/observability";
+import { withPageSpan, recordAstroError } from '@abugida/observability/astro'
+import { logger } from '@abugida/observability'
 
-const courses = await withPageSpan("page.courses", async (span) => {
-  span.setAttribute("astro.page", "/courses");
+const courses = await withPageSpan('page.courses', async (span) => {
+  span.setAttribute('astro.page', '/courses')
 
   try {
-    const data = await fetchCourses();
-    logger.info({ count: data.length }, "Courses loaded");
-    return data;
+    const data = await fetchCourses()
+    logger.info({ count: data.length }, 'Courses loaded')
+    return data
   } catch (error) {
-    recordAstroError(error);
-    throw error;
+    recordAstroError(error)
+    throw error
   }
-});
+})
 ---
 
 <h1>All Courses</h1>

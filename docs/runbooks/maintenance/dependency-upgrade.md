@@ -50,10 +50,12 @@ Update container image tags, validate in dev, security-scan, then deploy to prod
    Review CVE reports. Block any high/critical CVEs before proceeding.
 
 5. **Deploy to production**
+
    ```bash
    just restart SERVICE
    just health SERVICE
    ```
+
    Follow rolling-restart runbook order: infra → app → edge.
 
 ## Verification

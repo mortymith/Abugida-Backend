@@ -5,10 +5,10 @@ HashiCorp Vault policies define which paths and operations a token or AppRole is
 ## Policy File Location
 
 ```
-docker/config/vault/policies/
-├── admin-policy.hcl    # Full management — human operators only
-├── app-policy.hcl      # Application service access — AppRole scoped
-└── pki-policy.hcl       # Certificate issuance — mTLS for internal services
+   docker/config/vault/policies/
+   ├── admin-policy.hcl    # Full management — human operators only
+   ├── app-policy.hcl      # Application service access — AppRole scoped
+   └── pki-policy.hcl       # Certificate issuance — mTLS for internal services
 ```
 
 ## HCL Policy Format
@@ -16,9 +16,9 @@ docker/config/vault/policies/
 Each policy file contains `path` blocks that grant capabilities to specific Vault paths:
 
 ```hcl
-path "secret/data/app/*" {
-  capabilities = ["read"]
-}
+   path "secret/data/app/*" {
+     capabilities = ["read"]
+   }
 ```
 
 Available capabilities:
@@ -79,47 +79,47 @@ Certificate issuance for internal mTLS.
 
 1. **Create the HCL file** in `docker/config/vault/policies/`:
 
-```hcl
-# docker/config/vault/policies/worker-policy.hcl
-path "secret/data/app/worker/*" {
-  capabilities = ["read"]
-}
+   ```hcl
+   # docker/config/vault/policies/worker-policy.hcl
+   path "secret/data/app/worker/*" {
+     capabilities = ["read"]
+   }
 
-path "database/creds/worker-readwrite" {
-  capabilities = ["read"]
-}
+   path "database/creds/worker-readwrite" {
+     capabilities = ["read"]
+   }
 
-path "pki/issue/app-internal" {
-  capabilities = ["create", "update"]
-}
+   path "pki/issue/app-internal" {
+     capabilities = ["create", "update"]
+   }
 
-path "pki/cert/ca_chain" {
-  capabilities = ["read"]
-}
-```
+   path "pki/cert/ca_chain" {
+     capabilities = ["read"]
+   }
+   ```
 
 2. **Load the policy via `vault-secrets.sh`** or manually:
 
-```bash
-# After Vault is unsealed and authenticated
-vault policy write worker docker/config/vault/policies/worker-policy.hcl
-```
+   ```bash
+   # After Vault is unsealed and authenticated
+   vault policy write worker docker/config/vault/policies/worker-policy.hcl
+   ```
 
 3. **Assign the policy to an AppRole or identity**:
 
-```bash
-vault write auth/approle/role/worker \
-  token_policies="worker-policy" \
-  token_ttl=1h \
-  token_max_ttl=4h
-```
+   ```bash
+   vault write auth/approle/role/worker \
+     token_policies="worker-policy" \
+     token_ttl=1h \
+     token_max_ttl=4h
+   ```
 
 4. **Verify the policy**:
 
-```bash
-vault policy read worker
-vault policy list
-```
+   ```bash
+   vault policy read worker
+   vault policy list
+   ```
 
 ## Applying Policies During Bootstrap
 

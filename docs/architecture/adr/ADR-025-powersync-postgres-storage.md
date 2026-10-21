@@ -80,4 +80,4 @@ partitioning.
 
 - Reference deployment: `example/powersync-pg17/`
 - Service docs: `docs/services/powersync.md`
-- Config schema: https://unpkg.com/@powersync/service-schema@latest/json-schema/powersync-config.json
+- Config schema: <https://unpkg.com/@powersync/service-schema@latest/json-schema/powersync-config.json>
