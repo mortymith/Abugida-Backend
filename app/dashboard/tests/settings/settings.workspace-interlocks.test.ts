@@ -12,10 +12,9 @@ import {
   checkMaxMembersDecreaseInterlock,
   checkSelfServiceWorkspacesDecreaseInterlock,
   checkSessionTimeoutDecreaseInterlock,
-  runAllInterlocks
-  
+  runAllInterlocks,
 } from '#/features/settings/settings.workspace-interlocks'
-import type {InterlockContext} from '#/features/settings/settings.workspace-interlocks';
+import type { InterlockContext } from '#/features/settings/settings.workspace-interlocks'
 import { PLUGIN_DEFAULTS } from '#/features/settings/settings.workspace-policies'
 
 function baseCtx(overrides: Partial<InterlockContext> = {}): InterlockContext {

@@ -149,8 +149,7 @@ describe('spreadsheetHtmlToGfmTable', () => {
   })
 
   test('pads shorter rows to the header column count', () => {
-    const html =
-      '<table><tr><td>a</td><td>b</td></tr><tr><td>1</td></tr></table>'
+    const html = '<table><tr><td>a</td><td>b</td></tr><tr><td>1</td></tr></table>'
     const gfm = spreadsheetHtmlToGfmTable(html)
     expect(gfm).toContain('| 1 |  |')
   })
@@ -160,8 +159,7 @@ describe('spreadsheetHtmlToGfmTable', () => {
   })
 
   test('returns null for nested tables (data-loss surface, out of scope)', () => {
-    const html =
-      '<table><tr><td><table><tr><td>nested</td></tr></table></td></tr></table>'
+    const html = '<table><tr><td><table><tr><td>nested</td></tr></table></td></tr></table>'
     expect(spreadsheetHtmlToGfmTable(html)).toBeNull()
   })
 

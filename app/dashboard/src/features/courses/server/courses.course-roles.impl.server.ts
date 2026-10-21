@@ -31,13 +31,8 @@ import {
   resolveCourse,
 } from '../../courses/server/courses.server-helpers.server'
 import { writeAudit } from '../../settings/server/settings.server-helpers.server'
-import {
-  COURSE_ROLE_NAMES,
-  isCourseRoleName
-  
-  
-} from '../courses.course-roles'
-import type {CourseRoleAssignment, CourseRoleName} from '../courses.course-roles';
+import { COURSE_ROLE_NAMES, isCourseRoleName } from '../courses.course-roles'
+import type { CourseRoleAssignment, CourseRoleName } from '../courses.course-roles'
 
 // Re-export the pure helpers so callers can import everything from one place.
 export { COURSE_ROLE_NAMES, isCourseRoleName }
@@ -181,9 +176,7 @@ export async function revokeCourseRoleImpl(input: {
     })
     .from(courseRoles)
     .innerJoin(roles, eq(roles.id, courseRoles.roleId))
-    .where(
-      and(eq(courseRoles.publicId, input.courseRolePublicId), isNull(courseRoles.revokedAt)),
-    )
+    .where(and(eq(courseRoles.publicId, input.courseRolePublicId), isNull(courseRoles.revokedAt)))
     .limit(1)
   const assignment = rows.at(0)
   if (!assignment) throw new Error('ASSIGNMENT_NOT_FOUND')
@@ -192,9 +185,7 @@ export async function revokeCourseRoleImpl(input: {
   // goes through the transfer flow (Phase C2) so the workspace never ends
   // up with an ownerless course.
   if (assignment.roleName === 'owner') {
-    throw new Error(
-      'OWNER_REVOKE_BLOCKED: Transfer ownership to another member first.',
-    )
+    throw new Error('OWNER_REVOKE_BLOCKED: Transfer ownership to another member first.')
   }
 
   await db

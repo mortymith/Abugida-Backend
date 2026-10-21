@@ -17,14 +17,12 @@ import {
   enqueueSave,
   readQueuedSave,
   clearQueuedSave,
-  countQueuedSaves
-  
+  countQueuedSaves,
 } from '#/features/courses/hooks/courses.markdown-offline-queue'
 
-;
-import type {QueuedSave} from '#/features/courses/hooks/courses.markdown-offline-queue';
+import type { QueuedSave } from '#/features/courses/hooks/courses.markdown-offline-queue'
 
-(globalThis as unknown as { indexedDB: typeof fakeIndexedDB }).indexedDB = fakeIndexedDB
+;(globalThis as unknown as { indexedDB: typeof fakeIndexedDB }).indexedDB = fakeIndexedDB
 ;(globalThis as unknown as { IDBKeyRange: typeof fakeKeyRange }).IDBKeyRange = fakeKeyRange
 
 function makeEntry(lessonPublicId: string, body: string, rowVersion: number): QueuedSave {

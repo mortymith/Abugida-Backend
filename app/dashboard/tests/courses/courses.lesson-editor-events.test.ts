@@ -16,11 +16,12 @@ import {
   subscribeToLessonEditorEvents,
   __clearLessonEditorEventSinksForTests,
   LESSON_EDITOR_PERFORMANCE_BUDGETS,
-  LESSON_EDITOR_ACCEPTANCE_CRITERIA
-  
-  
+  LESSON_EDITOR_ACCEPTANCE_CRITERIA,
 } from '#/features/courses/courses.lesson-editor-events'
-import type {LessonEditorEvent, ItemConflictShownEvent} from '#/features/courses/courses.lesson-editor-events';
+import type {
+  LessonEditorEvent,
+  ItemConflictShownEvent,
+} from '#/features/courses/courses.lesson-editor-events'
 
 beforeEach(() => {
   __clearLessonEditorEventSinksForTests()

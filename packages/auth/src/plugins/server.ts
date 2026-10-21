@@ -92,8 +92,7 @@ export function buildOrganizationPlugin(config: AuthConfig): BetterAuthPlugin {
       : {}),
     ...(organizationConfig.cancelPendingInvitationsOnReInvite !== undefined
       ? {
-          cancelPendingInvitationsOnReInvite:
-            organizationConfig.cancelPendingInvitationsOnReInvite,
+          cancelPendingInvitationsOnReInvite: organizationConfig.cancelPendingInvitationsOnReInvite,
         }
       : {}),
     ...(organizationConfig.sendInvitationEmail

@@ -344,7 +344,7 @@ export function auditMarkdown(markdown: string): MarkdownIssue[] {
       issues.push({
         code: 'heading_h1_reserved',
         message:
-          "Level 1 is the lesson title. Use level 2 (##) for the first section. The toolbar offers H2 and H3 only; H4–H6 are accepted on paste and import but not produced by the toolbar.",
+          'Level 1 is the lesson title. Use level 2 (##) for the first section. The toolbar offers H2 and H3 only; H4–H6 are accepted on paste and import but not produced by the toolbar.',
         examples: [`# ${match[1].trim()}`],
         line: i + 1,
       })

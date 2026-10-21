@@ -138,16 +138,16 @@ const conflictInputSchema = z.object({
 export const getLessonServerRowVersion = createServerFn({ method: 'GET' })
   .validator((input: unknown) => lessonInputSchema.parse(input))
   .handler(async ({ data }) => {
-    const { getLessonServerRowVersionImpl } = await import('./courses.markdown-conflict.impl.server')
+    const { getLessonServerRowVersionImpl } =
+      await import('./courses.markdown-conflict.impl.server')
     return getLessonServerRowVersionImpl(data.lessonPublicId)
   })
 
 export const recordLessonConflictOverride = createServerFn({ method: 'POST' })
   .validator((input: unknown) => conflictInputSchema.parse(input))
   .handler(async ({ data }) => {
-    const { recordLessonConflictOverrideImpl } = await import(
-      './courses.markdown-conflict.impl.server'
-    )
+    const { recordLessonConflictOverrideImpl } =
+      await import('./courses.markdown-conflict.impl.server')
     await recordLessonConflictOverrideImpl(data)
     return { ok: true as const }
   })

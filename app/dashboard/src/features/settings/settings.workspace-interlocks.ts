@@ -97,8 +97,7 @@ export function checkRequireMfaForAllInterlock(ctx: InterlockContext): Interlock
     return {
       ok: false,
       field: 'requireMfaFor',
-      reason:
-        'Add a second admin first — otherwise a lost authenticator locks the workspace.',
+      reason: 'Add a second admin first — otherwise a lost authenticator locks the workspace.',
     }
   }
   return { ok: true }
@@ -173,7 +172,9 @@ export function checkMaxMembersDecreaseInterlock(ctx: InterlockContext): Interlo
  * Spec copy: "3 people are in 4+ workspaces. Raise the limit or remove them
  * first."
  */
-export function checkSelfServiceWorkspacesDecreaseInterlock(ctx: InterlockContext): InterlockResult {
+export function checkSelfServiceWorkspacesDecreaseInterlock(
+  ctx: InterlockContext,
+): InterlockResult {
   const proposed = ctx.changes.organizationLimit
   if (proposed === null || proposed === undefined) return { ok: true }
   const current = ctx.current?.organizationLimit ?? null

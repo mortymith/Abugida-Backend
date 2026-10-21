@@ -20,17 +20,15 @@ import {
   readDraft,
   writeDraft,
   clearDraft,
-  __resetDraftsDbCacheForTests
-  
+  __resetDraftsDbCacheForTests,
 } from '#/features/courses/hooks/courses.markdown-draft-mirror'
 
 // Inject the fake IndexedDB before any test opens a database. The module
 // checks `typeof indexedDB === 'undefined'` at call time, so the injection
 // works even though the file was imported above.
-;
-import type {LessonDraftMirror} from '#/features/courses/hooks/courses.markdown-draft-mirror';
+import type { LessonDraftMirror } from '#/features/courses/hooks/courses.markdown-draft-mirror'
 
-(globalThis as unknown as { indexedDB: typeof fakeIndexedDB }).indexedDB = fakeIndexedDB
+;(globalThis as unknown as { indexedDB: typeof fakeIndexedDB }).indexedDB = fakeIndexedDB
 ;(globalThis as unknown as { IDBKeyRange: typeof fakeKeyRange }).IDBKeyRange = fakeKeyRange
 
 beforeEach(async () => {

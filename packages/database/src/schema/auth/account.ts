@@ -1,7 +1,7 @@
 import { pgTable, text, timestamp, index, uniqueIndex } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
-import { z } from 'zod'
+import type { z } from 'zod'
 import { users } from './users'
 
 export const account = pgTable(

@@ -1,9 +1,11 @@
 import { queryOptions } from '@tanstack/react-query'
-import { getCohortComparison } from '../server/analytics.cohorts'
-import { getCoursePerformanceAnalytics } from '../server/analytics.performance'
-import { getDropOffAnalytics } from '../server/analytics.drop-off'
-import { getQuizAnalytics } from '../server/analytics.quiz'
-import { listExportCourses } from '../server/analytics.export'
+import {
+  getCohortComparison,
+  getCoursePerformanceAnalytics,
+  getDropOffAnalytics,
+  getQuizAnalytics,
+  listExportCourses,
+} from '../server/all'
 import type { AnalyticsRangeInput } from '../schemas/analytics.schema'
 
 export const analyticsQueryKeys = {

@@ -204,10 +204,10 @@ export const LESSON_EDITOR_PERFORMANCE_BUDGETS = {
  */
 export const LESSON_EDITOR_ACCEPTANCE_CRITERIA = [
   'axe reports zero violations on Rich, Split, and Source, including at 200% zoom.',
-  'A complete keyboard path — tree → item pane → type → Ctrl/⌘+S → switch mode → back to the tree — completes with no mouse, and the tree\'s selection and scroll position are intact on return.',
+  "A complete keyboard path — tree → item pane → type → Ctrl/⌘+S → switch mode → back to the tree — completes with no mouse, and the tree's selection and scroll position are intact on return.",
   'NVDA and VoiceOver pass on all three modes: the toolbar reports group and pressed state, the source textarea is labelled, find reports "n of N matches", and a conflict is announced assertive.',
   'At 200% zoom and at a 320px viewport, the editor reflows with no horizontal page scroll; a table wider than the pane scrolls inside its own labelled region.',
-  'A 10-minute Ge\'ez lesson renders with zero fixed-height truncation — no line-clamp, no clipped glyph at line-height: 1.6, and no truncation on the source pane.',
+  "A 10-minute Ge'ez lesson renders with zero fixed-height truncation — no line-clamp, no clipped glyph at line-height: 1.6, and no truncation on the source pane.",
   'Closing the tab with unsaved changes, then reopening the same lesson, presents the "Restore unsaved draft from {time}?" prompt with a working Discard (§ 8.1.1).',
   'Going offline, editing, and reconnecting with a server-side change in between resolves to the three-option conflict dialog — never a silent overwrite (§ 8.2).',
 ] as const

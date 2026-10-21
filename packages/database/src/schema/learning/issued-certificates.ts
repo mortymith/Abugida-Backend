@@ -10,7 +10,7 @@ import {
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { createSelectSchema } from 'drizzle-zod'
-import { z } from 'zod'
+import type { z } from 'zod'
 import { users } from '../auth/users'
 import { courses } from '../catalog/courses'
 import { enrollments } from './enrollments'

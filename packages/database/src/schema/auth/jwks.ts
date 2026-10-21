@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp, index } from 'drizzle-orm/pg-core'
 import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod'
-import { z } from 'zod'
+import type { z } from 'zod'
 
 export const jwks = pgTable(
   'jwks',

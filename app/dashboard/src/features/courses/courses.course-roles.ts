@@ -8,13 +8,7 @@
  * The `roles.name` column is unique, and these five names are the spec's
  * vocabulary. A grant for an unknown name is rejected at the boundary.
  */
-export const COURSE_ROLE_NAMES = [
-  'owner',
-  'instructor',
-  'reviewer',
-  'viewer',
-  'support',
-] as const
+export const COURSE_ROLE_NAMES = ['owner', 'instructor', 'reviewer', 'viewer', 'support'] as const
 
 export type CourseRoleName = (typeof COURSE_ROLE_NAMES)[number]
 

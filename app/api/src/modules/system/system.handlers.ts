@@ -62,9 +62,7 @@ export function createSystemHandlers() {
       // payment-gateway checks are stubs that return `'unavailable'`, so this
       // correctly yields 503 until they're wired up; do NOT treat `'unavailable'`
       // as passing here, or the probe stops protecting rollout.
-      const allAvailable = [database, smsProvider, paymentGateway].every(
-        (v) => v === 'ok',
-      )
+      const allAvailable = [database, smsProvider, paymentGateway].every((v) => v === 'ok')
 
       return c.json(
         {

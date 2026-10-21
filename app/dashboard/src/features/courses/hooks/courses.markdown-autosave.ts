@@ -28,14 +28,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 export const LESSON_AUTOSAVE_IDLE_MS = 60_000
 
-export type SaveStatus =
-  | 'idle'
-  | 'dirty'
-  | 'saving'
-  | 'saved'
-  | 'error'
-  | 'offline'
-  | 'suspended'
+export type SaveStatus = 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'offline' | 'suspended'
 
 export interface UseLessonAutosaveOptions {
   /** Whether a save is currently permitted (editable + not locked). */

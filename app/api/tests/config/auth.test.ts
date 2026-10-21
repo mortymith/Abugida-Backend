@@ -10,6 +10,14 @@
 
 import { beforeAll, describe, it, expect } from 'bun:test'
 
+/**
+ * The auth instance is built on first use (Better Auth initialises its
+ * plugins, crypto helpers, and the database binding). Under load — e.g. when
+ * every workspace test suite runs in parallel — that import can take longer
+ * than Bun's 5s default timeout, so these tests carry an explicit budget.
+ */
+const AUTH_INIT_TIMEOUT_MS = 30_000
+
 describe('auth module', () => {
   beforeAll(async () => {
     // The auth instance logs through the shared observability logger, which
@@ -17,65 +25,85 @@ describe('auth module', () => {
     const { init } = await import('@/config/observability')
     await init()
   })
-  it('exports createAuthInstance function', async () => {
-    const mod = await import('@/config/auth')
-    expect(typeof mod.createAuthInstance).toBe('function')
-  })
+  it(
+    'exports createAuthInstance function',
+    async () => {
+      const mod = await import('@/config/auth')
+      expect(typeof mod.createAuthInstance).toBe('function')
+    },
+    AUTH_INIT_TIMEOUT_MS,
+  )
 
-  it('builds exactly one instance per process', async () => {
-    const mod = await import('@/config/auth')
-    expect(mod.createAuthInstance()).toBe(mod.createAuthInstance())
-  })
+  it(
+    'builds exactly one instance per process',
+    async () => {
+      const mod = await import('@/config/auth')
+      expect(mod.createAuthInstance()).toBe(mod.createAuthInstance())
+    },
+    AUTH_INIT_TIMEOUT_MS,
+  )
 
-  it('resolves the configuration from the shared auth package', async () => {
-    const { createAuthInstance } = await import('@/config/auth')
-    const { config, api, db } = createAuthInstance()
+  it(
+    'resolves the configuration from the shared auth package',
+    async () => {
+      const { createAuthInstance } = await import('@/config/auth')
+      const { config, api, db } = createAuthInstance()
 
-    expect(config.secret).toBeDefined()
-    expect(config.baseUrl).toBeDefined()
-    expect(config.database.provider).toBe('pg')
-    expect(config.database.db).toBeDefined()
-    // Bound from @abugida/database — the app never declares these tables.
-    expect(config.database.schema).toHaveProperty('user')
-    expect(config.database.schema).toHaveProperty('session')
-    expect(config.database.schema).toHaveProperty('organization')
+      expect(config.secret).toBeDefined()
+      expect(config.baseUrl).toBeDefined()
+      expect(config.database.provider).toBe('pg')
+      expect(config.database.db).toBeDefined()
+      // Bound from @abugida/database — the app never declares these tables.
+      expect(config.database.schema).toHaveProperty('user')
+      expect(config.database.schema).toHaveProperty('session')
+      expect(config.database.schema).toHaveProperty('organization')
 
-    expect(typeof config.providers).toBe('object')
-    expect(config.rateLimit.max).toBe(100)
-    expect(config.rateLimit.windowSeconds).toBe(60)
-    expect(config.cors?.credentials).toBe(true)
-    expect(Array.isArray(config.cors?.origins)).toBe(true)
+      expect(typeof config.providers).toBe('object')
+      expect(config.rateLimit.max).toBe(100)
+      expect(config.rateLimit.windowSeconds).toBe(60)
+      expect(config.cors?.credentials).toBe(true)
+      expect(Array.isArray(config.cors?.origins)).toBe(true)
 
-    // Exposes better-auth's server API and the Drizzle handle the shared
-    // authorization helpers need.
-    expect(api).toBeDefined()
-    expect(db).toBeDefined()
-  })
+      // Exposes better-auth's server API and the Drizzle handle the shared
+      // authorization helpers need.
+      expect(api).toBeDefined()
+      expect(db).toBeDefined()
+    },
+    AUTH_INIT_TIMEOUT_MS,
+  )
 
-  it('serves the same plugin surface as the dashboard', async () => {
-    const { createAuthInstance } = await import('@/config/auth')
-    const { api } = createAuthInstance() as unknown as {
-      api: Record<string, unknown>
-    }
+  it(
+    'serves the same plugin surface as the dashboard',
+    async () => {
+      const { createAuthInstance } = await import('@/config/auth')
+      const { api } = createAuthInstance() as unknown as {
+        api: Record<string, unknown>
+      }
 
-    // Organizations and two-factor are registered by @abugida/auth, not here.
-    expect(api.getActiveMember).toBeDefined()
-    expect(api.createOrganization).toBeDefined()
-    expect(api.listMembers).toBeDefined()
-    expect(api.verifyTOTP).toBeDefined()
-    expect(api.verifyBackupCode).toBeDefined()
-  })
+      // Organizations and two-factor are registered by @abugida/auth, not here.
+      expect(api.getActiveMember).toBeDefined()
+      expect(api.createOrganization).toBeDefined()
+      expect(api.listMembers).toBeDefined()
+      expect(api.verifyTOTP).toBeDefined()
+      expect(api.verifyBackupCode).toBeDefined()
+    },
+    AUTH_INIT_TIMEOUT_MS,
+  )
 
-  it('mounts the auth endpoints with backend-owned social sign-in policy', async () => {
-    // Redirect destinations are app configuration, not request data: the
-    // shared mount replaces the client's body (see
-    // `SocialSignInPolicy` in @abugida/auth and its tests).
-    const { registerAuthRoutePolicy } = await import('@/app')
-    expect(typeof registerAuthRoutePolicy).toBe('function')
+  it(
+    'mounts the auth endpoints with backend-owned social sign-in policy',
+    async () => {
+      // Redirect destinations are app configuration, not request data: the
+      // shared mount replaces the client's body (see
+      // `SocialSignInPolicy` in @abugida/auth and its tests).
+      const { registerAuthRoutePolicy } = await import('@/app')
+      expect(typeof registerAuthRoutePolicy).toBe('function')
 
-    const policy = registerAuthRoutePolicy()
-    expect(policy.socialSignIn?.callbackURL).toBeDefined()
-    expect(policy.socialSignIn?.providerAliases).toEqual({ telegram: 'telegram-oidc' })
-    expect(policy.telegramConfig).toEqual({ providerId: 'telegram' })
-  })
+      const policy = registerAuthRoutePolicy()
+      expect(policy.socialSignIn?.callbackURL).toBeDefined()
+      expect(policy.socialSignIn?.providerAliases).toEqual({ telegram: 'telegram-oidc' })
+      expect(policy.telegramConfig).toEqual({ providerId: 'telegram' })
+    },
+    AUTH_INIT_TIMEOUT_MS,
+  )
 })

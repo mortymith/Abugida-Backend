@@ -41,19 +41,12 @@ import {
   ASSET_MISSING,
   LINK_UNREACHABLE,
   extractImageUrls,
-  extractLinkUrls
-  
-  
+  extractLinkUrls,
 } from '../courses.reference-audit'
-import type {ReferenceAuditCode, ReferenceAuditFinding} from '../courses.reference-audit';
+import type { ReferenceAuditCode, ReferenceAuditFinding } from '../courses.reference-audit'
 
 // Re-export the pure helpers so callers can import everything from one place.
-export {
-  ASSET_MISSING,
-  LINK_UNREACHABLE,
-  extractImageUrls,
-  extractLinkUrls,
-}
+export { ASSET_MISSING, LINK_UNREACHABLE, extractImageUrls, extractLinkUrls }
 export type { ReferenceAuditCode, ReferenceAuditFinding }
 
 /**
@@ -67,9 +60,7 @@ export type { ReferenceAuditCode, ReferenceAuditFinding }
  * No network call: this is a single indexed query per distinct asset id, not a
  * CDN probe. That is what makes the check affordable to run on every flush.
  */
-export async function auditImageAssetsImpl(
-  markdown: string,
-): Promise<ReferenceAuditFinding[]> {
+export async function auditImageAssetsImpl(markdown: string): Promise<ReferenceAuditFinding[]> {
   await requireAuthoringRole()
   const images = extractImageUrls(markdown)
   if (images.length === 0) return []
@@ -105,8 +96,7 @@ export async function auditImageAssetsImpl(
         code: ASSET_MISSING,
         url,
         line,
-        message:
-          'This image is in the Media module’s archive — restore it or choose another.',
+        message: 'This image is in the Media module’s archive — restore it or choose another.',
       })
     }
   }
@@ -137,10 +127,7 @@ interface LinkCheckOptions {
   negativeTtlMs?: number
 }
 
-async function checkLink(
-  url: string,
-  options: LinkCheckOptions = {},
-): Promise<boolean> {
+async function checkLink(url: string, options: LinkCheckOptions = {}): Promise<boolean> {
   const now = Date.now()
   const cached = linkCache.get(url)
   if (cached && cached.expiresAt > now) return cached.reachable
@@ -228,8 +215,10 @@ export async function auditReferencesImpl(
 function isMediaAssetUrl(url: string): boolean {
   // Match a UUID in the path or query string. Good enough for the heuristic;
   // the DB lookup is the source of truth.
-  return /[?&][^=]*=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(url) ||
+  return (
+    /[?&][^=]*=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(url) ||
     /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(url)
+  )
 }
 
 /** Test-only: clear the in-memory link cache. */

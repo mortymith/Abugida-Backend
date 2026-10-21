@@ -19,7 +19,11 @@
  * count is bounded regardless of how often the buffer flushes.
  */
 import { and, desc, eq, gt, lt } from '@abugida/database'
-import { lessons, lessonBodyRevisions, LESSON_BODY_REVISION_RETENTION  } from '@abugida/database/catalog'
+import {
+  lessons,
+  lessonBodyRevisions,
+  LESSON_BODY_REVISION_RETENTION,
+} from '@abugida/database/catalog'
 import { db } from '#/config/db.config'
 import { requireAuthoringRole, requireUserId, resolveLesson } from './courses.server-helpers.server'
 import type { LessonBodyRevisionReason } from '@abugida/database/catalog'

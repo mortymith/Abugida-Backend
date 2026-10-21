@@ -99,17 +99,10 @@ export function createBookmarksService(repo: BookmarksRepository): BookmarksServ
       // `itemId` arrives as a public UUID; the `bookmarks.item_id` column is a
       // bigint referencing `courses.id` or `lessons.id`. Resolve to the internal
       // id before checking for an existing bookmark / inserting.
-      const internalItemId = await repo.resolveItemIdByPublicId(
-        fields.itemType,
-        fields.itemId,
-      )
+      const internalItemId = await repo.resolveItemIdByPublicId(fields.itemType, fields.itemId)
       if (internalItemId === undefined) throw new BookmarkItemNotFoundError()
 
-      const existing = await repo.findBookmarkByItemId(
-        userId,
-        fields.itemType,
-        internalItemId,
-      )
+      const existing = await repo.findBookmarkByItemId(userId, fields.itemType, internalItemId)
       if (existing) throw new ConflictError('Item is already bookmarked.')
 
       const bookmark = await repo.createBookmark(userId, fields.itemType, internalItemId)

@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
 import type { DrizzleConfig } from 'drizzle-orm/utils'
-import { Pool, type PoolClient, type PoolConfig } from 'pg'
+import type { Pool } from 'pg'
+import { type PoolClient, type PoolConfig } from 'pg'
 import * as schema from './schema'
 
 type SchemaConfig = DrizzleConfig<typeof schema>

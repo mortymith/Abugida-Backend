@@ -13,8 +13,6 @@ import { WorkspaceConfigView, workspaceConfigQueryOptions } from '#/features/set
 export const Route = createFileRoute('/_app/settings/workspace-config')({
   beforeLoad: () => requireRolesBeforeLoad(['admin']),
   loader: ({ context }) =>
-    context.queryClient
-      .ensureQueryData(workspaceConfigQueryOptions())
-      .catch(() => undefined),
+    context.queryClient.ensureQueryData(workspaceConfigQueryOptions()).catch(() => undefined),
   component: WorkspaceConfigView,
 })

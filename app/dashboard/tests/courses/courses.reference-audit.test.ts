@@ -71,9 +71,7 @@ test('extractLinkUrls skips mailto: and relative URLs', () => {
 })
 
 test('extractLinkUrls reports the correct 1-based line for a mid-document link', () => {
-  const markdown = ['Intro paragraph.', '', 'Read the [guide](https://example.com).', ''].join(
-    '\n',
-  )
+  const markdown = ['Intro paragraph.', '', 'Read the [guide](https://example.com).', ''].join('\n')
   const urls = extractLinkUrls(markdown)
   expect(urls[0]?.line).toBe(3)
 })

@@ -6,10 +6,7 @@
  * the type guard, and the self-approval guard's error vocabulary.
  */
 import { test, expect } from 'bun:test'
-import {
-  COURSE_ROLE_NAMES,
-  isCourseRoleName,
-} from '#/features/courses/courses.course-roles'
+import { COURSE_ROLE_NAMES, isCourseRoleName } from '#/features/courses/courses.course-roles'
 
 test('COURSE_ROLE_NAMES matches the spec vocabulary', () => {
   // Spec 13 § The Two Role Systems — the `roles.name` column is unique, and

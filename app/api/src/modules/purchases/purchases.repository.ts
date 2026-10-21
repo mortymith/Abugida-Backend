@@ -278,10 +278,7 @@ export function createPurchasesRepository(db: DatabaseClient): PurchasesReposito
       // of creating a second one.
       const conditions = [
         eq(purchases.studentId, studentId),
-        or(
-          eq(purchases.status, 'initiated'),
-          eq(purchases.status, 'payment_pending'),
-        ),
+        or(eq(purchases.status, 'initiated'), eq(purchases.status, 'payment_pending')),
       ]
       if (courseId !== null) {
         conditions.push(eq(purchases.courseId, courseId))

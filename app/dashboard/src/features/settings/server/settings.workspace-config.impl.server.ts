@@ -21,14 +21,15 @@ import {
   PLUGIN_DEFAULTS,
   WORKSPACE_CONFIG_FIELDS,
   resolveEnvironmentEntry,
-  resolveWorkspaceEntry
-  
-  
-  
+  resolveWorkspaceEntry,
 } from '../settings.workspace-policies'
-import type {EnvPolicyKey, WorkspaceConfigEntry, WorkspaceConfigResult} from '../settings.workspace-policies';
-import { runAllInterlocks  } from '../settings.workspace-interlocks'
-import type {InterlockContext} from '../settings.workspace-interlocks';
+import type {
+  EnvPolicyKey,
+  WorkspaceConfigEntry,
+  WorkspaceConfigResult,
+} from '../settings.workspace-policies'
+import { runAllInterlocks } from '../settings.workspace-interlocks'
+import type { InterlockContext } from '../settings.workspace-interlocks'
 
 /**
  * Resolve the active organization for the caller. The dashboard is
@@ -54,7 +55,7 @@ async function resolveActiveOrganization(
   return {
     id: row.id,
     name: row.name,
-    policies: (row.policies) ?? null,
+    policies: row.policies ?? null,
   }
 }
 
@@ -273,13 +274,11 @@ async function buildInterlockContext(
   const activeOwnerSessionRows = await db
     .select({ sessionId: session.id })
     .from(session)
-    .innerJoin(member, and(eq(member.userId, session.userId), eq(member.organizationId, organizationId)))
-    .where(
-      and(
-        sql`${session.expiresAt} > NOW()`,
-        sql`${member.role} LIKE '%owner%'`,
-      ),
+    .innerJoin(
+      member,
+      and(eq(member.userId, session.userId), eq(member.organizationId, organizationId)),
     )
+    .where(and(sql`${session.expiresAt} > NOW()`, sql`${member.role} LIKE '%owner%'`))
     .limit(1)
   const hasActiveOwnerSession = activeOwnerSessionRows.length > 0
 

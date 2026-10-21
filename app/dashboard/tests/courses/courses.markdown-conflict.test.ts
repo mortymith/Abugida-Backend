@@ -10,12 +10,8 @@
  *  - The `ConflictResolution` type narrows to the three spec values.
  */
 import { test, expect } from 'bun:test'
-import {
-  diffMarkdown,
-  summarizeDiff
-  
-} from '#/features/courses/courses.markdown-conflict'
-import type {ConflictResolution} from '#/features/courses/courses.markdown-conflict';
+import { diffMarkdown, summarizeDiff } from '#/features/courses/courses.markdown-conflict'
+import type { ConflictResolution } from '#/features/courses/courses.markdown-conflict'
 
 test('identical bodies produce one equal row per line', () => {
   const rows = diffMarkdown('hello\nworld', 'hello\nworld')

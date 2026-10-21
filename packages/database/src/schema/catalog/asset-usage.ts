@@ -1,7 +1,7 @@
 import { pgTable, bigint, uuid, text, timestamp, uniqueIndex, index } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
-import { z } from 'zod'
+import type { z } from 'zod'
 import { users } from '../auth/users'
 import { lessons } from './lessons'
 import { assetLibrary } from './asset-library'

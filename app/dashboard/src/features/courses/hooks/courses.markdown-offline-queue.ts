@@ -85,9 +85,7 @@ async function openQueueDb(): Promise<IDBDatabase | null> {
   })
 }
 
-async function getQueueStore(
-  mode: 'readonly' | 'readwrite',
-): Promise<IDBObjectStore | null> {
+async function getQueueStore(mode: 'readonly' | 'readwrite'): Promise<IDBObjectStore | null> {
   const db = await openQueueDb()
   if (!db) return null
   return db.transaction(QUEUE_STORE_NAME, mode).objectStore(QUEUE_STORE_NAME)

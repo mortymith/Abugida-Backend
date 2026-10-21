@@ -176,14 +176,30 @@ export const WORKSPACE_CONFIG_FIELDS: Array<{
   range: string
 }> = [
   { key: 'membershipLimit', label: 'Max members per workspace', range: '1–500' },
-  { key: 'allowUserToCreateOrganization', label: 'Allow members to create workspaces', range: 'on / off' },
+  {
+    key: 'allowUserToCreateOrganization',
+    label: 'Allow members to create workspaces',
+    range: 'on / off',
+  },
   { key: 'organizationLimit', label: 'Max workspaces per user', range: '1–20' },
   { key: 'invitationExpiresInDays', label: 'Invite link expiry', range: '1–30 days' },
   { key: 'invitationLimit', label: 'Max pending invitations', range: '0–200' },
-  { key: 'cancelPendingInvitationsOnReInvite', label: 'Re-inviting replaces the previous link', range: 'on / off' },
-  { key: 'requireMfaFor', label: 'Require two-factor for', range: 'Everyone / Editors+Reviewers / No one' },
+  {
+    key: 'cancelPendingInvitationsOnReInvite',
+    label: 'Re-inviting replaces the previous link',
+    range: 'on / off',
+  },
+  {
+    key: 'requireMfaFor',
+    label: 'Require two-factor for',
+    range: 'Everyone / Editors+Reviewers / No one',
+  },
   { key: 'sessionTimeoutMinutes', label: 'Session timeout', range: '15m / 1h / 8h / 24h / 7d' },
-  { key: 'sessionRevocationOnRoleChange', label: 'Session revocation on role change', range: 'on / off' },
+  {
+    key: 'sessionRevocationOnRoleChange',
+    label: 'Session revocation on role change',
+    range: 'on / off',
+  },
 ]
 
 /**

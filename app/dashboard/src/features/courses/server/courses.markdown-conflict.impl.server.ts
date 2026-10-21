@@ -85,7 +85,9 @@ export async function getLessonServerRowVersionImpl(
 export async function confirmServerBodyImpl(
   lessonPublicId: string,
   expectedRowVersion: number,
-): Promise<{ ok: true; rowVersion: number; body: string | null } | { ok: false; rowVersion: number }> {
+): Promise<
+  { ok: true; rowVersion: number; body: string | null } | { ok: false; rowVersion: number }
+> {
   await requireUserId()
   const lesson = await resolveLesson(lessonPublicId)
   if (lesson.rowVersion !== expectedRowVersion) {

@@ -35,14 +35,12 @@
 export type WorkspaceConfigEntryPoint = 'settings_nav' | 'deep_link' | 'audit_log'
 
 /** The S-13.2 entry point that opened the workspace switcher. */
-export type WorkspaceSwitcherEntryPoint = 'header' | 'avatar_menu' | 'keyboard_shortcut' | 'command_palette'
+export type WorkspaceSwitcherEntryPoint =
+  'header' | 'avatar_menu' | 'keyboard_shortcut' | 'command_palette'
 
 /** The S-13.2 reason a workspace switch failed. */
 export type WorkspaceSwitchFailReason =
-  | 'offline'
-  | 'session_expired'
-  | 'removed_from_workspace'
-  | 'server_error'
+  'offline' | 'session_expired' | 'removed_from_workspace' | 'server_error'
 
 /** The S-13.3 role a member was changed from / to. */
 export type MemberRoleValue = 'owner' | 'admin' | 'member' | 'reviewer' | 'support' | 'viewer'

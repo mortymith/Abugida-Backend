@@ -178,9 +178,7 @@ export function createQuizzesRepository(db: DatabaseClient): QuizzesRepository {
       const [result] = await db
         .select({ count: count() })
         .from(quizAttempts)
-        .where(
-          and(eq(quizAttempts.studentId, studentId), eq(quizAttempts.lessonId, lessonId)),
-        )
+        .where(and(eq(quizAttempts.studentId, studentId), eq(quizAttempts.lessonId, lessonId)))
       return result?.count ?? 0
     },
 

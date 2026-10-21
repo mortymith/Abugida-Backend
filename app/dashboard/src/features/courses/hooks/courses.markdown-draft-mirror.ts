@@ -253,7 +253,7 @@ export function useLessonDraftMirror({
       // `cancelled` is set by the cleanup function below. TS's control-flow
       // analysis narrows it to `false` here because it cannot see the async
       // reassignment; the cast keeps the runtime check.
-      if ((cancelled as boolean)) return
+      if (cancelled as boolean) return
       if (!draft) {
         setRestore({ kind: 'none' })
         return

@@ -14,10 +14,9 @@ import { test, expect, beforeEach } from 'bun:test'
 import {
   trackWorkspaceEvent,
   subscribeToWorkspaceEvents,
-  __clearWorkspaceEventSinksForTests
-  
+  __clearWorkspaceEventSinksForTests,
 } from '#/features/workspaces/workspaces.events'
-import type {WorkspaceEvent} from '#/features/workspaces/workspaces.events';
+import type { WorkspaceEvent } from '#/features/workspaces/workspaces.events'
 
 beforeEach(() => {
   __clearWorkspaceEventSinksForTests()
