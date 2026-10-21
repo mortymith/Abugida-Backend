@@ -6,7 +6,7 @@
  */
 
 import { defineMiddleware } from 'astro:middleware'
-import { instrumentRequest } from '../src/integrations/astro.ts'
+import { instrumentRequest } from '../../src/integrations/astro.js'
 
 export const onRequest = defineMiddleware(async (context, next) => {
   return instrumentRequest(context.request.headers, context.url.pathname, next)

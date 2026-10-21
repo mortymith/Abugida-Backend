@@ -13,7 +13,7 @@ import {
   createUpDownCounter,
   withServerSpan,
   withSpan,
-} from '../src/index.ts'
+} from '../../src/index.js'
 
 await initObservability({
   serviceName: 'dashboard',

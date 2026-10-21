@@ -6,7 +6,7 @@
  */
 
 import { createMiddleware } from '@tanstack/react-start'
-import { initObservability, logger, withServerSpan, recordServerError } from '../src/index.ts'
+import { initObservability, logger, withServerSpan, recordServerError } from '../../src/index.js'
 
 await initObservability({
   serviceName: 'dashboard',
@@ -120,12 +120,12 @@ interface Progress {
   currentStreak: number
 }
 
-async function fetchEnrollments(userId: string): Promise<Enrollment[]> {
+async function fetchEnrollments(_userId: string): Promise<Enrollment[]> {
   await new Promise((resolve) => setTimeout(resolve, 30))
   return [{ id: '1', courseId: 'c1', progress: 0.5 }]
 }
 
-async function fetchRecommendations(userId: string): Promise<Recommendation[]> {
+async function fetchRecommendations(_userId: string): Promise<Recommendation[]> {
   await new Promise((resolve) => setTimeout(resolve, 80))
   return [{ id: 'r1', courseId: 'c2', score: 0.92 }]
 }

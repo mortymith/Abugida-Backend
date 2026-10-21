@@ -13,10 +13,8 @@ import {
   createCounter,
   createHistogram,
   createUpDownCounter,
-  incrementCounter,
-  recordHistogram,
   getMeter,
-} from '../src/index.ts'
+} from '../../src/index.js'
 
 const app = new Hono()
 

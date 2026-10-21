@@ -52,4 +52,3 @@ function telebirrTimestamp(date: Date): string {
 }
 
 export { restoreFetch, stubFetch, telebirrTimestamp }
-export type { StubHandler, StubResponse }

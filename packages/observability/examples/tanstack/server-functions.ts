@@ -14,7 +14,7 @@ import {
   recordServerError,
   createInstrumentedHandler,
   withServerSpan,
-} from '../src/index.ts'
+} from '../../src/index.js'
 
 await initObservability({
   serviceName: 'dashboard',
@@ -136,12 +136,12 @@ function validateCourse(course: Course): void {
   }
 }
 
-async function doPublish(courseId: string): Promise<{ publishedAt: string }> {
+async function doPublish(_courseId: string): Promise<{ publishedAt: string }> {
   await new Promise((resolve) => setTimeout(resolve, 100))
   return { publishedAt: new Date().toISOString() }
 }
 
-async function computeStats(userId: string): Promise<Stats> {
+async function computeStats(_userId: string): Promise<Stats> {
   await new Promise((resolve) => setTimeout(resolve, 50))
   return { enrolledCount: 5, completedCount: 3 }
 }

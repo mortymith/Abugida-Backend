@@ -4,7 +4,7 @@
  * with health check routes.
  */
 
-import { createHonoWorker, mergeWithDefaults } from '../../../src/index.js'
+import { createHonoWorker, mergeWithDefaults } from '../../src/index.js'
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -22,7 +22,7 @@ const config = mergeWithDefaults({
 // Create Worker with Health Routes
 // ---------------------------------------------------------------------------
 
-const { app, worker, start, stop } = createHonoWorker({
+const { start, stop } = createHonoWorker({
   config,
 })
 
@@ -53,6 +53,9 @@ async function main() {
 
 // In a real app, you would also serve healthApp on a port:
 // serve(healthApp, { port: 3001 });
+
+// Referenced on purpose: a real app calls main() to start the worker.
+void main
 
 console.log('[example:hono:worker] Worker example (not actually starting)')
 console.log('In a real app, call main() to start the worker.')

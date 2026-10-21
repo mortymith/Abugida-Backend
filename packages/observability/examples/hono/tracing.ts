@@ -13,8 +13,8 @@ import {
   getTracer,
   withSpan,
   recordError,
-} from '../src/index.ts'
-import { observabilityMiddleware } from '../src/integrations/hono.ts'
+} from '../../src/index.js'
+import { observabilityMiddleware } from '../../src/integrations/hono.js'
 
 const app = new Hono()
 
@@ -142,7 +142,7 @@ async function updateCourseInDb(courseId: string, updates: Partial<Course>): Pro
   return { id: courseId, title: 'Sample Course', status: updates.status ?? 'draft' }
 }
 
-async function scheduleNotifications(courseId: string): Promise<void> {
+async function scheduleNotifications(_courseId: string): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 50))
 }
 

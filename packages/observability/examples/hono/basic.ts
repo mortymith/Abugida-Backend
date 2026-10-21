@@ -10,13 +10,12 @@ import {
   initObservability,
   shutdownObservability,
   logger,
-  getTracer,
   createCounter,
   createHistogram,
   recordError,
   withSpan,
-} from '../src/index.ts'
-import { observabilityMiddleware } from '../src/integrations/hono.ts'
+} from '../../src/index.js'
+import { observabilityMiddleware } from '../../src/integrations/hono.js'
 
 const app = new Hono()
 

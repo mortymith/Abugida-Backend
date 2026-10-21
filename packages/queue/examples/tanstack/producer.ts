@@ -3,7 +3,12 @@
  * @description Example of enqueuing jobs from a TanStack Start server function.
  */
 
-import { getTanStackQueueClient, mergeWithDefaults, JobType, type DataExportJobData } from "../../../src/index.js";
+import {
+  getTanStackQueueClient,
+  mergeWithDefaults,
+  JobType,
+  type DataExportJobData,
+} from '../../src/index.js'
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -11,11 +16,11 @@ import { getTanStackQueueClient, mergeWithDefaults, JobType, type DataExportJobD
 
 const config = mergeWithDefaults({
   redis: {
-    hostname: "localhost",
+    hostname: 'localhost',
     port: 6379,
   },
-  logging: { level: "debug", format: "pretty" },
-});
+  logging: { level: 'debug', format: 'pretty' },
+})
 
 // ---------------------------------------------------------------------------
 // Server Functions (TanStack Start)
@@ -25,17 +30,20 @@ const config = mergeWithDefaults({
  * Server function: Request a GDPR data export.
  * Can be called from a TanStack Start route or component.
  */
-export async function requestDataExport(userId: string, format: "json" | "csv" = "json"): Promise<string> {
-  const queue = getTanStackQueueClient(config);
+export async function requestDataExport(
+  userId: string,
+  format: 'json' | 'csv' = 'json',
+): Promise<string> {
+  const queue = getTanStackQueueClient(config)
 
   const jobId = await queue.enqueue(JobType.DATA_EXPORT, {
     userId,
     format,
     requestedAt: new Date().toISOString(),
     idempotencyKey: `export:${userId}:${Date.now()}`,
-  } satisfies DataExportJobData);
+  } satisfies DataExportJobData)
 
-  return jobId;
+  return jobId
 }
 
 /**
@@ -44,33 +52,33 @@ export async function requestDataExport(userId: string, format: "json" | "csv" =
 export async function submitReviewForModeration(
   reviewId: string,
   content: string,
-  submittedBy: string
+  submittedBy: string,
 ): Promise<string> {
-  const queue = getTanStackQueueClient(config);
+  const queue = getTanStackQueueClient(config)
 
   const jobId = await queue.enqueue(JobType.MODERATION_SUBMIT, {
-    entityType: "review",
+    entityType: 'review',
     entityId: reviewId,
     content,
     submittedBy,
     idempotencyKey: `moderation:review:${reviewId}`,
-  });
+  })
 
-  return jobId;
+  return jobId
 }
 
 /**
  * Server function: Trigger course statistics recalculation.
  */
 export async function triggerStatsRecalculation(courseId: string): Promise<string> {
-  const queue = getTanStackQueueClient(config);
+  const queue = getTanStackQueueClient(config)
 
   const jobId = await queue.enqueue(JobType.RECALCULATE_STATS, {
     courseId,
     idempotencyKey: `stats:${courseId}:${Date.now()}`,
-  });
+  })
 
-  return jobId;
+  return jobId
 }
 
 // ---------------------------------------------------------------------------
@@ -88,5 +96,5 @@ export async function triggerStatsRecalculation(courseId: string): Promise<strin
 //   // ... component JSX
 // }
 
-console.log("[example:tanstack:producer] TanStack Start producer example");
-console.log("Import these server functions into your TanStack Start routes.");
+console.log('[example:tanstack:producer] TanStack Start producer example')
+console.log('Import these server functions into your TanStack Start routes.')

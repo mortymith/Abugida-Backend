@@ -6,7 +6,7 @@
  */
 
 import type { APIRoute } from 'astro'
-import { createCounter, createHistogram, withPageSpan, recordAstroError } from '../src/index.ts'
+import { createCounter, createHistogram, withPageSpan, recordAstroError } from '../../src/index.js'
 
 const contactCounter = createCounter('marketing_contact_submissions_total', {
   description: 'Total number of contact form submissions',
@@ -58,6 +58,6 @@ export const POST: APIRoute = async ({ request }) => {
   })
 }
 
-async function sendContactEmail(body: { name?: string; email: string; message: string }) {
+async function sendContactEmail(_body: { name?: string; email: string; message: string }) {
   await new Promise((resolve) => setTimeout(resolve, 100))
 }

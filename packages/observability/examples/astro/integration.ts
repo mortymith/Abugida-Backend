@@ -6,7 +6,7 @@
  */
 
 import { defineConfig } from 'astro/config'
-import { astroObservability } from '../src/integrations/astro.ts'
+import { astroObservability } from '../../src/integrations/astro.js'
 
 export default defineConfig({
   output: 'server',
