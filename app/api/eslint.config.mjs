@@ -1,32 +1,31 @@
-import tseslint from 'typescript-eslint'
+// @ts-check
 
-export default tseslint.config(
-  {
-    ignores: ['dist/**', 'node_modules/**'],
-  },
-  {
+/**
+ * ESLint configuration for the Hono API.
+ *
+ * The rules come from the shared tooling layer (`@abugida/eslint-config`).
+ * This file only adds the API's own type-aware projects: application code
+ * and tests are checked against different tsconfigs.
+ */
+import base, { typescriptProject } from '@abugida/eslint-config'
+
+export default [
+  ...base,
+  typescriptProject({
     files: ['src/**/*.ts'],
-    extends: [...tseslint.configs.recommended],
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: {
-        project: './tsconfig.json',
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
-  },
-  {
+    project: './tsconfig.json',
+    tsconfigRootDir: import.meta.dirname,
+  }),
+  typescriptProject({
     files: ['tests/**/*.ts'],
-    extends: [...tseslint.configs.recommended],
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: {
-        project: './tsconfig.test.json',
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
+    project: './tsconfig.test.json',
+    tsconfigRootDir: import.meta.dirname,
+  }),
+  {
+    name: 'abugida/api/test-rules',
+    files: ['tests/**/*.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },
-)
+]

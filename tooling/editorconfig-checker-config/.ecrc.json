@@ -3,28 +3,35 @@
     "Shared editorconfig-checker configuration for the Abugida monorepo.",
     "Consumed from root scripts: editorconfig-checker -config tooling/editorconfig-checker-config/.ecrc.json",
     "Generated, vendored, and lockfile content is excluded; everything else",
-    "must satisfy .editorconfig (LF, UTF-8, final newline, 2-space indent)."
+    "must satisfy .editorconfig (LF, UTF-8, final newline, 2-space indent).",
+    "",
+    "Format notes (editorconfig-checker v4):",
+    "- 'Disable' maps a check to true when the check must be skipped.",
+    "- 'Exclude' holds regular expressions (not globs) matched against the",
+    "  checked file paths."
   ],
   "Verbose": false,
   "Disable": {
     "MaxLineLength": true,
+    "Indentation": true,
     "TrimTrailingWhitespace": false,
-    "InsertFinalNewline": false,
-    "Indentation": true
+    "InsertFinalNewline": false
   },
-  "Ignore": [
-    "node_modules/**",
-    "**/node_modules/**",
-    "**/dist/**",
-    "**/.turbo/**",
-    "**/.astro/**",
-    "**/*.gen.ts",
-    "**/*.map",
-    "pnpm-lock.yaml",
-    "patches/**",
-    ".agents/**",
-    ".git/**",
-    "**/*.svg",
-    "**/*.md"
+  "Exclude": [
+    "(^|/)node_modules/",
+    "(^|/)dist/",
+    "(^|/)\\.turbo/",
+    "(^|/)\\.astro/",
+    "(^|/)coverage/",
+    "(^|/)\\.git/",
+    "(^|/)patches/",
+    "(^|/)\\.agents/",
+    "(^|/)\\.vscode/",
+    "packages/database/drizzle/",
+    "\\.gen\\.ts$",
+    "\\.map$",
+    "\\.md$",
+    "\\.svg$",
+    "pnpm-lock\\.yaml$"
   ]
 }

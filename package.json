@@ -18,14 +18,17 @@
     "dev": "turbo dev",
     "dev:tui": "turbo dev --ui=tui",
     "build": "turbo build",
-    "lint": "turbo lint",
-    "format": "turbo format",
+    "lint": "turbo lint && pnpm lint:tooling",
+    "lint:tooling": "eslint --config tooling/eslint.config.js tooling",
+    "format": "turbo format && pnpm format:root && pnpm format:shell",
+    "format:root": "prettier --config tooling/prettier-config/index.js --write \"*.{md,json,yaml,yml}\" \"docs/**/*.{md,mdx,json,yaml,yml}\" \"tooling/**/*.{js,mjs,cjs,ts,tsx,json,md,mdx,yaml,yml}\"",
+    "format:shell": "git ls-files '*.sh' | xargs -r shfmt -w -i 2 -sr -ln bash",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "clean": "turbo clean && rm -rf node_modules .turbo",
     "clean:workspaces": "turbo clean",
     "prepare": "husky && turbo run build --filter=./packages/*",
-    "lint:spelling": "cspell lint --no-progress --no-summary \"**/*.md\"",
+    "lint:spelling": "cspell lint --config tooling/cspell-config/cspell.json --no-progress --no-summary \"**/*.md\"",
     "lint:docker": "git ls-files '*Dockerfile' | xargs -r hadolint -c tooling/hadolint-config/.hadolint.yaml",
     "lint:yaml": "git ls-files '*.yml' '*.yaml' | grep -v pnpm-lock.yaml | xargs -r yamllint -c tooling/yamllint-config/.yamllint.yaml",
     "lint:markdown": "git ls-files '*.md' | grep -v '^.agents' | xargs -r markdownlint -c tooling/markdownlint-config/.markdownlint.json",
@@ -34,7 +37,12 @@
     "lint:shell": "git ls-files '*.sh' | xargs -r shellcheck -x --rcfile tooling/shellcheck-config/.shellcheckrc",
     "lint:secrets": "gitleaks git --no-banner --config tooling/gitleaks-config/.gitleaks.toml",
     "lint:deps": "syncpack lint --config tooling/syncpack-config/syncpack.config.js",
-    "knip": "KNIP_DISABLE_RAW_TRANSFER=1 knip --no-progress"
+    "knip": "KNIP_DISABLE_RAW_TRANSFER=1 knip --config tooling/knip-config/index.js --no-progress"
+  },
+  "commitlint": {
+    "extends": [
+      "@abugida/commitlint-config"
+    ]
   },
   "type": "module",
   "devDependencies": {
@@ -55,10 +63,8 @@
     "@abugida/typescript-config": "workspace:*",
     "@abugida/yamllint-config": "workspace:*",
     "@commitlint/cli": "^21.2.1",
-    "@commitlint/config-conventional": "^21.2.0",
     "cspell": "^10.3.3",
-    "@commitlint/config-conventional": "^21.2.0",
-    "eslint": "^10.8.0",
+    "eslint": "^10.8.1",
     "husky": "^9.1.7",
     "knip": "^6.37.0",
     "lint-staged": "^17.2.0",

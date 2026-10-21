@@ -123,3 +123,12 @@ commitlint
 editorconfig
 pgbouncer
 PRELOADED
+
+# Shell, TLS, and networking protocol vocabulary.
+pipefail
+certbot
+libc
+PSYNC
+ECONNREFUSED
+ECONNRESET
+ETIMEDOUT

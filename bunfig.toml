@@ -9,4 +9,4 @@ frozenLockfile = true
 # workspaces that run `bun test` carry their own thin bunfig.toml pointing at
 # the same preload via the @abugida/bun-test-config package.
 [test]
-preload = ["./tooling/bun-test-config/preload"]
+preload = ["@abugida/bun-test-config/preload"]

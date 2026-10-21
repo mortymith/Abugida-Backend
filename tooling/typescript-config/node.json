@@ -8,11 +8,17 @@
     "exposes Bun's globals without pulling Node's type surface into client code.",
     "noImplicitReturns lives here (not in base) because it matches the",
     "historical policy of app/api and the root config, while the shared",
-    "libraries never enabled it. Consumers keep app-specific options (jsx,",
-    "paths, include) local."
+    "libraries never enabled it.",
+    "",
+    "declaration/declarationMap are off: a project that does not emit must not",
+    "declare types either (declaration emit errors would otherwise surface",
+    "for inferred types that cannot be named).",
+    "Consumers keep app-specific options (jsx, paths, include) local."
   ],
   "compilerOptions": {
     "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
     "noImplicitReturns": true,
     "types": ["bun"]
   }

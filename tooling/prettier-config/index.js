@@ -3,16 +3,22 @@
 /**
  * Shared Prettier configuration for the Abugida monorepo.
  *
- * Extracted verbatim from the historical root `prettier.config.js` so every
- * consumer (root scripts, lint-staged, all workspaces) formats identically.
- * The Astro plugin lives here as a real dependency so the config is reusable
- * from any workspace without each one re-declaring the plugin.
+ * One formatting policy for the whole repository. Every workspace owns a
+ * `prettier.config.js` that re-exports this config, and repository-level
+ * files (docs, tooling sources) are formatted with `--config` pointing
+ * here — there is no root Prettier config.
  *
- * Consumed by the root `prettier.config.js`:
- *   export { default } from '@abugida/prettier-config'
- *
- * @type {import('prettier').Config}
+ * The Astro plugin is resolved to an absolute path on purpose: Prettier
+ * resolves plugin names relative to the config file that declares them, and
+ * this config is consumed from many directories (workspaces, the repository
+ * root, lint-staged). An absolute path keeps the plugin resolvable
+ * everywhere while it stays a dependency of this package only.
  */
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+
+/** @type {import('prettier').Config} */
 const config = {
   printWidth: 100,
   tabWidth: 2,
@@ -24,7 +30,7 @@ const config = {
   bracketSpacing: true,
   bracketSameLine: false,
   arrowParens: 'always',
-  plugins: ['prettier-plugin-astro'],
+  plugins: [require.resolve('prettier-plugin-astro')],
   overrides: [
     {
       files: '*.astro',

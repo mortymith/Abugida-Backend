@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-pnpm exec lint-staged
+pnpm exec lint-staged --config tooling/lint-staged-config/index.js

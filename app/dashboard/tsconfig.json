@@ -1,4 +1,5 @@
 {
+  "extends": "@abugida/typescript-config/base.json",
   "include": ["**/*.ts", "**/*.tsx", "eslint.config.js", "prettier.config.js", "vite.config.ts"],
 
   "compilerOptions": {
@@ -24,6 +25,14 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* Known relaxations vs the shared base (see tooling/typescript-config) */
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
+
+    /* This app never emits: no declarations, no declaration maps. */
+    "declaration": false,
+    "declarationMap": false
   }
 }

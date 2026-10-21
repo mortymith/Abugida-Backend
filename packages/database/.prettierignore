@@ -1,0 +1,5 @@
+# Build output — not source, never formatted.
+dist/
+
+# Generated Drizzle migrations and their metadata — never formatted.
+drizzle/

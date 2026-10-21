@@ -6,8 +6,10 @@
   "license": "MIT",
   "type": "module",
   "main": "./index.js",
+  "types": "./index.d.ts",
   "files": [
-    "index.js"
+    "index.js",
+    "index.d.ts"
   ],
   "dependencies": {
     "typescript-eslint": "8.69.0"

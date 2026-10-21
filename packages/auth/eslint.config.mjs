@@ -1,10 +1,16 @@
-import tseslint from 'typescript-eslint'
+// @ts-check
 
-export default tseslint.config(
-  {
-    ignores: ['dist/**', 'node_modules/**'],
-  },
-  {
+/**
+ * ESLint configuration for the auth package.
+ *
+ * Rules come from the shared tooling layer (`@abugida/eslint-config`); this
+ * file adds the package's type-aware project.
+ */
+import base, { typescriptProject } from '@abugida/eslint-config'
+
+export default [
+  ...base,
+  typescriptProject({
     files: [
       'src/**/*.ts',
       'src/**/*.tsx',
@@ -13,17 +19,7 @@ export default tseslint.config(
       'examples/**/*.ts',
       'examples/**/*.tsx',
     ],
-    extends: [...tseslint.configs.recommended],
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: {
-        project: ['./tsconfig.eslint.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
-    rules: {
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/consistent-type-imports': 'warn',
-    },
-  },
-)
+    project: ['./tsconfig.eslint.json'],
+    tsconfigRootDir: import.meta.dirname,
+  }),
+]

@@ -20,3 +20,32 @@ Backblaze
 journeyapps
 bunfig
 waitlists
+
+# Authentication + learner-facing product vocabulary.
+Passwordless
+PASSWORDLESS
+passwordless
+SMSETHIOPIA
+merch
+merchOrderId
+
+# Telecom domain vocabulary (Ethiopian mobile subscribers).
+Msisdn
+MSISDN
+msisdn
+MSISDNs
+
+# Domain and engineering vocabulary used in the docs and READMEs.
+memoises
+poolable
+variadics
+preflights
+impls
+themable
+grayscale
+
+# Design-system vocabulary (fonts, accessibility).
+Noto
+Segoe
+Consolas
+WCAG

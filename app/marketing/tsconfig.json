@@ -1,5 +1,10 @@
 {
-  "extends": "astro/tsconfigs/strict",
+  "extends": ["@abugida/typescript-config/base.json", "astro/tsconfigs/strict"],
+  "compilerOptions": {
+    /* Astro builds the site: nothing is emitted by tsc. */
+    "declaration": false,
+    "declarationMap": false
+  },
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
+  "exclude": ["dist", "eslint.config.js", "prettier.config.js"]
 }
