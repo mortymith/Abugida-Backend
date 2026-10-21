@@ -36,9 +36,11 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "@types/pg": "8.21.0",
+    "@abugida/eslint-config": "workspace:*",
+    "@abugida/typescript-config": "workspace:*",
+    "@types/bun": "^1.4.2",
+    "@types/pg": "^8.21.0",
     "dotenv-expand": "^13.0.0",
-    "typescript-eslint": "^8.65.0"
+    "typescript": "6.0.3"
   }
 }

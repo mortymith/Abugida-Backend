@@ -1,22 +1,15 @@
-import tseslint from 'typescript-eslint'
+import base, { typescriptProject } from '@abugida/eslint-config'
 
-export default tseslint.config(
-  {
-    ignores: ['dist/**', 'node_modules/**'],
-  },
-  {
+export default [
+  ...base,
+  ...typescriptProject({
     files: ['src/**/*.ts', 'tests/**/*.ts'],
-    extends: [...tseslint.configs.recommended],
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: {
-        project: ['./tsconfig.eslint.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
+    project: ['./tsconfig.eslint.json'],
+    tsconfigRootDir: import.meta.dirname,
+  }),
+  {
     rules: {
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/consistent-type-imports': 'warn',
     },
   },
-)
+]

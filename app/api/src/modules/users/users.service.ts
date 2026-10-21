@@ -7,7 +7,7 @@
 
 import type { QueueClient } from '@abugida/queue'
 import { JobType } from '@abugida/queue'
-import { devices } from '@abugida/database/auth'
+import type { devices } from '@abugida/database/auth'
 import type { UserRepository } from './users.repository'
 import type {
   UserProfileView,

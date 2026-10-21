@@ -70,12 +70,13 @@
   "devDependencies": {
     "@abugida/auth": "workspace:*",
     "@abugida/database": "workspace:*",
+    "@abugida/eslint-config": "workspace:*",
+    "@abugida/typescript-config": "workspace:*",
     "@types/bun": "^1.4.2",
     "eslint": "^10.8.1",
     "hono": "^4.6.14",
     "prettier": "^3.9.6",
-    "typescript": "^5.7.2",
-    "typescript-eslint": "^8.67.0",
+    "typescript": "6.0.3",
     "zod": "4.4.3"
   },
   "keywords": [

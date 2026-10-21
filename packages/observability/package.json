@@ -1,7 +1,7 @@
 {
   "name": "@abugida/observability",
   "version": "1.0.0",
-  "description": "Shared observability layer for the Abugida backend ecosystem — Pino logging + OpenTelemetry tracing & metrics over OTLP",
+  "description": "Shared observability layer for the Abugida backend ecosystem \u2014 Pino logging + OpenTelemetry tracing & metrics over OTLP",
   "type": "module",
   "license": "MIT",
   "private": false,
@@ -51,12 +51,13 @@
     "pino": "9.6.0"
   },
   "devDependencies": {
+    "@abugida/eslint-config": "workspace:*",
+    "@abugida/typescript-config": "workspace:*",
     "@types/bun": "^1.4.2",
     "eslint": "^10.8.1",
     "hono": "^4.7.4",
     "prettier": "^3.9.6",
-    "typescript": "^5.7.2",
-    "typescript-eslint": "^8.67.0"
+    "typescript": "6.0.3"
   },
   "peerDependencies": {
     "hono": ">=4.0.0"

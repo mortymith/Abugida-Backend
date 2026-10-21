@@ -1,14 +1,13 @@
-import tseslint from 'typescript-eslint'
+import base, { typescriptProject } from '@abugida/eslint-config'
 
-export default tseslint.config({
-  ignores: ['dist/**', 'drizzle/**', 'tests/**', 'examples/**', 'drizzle.config.ts'],
-  files: ['**/*.ts'],
-  extends: [...tseslint.configs.recommended],
-  languageOptions: {
-    parser: tseslint.parser,
-    parserOptions: {
-      project: true,
-      tsconfigRootDir: import.meta.dirname,
-    },
+export default [
+  ...base,
+  {
+    ignores: ['drizzle/**', 'tests/**', 'examples/**', 'drizzle.config.ts'],
   },
-})
+  ...typescriptProject({
+    files: ['**/*.ts'],
+    project: true,
+    tsconfigRootDir: import.meta.dirname,
+  }),
+]
