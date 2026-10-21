@@ -147,6 +147,33 @@ function onlyExisting(command) {
   }
 }
 
+/**
+ * Directories whose files are linted and formatted by their own owner.
+ *
+ * The repository-level patterns below use a leading `*`, which lint-staged
+ * matches against the basename — so they also match files inside a
+ * workspace. Those files are handled by the workspace patterns and must not
+ * be linted a second time with the tooling configuration.
+ */
+const ownedDirectories = ['app/', 'packages/', 'tooling/', 'docs/']
+
+/**
+ * Wrap a command so that it only runs on repository-level files.
+ *
+ * @param {string} command
+ * @returns {(files: string[]) => string}
+ */
+function onlyRepositoryFiles(command) {
+  return (files) => {
+    const owned = files.filter(
+      (file) =>
+        !ownedDirectories.some((directory) => file.replaceAll('\\', '/').startsWith(directory)),
+    )
+    if (owned.length === 0) return ''
+    return [command, ...owned.map((file) => JSON.stringify(file))].join(' ')
+  }
+}
+
 /** @type {import('lint-staged').Configuration} */
 const config = {}
 
@@ -174,11 +201,11 @@ config['tooling/**/*.{json,jsonc,md,mdx,yaml,yml,css,scss,html,graphql}'] = [
 // Repository-level files: no workspace owns them, so the shared configs are
 // referenced explicitly.
 config['*.{js,mjs,cjs,ts,tsx,jsx}'] = [
-  onlyExisting('eslint --fix --no-warn-ignored --config tooling/eslint.config.js'),
-  onlyExisting('prettier --write --config tooling/prettier-config/index.js'),
+  onlyRepositoryFiles('eslint --fix --no-warn-ignored --config tooling/eslint.config.js'),
+  onlyRepositoryFiles('prettier --write --config tooling/prettier-config/index.js'),
 ]
 config['*.{json,jsonc,md,mdx,yaml,yml,css,scss,html,graphql}'] = [
-  onlyExisting('prettier --write --config tooling/prettier-config/index.js'),
+  onlyRepositoryFiles('prettier --write --config tooling/prettier-config/index.js'),
 ]
 config['docs/**/*.{md,mdx,json,yaml,yml}'] = [
   onlyExisting('prettier --write --config tooling/prettier-config/index.js'),
