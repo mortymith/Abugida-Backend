@@ -48,6 +48,6 @@ export async function currentSessionUser(): Promise<{
   const request = getRequest()
   const session = await getAuth().getSession(request.headers)
   if (!session.ok) return null
-  const user = session.value.user as typeof session.value.user & { twoFactorEnabled?: boolean }
+  const user = session.value.user as unknown as { id: string; twoFactorEnabled?: boolean }
   return { id: user.id, twoFactorEnabled: user.twoFactorEnabled === true }
 }

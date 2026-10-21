@@ -104,7 +104,7 @@ function buildAuditWhere(query: AuditLogQuery): AuditWhere {
   }
   const isValidAction = (AUDIT_ACTIONS as readonly string[]).includes(query.action ?? '')
   if (query.action && isValidAction) {
-    filters.push(eq(auditLogs.action, query.action as (typeof AUDIT_ACTIONS)[number]))
+    filters.push(eq(auditLogs.action, query.action as unknown as (typeof AUDIT_ACTIONS)[number]))
   }
   return filters.length ? and(...filters) : undefined
 }

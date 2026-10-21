@@ -113,7 +113,7 @@ export async function listAffiliatesImpl(query: {
       and(
         isNull(affiliates.deletedAt),
         query.status && query.status !== 'all'
-          ? eq(affiliates.status, query.status as 'pending')
+          ? eq(affiliates.status, query.status as 'pending' | 'approved' | 'suspended' | 'declined')
           : undefined,
       ),
     )

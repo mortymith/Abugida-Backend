@@ -57,7 +57,7 @@ export async function getRolesPageImpl(): Promise<RolesPage> {
     ...BUILT_IN_ROLES.map<RoleItem>((name) => ({
       publicId: `built-in:${name}`,
       name,
-      description: ROLE_DESCRIPTIONS[name] ?? null,
+      description: ROLE_DESCRIPTIONS[name],
       isBuiltIn: true,
       permissions: effective[name] ?? {},
     })),

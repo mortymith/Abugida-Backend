@@ -262,18 +262,11 @@ curl http://localhost:3001/courses/$COURSE_PUBLIC_ID
 }
 ```
 
-> [!WARNING]
-> **The content hierarchy is not traversable over the API yet.**
+> [!NOTE]
+> **Content hierarchy traversal.**
 >
-> - `GET /courses/{courseId}/curriculum` returns the course and its ordered modules, but
->   populates `lessons` with an empty array.
-> - `GET /modules/{moduleId}/lessons` parses the UUID `moduleId` as an integer
->   (`Number.parseInt(moduleId, 10) || 0`), so it resolves module `0`.
->
-> The reliably usable content reads today are `GET /courses/{courseId}`,
-> `GET /courses/{courseId}/curriculum` (module list), and `GET /courses/{courseId}/modules`
-> (with `lessonCount`). Read lesson-level content directly from `@abugida/database` in the
-> meantime.
+> - `GET /courses/{courseId}/curriculum` returns the course and its ordered modules and lessons.
+> - `GET /modules/{moduleId}/lessons` accepts the public UUID `moduleId` and returns lessons for that module.
 
 ## Architecture
 

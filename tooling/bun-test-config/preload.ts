@@ -17,6 +17,10 @@ const TEST_ENV_DEFAULTS = {
   BETTER_AUTH_SECRET: 'tooling-preload-test-secret-0123456789abcdef',
   BETTER_AUTH_URL: 'http://localhost:3000',
   DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+  GOOGLE_CLIENT_ID: '12345.apps.googleusercontent.com',
+  GOOGLE_CLIENT_SECRET: 'google-client-secret-test-value',
+  TELEGRAM_OIDC_CLIENT_ID: 'telegram-oidc-client-id-test-value',
+  TELEGRAM_OIDC_CLIENT_SECRET: 'telegram-oidc-client-secret-test-value',
 } as const
 
 for (const [key, value] of Object.entries(TEST_ENV_DEFAULTS)) {

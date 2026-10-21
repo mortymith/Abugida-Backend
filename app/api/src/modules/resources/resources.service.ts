@@ -176,8 +176,11 @@ export function createResourcesService(repo: ResourcesRepository): ResourcesServ
     },
 
     async listModuleLessons(moduleId, query) {
+      const internalModuleId = await repo.findModuleIdByPublicId(moduleId)
+      if (!internalModuleId) throw new NotFoundError('Module not found.')
+
       const limit = query.limit ?? 20
-      const { rows, hasMore } = await repo.findLessonsByModule(Number.parseInt(moduleId, 10) || 0, {
+      const { rows, hasMore } = await repo.findLessonsByModule(internalModuleId, {
         cursor: query.cursor,
         limit,
       })

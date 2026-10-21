@@ -103,6 +103,7 @@ export interface ResourcesRepository {
   ): Promise<{ rows: CourseWithStats[]; hasMore: boolean }>
   findModulesByCourse(courseId: number): Promise<ModuleWithCount[]>
   findLessonsByCourse(courseId: number): Promise<LessonRow[]>
+  findModuleIdByPublicId(publicId: string): Promise<number | undefined>
   findLessonsByModule(
     moduleId: number,
     opts: { cursor: string | undefined; limit: number },
@@ -301,6 +302,15 @@ export function createResourcesRepository(db: DatabaseClient): ResourcesReposito
         .orderBy(asc(modules.sortOrder), asc(lessons.sortOrder), asc(lessons.id))
 
       return rows as LessonRow[]
+    },
+
+    async findModuleIdByPublicId(publicId) {
+      const [row] = await db
+        .select({ id: modules.id })
+        .from(modules)
+        .where(and(eq(modules.publicId, publicId), isNull(modules.deletedAt)))
+        .limit(1)
+      return row?.id
     },
 
     async findLessonsByModule(moduleId, opts) {
