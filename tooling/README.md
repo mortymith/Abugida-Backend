@@ -8,25 +8,28 @@ Shared, per-tool configuration packages. **One source of truth per tool, owned b
 ## Design
 
 The tooling layer holds **only** configuration that is genuinely shared across the
-repository. It covers the tools whose configuration is _code_ — a JavaScript
-module, a JSON preset, a dictionary set — that more than one consumer imports
-or extends.
+repository. It covers the tools whose configuration is a **preset or a dictionary
+set** that several consumers import or extend (eslint, prettier, typescript,
+bun test, cspell).
 
-Tools whose configuration is a **single, non-importable file** (shellcheck,
-hadolint, yamllint, markdownlint, editorconfig-checker, gitleaks,
-dotenv-linter) keep that file in the repository root, where the tool discovers
-it by convention. Wrapping one file in a workspace package would add a
-publish/resolve step without adding any sharing.
+Every other tool owns exactly **one** configuration file, and that file lives in
+the repository root under the name the tool discovers it by convention
+(`.shellcheckrc`, `knip.config.js`, `commitlint.config.js`, …). Wrapping a
+single file in a workspace package would add a publish/resolve step without
+adding any sharing: nothing imports it, and the tool reads it from the project
+root anyway.
 
 | Concern              | Owner                                                                    |
 | -------------------- | ------------------------------------------------------------------------ |
 | ESLint rules         | `tooling/eslint-config` → composed by each workspace's `eslint.config.*` |
 | Prettier policy      | `tooling/prettier-config` → re-exported by each `prettier.config.js`     |
 | TypeScript presets   | `tooling/typescript-config` → `extends` in each `tsconfig.json`          |
-| Commit message rules | `tooling/commitlint-config` → root `package.json#commitlint`             |
-| Staged-file pipeline | `tooling/lint-staged-config` → husky `pre-commit` hook                   |
-| Unused code analysis | `tooling/knip-config` → root `pnpm knip`                                 |
-| Spelling             | `tooling/cspell-config` → root `pnpm lint:spelling`                      |
+| Test preload         | `tooling/bun-test-config` → `bunfig.toml` (`[test] preload`)             |
+| Spelling dictionary  | `tooling/cspell-config` → root `pnpm lint:spelling` (`--config`)         |
+| Commit message rules | repository-root `commitlint.config.js` → husky `commit-msg` hook         |
+| Staged-file pipeline | repository-root `lint-staged.config.js` → husky `pre-commit` hook        |
+| Unused code analysis | repository-root `knip.config.js` → root `pnpm knip`                      |
+| Version drift        | repository-root `syncpack.config.js` → root `pnpm lint:deps`             |
 | CLI linters          | repository-root config file → root `lint:*` scripts                      |
 
 Everything that is _not_ shared lives with its owner: an app's framework
@@ -36,34 +39,34 @@ plugins, a package's `tsconfig` paths, a script's shell rules.
 
 All tooling packages use the repository's established `@abugida/*` scope. Every tool has exactly one owner; consumers depend on the package (JS modules) or reference the config file path (CLI configs consumed from root scripts).
 
-| Package                      | Tool        | Consumed by                                       | Blocking gate               |
-| ---------------------------- | ----------- | ------------------------------------------------- | --------------------------- |
-| `tooling/typescript-config`  | tsc         | `app/*`, `packages/*` (`extends`)                 | `pnpm typecheck`            |
-| `tooling/eslint-config`      | eslint      | every workspace's `eslint.config.*`               | `pnpm lint`                 |
-| `tooling/prettier-config`    | prettier    | every workspace's `prettier.config.js`            | `pnpm format` / lint-staged |
-| `tooling/bun-test-config`    | bun test    | root + workspace `bunfig.toml` (`[test] preload`) | `pnpm test`                 |
-| `tooling/lint-staged-config` | lint-staged | husky `pre-commit` hook (`--config`)              | husky `pre-commit`          |
-| `tooling/commitlint-config`  | commitlint  | root `package.json#commitlint`                    | husky `commit-msg`          |
-| `tooling/cspell-config`      | cspell      | root `pnpm lint:spelling` (`--config`)            | yes                         |
-| `tooling/knip-config`        | knip        | root `pnpm knip` (`--config`)                     | advisory                    |
-| `tooling/syncpack-config`    | syncpack    | root `pnpm lint:deps` (config path)               | yes                         |
+| Package                     | Tool     | Consumed by                                       | Blocking gate               |
+| --------------------------- | -------- | ------------------------------------------------- | --------------------------- |
+| `tooling/typescript-config` | tsc      | `app/*`, `packages/*` (`extends`)                 | `pnpm typecheck`            |
+| `tooling/eslint-config`     | eslint   | every workspace's `eslint.config.*`               | `pnpm lint`                 |
+| `tooling/prettier-config`   | prettier | every workspace's `prettier.config.js`            | `pnpm format` / lint-staged |
+| `tooling/bun-test-config`   | bun test | root + workspace `bunfig.toml` (`[test] preload`) | `pnpm test`                 |
+| `tooling/cspell-config`     | cspell   | root `pnpm lint:spelling` (`--config`)            | yes                         |
 
 ### Repository-root tool configuration
 
 These tools own exactly one configuration file. The file lives in the repository
-root — the directory every root script runs from — and is both discovered by
-the tool and passed explicitly by the root script, so the result never depends
-on discovery order.
+root — the directory every root script runs from — and is discovered by the
+tool itself, so the scripts need no `--config` flag and the result never
+depends on the working directory.
 
-| Config file          | Tool                 | Consumed by                               | Blocking gate |
-| -------------------- | -------------------- | ----------------------------------------- | ------------- |
-| `.shellcheckrc`      | shellcheck           | `pnpm lint:shell` (`--rcfile`)            | yes           |
-| `.hadolint.yaml`     | hadolint             | `pnpm lint:docker` (`-c`)                 | yes           |
-| `.yamllint.yaml`     | yamllint             | `pnpm lint:yaml` (`-c`)                   | yes           |
-| `.markdownlint.json` | markdownlint         | `pnpm lint:markdown` (`-c`)               | yes           |
-| `.ecrc.json`         | editorconfig-checker | `pnpm lint:editorconfig` (`-config`)      | yes           |
-| `.gitleaks.toml`     | gitleaks             | `pnpm lint:secrets` (`--config`)          | yes           |
-| `.dotenv-linter`     | dotenv-linter        | `pnpm lint:env` (policy + explicit flags) | yes           |
+| Config file             | Tool                 | Consumed by                               | Blocking gate      |
+| ----------------------- | -------------------- | ----------------------------------------- | ------------------ |
+| `.shellcheckrc`         | shellcheck           | `pnpm lint:shell` (`--rcfile`)            | yes                |
+| `.hadolint.yaml`        | hadolint             | `pnpm lint:docker` (`-c`)                 | yes                |
+| `.yamllint.yaml`        | yamllint             | `pnpm lint:yaml` (`-c`)                   | yes                |
+| `.markdownlint.json`    | markdownlint         | `pnpm lint:markdown` (`-c`)               | yes                |
+| `.ecrc.json`            | editorconfig-checker | `pnpm lint:editorconfig` (`-config`)      | yes                |
+| `.gitleaks.toml`        | gitleaks             | `pnpm lint:secrets` (`--config`)          | yes                |
+| `.dotenv-linter`        | dotenv-linter        | `pnpm lint:env` (policy + explicit flags) | yes                |
+| `knip.config.js`        | knip                 | `pnpm knip`                               | advisory           |
+| `syncpack.config.js`    | syncpack             | `pnpm lint:deps`                          | yes                |
+| `lint-staged.config.js` | lint-staged          | husky `pre-commit` hook                   | husky `pre-commit` |
+| `commitlint.config.js`  | commitlint           | husky `commit-msg` hook                   | husky `commit-msg` |
 
 ## How consumption works
 
@@ -103,9 +106,9 @@ on discovery order.
   must stay in the consuming tsconfig — relative paths in a shared preset
   resolve against the preset file.
 
-- **CLI configs** (syncpack, cspell, knip) — the root `package.json` scripts
-  pass the config path explicitly, e.g. `syncpack lint --config
-tooling/syncpack-config/syncpack.config.js`.
+- **CLI configs** (cspell) — the root `package.json` script passes the config
+  path explicitly, e.g. `cspell lint --config tooling/cspell-config/cspell.json`.
+  The config is a dictionary set (two word lists), so it stays a package.
 
 - **Root CLI configs** (shellcheck, hadolint, yamllint, markdownlint,
   editorconfig-checker, gitleaks, dotenv-linter) — the config file lives in the
@@ -113,6 +116,14 @@ tooling/syncpack-config/syncpack.config.js`.
   `hadolint -c .hadolint.yaml`. The same file is picked up automatically when
   the tool is run without a config flag, so editors and ad-hoc invocations
   behave like CI.
+
+- **Root JS configs** (knip, syncpack, lint-staged, commitlint) — the config
+  file lives in the repository root under the name the tool discovers
+  (`knip.config.js`, `syncpack.config.js`, `lint-staged.config.js`,
+  `commitlint.config.js`). The root scripts and the husky hooks call the tools
+  without a `--config` flag, so the file is always the one that is loaded.
+  They are linted and formatted with the tooling layer's own ESLint and
+  Prettier configs (`pnpm lint:tooling`, `pnpm format:root`).
 
 ## Commands
 
@@ -123,8 +134,8 @@ pnpm typecheck          # tsc per workspace (turbo)
 pnpm test               # bun test per workspace (turbo) — no env exports needed
 pnpm build              # tsc builds for packages, bundlers for apps
 
-pnpm lint:tooling       # ESLint over the tooling layer itself
-pnpm format:root        # Prettier over repository-level files (docs, tooling)
+pnpm lint:tooling       # ESLint over the tooling layer + the root tool configs
+pnpm format:root        # Prettier over repository-level files (docs, tooling, root configs)
 pnpm format:shell       # shfmt over the tracked shell scripts
 
 pnpm lint:spelling      # cspell over tracked Markdown          (blocking)
@@ -175,13 +186,13 @@ There is no CI in this repository yet. When CI is added, the system binaries abo
 First decide where the configuration belongs:
 
 - **A single file that no other tool imports** (shellcheck, hadolint,
-  yamllint, markdownlint, editorconfig-checker, gitleaks, dotenv-linter) →
-  put it in the repository root, named exactly as the tool discovers it
-  (`.shellcheckrc`, `.hadolint.yaml`, …), and pass it explicitly from the root
-  script. No package, no workspace entry.
-- **A module, preset, or dictionary set that several consumers import or
-  extend** (eslint, prettier, typescript, commitlint, lint-staged, knip,
-  cspell, syncpack) → create a `tooling/<tool>-config/` package.
+  yamllint, markdownlint, editorconfig-checker, gitleaks, dotenv-linter,
+  knip, syncpack, lint-staged, commitlint) → put it in the repository root,
+  named exactly as the tool discovers it (`.shellcheckrc`, `knip.config.js`,
+  …). No package, no workspace entry.
+- **A preset or dictionary set that several consumers import or extend**
+  (eslint, prettier, typescript, bun test, cspell) → create a
+  `tooling/<tool>-config/` package.
 
 For a tooling package:
 
@@ -194,9 +205,10 @@ For a tooling package:
 For a root-level config file:
 
 1. Name the file exactly as the tool discovers it, and place it in the repository root.
-2. Pass it explicitly from the root script so the result never depends on the working directory.
+2. Call the tool without a `--config` flag, so the discovered file is the one that is loaded.
 3. Add the file to the "Repository-root tool configuration" table above.
 4. If the tool needs a system binary, add it to the system-binary table below.
+5. Lint and format it with the tooling layer's configs: add it to the `lint:tooling` and `format:root` scripts.
 
 ## Tool-specific exceptions
 
@@ -209,8 +221,10 @@ For a root-level config file:
 - **gitleaks** (`.gitleaks.toml`): `[extend] useDefault = true` is required — a custom config without it silently _replaces_ the rule set and scans nothing. The allowlist covers committed `.env.example` placeholders (ADR-006 dev-only defaults), test fixtures, and API doc examples; every entry is individually justified inline.
 - **dotenv-linter** (`.dotenv-linter`): dotenv-linter 3.x discovers its config via CWD walk-up, so the file lives in the repository root and `lint:env` additionally passes the skips as explicit flags — the result is identical either way. Only `.env.example` files are ever scanned — real `.env` files (actual secrets) are never passed to the linter.
 - **editorconfig-checker** (`.ecrc.json`): v4 takes regular expressions in `Exclude` (not globs) and a boolean map in `Disable`. Generated migrations (`packages/database/drizzle/**`) are excluded like other generated code.
-- **knip-config**: the app modules, the dashboard features and the published packages export their public surface by design, so the `exports`/`types` issue types are not reported for them. Intentional API aliases are excluded from the `duplicates` report.
-- **lint-staged-config**: the workspace list is discovered from the filesystem, so a new workspace is covered by the pre-commit hook without touching the file.
+- **knip** (`knip.config.js`): the app modules, the dashboard features and the published packages export their public surface by design, so the `exports`/`types` issue types are not reported for them. Intentional API aliases are excluded from the `duplicates` report.
+- **lint-staged** (`lint-staged.config.js`): the workspace list is discovered from the filesystem, so a new workspace is covered by the pre-commit hook without touching the file.
+- **commitlint** (`commitlint.config.js`): `body-max-line-length` / `footer-max-line-length` stay disabled because generated PR/issue footers legitimately exceed 100 characters. `@commitlint/config-conventional` and `@commitlint/types` are direct dependencies of the root package so the `extends` resolution and the type annotation resolve next to the config file.
+- **syncpack** (`syncpack.config.js`): the repo-wide `versionGroups` entry ignores `peer` ranges, because peers intentionally declare flexible ranges. Without it, syncpack reports every peer range as drift.
 
 ## Known limitations
 

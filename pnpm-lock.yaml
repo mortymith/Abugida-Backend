@@ -197,33 +197,27 @@ importers:
       '@abugida/bun-test-config':
         specifier: workspace:*
         version: link:tooling/bun-test-config
-      '@abugida/commitlint-config':
-        specifier: workspace:*
-        version: link:tooling/commitlint-config
       '@abugida/cspell-config':
         specifier: workspace:*
         version: link:tooling/cspell-config
       '@abugida/eslint-config':
         specifier: workspace:*
         version: link:tooling/eslint-config
-      '@abugida/knip-config':
-        specifier: workspace:*
-        version: link:tooling/knip-config
-      '@abugida/lint-staged-config':
-        specifier: workspace:*
-        version: link:tooling/lint-staged-config
       '@abugida/prettier-config':
         specifier: workspace:*
         version: link:tooling/prettier-config
-      '@abugida/syncpack-config':
-        specifier: workspace:*
-        version: link:tooling/syncpack-config
       '@abugida/typescript-config':
         specifier: workspace:*
         version: link:tooling/typescript-config
       '@commitlint/cli':
         specifier: ^21.2.1
         version: 21.2.3(@types/node@22.20.1)(conventional-commits-parser@7.1.2)(typescript@6.0.3)
+      '@commitlint/config-conventional':
+        specifier: ^21.2.0
+        version: 21.2.3
+      '@commitlint/types':
+        specifier: ^21.2.0
+        version: 21.2.3
       cspell:
         specifier: ^10.3.3
         version: 10.4.0
@@ -883,18 +877,6 @@ importers:
 
   tooling/bun-test-config: {}
 
-  tooling/commitlint-config:
-    dependencies:
-      '@commitlint/cli':
-        specifier: '>=19'
-        version: 21.2.3(@types/node@22.20.1)(conventional-commits-parser@7.1.2)(typescript@6.0.3)
-      '@commitlint/config-conventional':
-        specifier: ^21.2.0
-        version: 21.2.3
-      '@commitlint/types':
-        specifier: ^21.2.0
-        version: 21.2.3
-
   tooling/cspell-config: {}
 
   tooling/eslint-config:
@@ -906,18 +888,6 @@ importers:
         specifier: 8.69.0
         version: 8.69.0(eslint@10.11.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
 
-  tooling/knip-config:
-    dependencies:
-      knip:
-        specifier: '>=5'
-        version: 6.42.0
-
-  tooling/lint-staged-config:
-    dependencies:
-      lint-staged:
-        specifier: '>=15'
-        version: 17.5.1
-
   tooling/prettier-config:
     dependencies:
       prettier:
@@ -926,8 +896,6 @@ importers:
       prettier-plugin-astro:
         specifier: ^0.14.1
         version: 0.14.1
-
-  tooling/syncpack-config: {}
 
   tooling/typescript-config: {}
 

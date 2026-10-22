@@ -1,15 +1,15 @@
 // @ts-check
 
 /**
- * Shared lint-staged configuration for the Abugida monorepo.
+ * Repository-level lint-staged configuration for the Abugida monorepo.
  *
  * The pre-commit pipeline is the fast path for developers; the full
  * repository validation always uses the `pnpm lint*` commands. This config
  * is the single source of truth for what runs on staged files.
  *
- * There is no root lint-staged config file: the husky `pre-commit` hook
- * points lint-staged at this package
- * (`lint-staged --config tooling/lint-staged-config/index.js`).
+ * Owned by the repository root: lint-staged discovers
+ * `lint-staged.config.js` in the working directory, so the husky
+ * `pre-commit` hook needs no `--config` flag.
  *
  * Routing rules:
  * - Files that belong to a workspace (app/*, packages/*) are linted with
@@ -29,8 +29,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-/** Repository root (tooling/lint-staged-config → repo root). */
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
+/** Repository root (this file lives in the repository root). */
+const repoRoot = path.dirname(fileURLToPath(import.meta.url))
 
 /** Directories that contain workspaces. */
 const workspaceRoots = ['app', 'packages']

@@ -19,9 +19,9 @@
     "dev:tui": "turbo dev --ui=tui",
     "build": "turbo build",
     "lint": "turbo lint && pnpm lint:tooling",
-    "lint:tooling": "eslint --config tooling/eslint.config.js tooling",
+    "lint:tooling": "eslint --config tooling/eslint.config.js tooling commitlint.config.js knip.config.js lint-staged.config.js syncpack.config.js",
     "format": "turbo format && pnpm format:root && pnpm format:shell",
-    "format:root": "prettier --config tooling/prettier-config/index.js --write \"*.{md,json,yaml,yml}\" \"docs/**/*.{md,mdx,json,yaml,yml}\" \"tooling/**/*.{js,mjs,cjs,ts,tsx,json,md,mdx,yaml,yml}\"",
+    "format:root": "prettier --config tooling/prettier-config/index.js --write \"*.{js,mjs,cjs,ts,tsx,json,yaml,yml}\" \"docs/**/*.{md,mdx,json,yaml,yml}\" \"tooling/**/*.{js,mjs,cjs,ts,tsx,json,md,mdx,yaml,yml}\"",
     "format:shell": "git ls-files '*.sh' | xargs -r shfmt -w -i 2 -sr -ln bash",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
@@ -36,26 +36,19 @@
     "lint:env": "dotenv-linter --skip KeyShouldBeFormatted --skip QuoteCharacterMismatch --skip UnorderedKey .env.example app/api/.env.example app/dashboard/.env.example app/marketing/.env.example",
     "lint:shell": "git ls-files '*.sh' | xargs -r shellcheck -x --rcfile .shellcheckrc",
     "lint:secrets": "gitleaks git --no-banner --config .gitleaks.toml",
-    "lint:deps": "syncpack lint --config tooling/syncpack-config/syncpack.config.js",
-    "knip": "KNIP_DISABLE_RAW_TRANSFER=1 knip --config tooling/knip-config/index.js --no-progress"
-  },
-  "commitlint": {
-    "extends": [
-      "@abugida/commitlint-config"
-    ]
+    "lint:deps": "syncpack lint",
+    "knip": "KNIP_DISABLE_RAW_TRANSFER=1 knip --no-progress"
   },
   "type": "module",
   "devDependencies": {
     "@abugida/bun-test-config": "workspace:*",
-    "@abugida/commitlint-config": "workspace:*",
     "@abugida/cspell-config": "workspace:*",
     "@abugida/eslint-config": "workspace:*",
-    "@abugida/knip-config": "workspace:*",
-    "@abugida/lint-staged-config": "workspace:*",
     "@abugida/prettier-config": "workspace:*",
-    "@abugida/syncpack-config": "workspace:*",
     "@abugida/typescript-config": "workspace:*",
     "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
+    "@commitlint/types": "^21.2.0",
     "cspell": "^10.3.3",
     "eslint": "^10.8.1",
     "husky": "^9.1.7",

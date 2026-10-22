@@ -1,5 +1,8 @@
 /**
- * Shared Syncpack configuration for the Abugida monorepo.
+ * Repository-level Syncpack configuration for the Abugida monorepo.
+ *
+ * Owned by the repository root: syncpack discovers `syncpack.config.js` in
+ * the working directory, so the root script needs no `--config` flag.
  *
  * Run as a DETECTION tool (`pnpm lint:deps` → `syncpack lint`): the goal is
  * to surface version drift across workspaces, not to force identical

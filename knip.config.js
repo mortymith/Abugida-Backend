@@ -1,5 +1,8 @@
 /**
- * Shared Knip configuration for the Abugida monorepo.
+ * Repository-level Knip configuration for the Abugida monorepo.
+ *
+ * Owned by the repository root: Knip discovers `knip.config.js` in the
+ * working directory, so the root script needs no `--config` flag.
  *
  * Knip detects unused files, exports, and dependencies. The configuration
  * below teaches Knip about the repository's framework entry points so
@@ -55,8 +58,6 @@ const config = {
     'packages/*/src/**': ['exports', 'types'],
   },
   ignoreDependencies: [
-    // Loaded by name at runtime from tooling/commitlint-config:
-    '@commitlint/config-conventional',
     // Provides the `markdownlint` binary used by the root `lint:markdown`
     // script. The binary is referenced inside a pipeline, which Knip cannot
     // resolve to the package that ships it.
@@ -71,10 +72,7 @@ const config = {
     // *files* (`--config` paths, `tsconfig` extends, `bunfig` preloads),
     // never imported, so static analysis cannot see them:
     '@abugida/cspell-config',
-    '@abugida/knip-config',
-    '@abugida/lint-staged-config',
     '@abugida/prettier-config',
-    '@abugida/syncpack-config',
     '@abugida/typescript-config',
   ],
   workspaces: {

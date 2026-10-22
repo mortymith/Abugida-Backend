@@ -1,13 +1,12 @@
 /**
- * Shared commitlint configuration for the Abugida monorepo.
+ * Repository-level commitlint configuration for the Abugida monorepo.
  *
- * Extracted from the historical root `commitlint.config.js`. Consumed by the
- * root `commitlint.config.js`:
+ * Owned by the repository root: commitlint discovers `commitlint.config.js`
+ * in the working directory, so the husky `commit-msg` hook needs no
+ * `--config` flag.
  *
- *   export { default } from '@abugida/commitlint-config'
- *
- * @commitlint/config-conventional is a real dependency of this package so
- * the extends resolution always finds it next to this config.
+ * @commitlint/config-conventional is a direct dependency of the root
+ * package, so the `extends` resolution always finds it next to this config.
  *
  * `body-max-line-length` / `footer-max-line-length` are disabled (existing
  * repository decision) because generated PR/issue footers legitimately
