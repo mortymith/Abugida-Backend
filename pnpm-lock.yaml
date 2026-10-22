@@ -203,45 +203,24 @@ importers:
       '@abugida/cspell-config':
         specifier: workspace:*
         version: link:tooling/cspell-config
-      '@abugida/dotenv-linter-config':
-        specifier: workspace:*
-        version: link:tooling/dotenv-linter-config
-      '@abugida/editorconfig-checker-config':
-        specifier: workspace:*
-        version: link:tooling/editorconfig-checker-config
       '@abugida/eslint-config':
         specifier: workspace:*
         version: link:tooling/eslint-config
-      '@abugida/gitleaks-config':
-        specifier: workspace:*
-        version: link:tooling/gitleaks-config
-      '@abugida/hadolint-config':
-        specifier: workspace:*
-        version: link:tooling/hadolint-config
       '@abugida/knip-config':
         specifier: workspace:*
         version: link:tooling/knip-config
       '@abugida/lint-staged-config':
         specifier: workspace:*
         version: link:tooling/lint-staged-config
-      '@abugida/markdownlint-config':
-        specifier: workspace:*
-        version: link:tooling/markdownlint-config
       '@abugida/prettier-config':
         specifier: workspace:*
         version: link:tooling/prettier-config
-      '@abugida/shellcheck-config':
-        specifier: workspace:*
-        version: link:tooling/shellcheck-config
       '@abugida/syncpack-config':
         specifier: workspace:*
         version: link:tooling/syncpack-config
       '@abugida/typescript-config':
         specifier: workspace:*
         version: link:tooling/typescript-config
-      '@abugida/yamllint-config':
-        specifier: workspace:*
-        version: link:tooling/yamllint-config
       '@commitlint/cli':
         specifier: ^21.2.1
         version: 21.2.3(@types/node@22.20.1)(conventional-commits-parser@7.1.2)(typescript@6.0.3)
@@ -918,10 +897,6 @@ importers:
 
   tooling/cspell-config: {}
 
-  tooling/dotenv-linter-config: {}
-
-  tooling/editorconfig-checker-config: {}
-
   tooling/eslint-config:
     dependencies:
       eslint:
@@ -930,10 +905,6 @@ importers:
       typescript-eslint:
         specifier: 8.69.0
         version: 8.69.0(eslint@10.11.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
-
-  tooling/gitleaks-config: {}
-
-  tooling/hadolint-config: {}
 
   tooling/knip-config:
     dependencies:
@@ -947,8 +918,6 @@ importers:
         specifier: '>=15'
         version: 17.5.1
 
-  tooling/markdownlint-config: {}
-
   tooling/prettier-config:
     dependencies:
       prettier:
@@ -958,13 +927,9 @@ importers:
         specifier: ^0.14.1
         version: 0.14.1
 
-  tooling/shellcheck-config: {}
-
   tooling/syncpack-config: {}
 
   tooling/typescript-config: {}
-
-  tooling/yamllint-config: {}
 
 packages:
 

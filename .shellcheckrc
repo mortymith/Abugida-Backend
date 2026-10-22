@@ -1,5 +1,7 @@
-# Shared ShellCheck configuration for the Abugida monorepo.
-# Consumed from root scripts: shellcheck -x --rcfile tooling/shellcheck-config/.shellcheckrc
+# Repository-level ShellCheck configuration for the Abugida monorepo.
+# Owned by the repository root: shellcheck discovers .shellcheckrc in the
+# working directory, and the root script passes it explicitly
+# (shellcheck -x --rcfile .shellcheckrc).
 
 # Ops scripts source shared libraries and rely on dynamic paths; follow
 # `source` directives when the file is resolvable.

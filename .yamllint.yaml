@@ -1,5 +1,7 @@
-# Shared yamllint configuration for the Abugida monorepo.
-# Consumed from root scripts: yamllint -c tooling/yamllint-config/.yamllint.yaml <files...>
+# Repository-level yamllint configuration for the Abugida monorepo.
+# Owned by the repository root: yamllint discovers .yamllint.yaml in the
+# working directory, and the root script passes it explicitly
+# (yamllint -c .yamllint.yaml <files...>).
 #
 # Repository policy:
 # - 2-space indent (matches .editorconfig).

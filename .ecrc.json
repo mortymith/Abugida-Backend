@@ -1,7 +1,8 @@
 {
   "//": [
-    "Shared editorconfig-checker configuration for the Abugida monorepo.",
-    "Consumed from root scripts: editorconfig-checker -config tooling/editorconfig-checker-config/.ecrc.json",
+    "Repository-level editorconfig-checker configuration for the Abugida monorepo.",
+    "Owned by the repository root: editorconfig-checker discovers .ecrc.json in",
+    "the working directory, and the root script passes it explicitly",
     "Generated, vendored, and lockfile content is excluded; everything else",
     "must satisfy .editorconfig (LF, UTF-8, final newline, 2-space indent).",
     "",

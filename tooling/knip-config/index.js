@@ -16,7 +16,10 @@
  * Dependencies that are consumed as *files* (CLI configuration, `--config`
  * paths, `tsconfig` extends, `bunfig` preloads) are invisible to static
  * analysis and are listed in `ignoreDependencies` with the owner documented
- * inline.
+ * inline. The CLI linters that own a single, non-importable config file
+ * (editorconfig-checker, hadolint, shellcheck, yamllint, markdownlint,
+ * gitleaks, dotenv-linter) keep that file in the repository root, where the
+ * tool discovers it, and need no package at all.
  *
  * Run via the root `pnpm knip`.
  *
@@ -58,22 +61,21 @@ const config = {
     // script. The binary is referenced inside a pipeline, which Knip cannot
     // resolve to the package that ships it.
     'markdownlint-cli',
+    // The repository-root `.markdownlint.json` is consumed by the
+    // `markdownlint-cli` binary. Knip's markdownlint plugin expects the
+    // `markdownlint` library to be a direct dependency of the workspace that
+    // owns the config file; here it is installed transitively by
+    // `markdownlint-cli` instead.
+    'markdownlint',
     // Root-only tooling configuration packages. They are consumed as config
-    // *files* (CLI `--config` paths, `tsconfig` extends, `bunfig` preloads),
+    // *files* (`--config` paths, `tsconfig` extends, `bunfig` preloads),
     // never imported, so static analysis cannot see them:
     '@abugida/cspell-config',
-    '@abugida/dotenv-linter-config',
-    '@abugida/editorconfig-checker-config',
-    '@abugida/gitleaks-config',
-    '@abugida/hadolint-config',
     '@abugida/knip-config',
     '@abugida/lint-staged-config',
-    '@abugida/markdownlint-config',
     '@abugida/prettier-config',
-    '@abugida/shellcheck-config',
     '@abugida/syncpack-config',
     '@abugida/typescript-config',
-    '@abugida/yamllint-config',
   ],
   workspaces: {
     '.': {},

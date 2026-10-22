@@ -121,6 +121,8 @@ cspell
 lint-staged
 commitlint
 editorconfig
+ecrc
+rcfile
 pgbouncer
 PRELOADED
 

@@ -1,8 +1,10 @@
-# Shared dotenv-linter policy for the Abugida monorepo (canonical reference).
+# Repository-level dotenv-linter policy for the Abugida monorepo.
 #
-# dotenv-linter 3.x discovers this file only via CWD-walk-up, so the root
-# `lint:env` script passes the same skips as explicit flags. Keep both in
-# sync — this file is the documented source of truth.
+# dotenv-linter 3.x discovers this file by walking up from the working
+# directory, so this file — placed in the repository root — is the policy
+# every invocation picks up. The root `lint:env` script passes the same
+# skips as explicit flags so the result never depends on the discovery
+# order. Keep both in sync — this file is the documented source of truth.
 #
 # - KeyShouldBeFormatted: the template groups keys with section headers and
 #   comments; strict key formatting is not enforced across sections.

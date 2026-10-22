@@ -1,5 +1,7 @@
-# Shared Gitleaks configuration for the Abugida monorepo.
-# Consumed from root scripts: gitleaks git --config tooling/gitleaks-config/.gitleaks.toml ...
+# Repository-level Gitleaks configuration for the Abugida monorepo.
+# Owned by the repository root: gitleaks discovers .gitleaks.toml in the
+# working directory, and the root script passes it explicitly
+# (gitleaks git --no-banner --config .gitleaks.toml).
 #
 # Allowlist policy: explicit, minimal, justified. Every entry documents WHY
 # the match is a false positive. Do not add entries to make the scan pass —

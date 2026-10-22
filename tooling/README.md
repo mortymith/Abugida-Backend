@@ -8,7 +8,15 @@ Shared, per-tool configuration packages. **One source of truth per tool, owned b
 ## Design
 
 The tooling layer holds **only** configuration that is genuinely shared across the
-repository. There are no root-level tool configuration files:
+repository. It covers the tools whose configuration is _code_ — a JavaScript
+module, a JSON preset, a dictionary set — that more than one consumer imports
+or extends.
+
+Tools whose configuration is a **single, non-importable file** (shellcheck,
+hadolint, yamllint, markdownlint, editorconfig-checker, gitleaks,
+dotenv-linter) keep that file in the repository root, where the tool discovers
+it by convention. Wrapping one file in a workspace package would add a
+publish/resolve step without adding any sharing.
 
 | Concern              | Owner                                                                    |
 | -------------------- | ------------------------------------------------------------------------ |
@@ -19,33 +27,43 @@ repository. There are no root-level tool configuration files:
 | Staged-file pipeline | `tooling/lint-staged-config` → husky `pre-commit` hook                   |
 | Unused code analysis | `tooling/knip-config` → root `pnpm knip`                                 |
 | Spelling             | `tooling/cspell-config` → root `pnpm lint:spelling`                      |
-| CLI linters          | `tooling/<tool>-config` → root `lint:*` scripts                          |
+| CLI linters          | repository-root config file → root `lint:*` scripts                      |
 
 Everything that is _not_ shared lives with its owner: an app's framework
 plugins, a package's `tsconfig` paths, a script's shell rules.
 
 ## Naming and ownership
 
-All tooling packages use the repository's established `@abugida/*` scope. Every tool has exactly one owning package; consumers depend on the package (JS modules) or reference the config file path (CLI configs consumed from root scripts).
+All tooling packages use the repository's established `@abugida/*` scope. Every tool has exactly one owner; consumers depend on the package (JS modules) or reference the config file path (CLI configs consumed from root scripts).
 
-| Package                               | Tool                 | Consumed by                                       | Blocking gate               |
-| ------------------------------------- | -------------------- | ------------------------------------------------- | --------------------------- |
-| `tooling/typescript-config`           | tsc                  | `app/*`, `packages/*` (`extends`)                 | `pnpm typecheck`            |
-| `tooling/eslint-config`               | eslint               | every workspace's `eslint.config.*`               | `pnpm lint`                 |
-| `tooling/prettier-config`             | prettier             | every workspace's `prettier.config.js`            | `pnpm format` / lint-staged |
-| `tooling/bun-test-config`             | bun test             | root + workspace `bunfig.toml` (`[test] preload`) | `pnpm test`                 |
-| `tooling/lint-staged-config`          | lint-staged          | husky `pre-commit` hook (`--config`)              | husky `pre-commit`          |
-| `tooling/commitlint-config`           | commitlint           | root `package.json#commitlint`                    | husky `commit-msg`          |
-| `tooling/cspell-config`               | cspell               | root `pnpm lint:spelling` (`--config`)            | yes                         |
-| `tooling/knip-config`                 | knip                 | root `pnpm knip` (`--config`)                     | advisory                    |
-| `tooling/shellcheck-config`           | shellcheck           | `pnpm lint:shell` (config path)                   | yes                         |
-| `tooling/hadolint-config`             | hadolint             | `pnpm lint:docker` (config path)                  | yes                         |
-| `tooling/yamllint-config`             | yamllint             | `pnpm lint:yaml` (config path)                    | yes                         |
-| `tooling/markdownlint-config`         | markdownlint         | `pnpm lint:markdown` (config path)                | yes                         |
-| `tooling/editorconfig-checker-config` | editorconfig-checker | `pnpm lint:editorconfig` (config path)            | yes                         |
-| `tooling/gitleaks-config`             | gitleaks             | `pnpm lint:secrets` (config path)                 | yes                         |
-| `tooling/dotenv-linter-config`        | dotenv-linter        | `pnpm lint:env` (policy + flags)                  | yes                         |
-| `tooling/syncpack-config`             | syncpack             | `pnpm lint:deps` (config path)                    | yes                         |
+| Package                      | Tool        | Consumed by                                       | Blocking gate               |
+| ---------------------------- | ----------- | ------------------------------------------------- | --------------------------- |
+| `tooling/typescript-config`  | tsc         | `app/*`, `packages/*` (`extends`)                 | `pnpm typecheck`            |
+| `tooling/eslint-config`      | eslint      | every workspace's `eslint.config.*`               | `pnpm lint`                 |
+| `tooling/prettier-config`    | prettier    | every workspace's `prettier.config.js`            | `pnpm format` / lint-staged |
+| `tooling/bun-test-config`    | bun test    | root + workspace `bunfig.toml` (`[test] preload`) | `pnpm test`                 |
+| `tooling/lint-staged-config` | lint-staged | husky `pre-commit` hook (`--config`)              | husky `pre-commit`          |
+| `tooling/commitlint-config`  | commitlint  | root `package.json#commitlint`                    | husky `commit-msg`          |
+| `tooling/cspell-config`      | cspell      | root `pnpm lint:spelling` (`--config`)            | yes                         |
+| `tooling/knip-config`        | knip        | root `pnpm knip` (`--config`)                     | advisory                    |
+| `tooling/syncpack-config`    | syncpack    | root `pnpm lint:deps` (config path)               | yes                         |
+
+### Repository-root tool configuration
+
+These tools own exactly one configuration file. The file lives in the repository
+root — the directory every root script runs from — and is both discovered by
+the tool and passed explicitly by the root script, so the result never depends
+on discovery order.
+
+| Config file          | Tool                 | Consumed by                               | Blocking gate |
+| -------------------- | -------------------- | ----------------------------------------- | ------------- |
+| `.shellcheckrc`      | shellcheck           | `pnpm lint:shell` (`--rcfile`)            | yes           |
+| `.hadolint.yaml`     | hadolint             | `pnpm lint:docker` (`-c`)                 | yes           |
+| `.yamllint.yaml`     | yamllint             | `pnpm lint:yaml` (`-c`)                   | yes           |
+| `.markdownlint.json` | markdownlint         | `pnpm lint:markdown` (`-c`)               | yes           |
+| `.ecrc.json`         | editorconfig-checker | `pnpm lint:editorconfig` (`-config`)      | yes           |
+| `.gitleaks.toml`     | gitleaks             | `pnpm lint:secrets` (`--config`)          | yes           |
+| `.dotenv-linter`     | dotenv-linter        | `pnpm lint:env` (policy + explicit flags) | yes           |
 
 ## How consumption works
 
@@ -85,10 +103,16 @@ All tooling packages use the repository's established `@abugida/*` scope. Every 
   must stay in the consuming tsconfig — relative paths in a shared preset
   resolve against the preset file.
 
-- **CLI configs** (shellcheck, hadolint, yamllint, markdownlint,
-  editorconfig-checker, gitleaks, dotenv-linter, syncpack, cspell, knip) —
-  the root `package.json` scripts pass the config path explicitly, e.g.
-  `hadolint -c tooling/hadolint-config/.hadolint.yaml`.
+- **CLI configs** (syncpack, cspell, knip) — the root `package.json` scripts
+  pass the config path explicitly, e.g. `syncpack lint --config
+tooling/syncpack-config/syncpack.config.js`.
+
+- **Root CLI configs** (shellcheck, hadolint, yamllint, markdownlint,
+  editorconfig-checker, gitleaks, dotenv-linter) — the config file lives in the
+  repository root and the root scripts pass it explicitly, e.g.
+  `hadolint -c .hadolint.yaml`. The same file is picked up automatically when
+  the tool is run without a config flag, so editors and ad-hoc invocations
+  behave like CI.
 
 ## Commands
 
@@ -148,11 +172,31 @@ There is no CI in this repository yet. When CI is added, the system binaries abo
 
 ## Adding a new shared tooling configuration
 
+First decide where the configuration belongs:
+
+- **A single file that no other tool imports** (shellcheck, hadolint,
+  yamllint, markdownlint, editorconfig-checker, gitleaks, dotenv-linter) →
+  put it in the repository root, named exactly as the tool discovers it
+  (`.shellcheckrc`, `.hadolint.yaml`, …), and pass it explicitly from the root
+  script. No package, no workspace entry.
+- **A module, preset, or dictionary set that several consumers import or
+  extend** (eslint, prettier, typescript, commitlint, lint-staged, knip,
+  cspell, syncpack) → create a `tooling/<tool>-config/` package.
+
+For a tooling package:
+
 1. Create `tooling/<tool>-config/` with the config file (and a `package.json` following the existing pattern — `@abugida/<tool>-config`, `private: true`).
 2. Add `tooling/*` globs already cover the directory; run `pnpm install`.
 3. Wire consumption: a workspace config that composes the package, or a root script referencing the config path.
 4. Add the tool to the tables above and to the CI dependency list if it needs a system binary.
 5. Keep framework-specific rules OUT of shared packages — framework extensions belong to the consuming workspace (`app/marketing` owns Astro ESLint plugins, `app/dashboard` owns `@tanstack/eslint-config`).
+
+For a root-level config file:
+
+1. Name the file exactly as the tool discovers it, and place it in the repository root.
+2. Pass it explicitly from the root script so the result never depends on the working directory.
+3. Add the file to the "Repository-root tool configuration" table above.
+4. If the tool needs a system binary, add it to the system-binary table below.
 
 ## Tool-specific exceptions
 
@@ -161,10 +205,10 @@ There is no CI in this repository yet. When CI is added, the system binaries abo
 - **prettier-config**: the Astro plugin is resolved with `require.resolve` to an absolute path, so the config behaves identically no matter which directory consumes it.
 - **bun-test-config**: the preload provides deterministic env fallbacks (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `DATABASE_URL`) only when unset. Turbo strips undeclared env vars from task processes (no `globalEnv` in `turbo.json`), which is why `pnpm test` previously failed for `@abugida/api` when run through turbo while direct `bun test` passed.
 - **cspell-config**: `app/dashboard/spec /` wireframes are excluded — they contain intentional UI truncations (shortened mockup labels) that are not fixable spelling.
-- **markdownlint-config**: `.agents/**` vendored skill docs are excluded.
-- **gitleaks-config**: `[extend] useDefault = true` is required — a custom config without it silently _replaces_ the rule set and scans nothing. The allowlist covers committed `.env.example` placeholders (ADR-006 dev-only defaults), test fixtures, and API doc examples; every entry is individually justified inline.
-- **dotenv-linter-config**: dotenv-linter 3.x only discovers its config via CWD walk-up, so `lint:env` passes the skips as explicit flags; `.dotenv-linter` in the package is the canonical documented policy. Only `.env.example` files are ever scanned — real `.env` files (actual secrets) are never passed to the linter.
-- **editorconfig-checker-config**: v4 takes regular expressions in `Exclude` (not globs) and a boolean map in `Disable`. Generated migrations (`packages/database/drizzle/**`) are excluded like other generated code.
+- **markdownlint** (`.markdownlint.json`): `.agents/**` vendored skill docs are excluded.
+- **gitleaks** (`.gitleaks.toml`): `[extend] useDefault = true` is required — a custom config without it silently _replaces_ the rule set and scans nothing. The allowlist covers committed `.env.example` placeholders (ADR-006 dev-only defaults), test fixtures, and API doc examples; every entry is individually justified inline.
+- **dotenv-linter** (`.dotenv-linter`): dotenv-linter 3.x discovers its config via CWD walk-up, so the file lives in the repository root and `lint:env` additionally passes the skips as explicit flags — the result is identical either way. Only `.env.example` files are ever scanned — real `.env` files (actual secrets) are never passed to the linter.
+- **editorconfig-checker** (`.ecrc.json`): v4 takes regular expressions in `Exclude` (not globs) and a boolean map in `Disable`. Generated migrations (`packages/database/drizzle/**`) are excluded like other generated code.
 - **knip-config**: the app modules, the dashboard features and the published packages export their public surface by design, so the `exports`/`types` issue types are not reported for them. Intentional API aliases are excluded from the `duplicates` report.
 - **lint-staged-config**: the workspace list is discovered from the filesystem, so a new workspace is covered by the pre-commit hook without touching the file.
 

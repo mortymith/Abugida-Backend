@@ -1,5 +1,7 @@
-# Shared hadolint configuration for the Abugida monorepo.
-# Consumed from root scripts: hadolint -c tooling/hadolint-config/.hadolint.yaml <Dockerfile...>
+# Repository-level hadolint configuration for the Abugida monorepo.
+# Owned by the repository root: hadolint discovers .hadolint.yaml in the
+# working directory, and the root script passes it explicitly
+# (hadolint -c .hadolint.yaml <Dockerfile...>).
 #
 # Repository policy:
 # - Base images are pinned by digest (DL3007 would fire on tagged pins we
