@@ -92,19 +92,32 @@ you consume, not a marketplace you must adopt wholesale.
 
 ### Prerequisites
 
-Bun ≥ 1.4.2 (pinned in `.bun-version`, enforced by `engines`/`devEngines`), pnpm 12.x,
-Docker 27.0+, Docker Compose v2.24.0+, just 1.40.0+. `trivy`, `jq`, and `nmap` are optional
-and only used by security and diagnostics recipes. See
-[`docs/onboarding/prerequisites.md`](docs/onboarding/prerequisites.md).
+The development toolchain is **pinned and provided by a [Devbox](https://www.jetify.com/devbox)
+sandbox** — Bun 1.4.2, pnpm 12, Node 22, just 1.58, the Docker client, and every system binary
+the repository lints with. Install [Devbox](https://www.jetify.com/devbox/docs/installing) and
+run `just sandbox-setup`; everything else is provisioned for you.
+
+You still need a running **Docker daemon** (27.0+) with Docker Compose v2.24.0+ on the host —
+the sandbox ships the client, not the daemon, and Compose owns the infrastructure.
+`trivy` and `jq` are optional and only used by security and diagnostics recipes. See
+[`docs/onboarding/prerequisites.md`](docs/onboarding/prerequisites.md) and
+[`docs/development/devbox-sandbox.md`](docs/development/devbox-sandbox.md).
 
 ### 1. Install
 
 ```bash
-pnpm install
+just sandbox-setup   # pinned toolchain (devbox) + workspace dependencies (pnpm)
+just sandbox-shell   # enter the sandbox — every tool below is on PATH
 ```
 
 pnpm owns the dependency graph. `bunfig.toml` sets `frozenLockfile = true` so Bun can never
 write a competing lockfile — do not run `bun install` or `bun add`.
+
+Without the sandbox the same install works on a host that already has the tools:
+
+```bash
+pnpm install
+```
 
 ### 2. Configure
 
@@ -411,6 +424,7 @@ Conventions are documented in `AGENTS.md` at the root and in `app/dashboard/`,
 ## Development workflow
 
 ```bash
+just sandbox-shell   # enter the pinned sandbox (devbox) — do this first
 pnpm dev          # watch all workspaces
 pnpm build        # build all, honoring ^build ordering
 pnpm typecheck    # tsc --noEmit across workspaces
@@ -418,6 +432,11 @@ pnpm lint         # eslint
 pnpm format       # prettier + eslint --fix
 pnpm test         # bun test
 ```
+
+The sandbox pins the toolchain (`devbox.json` + `devbox.lock`) so every developer and every
+future CI runner resolves the same Bun, pnpm, Node, just and linter versions.
+`just sandbox-doctor` verifies the sandbox against the versions the repository declares.
+See [`docs/development/devbox-sandbox.md`](docs/development/devbox-sandbox.md).
 
 - **Tests run on Bun**, not Vitest or Jest. `app/api` and `app/dashboard` pass
   `--pass-with-no-tests`.

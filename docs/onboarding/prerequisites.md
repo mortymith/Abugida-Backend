@@ -16,15 +16,30 @@ A **Linux host is required**. Keepalived (VRRP) and iptables-persistent do not r
 
 | Tool           | Minimum Version | Purpose                                 |
 | -------------- | --------------- | --------------------------------------- |
-| Docker CE      | 27.0+           | Container runtime                       |
+| Docker CE      | 27.0+           | Container runtime (host daemon)         |
 | Docker Compose | v2.24.0+        | Multi-service orchestration             |
+| Devbox         | 0.18+           | Toolchain sandbox (pins every tool)     |
 | Just           | 1.40.0          | Task runner / CLI                       |
 | Bun            | 1.2.1           | App runtime (API, Dashboard, Marketing) |
 | Trivy          | 0.58.0          | Container image scanning                |
 | jq             | 1.6+            | JSON processing                         |
-| nmap           | 7.80+           | Port verification                       |
+
 
 All required tools are installed automatically by the prerequisites script (see [Installation](installation.md)).
+
+### Toolchain sandbox
+
+Except for the **Docker daemon**, every tool in the table above is provided — and version-pinned
+— by the [Devbox](../development/devbox-sandbox.md) sandbox declared in `devbox.json`:
+
+```bash
+just sandbox-setup   # materialise the pinned toolchain (Nix store) + install dependencies
+just sandbox-shell   # enter the sandbox
+just sandbox-doctor  # verify the sandbox against the versions this repository declares
+```
+
+`devbox.lock` is committed, so every developer resolves the same Bun, pnpm, Node, just and
+linter versions. The sandbox provides the Docker **client**; the daemon stays on the host.
 
 ## Port Requirements
 

@@ -28,3 +28,7 @@ config/cloudflared/credentials.json
 # ─── Redis persistence files ────────────────────────────────────────────────
 *.rdb
 *.aof
+
+# ─── Devbox sandbox (local Nix state; devbox.json/devbox.lock ARE committed) ──
+.devbox/
+.direnv/

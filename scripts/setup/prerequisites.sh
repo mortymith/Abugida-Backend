@@ -4,7 +4,7 @@
 # Source: prerequisites.md, ADR-009
 #
 # Installs all required tools for this project:
-#   Docker CE + Compose plugin, Just, Bun, jq, Trivy, nmap,
+#   Docker CE + Compose plugin, Just, Bun, jq, Trivy,
 #   keepalived, iptables-persistent
 #
 # Idempotent — safe to re-run.
@@ -74,7 +74,7 @@ log_ok "Package index updated."
 # ═══════════════════════════════════════════════════════════════════
 # 2. Install apt packages
 # ═══════════════════════════════════════════════════════════════════
-log_info "Installing apt packages (jq, nmap, keepalived, iptables-persistent, ca-certificates, curl, gnupg)..."
+log_info "Installing apt packages (jq, keepalived, iptables-persistent, ca-certificates, curl, gnupg)..."
 
 # Pre-seed iptables-persistent to avoid interactive prompt
 echo iptables-persistent iptables-persistent/autosave_v4 boolean true | debconf-set-selections
@@ -82,7 +82,6 @@ echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-
 
 apt-get install -y -qq \
   jq \
-  nmap \
   keepalived \
   iptables-persistent \
   ca-certificates \
@@ -240,7 +239,6 @@ CHECKS=(
   "bun:Bun 1.2+"
   "trivy:Trivy 0.58+"
   "jq:jq 1.6+"
-  "nmap:nmap 7.80+"
   "keepalived:Keepalived"
   "iptables:iptables-persistent"
 )

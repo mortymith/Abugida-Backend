@@ -21,13 +21,6 @@ Run before every PR merge. CI mirrors this via `just test-suite all`.
 
 ## Security Tests
 
-### Port Scan (nmap)
-
-**Invoke:** `just port-scan [target]`
-**Script:** `docker/tests/security/nmap/scan-ports.sh`
-
-Scans the host to verify only expected ports are open. Compares open ports against the known service map (Caddy on 80/443, SSH, Cloudflare Tunnel). Any unexpected open port fails the check.
-
 ### Tunnel Access Test
 
 **Invoke:** `just tunnel-test`

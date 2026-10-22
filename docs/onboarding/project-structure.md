@@ -29,7 +29,7 @@ my-project/
 │   │   └── postgres-replica/Dockerfile # PostgreSQL 17-alpine, replica setup
 │   └── tests/               #   Integration and security tests
 │       ├── integration/     #     End-to-end tests across services
-│       └── security/        #     CIS benchmark, nmap scans, tunnel access
+│       └── security/        #     CIS benchmark, tunnel access
 │   ├── compose/             #   Modular Docker Compose files (ADR-003, ADR-024)
 │   │   ├── networks.yml         #   Network definitions (edge, backend, infrastructure)
 │   │   ├── volumes.yml          #   Named volume declarations

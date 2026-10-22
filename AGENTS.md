@@ -74,6 +74,24 @@ Rules:
 - Env is per-app and git-ignored; examples live at `app/*/.env.example`.
 - The root `format` script also runs `shfmt` on shell scripts.
 
+## Development sandbox (devbox)
+
+The toolchain is **pinned and sandboxed with [Devbox](https://www.jetify.com/devbox)** — Bun, pnpm, just, the Docker client and every system binary the lints need. `devbox.json` declares the versions, `devbox.lock` is committed.
+
+```bash
+just sandbox-setup    # materialise the pinned toolchain + install workspace dependencies
+just sandbox-shell    # enter the sandbox (equivalent to `devbox shell`)
+just sandbox-doctor   # verify the sandbox against .bun-version / packageManager
+just sandbox-verify   # typecheck + lint + test inside the sandbox
+```
+
+- Run repository commands **inside** the sandbox (`just sandbox-shell`) so the pinned versions are used; a host tool must never shadow the pinned one.
+- `devbox run <script>` runs a named command in the sandbox (`devbox run --list` for the list: `setup`, `doctor`, `lint`, `typecheck`, `test`, `build`, `infra-up`, …).
+- The sandbox provides the Docker **client** only — the daemon stays on the host, and Docker Compose still owns the infrastructure.
+- Never put secrets in `devbox.json`; `.env` files stay on the host and git-ignored.
+- Tool changes go through `devbox add` / `devbox update` + a committed `devbox.lock`, never a hand-edited version pin.
+- Reference: `docs/development/devbox-sandbox.md`, ADR-026.
+
 ## Infrastructure (just command runner)
 
 The `justfile` manages Docker Compose infrastructure across three tiers (dev/staging/prod). Run `just --list` to see all recipes.

@@ -53,10 +53,6 @@ Chain recipes with `:` after the name. Dependencies run first, in order. Two pri
 security-audit: check-configs audit-dependencies validate-secrets
     @echo "==> Full security audit complete."
 
-# Optional CLI preflight
-port-scan target="": (_need "nmap")
-    bash docker/tests/security/nmap/scan-ports.sh {{if target != ""}}--target {{target}}{{/if}}
-
 # Host-privileged script (prompts for sudo once, no-op under `sudo just`)
 firewall-install: (_sudo "scripts/security/firewall-install-all.sh" "install")
 ```
@@ -74,9 +70,6 @@ Use `*ARGS` for variadic arguments (passed through to underlying scripts) or nam
 restore-postgres file="":
     bash scripts/restore/restore-postgres.sh "{{file}}"
 
-# Run port scan against optional target
-port-scan target="":
-    bash docker/tests/security/nmap/scan-ports.sh {{if target != ""}}--target {{target}}{{/if}}
 ```
 
 ### Suppressing Echo
@@ -111,7 +104,7 @@ The justfile is organized into labeled sections with comment headers. Add your r
 9. **Secrets Rotation** — `rotate-secrets`, `validate-secrets`
 10. **Vault Operations** — `vault-init`, `vault-unseal`, `vault-status`
 11. **Backup & Restore** — `backup-*`, `restore-*`, `verify-backup`
-12. **Security** — `audit-*`, `check-configs`, `firewall-*`, `port-scan`
+12. **Security** — `audit-*`, `check-configs`, `firewall-*`
 13. **Edge & Tunnel (Prod)** — `tunnel-status`, `cert-status`, `cert-force-renewal`
 14. **Testing** — `test-suite`
 

@@ -15,10 +15,16 @@
 # Requirements:
 #   Required:  docker (compose v2), bash
 #   Optional:  pnpm (db:push) · curl (HTTP probes) · jq + vault CLI (vault ops)
-#              · nmap (port-scan) · sudo (firewall / cron)
+#              · sudo (firewall / cron)
 #              Missing optional tools are reported by a preflight guard
 #              (_need / _need-root / scripts/lib/common.sh: require_cmd),
 #              not a raw "command not found" mid-recipe.
+#
+# Development toolchain (Bun, pnpm, Node, and every system binary the
+# repository lints with) is pinned and provided by the Devbox sandbox —
+# see ADR-026 and docs/development/devbox-sandbox.md. `just sandbox-shell`
+# enters it; recipes below are written so they also work from a plain host
+# that has the tools installed.
 #
 # Shared shell libraries (single source of truth, do not duplicate here):
 #   scripts/lib/compose.sh  — tiered compose file sets + dc <tier> <args>
@@ -44,6 +50,7 @@
 # 12. Security                   just security-audit | firewall-install ...
 # 13. Edge & Tunnel (Prod)       just tunnel-status | cert-status ...
 # 14. Testing                    just test-suite
+# 15. Sandbox (Devbox)           just sandbox-shell | sandbox-doctor | sandbox-setup
 # ═════════════════════════════════════════════════════════════════════════════════
 
 # Load .env into every recipe's environment (same file compose reads), so
@@ -150,6 +157,12 @@ POSTGRES_DB_DEFAULT := env_var_or_default("POSTGRES_DB", "app")
     echo "  DISCOVER MORE"
     echo "    just --list               All recipes with descriptions"
     echo "    just --summary            Recipe names only"
+    echo ""
+    echo "  SANDBOX (devbox)"
+    echo "    just sandbox-setup        Install the pinned toolchain + workspace deps"
+    echo "    just sandbox-shell        Enter the sandboxed development shell"
+    echo "    just sandbox-doctor       Verify the sandbox against repo requirements"
+    echo "    just sandbox-verify       typecheck + lint + test inside the sandbox"
     echo ""
 
 # Preflight guard: fail fast with an actionable message when an optional
@@ -783,10 +796,6 @@ vault-firewall-teardown: (_sudo "scripts/security/vault-firewall.sh" "teardown")
 # Show Vault firewall status
 vault-firewall-status: (_sudo "scripts/security/vault-firewall.sh" "status")
 
-# Run port scan (nmap) to verify only expected ports are open
-port-scan target="": (_need "nmap")
-    bash docker/tests/security/nmap/scan-ports.sh {{ if target != "" { "--target " + target } else { "" } }}
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # 13. Edge & Tunnel (Production Only, ADR-020)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -824,6 +833,34 @@ cert-force-renewal: (_need "docker")
 # Run integration test suite (smoke > API > cache > DB)
 test-suite group="all":
     bash docker/tests/integration/test-suite.sh --group {{group}}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 15. Sandbox (Devbox)
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# The development toolchain is pinned in devbox.json and materialised in the
+# Nix store (ADR-026). These recipes drive that sandbox; they never depend on
+# a globally installed Bun/pnpm/Node.
+
+# Materialise the pinned toolchain and install workspace dependencies
+sandbox-setup: (_need "devbox")
+    devbox install
+    devbox run setup
+    @echo "==> Sandbox ready. Enter it with 'just sandbox-shell'."
+
+# Enter the sandboxed development shell (all pinned tools on PATH)
+sandbox-shell: (_need "devbox")
+    devbox shell
+
+# Verify the sandbox toolchain against the versions the repository declares
+sandbox-doctor: (_need "devbox")
+    devbox run doctor
+
+# Full verification inside the sandbox: types, lint, tests
+sandbox-verify: (_need "devbox")
+    devbox run typecheck
+    devbox run lint
+    devbox run test
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # EXTENDING THIS FILE

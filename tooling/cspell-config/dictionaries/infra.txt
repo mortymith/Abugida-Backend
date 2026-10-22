@@ -98,7 +98,6 @@ codepaths
 creds
 distroless
 dport
-nmap
 minioadmin
 Perc
 conninfo

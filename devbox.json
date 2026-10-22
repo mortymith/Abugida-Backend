@@ -1,0 +1,67 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.18.4/.schema/devbox.schema.json",
+  "name": "abugida-platform",
+  "description": "Sandboxed development environment for the Abugida platform monorepo (Bun + pnpm + Turborepo apps, Docker Compose infrastructure, repository linters).",
+  "packages": [
+    "bun@1.4.2",
+    "pnpm@12",
+    "just@1.58.0",
+    "docker-client@29.9.1",
+    "docker-compose@5.6.0",
+    "jq@1.8.2",
+    "curl@8",
+    "git@2",
+    "openssl@3",
+    "cacert",
+    "shellcheck@0.11.0",
+    "hadolint@2.14.0",
+    "yamllint@1.37.1",
+    "gitleaks@8.30.1",
+    "dotenv-linter@3.3.0",
+    "editorconfig-checker@4.0.2",
+    "shfmt@3.14.1",
+    "vault-bin@1.21.4",
+    "mc@4.8.33",
+    "python3",
+    "gnumake",
+    "gcc",
+    "pkg-config",
+    "binutils"
+  ],
+  "env": {
+    "DEVBOX_SHELL": "1",
+    "DO_NOT_TRACK": "1",
+    "BUN_INSTALL": "$HOME/.bun",
+    "PNPM_HOME": "$HOME/.local/share/pnpm",
+    "PNPM_STORE_DIR": "$HOME/.local/share/pnpm/store",
+    "VAULT_ADDR": "http://127.0.0.1:8200"
+  },
+  "shell": {
+    "init_hook": [
+      "bash \"$DEVBOX_PROJECT_ROOT/scripts/devbox/docker-plugin.sh\"",
+      "bash \"$DEVBOX_PROJECT_ROOT/scripts/devbox/doctor.sh\" --quiet || true"
+    ],
+    "scripts": {
+      "setup": "pnpm install --frozen-lockfile",
+      "install": "pnpm install --frozen-lockfile",
+      "doctor": "bash scripts/devbox/doctor.sh",
+      "lint": "pnpm lint",
+      "lint:fast": "pnpm lint:tooling",
+      "format": "pnpm format",
+      "typecheck": "pnpm typecheck",
+      "test": "pnpm test",
+      "build": "pnpm build",
+      "infra-up": "just dev-up",
+      "infra-down": "just dev-down",
+      "infra-logs": "just logs",
+      "psql": "just psql",
+      "redis-cli": "just redis-cli",
+      "shell": "devbox shell"
+    }
+  },
+  "aliases": {
+    "dbx-setup": "devbox run setup",
+    "dbx-doctor": "devbox run doctor",
+    "dbx-verify": "devbox run typecheck && devbox run lint"
+  }
+}

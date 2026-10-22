@@ -84,7 +84,7 @@
 | `just rollback`         | Roll back to previous deployment                 |
 | `just rotate-secrets`   | Rotate all application secrets (Vault)           |
 | `just validate-secrets` | Verify all secrets are present and valid         |
-| `just port-scan`        | Scan for unexpected open ports                   |
+
 | `just security-audit`   | Full security audit (secrets, configs, firewall) |
 
 ### Vault Operations

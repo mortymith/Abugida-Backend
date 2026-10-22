@@ -177,9 +177,11 @@ The infrastructure linters are system packages (no npm wrappers — the wrappers
 | editorconfig-checker | [github.com/editorconfig-checker/editorconfig-checker](https://github.com/editorconfig-checker/editorconfig-checker/releases) (v4.0 tested) |
 | shfmt                | [github.com/mvdan/sh](https://github.com/mvdan/sh/releases) (v3.11 tested)                                                                  |
 
+**In the sandbox these are installed for you.** The [Devbox sandbox](../docs/development/devbox-sandbox.md) pins each of them (ADR-026), so `just sandbox-setup` provisions the whole list above and `just sandbox-doctor` verifies it. The manual install paths remain the fallback for hosts that do not use the sandbox.
+
 `pnpm lint` / `format` / `typecheck` / `test` / `build` / `lint:spelling` / `lint:markdown` / `lint:deps` / `knip` need no system binaries beyond Node/pnpm/Bun.
 
-There is no CI in this repository yet. When CI is added, the system binaries above are the documented dependency list; everything else is installed by `pnpm install`.
+There is no CI in this repository yet. When CI is added, the Devbox sandbox (`devbox.json` + `devbox.lock`) is the dependency list — it already covers every binary above, plus Bun, pnpm, Node and just.
 
 ## Adding a new shared tooling configuration
 
