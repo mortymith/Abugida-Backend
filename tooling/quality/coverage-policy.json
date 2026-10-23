@@ -1,0 +1,21 @@
+{
+  "$comment": "QGS-001 §6 — coverage policy. Floors are the §6.3 thresholds; baselines are recorded at adoption (§6.4). The enforced floor is max(policy floor, baseline). The floor may increase by at most 2 points per PR.",
+  "version": "1.0.0",
+  "measurement": {
+    "runner": "bun test --coverage",
+    "include": ["src/**/*.{ts,tsx}"],
+    "exclude": ["**/*.gen.ts", "**/*routeTree.gen.*", "**/*.d.ts", "**/config/**", "**/*.config.*"]
+  },
+  "workspaces": {
+    "packages/*": { "lines": 90, "functions": 90, "branches": 85, "baseline": null },
+    "@abugida/api": { "lines": 80, "functions": 80, "branches": 75, "baseline": null },
+    "@abugida/dashboard": { "lines": 75, "functions": 75, "branches": 70, "baseline": null },
+    "@abugida/marketing": { "lines": 60, "functions": 60, "branches": null, "baseline": null }
+  },
+  "diffCoverage": { "lines": 90 },
+  "ratchet": {
+    "maxFloorIncreasePerPr": 2,
+    "floorsNeverDecrease": true,
+    "policyFile": "tooling/quality/coverage-policy.json"
+  }
+}

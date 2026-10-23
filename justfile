@@ -862,6 +862,17 @@ sandbox-verify: (_need "devbox")
     devbox run lint
     devbox run test
 
+# QGS-001 §10 — sandbox-scoped quality-gate verification (pinned binaries)
+verify: (_need "devbox")
+    devbox run pnpm quality:fast
+    devbox run pnpm lint:docker
+    devbox run pnpm lint:yaml
+    devbox run pnpm lint:shell
+    devbox run pnpm lint:env
+    devbox run pnpm lint:editorconfig
+    devbox run pnpm lint:markdown
+    devbox run pnpm lint:secrets
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # EXTENDING THIS FILE
 # ═══════════════════════════════════════════════════════════════════════════════

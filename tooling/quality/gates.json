@@ -1,0 +1,701 @@
+{
+  "$comment": "QGS-001 §5 — machine-readable gate catalogue. policy: BLOCKING | ADVISORY | SCHEDULED. scope: repo | ws:<name> | changed | infra | deployed | release.",
+  "version": "1.0.0",
+  "document": "docs/quality/quality-gate-specification.md",
+  "gates": [
+    {
+      "id": "QG-101",
+      "name": "Typecheck (strict TS)",
+      "tier": "G1",
+      "command": "pnpm typecheck",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": false
+    },
+    {
+      "id": "QG-102",
+      "name": "Lint (all workspaces)",
+      "tier": "G1",
+      "command": "pnpm lint",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-103",
+      "name": "Formatting (Prettier, check mode)",
+      "tier": "G1",
+      "command": "pnpm format:check",
+      "scope": "changed",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-104",
+      "name": "Type-strictness policy",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/ts-strictness.mjs",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": false
+    },
+    {
+      "id": "QG-105",
+      "name": "Type-aware linting",
+      "tier": "G1",
+      "command": "pnpm lint",
+      "scope": "ws",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-106",
+      "name": "Type-only import hygiene",
+      "tier": "G1",
+      "command": "pnpm lint",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-107",
+      "name": "Dead code / unused exports (knip)",
+      "tier": "G1",
+      "command": "pnpm knip",
+      "scope": "repo",
+      "policy": "ADVISORY",
+      "waivable": true
+    },
+    {
+      "id": "QG-108",
+      "name": "Dependency version consistency (syncpack)",
+      "tier": "G1",
+      "command": "pnpm lint:deps",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-109",
+      "name": "Dependency graph integrity",
+      "tier": "G1",
+      "command": "pnpm install --frozen-lockfile",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": false
+    },
+    {
+      "id": "QG-110",
+      "name": "No bun.lockb / no bun mutation",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/lockfile-guard.mjs",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": false
+    },
+    {
+      "id": "QG-111",
+      "name": "Forbidden runtime in dependency graph",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/forbidden-deps.mjs",
+      "scope": "repo",
+      "policy": "ADVISORY",
+      "waivable": true
+    },
+
+    {
+      "id": "QG-201",
+      "name": "Unit & component tests",
+      "tier": "G1",
+      "command": "pnpm test",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-202",
+      "name": "Test determinism / no flakes",
+      "tier": "G1",
+      "command": "pnpm test && pnpm test",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-203",
+      "name": "Coverage measurement",
+      "tier": "G1",
+      "command": "pnpm coverage",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-204",
+      "name": "Coverage threshold",
+      "tier": "G1",
+      "command": "pnpm coverage:check",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-205",
+      "name": "Test-to-change coupling (diff coverage)",
+      "tier": "G1",
+      "command": "pnpm coverage:check",
+      "scope": "changed",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-206",
+      "name": "New-code coverage",
+      "tier": "G1",
+      "command": "pnpm coverage:check",
+      "scope": "changed",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-207",
+      "name": "API route contract tests",
+      "tier": "G1",
+      "command": "pnpm --filter @abugida/api test",
+      "scope": "ws:api",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-208",
+      "name": "OpenAPI document integrity",
+      "tier": "G1",
+      "command": "pnpm --filter @abugida/api test",
+      "scope": "ws:api",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-209",
+      "name": "Marketing smoke test",
+      "tier": "G1",
+      "command": "pnpm --filter @abugida/marketing build",
+      "scope": "ws:marketing",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-210",
+      "name": "Database integration tests",
+      "tier": "G3",
+      "command": "just test-suite db",
+      "scope": "ws:api",
+      "policy": "ADVISORY",
+      "waivable": true
+    },
+    {
+      "id": "QG-211",
+      "name": "Migration applies cleanly",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/migration-check.mjs",
+      "scope": "ws:database",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-212",
+      "name": "Test naming & placement convention",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/test-conventions.mjs",
+      "scope": "repo",
+      "policy": "ADVISORY",
+      "waivable": true
+    },
+
+    {
+      "id": "QG-301",
+      "name": "No cross-app imports",
+      "tier": "G1",
+      "command": "eslint boundary-rules no-cross-app-imports",
+      "scope": "app/*",
+      "policy": "BLOCKING",
+      "waivable": false
+    },
+    {
+      "id": "QG-302",
+      "name": "Sibling packages are peer dependencies",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/peer-deps-check.mjs",
+      "scope": "packages",
+      "policy": "BLOCKING",
+      "waivable": false
+    },
+    {
+      "id": "QG-303",
+      "name": "No reimplementation of shared concerns",
+      "tier": "G1",
+      "command": "eslint boundary-rules no-shared-concern-reimplementation",
+      "scope": "app/*",
+      "policy": "BLOCKING",
+      "waivable": false
+    },
+    {
+      "id": "QG-304",
+      "name": "Environment read only via config module",
+      "tier": "G1",
+      "command": "eslint boundary-rules no-process-env",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": false
+    },
+    {
+      "id": "QG-305",
+      "name": "No raw SQL string interpolation",
+      "tier": "G1",
+      "command": "eslint boundary-rules no-raw-sql-interpolation",
+      "scope": "ws:database",
+      "policy": "BLOCKING",
+      "waivable": false
+    },
+    {
+      "id": "QG-306",
+      "name": "Package export surface stability",
+      "tier": "G5",
+      "command": "pnpm pack:check",
+      "scope": "packages",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-307",
+      "name": "Public API of published packages is documented",
+      "tier": "G5",
+      "command": "typedoc coverage check",
+      "scope": "packages",
+      "policy": "ADVISORY",
+      "waivable": true
+    },
+    {
+      "id": "QG-308",
+      "name": "No console.* in shipped code",
+      "tier": "G1",
+      "command": "eslint no-console",
+      "scope": "app/*,packages/*",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+
+    {
+      "id": "QG-401",
+      "name": "Secret leak detection (history)",
+      "tier": "G1",
+      "command": "pnpm lint:secrets",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": false
+    },
+    {
+      "id": "QG-402",
+      "name": "Secret leak detection (working tree)",
+      "tier": "G1",
+      "command": "gitleaks dir .",
+      "scope": "changed",
+      "policy": "BLOCKING",
+      "waivable": false
+    },
+    {
+      "id": "QG-403",
+      "name": "Dependency vulnerability scan",
+      "tier": "G1",
+      "command": "pnpm audit --audit-level=high && trivy fs .",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": false,
+      "hardLimitCritical": true
+    },
+    {
+      "id": "QG-404",
+      "name": "Container image vulnerability scan",
+      "tier": "G5",
+      "command": "trivy image",
+      "scope": "infra",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-405",
+      "name": "Dockerfile hardening lint",
+      "tier": "G1",
+      "command": "pnpm lint:docker",
+      "scope": "infra",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-406",
+      "name": "Configuration security audit",
+      "tier": "G1",
+      "command": "scripts/security/check-configs.sh --ci",
+      "scope": "infra",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-407",
+      "name": "Dependency & Dockerfile audit",
+      "tier": "G1",
+      "command": "scripts/security/audit-dependencies.sh --ci",
+      "scope": "infra",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-408",
+      "name": ".env.example hygiene",
+      "tier": "G1",
+      "command": "pnpm lint:env",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-409",
+      "name": "Environment contract parity",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/env-parity.mjs",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-410",
+      "name": "No secret material in the repository",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/no-env-files-tracked.mjs",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": false
+    },
+    {
+      "id": "QG-411",
+      "name": "Auth surface conformance",
+      "tier": "G1",
+      "command": "pnpm --filter @abugida/auth test",
+      "scope": "ws:auth",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-412",
+      "name": "Tenant isolation conformance",
+      "tier": "G1",
+      "command": "pnpm --filter @abugida/tenant test",
+      "scope": "ws:tenant,ws:api",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-413",
+      "name": "OWASP ZAP baseline scan",
+      "tier": "G3",
+      "command": "zap-baseline.py -c docker/tests/security/owasp-zap/scan-policy.xml",
+      "scope": "deployed",
+      "policy": "ADVISORY",
+      "waivable": true
+    },
+    {
+      "id": "QG-414",
+      "name": "Tunnel exposure test",
+      "tier": "G5",
+      "command": "just tunnel-test",
+      "scope": "deployed",
+      "policy": "SCHEDULED",
+      "waivable": true
+    },
+    {
+      "id": "QG-415",
+      "name": "TLS & certificate validity",
+      "tier": "G5",
+      "command": "just cert-status",
+      "scope": "deployed",
+      "policy": "SCHEDULED",
+      "waivable": true
+    },
+    {
+      "id": "QG-416",
+      "name": "SAST (semantic)",
+      "tier": "G1",
+      "command": "semgrep ci",
+      "scope": "repo",
+      "policy": "ADVISORY",
+      "waivable": true
+    },
+
+    {
+      "id": "QG-501",
+      "name": "Lockfile is current",
+      "tier": "G1",
+      "command": "pnpm install --frozen-lockfile",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": false
+    },
+    {
+      "id": "QG-502",
+      "name": "Pinned toolchain",
+      "tier": "G1",
+      "command": "devbox run -- devbox doctor",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-503",
+      "name": "No unapproved native builds",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/allow-builds-baseline.mjs",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-504",
+      "name": "Patches are applied and reviewed",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/patches-check.mjs",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-505",
+      "name": "Licence policy",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/license-check.mjs",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-506",
+      "name": "SBOM generation",
+      "tier": "G5",
+      "command": "syft / cyclonedx per artifact",
+      "scope": "release",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-507",
+      "name": "Provenance & attestation",
+      "tier": "G5",
+      "command": "pnpm publish --provenance",
+      "scope": "release",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-508",
+      "name": "Package tarball contents",
+      "tier": "G5",
+      "command": "npm pack --dry-run",
+      "scope": "release",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-509",
+      "name": "Version bump & changelog consistency",
+      "tier": "G5",
+      "command": "pnpm changeset status",
+      "scope": "release",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-510",
+      "name": "Dependency update automation health",
+      "tier": "G5",
+      "command": "renovate dashboard report",
+      "scope": "repo",
+      "policy": "SCHEDULED",
+      "waivable": true
+    },
+
+    {
+      "id": "QG-601",
+      "name": "Compose validity (all tiers)",
+      "tier": "G1",
+      "command": "just validate-compose",
+      "scope": "infra",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-602",
+      "name": "Compose service-count drift",
+      "tier": "G1",
+      "command": "just validate-compose",
+      "scope": "infra",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-603",
+      "name": "YAML lint",
+      "tier": "G1",
+      "command": "pnpm lint:yaml",
+      "scope": "infra",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-604",
+      "name": "Shell script lint",
+      "tier": "G1",
+      "command": "pnpm lint:shell",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-605",
+      "name": "Shell formatting",
+      "tier": "G1",
+      "command": "shfmt -d -i 2 -sr -ln bash",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-606",
+      "name": "EditorConfig conformance",
+      "tier": "G1",
+      "command": "pnpm lint:editorconfig",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-607",
+      "name": "Integration suite (container tier)",
+      "tier": "G3",
+      "command": "just test-suite all",
+      "scope": "infra",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-608",
+      "name": "Post-deploy verification",
+      "tier": "G3",
+      "command": "docs/runbooks/deploy/post-deploy-verification.md",
+      "scope": "deployed",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-609",
+      "name": "Backup & restore verification",
+      "tier": "G5",
+      "command": "just verify-backup && just restore-test",
+      "scope": "infra",
+      "policy": "SCHEDULED",
+      "waivable": true
+    },
+    {
+      "id": "QG-610",
+      "name": "Observability wiring",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/observability-wiring.mjs",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+
+    {
+      "id": "QG-701",
+      "name": "Markdown lint",
+      "tier": "G1",
+      "command": "pnpm lint:markdown",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-702",
+      "name": "Spelling",
+      "tier": "G1",
+      "command": "pnpm lint:spelling",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-703",
+      "name": "Documentation link integrity",
+      "tier": "G1",
+      "command": "markdown-link-check",
+      "scope": "repo",
+      "policy": "ADVISORY",
+      "waivable": true
+    },
+    {
+      "id": "QG-704",
+      "name": "ADR required for architecture changes",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/adr-required.mjs",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-705",
+      "name": "Runbook & service-doc pairing",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/runbook-pairing.mjs",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-706",
+      "name": "Docs ↔ code consistency",
+      "tier": "G1",
+      "command": "node tooling/quality/scripts/docs-code-consistency.mjs",
+      "scope": "repo",
+      "policy": "ADVISORY",
+      "waivable": true
+    },
+    {
+      "id": "QG-707",
+      "name": "Changelog & version documentation",
+      "tier": "G5",
+      "command": "pnpm changeset status",
+      "scope": "repo",
+      "policy": "BLOCKING",
+      "waivable": true
+    },
+    {
+      "id": "QG-708",
+      "name": "Repo-local instruction files up to date",
+      "tier": "G1",
+      "command": "manual review cadence",
+      "scope": "repo",
+      "policy": "ADVISORY",
+      "waivable": true
+    }
+  ],
+  "hardLimits": [
+    "QG-401",
+    "QG-402",
+    "QG-101",
+    "QG-104",
+    "QG-301",
+    "QG-302",
+    "QG-109",
+    "QG-501",
+    "QG-403:CRITICAL"
+  ],
+  "requiredStatusChecks": ["quality-gate", "security-gate", "build-gate"]
+}

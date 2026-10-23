@@ -33,7 +33,7 @@ Validates that SigNoz is reachable through the Cloudflare Tunnel and that Vault 
 **Invoke:** `just audit-dependencies`
 **Script:** `scripts/security/audit-dependencies.sh`
 
-Runs Trivy against Dockerfiles, lockfiles (`bun.lockb`), and built images. Fails on CRITICAL or HIGH CVEs. Also invoked by `security.yml` in CI.
+Runs Trivy against Dockerfiles, lockfiles (`pnpm-lock.yaml`), and built images. Fails on CRITICAL or HIGH CVEs. Also invoked by `security.yml` in CI.
 
 ## Compose Validation
 

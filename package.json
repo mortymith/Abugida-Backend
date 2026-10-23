@@ -37,7 +37,13 @@
     "lint:shell": "git ls-files '*.sh' | xargs -r shellcheck -x --rcfile .shellcheckrc",
     "lint:secrets": "gitleaks git --no-banner --config .gitleaks.toml",
     "lint:deps": "syncpack lint",
-    "knip": "KNIP_DISABLE_RAW_TRANSFER=1 knip --no-progress"
+    "knip": "KNIP_DISABLE_RAW_TRANSFER=1 knip --no-progress",
+    "format:check": "prettier --config tooling/prettier-config/index.js --check \"*.{js,mjs,cjs,ts,tsx,json,yaml,yml}\" \"docs/**/*.{md,mdx,json,yaml,yml}\" \"tooling/**/*.{js,mjs,cjs,ts,tsx,json,md,mdx,yaml,yml}\"",
+    "coverage": "turbo coverage",
+    "coverage:check": "node tooling/quality/scripts/coverage-check.mjs",
+    "quality:fast": "bun tooling/quality/scripts/quality-fast.ts",
+    "quality": "node tooling/quality/scripts/quality-full.mjs",
+    "quality:fix": "pnpm format && turbo lint -- --fix && pnpm knip --fix"
   },
   "type": "module",
   "devDependencies": {

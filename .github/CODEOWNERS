@@ -1,0 +1,27 @@
+# QGS-001 §11.3 — CODEOWNERS (ownership + review routing).
+# A PR modifying an owned path requires an approval from that owner.
+
+* @mortymith/platform
+
+# Packages
+/packages/auth/ @mortymith/auth-owner
+/packages/database/ @mortymith/data-owner
+/packages/tenant/ @mortymith/platform
+/packages/queue/ @mortymith/platform
+/packages/storage/ @mortymith/platform
+/packages/observability/ @mortymith/platform
+
+# Apps
+/app/api/ @mortymith/api-owner
+/app/dashboard/ @mortymith/dashboard-owner
+/app/marketing/ @mortymith/platform
+
+# Infrastructure & platform
+/docker/ @mortymith/platform
+/scripts/ @mortymith/platform
+/.github/ @mortymith/platform
+/tooling/ @mortymith/platform
+
+# Documentation
+/docs/architecture/ @mortymith/architecture-owner
+/docs/quality/ @mortymith/platform

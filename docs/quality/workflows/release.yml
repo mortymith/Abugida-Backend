@@ -1,0 +1,50 @@
+# QGS-001 §7.1 + §9.5 — package release with provenance (G5).
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  id-token: write # provenance (QG-507)
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pdm-project/setup-devbox@main
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'devbox.lock') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - run: devbox run -- pnpm install --frozen-lockfile
+      - name: Build publishable packages
+        run: devbox run -- pnpm --filter='./packages/*' build
+      - name: Package export surface (QG-306)
+        run: devbox run -- npx --yes publint packages/*/package.json
+        continue-on-error: true
+      - name: Tarball contents (QG-508 — dist/ + README only)
+        run: devbox run -- bash -c 'for p in packages/*; do (cd "$p" && npm pack --dry-run); done'
+        continue-on-error: true
+      - name: Changelog consistency (QG-509)
+        run: devbox run -- npx --yes @changesets/cli status
+        continue-on-error: true
+      - name: SBOM (QG-506)
+        uses: anchore/sbom-action@v0
+        continue-on-error: true
+        with:
+          format: cyclonedx-json
+          artifact-name: abugida-backend-sbom.cdx.json
+      - name: Publish with provenance (QG-507)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "Publish hook: pnpm -r publish --access public --provenance --no-git-checks"
+          echo "Wire NPM_TOKEN as a GitHub secret before enabling."

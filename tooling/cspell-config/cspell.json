@@ -34,7 +34,6 @@
     "**/.astro/**",
     "coverage/**",
     "pnpm-lock.yaml",
-    "bun.lockb",
     "**/*.gen.ts",
     "**/*.tsbuildinfo",
     ".agents/**",
