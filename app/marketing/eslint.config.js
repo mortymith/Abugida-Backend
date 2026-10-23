@@ -9,8 +9,10 @@
  */
 import base from '@abugida/eslint-config'
 import eslintPluginAstro from 'eslint-plugin-astro'
-import astroParser from 'astro-eslint-parser'
+import * as astroParserModule from 'astro-eslint-parser'
 import typescriptParser from '@typescript-eslint/parser'
+
+const astroParser = { parseForESLint: astroParserModule.parseForESLint }
 
 export default [
   ...base,

@@ -93,7 +93,7 @@
   },
   "dependencies": {
     "better-auth-telegram": "^2.0.1",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@abugida/database": "workspace:*",
@@ -101,16 +101,16 @@
     "@abugida/prettier-config": "workspace:*",
     "@abugida/typescript-config": "workspace:*",
     "@tanstack/react-router": "1.170.38",
-    "@tanstack/react-start": "1.168.56",
-    "@types/bun": "^1.4.2",
-    "@types/react": "^19.2.18",
+    "@tanstack/react-start": "1.169.3",
+    "@types/bun": "1.4.2",
+    "@types/react": "^19.3.0",
     "better-auth": "1.6.26",
-    "drizzle-orm": "^0.45.2",
-    "eslint": "^10.8.1",
-    "hono": "^4.12.32",
-    "prettier": "^3.9.6",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
+    "drizzle-orm": "^0.45.4",
+    "eslint": "^10.13.0",
+    "hono": "^4.13.13",
+    "prettier": "^3.9.10",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "typescript": "^6.0.3"
   },
   "engines": {
