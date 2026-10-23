@@ -25,6 +25,9 @@
     "test": {
       "outputs": []
     },
+    "coverage": {
+      "outputs": ["coverage/**"]
+    },
     "db:generate": {
       "cache": false
     },

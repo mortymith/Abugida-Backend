@@ -1,0 +1,62 @@
+# QGS-001 §7.1 — staging deploy (G3). Never cancels.
+name: deploy-staging
+
+on:
+  push:
+    branches: [dev]
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  pre-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pdm-project/setup-devbox@main
+      - run: devbox run -- pnpm install --frozen-lockfile
+      - run: devbox run -- pnpm typecheck
+      - run: devbox run -- pnpm test
+
+  image-scan:
+    # QG-404 — Trivy image scan before deploy.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy config/image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+
+  deploy:
+    needs: [pre-deploy, image-scan]
+    environment: staging # §11.2 — 0 reviewers, no wait timer
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to staging
+        run: |
+          echo "Staging deploy hook — wire the real deployment command here"
+          echo "(See docs/runbooks/deploy/post-deploy-verification.md for QG-608)"
+
+  post-deploy-verification:
+    # QG-608 — post-deploy verification runbook.
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Post-deploy verification (QG-608)
+        run: |
+          echo "Run docs/runbooks/deploy/post-deploy-verification.md checks here"
+          echo "A deploy without telemetry is a failed deploy (QG-610)."

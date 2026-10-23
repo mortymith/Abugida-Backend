@@ -1,0 +1,92 @@
+# QGS-001 §7.1 — security gates (G1 + SCHEDULED).
+name: security
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [dev, master]
+  schedule:
+    - cron: '0 3 * * 1' # weekly, Monday 03:00 UTC
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  gitleaks:
+    # QG-401/402 — full history + working tree. Hard limit: no waiver.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  trivy:
+    # QG-403 — dependency + config scan (fs mode), SARIF to code scanning.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-results.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+  audit:
+    # QG-403 — pnpm audit gate.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pdm-project/setup-devbox@main
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'devbox.lock') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - run: devbox run -- pnpm install --frozen-lockfile
+      - name: pnpm audit (HIGH/CRITICAL block, CRITICAL zero-tolerance)
+        run: devbox run -- pnpm audit --audit-level=high
+
+  sast:
+    # QG-416 — semantic SAST, ADVISORY until promoted.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: returntocorp/semgrep-action@v1
+        continue-on-error: true
+
+  security-gate:
+    needs: [gitleaks, trivy, audit]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Aggregate security gate
+        run: |
+          for job in gitleaks trivy audit; do
+            if [[ "${{ needs[job].result }}" != success ]]; then
+              echo "security-gate FAILED at $job"
+              exit 1
+            fi
+          done
+          echo "security-gate PASSED"

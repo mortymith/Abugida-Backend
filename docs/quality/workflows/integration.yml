@@ -1,0 +1,34 @@
+# QGS-001 §7.1 — container-tier integration suite (G3).
+name: integration
+
+on:
+  push:
+    branches: [dev]
+  schedule:
+    - cron: '0 4 * * *' # nightly
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  integration-gate:
+    # QG-607 — smoke → api → cache → db via `just test-suite all`.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pdm-project/setup-devbox@main
+      - uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'devbox.lock') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - run: devbox run -- pnpm install --frozen-lockfile
+      - name: Validate compose (QG-601)
+        run: devbox run -- just validate-compose
+      - name: Integration suite (QG-607)
+        run: devbox run -- just test-suite all

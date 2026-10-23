@@ -1,0 +1,290 @@
+# QGS-001 §7 — G1 PR validation pipeline.
+# Aggregate `quality-gate` is the single required status check (§7.2/§11.1).
+name: quality
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+  security-events: write
+
+env:
+  PNPM_CACHE_DIR: ~/.local/share/pnpm/store
+
+jobs:
+  setup:
+    # QG-109 / QG-501 / QG-502 — frozen install + pinned toolchain.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pdm-project/setup-devbox@main
+        name: Install Devbox-pinned toolchain (QG-502)
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.PNPM_CACHE_DIR }}
+            .turbo
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'devbox.lock') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - name: Frozen lockfile install (QG-109)
+        run: devbox run -- pnpm install --frozen-lockfile
+      - name: Lockfile guard (QG-110)
+        run: devbox run -- node tooling/quality/scripts/lockfile-guard.mjs
+      - name: TS strictness policy (QG-104)
+        run: devbox run -- node tooling/quality/scripts/ts-strictness.mjs
+      - name: Sibling packages are peer dependencies (QG-302)
+        run: devbox run -- node tooling/quality/scripts/peer-deps-check.mjs
+      - name: No secret material tracked (QG-410)
+        run: devbox run -- node tooling/quality/scripts/no-env-files-tracked.mjs
+      - name: Patches declared (QG-504)
+        run: devbox run -- node tooling/quality/scripts/patches-check.mjs
+      - name: Native build baseline (QG-503)
+        run: devbox run -- node tooling/quality/scripts/allow-builds-baseline.mjs
+      - name: Observability wiring (QG-610)
+        run: devbox run -- node tooling/quality/scripts/observability-wiring.mjs
+      - name: Environment contract parity (QG-409)
+        run: devbox run -- node tooling/quality/scripts/env-parity.mjs
+      - name: Build workspace packages
+        run: devbox run -- pnpm --filter='./packages/*' build
+
+  static:
+    # QG-101/102/103/106/108 — lint, typecheck, format check, syncpack.
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pdm-project/setup-devbox@main
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.PNPM_CACHE_DIR }}
+            .turbo
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'devbox.lock') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - run: devbox run -- pnpm install --frozen-lockfile
+      - name: Typecheck (QG-101)
+        run: devbox run -- pnpm typecheck
+      - name: Lint (QG-102)
+        run: devbox run -- pnpm lint
+      - name: Format check (QG-103)
+        run: devbox run -- pnpm format:check
+      - name: Syncpack (QG-108)
+        run: devbox run -- pnpm lint:deps
+
+  tests:
+    # QG-201 + QG-202 — bun test, run twice for flake detection (§8).
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        run: [1, 2]
+    name: tests (determinism pass ${{ matrix.run }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pdm-project/setup-devbox@main
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.PNPM_CACHE_DIR }}
+            .turbo
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'devbox.lock') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - run: devbox run -- pnpm install --frozen-lockfile
+      - run: devbox run -- pnpm --filter='./packages/*' build
+      - name: Test suite (QG-201, pass ${{ matrix.run }})
+        run: devbox run -- pnpm test
+      - name: JUnit report
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        continue-on-error: true
+        with:
+          check_name: tests-${{ matrix.run }}
+          report_paths: '**/junit*.xml'
+          require_tests: false
+
+  coverage:
+    # QG-203/204/205/206 — coverage measurement + ratchet (§6).
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pdm-project/setup-devbox@main
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.PNPM_CACHE_DIR }}
+            .turbo
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'devbox.lock') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - run: devbox run -- pnpm install --frozen-lockfile
+      - run: devbox run -- pnpm --filter='./packages/*' build
+      - name: Collect coverage (QG-203)
+        run: devbox run -- pnpm coverage || true
+      - name: Coverage policy check (QG-204/205/206)
+        run: devbox run -- node tooling/quality/scripts/coverage-check.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report-${{ github.event.pull_request.head.sha }}
+          path: |
+            coverage/
+            **/coverage/
+          retention-days: 14
+
+  deps:
+    # QG-107 (advisory) + QG-403 — knip, audit, licence check.
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pdm-project/setup-devbox@main
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.PNPM_CACHE_DIR }}
+            .turbo
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'devbox.lock') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - run: devbox run -- pnpm install --frozen-lockfile
+      - name: Knip (QG-107 — advisory until Phase 2)
+        run: devbox run -- pnpm knip
+        continue-on-error: true
+      - name: pnpm audit (QG-403)
+        run: devbox run -- pnpm audit --audit-level=high
+        continue-on-error: true
+      - name: Licence policy (QG-505 — advisory until Phase 2)
+        run: devbox run -- node tooling/quality/scripts/license-check.mjs
+        continue-on-error: true
+      - name: Forbidden deps (QG-111 — advisory)
+        run: devbox run -- node tooling/quality/scripts/forbidden-deps.mjs
+
+  docs:
+    # QG-701/702/704/705 — markdown, spelling, ADR pairing, runbook pairing.
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pdm-project/setup-devbox@main
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.PNPM_CACHE_DIR }}
+            .turbo
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'devbox.lock') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - run: devbox run -- pnpm install --frozen-lockfile
+      - name: Markdown lint (QG-701)
+        run: devbox run -- pnpm lint:markdown
+      - name: Spelling (QG-702)
+        run: devbox run -- pnpm lint:spelling
+      - name: ADR required (QG-704)
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: devbox run -- node tooling/quality/scripts/adr-required.mjs
+      - name: Runbook & service-doc pairing (QG-705)
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+        run: devbox run -- node tooling/quality/scripts/runbook-pairing.mjs
+      - name: Waiver check (§13)
+        run: devbox run -- node tooling/quality/waiver-check.mjs
+
+  infra:
+    # QG-601/603/604/605/606 + QG-406/407/408 — compose, yamllint, shellcheck,
+    # shfmt, editorconfig, hadolint, dotenv-linter, config security.
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pdm-project/setup-devbox@main
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.PNPM_CACHE_DIR }}
+            .turbo
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'devbox.lock') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - run: devbox run -- pnpm install --frozen-lockfile
+      - name: Compose validity (QG-601/602)
+        run: devbox run -- just validate-compose
+        continue-on-error: true
+      - name: YAML lint (QG-603)
+        run: devbox run -- pnpm lint:yaml
+      - name: Shell lint (QG-604)
+        run: devbox run -- pnpm lint:shell
+      - name: Shell format (QG-605)
+        run: devbox run -- shfmt -d -i 2 -sr -ln bash $(git ls-files '*.sh')
+      - name: EditorConfig (QG-606)
+        run: devbox run -- pnpm lint:editorconfig
+      - name: Dockerfile lint (QG-405)
+        run: devbox run -- pnpm lint:docker
+      - name: .env.example hygiene (QG-408)
+        run: devbox run -- pnpm lint:env
+      - name: Config security audit (QG-406)
+        run: devbox run -- bash scripts/security/check-configs.sh --ci
+        continue-on-error: true
+      - name: Dependency & Dockerfile audit (QG-407)
+        run: devbox run -- bash scripts/security/audit-dependencies.sh --ci
+        continue-on-error: true
+
+  secrets:
+    # QG-401/402 — gitleaks history + working-tree scan. Hard limit, no waiver.
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  quality-gate:
+    # §7.2 — aggregate required status check.
+    needs: [static, tests, coverage, deps, docs, infra, secrets]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aggregate gate
+        run: |
+          echo "| Job | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| static | ${{ needs.static.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| tests | ${{ needs.tests.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| coverage | ${{ needs.coverage.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| deps | ${{ needs.deps.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| docs | ${{ needs.docs.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| infra | ${{ needs.infra.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| secrets | ${{ needs.secrets.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "${{ needs.static.result }}" != success || "${{ needs.tests.result }}" != success \
+            || "${{ needs.coverage.result }}" != success || "${{ needs.docs.result }}" != success \
+            || "${{ needs.infra.result }}" != success || "${{ needs.secrets.result }}" != success ]]; then
+            echo "quality-gate FAILED" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "quality-gate PASSED" >> "$GITHUB_STEP_SUMMARY"

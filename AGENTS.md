@@ -144,3 +144,11 @@ Shared per-tool configuration packages (`@abugida/*-config`, part of the pnpm wo
 - `app/dashboard/AGENTS.md` — Dashboard app architecture, naming conventions, and agent instructions.
 - `app/marketing/AGENTS.md` — Dev-server workflow (use `astro dev --background`).
 - `.agents/skills/` — 17 installable skills: better-auth, hono, shadcn, tanstack-* (ai, cli, config, db, devtools, query, router, start, virtual), design-doc-mermaid, commit-master, create-auth, organization-best-practices.
+
+## Quality gates (QGS-001)
+
+The delivery pipeline is governed by `docs/quality/quality-gate-specification.md` (QGS-001).
+Every PR must pass the aggregate `quality-gate` check (`.github/workflows/quality.yml`).
+Local mirrors: `pnpm quality:fast` (< 60 s, no Docker), `pnpm quality` (full), `just verify` (Devbox sandbox).
+Machine-readable gate catalogue: `tooling/quality/gates.json`; coverage policy & ratchet: `tooling/quality/coverage-policy.json`;
+waivers: `docs/quality/waivers/` (expiry ≤ 30 days, never for hard-limit gates — see §13 of the spec).
