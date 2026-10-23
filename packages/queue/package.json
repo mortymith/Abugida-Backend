@@ -46,11 +46,11 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "bullmq": "^6.3.8"
+    "bullmq": "^6.4.0"
   },
   "peerDependencies": {
-    "hono": "^4.6.0",
-    "@tanstack/react-start": "^1.112.0"
+    "@tanstack/react-start": "^1.112.0",
+    "hono": "^4.6.0"
   },
   "peerDependenciesMeta": {
     "hono": {
@@ -64,10 +64,10 @@
     "@abugida/eslint-config": "workspace:*",
     "@abugida/prettier-config": "workspace:*",
     "@abugida/typescript-config": "workspace:*",
-    "@types/bun": "^1.4.2",
+    "@types/bun": "1.4.2",
     "@types/node": "^22.20.1",
-    "eslint": "^10.8.1",
-    "prettier": "^3.9.6",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10",
     "typescript": "^6.0.3"
   },
   "keywords": [

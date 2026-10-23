@@ -25,23 +25,23 @@
     "@abugida/queue": "workspace:*",
     "@abugida/storage": "workspace:*",
     "@abugida/tenant": "workspace:*",
-    "@hono/zod-openapi": "^1.5.1",
-    "@scalar/hono-api-reference": "^0.11.11",
+    "@hono/zod-openapi": "^1.6.3",
+    "@scalar/hono-api-reference": "^0.12.13",
     "better-auth": "1.6.26",
-    "dotenv": "^17.4.2",
-    "drizzle-orm": "^0.45.2",
-    "hono": "^4.12.32",
-    "pg": "^8.23.0",
-    "rate-limiter-flexible": "^11.2.0",
-    "zod": "^4.4.3"
+    "dotenv": "^18.0.8",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.13",
+    "pg": "^8.23.1",
+    "rate-limiter-flexible": "^11.2.3",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@abugida/eslint-config": "workspace:*",
     "@abugida/prettier-config": "workspace:*",
     "@abugida/typescript-config": "workspace:*",
-    "@types/bun": "^1.4.2",
-    "@types/pg": "^8.21.0",
-    "eslint": "^10.8.1",
-    "prettier": "^3.9.6"
+    "@types/bun": "1.4.2",
+    "@types/pg": "^8.23.1",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10"
   }
 }
