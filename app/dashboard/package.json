@@ -12,10 +12,10 @@
   },
   "scripts": {
     "predev": "pnpm --filter \"@abugida/dashboard^...\" run build",
-    "dev": "bun run vite dev --port 3000",
+    "dev": "bun --bun vite dev --port 3000",
     "generate-routes": "bun run tsr generate",
-    "build": "bun run vite build",
-    "preview": "bun run vite preview",
+    "build": "bun --bun vite build",
+    "preview": "bun --bun vite preview",
     "lint": "eslint",
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check .",

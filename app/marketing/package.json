@@ -8,13 +8,13 @@
     "bun": ">=1.4.2"
   },
   "scripts": {
-    "dev": "bun run astro dev",
-    "build": "bun run astro build",
-    "preview": "bun run astro preview",
+    "dev": "bun --bun astro dev",
+    "build": "bun --bun astro build",
+    "preview": "bun --bun astro preview",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
-    "typecheck": "bun run astro check",
+    "typecheck": "bun --bun astro check",
     "clean": "rm -rf dist .astro"
   },
   "dependencies": {
