@@ -6,7 +6,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { UnrecoverableError } from 'bullmq'
+import * as BullMQ from 'bullmq'
 import { createHash, generateKeyPairSync } from 'node:crypto'
 import { SIGN_TYPE, buildStringToSign, signPayload } from '../../src/integrations/telebirr.js'
 import { restoreFetch, stubFetch, telebirrTimestamp } from '../helpers/stub-fetch.js'
@@ -175,7 +175,7 @@ describe('Purchase Processors', () => {
         },
         { ...JOB_CTX, name: 'PURCHASE_INITIATE' },
       ),
-    ).rejects.toBeInstanceOf(UnrecoverableError)
+    ).rejects.toBeInstanceOf(BullMQ.UnrecoverableError)
   })
 
   test('processPurchaseComplete should verify the callback signature', async () => {
@@ -226,7 +226,7 @@ describe('Purchase Processors', () => {
         },
         { ...JOB_CTX, name: 'PURCHASE_COMPLETE' },
       ),
-    ).rejects.toBeInstanceOf(UnrecoverableError)
+    ).rejects.toBeInstanceOf(BullMQ.UnrecoverableError)
   })
 })
 
@@ -273,7 +273,7 @@ describe('Notification Processors', () => {
         },
         { ...JOB_CTX, name: 'SMS_NOTIFICATION' },
       ),
-    ).rejects.toBeInstanceOf(UnrecoverableError)
+    ).rejects.toBeInstanceOf(BullMQ.UnrecoverableError)
   })
 })
 
@@ -326,7 +326,7 @@ describe('Webhook Processors', () => {
         },
         { ...JOB_CTX, name: 'WEBHOOK_PROCESS' },
       ),
-    ).rejects.toBeInstanceOf(UnrecoverableError)
+    ).rejects.toBeInstanceOf(BullMQ.UnrecoverableError)
   })
 
   test('processWebhook should normalise sms delivery receipts', async () => {

@@ -10,7 +10,7 @@
  */
 
 import { createHash } from 'node:crypto'
-import { UnrecoverableError } from 'bullmq'
+import * as BullMQ from 'bullmq'
 import type {
   AnyProcessorEntry,
   JobProcessor,
@@ -50,13 +50,15 @@ export const processPurchaseInitiate: JobProcessor<PurchaseInitiateJobData> = as
 
   if (paymentMethod !== 'telebirr') {
     // No other gateway is implemented; retrying cannot succeed.
-    throw new UnrecoverableError(`Unsupported payment method: ${paymentMethod}`)
+    throw new BullMQ.UnrecoverableError(`Unsupported payment method: ${paymentMethod}`)
   }
   if (!(amount > 0)) {
-    throw new UnrecoverableError(`Purchase amount must be positive, got: ${amount}`)
+    throw new BullMQ.UnrecoverableError(`Purchase amount must be positive, got: ${amount}`)
   }
   if (!/^[A-Z]{3}$/.test(currency.toUpperCase())) {
-    throw new UnrecoverableError(`Purchase currency must be a 3-letter code, got: ${currency}`)
+    throw new BullMQ.UnrecoverableError(
+      `Purchase currency must be a 3-letter code, got: ${currency}`,
+    )
   }
 
   logger.info(
@@ -149,7 +151,7 @@ export const processPurchaseComplete: JobProcessor<PurchaseCompleteJobData> = as
   try {
     const telebirr = getTelebirrClient()
     if (!telebirr.verifyCallback(callbackPayload)) {
-      throw new UnrecoverableError('Invalid Telebirr callback signature')
+      throw new BullMQ.UnrecoverableError('Invalid Telebirr callback signature')
     }
 
     // TODO: Replace with actual database integration:

@@ -4,7 +4,8 @@
  * instances on demand and exposes enqueue / bulk / stats methods.
  */
 
-import { Queue, type JobsOptions } from 'bullmq'
+import * as BullMQ from 'bullmq'
+import type { JobsOptions } from 'bullmq'
 import type { QueueConfig } from '../config/schema.js'
 import type { EnqueueOptions, JobDataMap, JobType, QueueClient } from './types.js'
 import { createBullMQConnection, closeConnection } from './connection.js'
@@ -14,7 +15,7 @@ import { JOB_QUEUE_MAP, DEFAULT_QUEUE_OPTIONS, JOB_PRIORITY_MAP } from '../defin
 // QueueInstance cache
 // ---------------------------------------------------------------------------
 
-const queueCache = new Map<string, Queue>()
+const queueCache = new Map<string, BullMQ.Queue>()
 
 // ---------------------------------------------------------------------------
 // Implementation
@@ -23,7 +24,7 @@ const queueCache = new Map<string, Queue>()
 /**
  * Create a BullMQ Queue instance (or return cached) for the given queue name.
  */
-function getOrCreateQueue(queueName: string, config: QueueConfig): Queue {
+function getOrCreateQueue(queueName: string, config: QueueConfig): BullMQ.Queue {
   const cached = queueCache.get(queueName)
   if (cached) return cached
 
@@ -38,7 +39,7 @@ function getOrCreateQueue(queueName: string, config: QueueConfig): Queue {
     ...(userOverrides?.defaultJobOptions as JobsOptions),
   }
 
-  const queue = new Queue(queueName, {
+  const queue = new BullMQ.Queue(queueName, {
     connection,
     defaultJobOptions: mergedOptions,
   })

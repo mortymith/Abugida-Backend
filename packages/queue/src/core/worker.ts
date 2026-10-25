@@ -5,7 +5,8 @@
  * shutdown, and exposes lifecycle events.
  */
 
-import { Worker, type Processor } from 'bullmq'
+import * as BullMQ from 'bullmq'
+import type { Processor } from 'bullmq'
 import type { QueueConfig } from '../config/schema.js'
 import type { AnyProcessorEntry, QueueWorker } from './types.js'
 import { createBullMQConnection, closeConnection } from './connection.js'
@@ -18,7 +19,7 @@ import { getWorkerId } from '../config/env.js'
 // ---------------------------------------------------------------------------
 
 interface ManagedWorker {
-  worker: Worker
+  worker: BullMQ.Worker
   queueName: string
   jobTypes: string[]
   isClosing: boolean
@@ -120,7 +121,7 @@ export function createQueueWorker(
 
       const limiter = userConfig?.limiter ?? queueConfig?.limiter
 
-      const worker = new Worker(queueName, dispatchProcessor, {
+      const worker = new BullMQ.Worker(queueName, dispatchProcessor, {
         connection,
         concurrency,
         stalledInterval: userConfig?.stalledInterval ?? queueConfig?.stalledInterval ?? 30_000,

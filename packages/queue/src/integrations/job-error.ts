@@ -6,7 +6,7 @@
  * succeed (invalid credentials, rejected requests, signature mismatches…).
  */
 
-import { UnrecoverableError } from 'bullmq'
+import * as BullMQ from 'bullmq'
 import { IntegrationError } from './errors.js'
 
 /**
@@ -18,7 +18,7 @@ import { IntegrationError } from './errors.js'
  */
 export function toJobError(error: unknown): Error {
   if (error instanceof IntegrationError && !error.retryable) {
-    return new UnrecoverableError(`${error.name}[${error.code}]: ${error.message}`)
+    return new BullMQ.UnrecoverableError(`${error.name}[${error.code}]: ${error.message}`)
   }
   if (error instanceof Error) return error
   return new Error(String(error))

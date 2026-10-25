@@ -4,7 +4,7 @@
  * are delivered through the SMSEthiopia API (see `integrations/smsethiopia`).
  */
 
-import { UnrecoverableError } from 'bullmq'
+import * as BullMQ from 'bullmq'
 import type {
   AnyProcessorEntry,
   JobProcessor,
@@ -42,7 +42,7 @@ export const processSmsNotification: JobProcessor<SmsNotificationJobData> = asyn
   const msisdn = normalizeMsisdn(recipientPhone)
   if (!msisdn) {
     // Invalid input will never succeed on retry – fail permanently.
-    throw new UnrecoverableError(
+    throw new BullMQ.UnrecoverableError(
       `SMS_NOTIFICATION rejected an invalid recipient phone: ${maskPhone(recipientPhone)}`,
     )
   }
