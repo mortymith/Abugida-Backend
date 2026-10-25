@@ -133,3 +133,8 @@ PSYNC
 ECONNREFUSED
 ECONNRESET
 ETIMEDOUT
+jetify
+gnumake
+binutils
+nixpkgs
+libexec

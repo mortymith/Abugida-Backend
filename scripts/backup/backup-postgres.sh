@@ -148,7 +148,7 @@ backup_dump() {
 
   # Checksum verification
   sha256sum "${BACKUP_FILE}" > "${CHECKSUM_FILE}"
-  echo "[backup-postgres] Checksum: $(cat "${CHECKSUM_FILE}" | cut -d' ' -f1)"
+  echo "[backup-postgres] Checksum: $(cut -d' ' -f1 < "${CHECKSUM_FILE}")"
 
   # Upload to S3
   s3_upload "${BACKUP_FILE}" "${S3_PREFIX}/dumps/${DATE_ONLY}/pg_backup_${TIMESTAMP}.dump"

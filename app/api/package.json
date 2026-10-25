@@ -39,7 +39,7 @@
     "@abugida/eslint-config": "workspace:*",
     "@abugida/prettier-config": "workspace:*",
     "@abugida/typescript-config": "workspace:*",
-    "@types/bun": "1.4.4",
+    "@types/bun": "^1.4.4",
     "@types/pg": "^8.23.1",
     "eslint": "^10.13.0",
     "prettier": "^3.9.10"

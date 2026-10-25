@@ -316,7 +316,7 @@ importers:
         specifier: workspace:*
         version: link:../../tooling/typescript-config
       '@types/bun':
-        specifier: 1.4.4
+        specifier: ^1.4.4
         version: 1.4.4
       '@types/pg':
         specifier: ^8.23.1
@@ -631,7 +631,7 @@ importers:
         specifier: 1.169.3
         version: 1.169.3(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.15)(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@types/bun':
-        specifier: 1.4.4
+        specifier: ^1.4.4
         version: 1.4.4
       '@types/react':
         specifier: ^19.3.0
@@ -753,19 +753,19 @@ importers:
         specifier: 1.169.3
         version: 1.169.3(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.15)(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@types/bun':
-        specifier: 1.4.4
+        specifier: ^1.4.4
         version: 1.4.4
       astro:
-        specifier: ^7.1.4
+        specifier: ^7.4.2
         version: 7.4.2(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
       eslint:
-        specifier: ^10.8.1
+        specifier: ^10.13.0
         version: 10.13.0(jiti@2.7.0)
       hono:
-        specifier: ^4.12.32
+        specifier: ^4.13.13
         version: 4.13.13
       prettier:
-        specifier: ^3.9.6
+        specifier: ^3.9.10
         version: 3.9.10
       typescript:
         specifier: ^6.0.3
@@ -793,7 +793,7 @@ importers:
         specifier: workspace:*
         version: link:../../tooling/typescript-config
       '@types/bun':
-        specifier: 1.4.4
+        specifier: ^1.4.4
         version: 1.4.4
       '@types/node':
         specifier: ^22.20.1
@@ -833,13 +833,13 @@ importers:
         specifier: ^1.4.4
         version: 1.4.4
       eslint:
-        specifier: ^10.8.1
+        specifier: ^10.13.0
         version: 10.13.0(jiti@2.7.0)
       hono:
-        specifier: ^4.12.32
+        specifier: ^4.13.13
         version: 4.13.13
       prettier:
-        specifier: ^3.9.6
+        specifier: ^3.9.10
         version: 3.9.10
       typescript:
         specifier: ^6.0.3
@@ -863,7 +863,7 @@ importers:
         specifier: workspace:*
         version: link:../../tooling/typescript-config
       '@types/bun':
-        specifier: 1.4.4
+        specifier: ^1.4.4
         version: 1.4.4
       eslint:
         specifier: ^10.13.0

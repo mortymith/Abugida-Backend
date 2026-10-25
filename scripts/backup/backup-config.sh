@@ -66,7 +66,7 @@ tar czf "${BACKUP_FILE}" \
 
 # ── Checksum ─────────────────────────────────────────────────────
 sha256sum "${BACKUP_FILE}" > "${BACKUP_FILE}.sha256"
-CHECKSUM=$(cat "${BACKUP_FILE}.sha256" | cut -d' ' -f1)
+CHECKSUM=$(cut -d' ' -f1 < "${BACKUP_FILE}.sha256")
 echo "[backup-config] Checksum: ${CHECKSUM}"
 
 # ── Upload to S3 ─────────────────────────────────────────────────
