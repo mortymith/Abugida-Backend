@@ -1,0 +1,62 @@
+# Dependabot update automation.
+#
+# Alerts were already enabled (they drive the security tab); this file adds
+# version-update PRs on a weekly cadence. Security updates are always created
+# immediately regardless of the schedule below.
+#
+# Ecosystems:
+# - npm        one entry at the repo root covers the whole pnpm workspace
+#              (root + app/* + packages/* importers in pnpm-lock.yaml).
+# - docker     the oven/bun base images are pinned by tag AND multi-arch index
+#              digest (ADR-002); Dependabot updates the digest together with
+#              the tag for those, and the postgres/redis/caddy images the
+#              same way.
+# - github-actions     picks up .github/workflows/* as they land.
+#
+# Grouping: minor + patch bumps are batched per ecosystem to keep PR noise
+# down; major bumps always come as individual PRs so breaking changes are
+# reviewed on their own.
+
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # @tanstack/react-router is pinned by a pnpm patch
+      # (patchedDependencies -> patches/@tanstack__react-router@1.170.38.patch).
+      # A Dependabot bump would break `pnpm install` until the patch is
+      # rebased, so version bumps for it must go through a manual patch
+      # rebase instead.
+      - dependency-name: '@tanstack/react-router'
+
+  - package-ecosystem: docker
+    directories:
+      - /app/api
+      - /app/dashboard
+      - /app/marketing
+      - /docker/dockerfiles/postgres-replica
+      - /docker/dockerfiles/redis
+      - /docker/dockerfiles/caddy
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
