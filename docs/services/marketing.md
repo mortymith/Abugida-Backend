@@ -8,7 +8,7 @@
 
 | Property              | Value                                    |
 | --------------------- | ---------------------------------------- |
-| **Runtime**           | Bun 1.4.2-alpine (shared base toolchain) |
+| **Runtime**           | Bun 1.4.4-alpine (shared base toolchain) |
 | **Framework**         | Astro (static output)                    |
 | **Container Port**    | 8080                                     |
 | **Staging Host Port** | 8082 (`MARKETING_PORT`)                  |
@@ -23,7 +23,7 @@
 The image builds from `app/marketing/Dockerfile` using the **monorepo root as the build context**, so manifest, source, and entrypoint paths are repo-relative:
 
 ```dockerfile
-# Stage 0 (base): Bun 1.4.2 + pnpm, runtime tooling, non-root appuser (1000:1000)
+# Stage 0 (base): Bun 1.4.4 + pnpm, runtime tooling, non-root appuser (1000:1000)
 # Stage 1 (builder): pnpm install --filter @abugida/marketing --frozen-lockfile,
 #                    then astro build for a fully static dist/ output
 # Stage 2 (runtime): static dist/ + Bun static-file server

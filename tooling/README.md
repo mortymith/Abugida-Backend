@@ -2,7 +2,7 @@
 
 Shared, per-tool configuration packages. **One source of truth per tool, owned by the app or package that needs it.**
 
-- Runtime: **Bun** (>= 1.4.2, see `.bun-version`). Package manager: **pnpm** (`tooling/*` is part of the pnpm workspace).
+- Runtime: **Bun** (>= 1.4.4, see `.bun-version`). Package manager: **pnpm** (`tooling/*` is part of the pnpm workspace).
 - Tooling packages are `private: true` configuration packages — no runtime code, no app dependencies.
 
 ## Design

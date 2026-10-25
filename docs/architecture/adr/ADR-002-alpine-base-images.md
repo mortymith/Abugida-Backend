@@ -19,7 +19,7 @@ All images must use **Alpine (or distroless) variants** and follow a fixed set o
 | Rule                 | Details                                                                                                     |
 | -------------------- | ----------------------------------------------------------------------------------------------------------- |
 | **Alpine base**      | Use `*-alpine` variants for minimal attack surface                                                          |
-| **Pinned versions**  | Never `:latest`. Pin an exact version, and a digest where practical (e.g. `oven/bun:1.4.2-alpine@sha256:…`) |
+| **Pinned versions**  | Never `:latest`. Pin an exact version, and a digest where practical (e.g. `oven/bun:1.4.4-alpine@sha256:…`) |
 | **Non-root user**    | Create a dedicated `appuser` and `USER appuser` before `EXPOSE`/`ENTRYPOINT`                                |
 | **HEALTHCHECK**      | Every service declares a `HEALTHCHECK` with `--interval`, `--timeout`, `--retries`, and `--start-period`    |
 | **Minimal packages** | Only runtime-essential packages via `apk add --no-cache`; no build tools in the runtime stage               |
@@ -30,7 +30,7 @@ Supply-chain defences accompany the base-image policy:
 - CI runs `trivy image` on every build; any HIGH or CRITICAL CVE blocks the merge.
 - Images are built once in CI, tagged with the immutable git SHA, scanned, and then the **same artefact** is promoted through staging and production.
 
-Representative pins in use: `postgres:17-alpine`, `redis:7.4-alpine`, `caddy:2.8.4-alpine`, `oven/bun:1.4.2-alpine`, `hashicorp/vault:1.18-alpine`.
+Representative pins in use: `postgres:17-alpine`, `redis:7.4-alpine`, `caddy:2.8.4-alpine`, `oven/bun:1.4.4-alpine`, `hashicorp/vault:1.18-alpine`.
 
 ## Consequences
 

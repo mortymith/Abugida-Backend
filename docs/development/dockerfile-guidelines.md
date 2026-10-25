@@ -5,14 +5,14 @@
 Every application Dockerfile must use at least two stages: a **builder** and a **runtime** stage. The builder installs all dependencies and compiles or bundles source code. The runtime stage copies only the artifacts needed to run.
 
 ```dockerfile
-FROM oven/bun:1.4.2-alpine AS builder
+FROM oven/bun:1.4.4-alpine AS builder
 WORKDIR /build
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY <workspace>/ .
 RUN bun run build
 
-FROM oven/bun:1.4.2-alpine AS runtime
+FROM oven/bun:1.4.4-alpine AS runtime
 WORKDIR /app
 COPY --from=builder --chown=appuser:appuser /build/dist ./dist
 ```
@@ -28,7 +28,7 @@ Reference implementations:
 | Rule                 | Details                                                                                                                  |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | **Alpine base**      | All images must use Alpine variants (`*-alpine`) for minimal attack surface                                              |
-| **Pinned versions**  | Never use `:latest`. Pin to exact version (e.g., `oven/bun:1.2.1-alpine`, `redis:7.4-alpine`)                            |
+| **Pinned versions**  | Never use `:latest`. Pin to exact version (e.g., `oven/bun:1.4.4-alpine`, `redis:7.4-alpine`)                            |
 | **Non-root user**    | Create a dedicated user (`appuser`) and `USER appuser` before `EXPOSE`/`ENTRYPOINT`                                      |
 | **HEALTHCHECK**      | Every service must include a `HEALTHCHECK` instruction with `--interval`, `--timeout`, `--retries`, and `--start-period` |
 | **Minimal packages** | Only install runtime-essential packages via `apk add --no-cache`. No build tools in the runtime stage                    |

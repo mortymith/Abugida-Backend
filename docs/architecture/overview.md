@@ -78,9 +78,9 @@ The modular Compose structure enables three distinct deployment tiers, each asse
 | Caddy Active                  | `caddy:2.8.4-alpine` (custom build)        | Reverse proxy (primary)                    | edge, backend  | 80, 443          | prod only      |
 | Caddy Standby                 | `caddy:2.8.4-alpine` (custom build)        | Reverse proxy (hot standby)                | edge, backend  | 80, 443          | prod only      |
 | Keepalived                    | `osixia/keepalived:2.0.20-alpine`          | VRRP floating VIP                          | host network   | N/A              | prod only      |
-| API                           | `oven/bun:1.2.1-alpine`                    | REST API backend                           | backend, infra | 3000             | staging, prod  |
-| Dashboard                     | `oven/bun:1.2.1-alpine` (custom build)     | Web dashboard app                          | backend, infra | 8080             | staging, prod  |
-| Marketing                     | `oven/bun:1.2.1-alpine` (custom build)     | Static landing page (no data-layer access) | backend        | 8080             | staging, prod  |
+| API                           | `oven/bun:1.4.4-alpine`                    | REST API backend                           | backend, infra | 3000             | staging, prod  |
+| Dashboard                     | `oven/bun:1.4.4-alpine` (custom build)     | Web dashboard app                          | backend, infra | 8080             | staging, prod  |
+| Marketing                     | `oven/bun:1.4.4-alpine` (custom build)     | Static landing page (no data-layer access) | backend        | 8080             | staging, prod  |
 | PostgreSQL Primary            | `postgres:17-alpine`                       | Database (write)                           | infra          | 5432             | all            |
 | PostgreSQL Replica x2         | `postgres:17-alpine` (custom build)        | Database (read)                            | infra          | 5432             | prod only      |
 | PgBouncer                     | `pgbouncer/pgbouncer:1.15.0`               | Connection pooler                          | infra          | 6432             | all            |

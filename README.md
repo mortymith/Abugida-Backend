@@ -5,7 +5,7 @@
 **Headless course builder** — author structured learning content in Abugida, then deliver
 it through your own websites, apps, and learning products.
 
-[![Runtime](https://img.shields.io/badge/runtime-Bun%201.4.2-f5f5f5?logo=bun&logoColor=ffffff)](https://bun.sh)
+[![Runtime](https://img.shields.io/badge/runtime-Bun%201.4.4-f5f5f5?logo=bun&logoColor=ffffff)](https://bun.sh)
 [![Packages](https://img.shields.io/badge/package%20manager-pnpm%2012.8.1-f5f5f5?logo=pnpm&logoColor=ffffff)](https://pnpm.io)
 [![Language](https://img.shields.io/badge/TypeScript-6-f5f5f5?logo=typescript&logoColor=ffffff)](https://www.typescriptlang.org)
 [![API](https://img.shields.io/badge/API-Hono%204-f5f5f5?logo=hono&logoColor=ffffff)](https://hono.dev)
@@ -93,7 +93,7 @@ you consume, not a marketplace you must adopt wholesale.
 ### Prerequisites
 
 The development toolchain is **pinned and provided by a [Devbox](https://www.jetify.com/devbox)
-sandbox** — Bun 1.4.2, pnpm 12, Node 22, just 1.58, the Docker client, and every system binary
+sandbox** — Bun 1.4.4, pnpm 12, Node 22, just 1.58, the Docker client, and every system binary
 the repository lints with. Install [Devbox](https://www.jetify.com/devbox/docs/installing) and
 run `just sandbox-setup`; everything else is provisioned for you.
 
@@ -396,7 +396,7 @@ Conventions are documented in `AGENTS.md` at the root and in `app/dashboard/`,
 
 | Layer           | Technologies                                                                                                                                         |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime & tools | Bun 1.4.2 (runtime + test runner) · pnpm 12.8.1 · Turborepo 2 · TypeScript 6 strict · Docker Compose · just · ESLint + Prettier · husky + commitlint |
+| Runtime & tools | Bun 1.4.4 (runtime + test runner) · pnpm 12.8.1 · Turborepo 2 · TypeScript 6 strict · Docker Compose · just · ESLint + Prettier · husky + commitlint |
 | API             | Hono 4 + Zod OpenAPI · Zod 4 · Better Auth 1.6.26 · Drizzle ORM 0.45 + `pg` · BullMQ 6.3 · rate-limiter-flexible                                     |
 | Dashboard       | TanStack Start + Router + Query + Charts · React 19 + Vite · Tailwind 4 + shadcn · `@dnd-kit` · TipTap · TanStack AI                                 |
 | Data            | PostgreSQL 17 · PgBouncer 1.23 · Redis 7.4 · MinIO · PowerSync 1.24                                                                                  |

@@ -102,7 +102,7 @@
     "@abugida/typescript-config": "workspace:*",
     "@tanstack/react-router": "1.170.38",
     "@tanstack/react-start": "1.169.3",
-    "@types/bun": "1.4.2",
+    "@types/bun": "1.4.4",
     "@types/react": "^19.3.0",
     "better-auth": "1.6.26",
     "drizzle-orm": "^0.45.4",
@@ -114,7 +114,7 @@
     "typescript": "^6.0.3"
   },
   "engines": {
-    "bun": ">=1.4.2"
+    "bun": ">=1.4.4"
   },
   "publishConfig": {
     "access": "public"

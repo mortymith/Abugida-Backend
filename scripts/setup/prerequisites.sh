@@ -30,7 +30,7 @@ log_err() { echo -e "${RED}[prerequisites][ERROR]${NC} $*" >&2; }
 # ── Version targets ──────────────────────────────────────────────
 DOCKER_VERSION="27.0"
 JUST_VERSION="1.40.0"
-BUN_VERSION="1.2.1"
+BUN_VERSION="1.4.4"
 TRIVY_VERSION="0.58.0"
 
 # ── Detect architecture ──────────────────────────────────────────
@@ -236,7 +236,7 @@ CHECKS=(
   "docker:Docker CE 27.x+"
   "docker compose:Docker Compose v2.24+"
   "just:Just 1.40+"
-  "bun:Bun 1.2+"
+  "bun:Bun 1.4+"
   "trivy:Trivy 0.58+"
   "jq:jq 1.6+"
   "keepalived:Keepalived"

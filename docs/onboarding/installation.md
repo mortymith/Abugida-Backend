@@ -23,7 +23,7 @@ Verify installation:
 ```bash
 docker --version    # Docker CE 27.x
 just --version     # just 1.40.0
-bun --version      # Bun 1.2.x
+bun --version      # Bun 1.4.x
 trivy --version    # Trivy 0.58.x
 ```
 

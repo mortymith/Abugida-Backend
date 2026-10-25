@@ -20,10 +20,9 @@ A **Linux host is required**. Keepalived (VRRP) and iptables-persistent do not r
 | Docker Compose | v2.24.0+        | Multi-service orchestration             |
 | Devbox         | 0.18+           | Toolchain sandbox (pins every tool)     |
 | Just           | 1.40.0          | Task runner / CLI                       |
-| Bun            | 1.2.1           | App runtime (API, Dashboard, Marketing) |
+| Bun            | 1.4.4           | App runtime (API, Dashboard, Marketing) |
 | Trivy          | 0.58.0          | Container image scanning                |
 | jq             | 1.6+            | JSON processing                         |
-
 
 All required tools are installed automatically by the prerequisites script (see [Installation](installation.md)).
 

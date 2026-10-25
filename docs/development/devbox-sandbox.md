@@ -1,6 +1,6 @@
 # Devbox Sandbox — Developer Guide
 
-The development toolchain (Bun, pnpm, Node, Just, the Docker client, and every system binary the repository lints with) is **pinned and provided by a Devbox sandbox**. Docker Compose keeps owning the *infrastructure* (PostgreSQL, Redis, MinIO, observability) — the sandbox owns the *tools*.
+The development toolchain (Bun, pnpm, Node, Just, the Docker client, and every system binary the repository lints with) is **pinned and provided by a Devbox sandbox**. Docker Compose keeps owning the _infrastructure_ (PostgreSQL, Redis, MinIO, observability) — the sandbox owns the _tools_.
 
 ADR: [ADR-026](../architecture/adr/ADR-026-devbox-sandbox.md)
 
@@ -29,15 +29,15 @@ just dev-up               # Docker Compose infrastructure
 
 ## What is pinned
 
-| Area                 | Packages                                                                                                                                                  |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime              | `bun@1.4.2` (matches `.bun-version`), `pnpm@12`                                                                                 |
-| Task runner          | `just@1.58.0`                                                                                                                                              |
-| Containers (client)  | `docker-client@29.9.1`, `docker-compose@5.6.0`                                                                                                             |
-| Service clients      | `mc@4.8.33` (MinIO), `vault-bin@1.21.4` (staging/prod secret operations)                                                         |
-| Misc utilities       | `jq@1.8.2`, `curl@8`, `git@2`, `openssl@3`, `cacert`                                                                                                       |
-| Repository linters   | `shellcheck@0.11.0`, `hadolint@2.14.0`, `yamllint@1.37.1`, `gitleaks@8.30.1`, `dotenv-linter@3.3.0`, `editorconfig-checker@4.0.2`, `shfmt@3.14.1`   |
-| Native builds        | `gcc`, `gnumake`, `binutils`, `pkg-config`, `python3`                                                                                                        |
+| Area                | Packages                                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime             | `bun@1.4.4` (matches `.bun-version`), `pnpm@12`                                                                                                   |
+| Task runner         | `just@1.58.0`                                                                                                                                     |
+| Containers (client) | `docker-client@29.9.1`, `docker-compose@5.6.0`                                                                                                    |
+| Service clients     | `mc@4.8.33` (MinIO), `vault-bin@1.21.4` (staging/prod secret operations)                                                                          |
+| Misc utilities      | `jq@1.8.2`, `curl@8`, `git@2`, `openssl@3`, `cacert`                                                                                              |
+| Repository linters  | `shellcheck@0.11.0`, `hadolint@2.14.0`, `yamllint@1.37.1`, `gitleaks@8.30.1`, `dotenv-linter@3.3.0`, `editorconfig-checker@4.0.2`, `shfmt@3.14.1` |
+| Native builds       | `gcc`, `gnumake`, `binutils`, `pkg-config`, `python3`                                                                                             |
 
 `devbox.lock` is committed. It is the reproducibility contract: `devbox install` resolves to exactly the versions in the lock file.
 
@@ -49,28 +49,28 @@ just dev-up               # Docker Compose infrastructure
 
 | Script              | Does                                             |
 | ------------------- | ------------------------------------------------ |
-| `setup` / `install` | `pnpm install --frozen-lockfile`                |
+| `setup` / `install` | `pnpm install --frozen-lockfile`                 |
 | `doctor`            | Verify the sandbox against the repo requirements |
-| `lint`              | `pnpm lint`                                     |
-| `format`            | `pnpm format`                                   |
-| `typecheck`         | `pnpm typecheck`                                |
-| `test`              | `pnpm test`                                     |
-| `build`             | `pnpm build`                                    |
-| `infra-up`          | `just dev-up`                                   |
-| `infra-down`        | `just dev-down`                                 |
-| `psql`              | `just psql`                                     |
-| `redis-cli`         | `just redis-cli`                                |
+| `lint`              | `pnpm lint`                                      |
+| `format`            | `pnpm format`                                    |
+| `typecheck`         | `pnpm typecheck`                                 |
+| `test`              | `pnpm test`                                      |
+| `build`             | `pnpm build`                                     |
+| `infra-up`          | `just dev-up`                                    |
+| `infra-down`        | `just dev-down`                                  |
+| `psql`              | `just psql`                                      |
+| `redis-cli`         | `just redis-cli`                                 |
 
 List them any time with `devbox run --list`.
 
 ### Just recipes (the single task runner)
 
-| Recipe                 | Does                                                         |
-| ---------------------- | ------------------------------------------------------------ |
-| `just sandbox-setup`   | `devbox install` + `devbox run setup`                        |
-| `just sandbox-shell`   | Enter the sandbox                                             |
-| `just sandbox-doctor`  | Verify the sandbox                                            |
-| `just sandbox-verify`  | `typecheck` + `lint` + `test` inside the sandbox             |
+| Recipe                | Does                                             |
+| --------------------- | ------------------------------------------------ |
+| `just sandbox-setup`  | `devbox install` + `devbox run setup`            |
+| `just sandbox-shell`  | Enter the sandbox                                |
+| `just sandbox-doctor` | Verify the sandbox                               |
+| `just sandbox-verify` | `typecheck` + `lint` + `test` inside the sandbox |
 
 ### Everything else
 
@@ -105,7 +105,7 @@ devbox.json ──► devbox install ──► Nix store (pinned binaries)
       │                                   ▼
       │                            devbox shell / devbox run
       │                                   │
-      │                                   ├── bun 1.4.2   (repo runtime)
+      │                                   ├── bun 1.4.4   (repo runtime)
       │                                   ├── pnpm 12     (package manager)
       │                                   ├── just 1.58   (task runner)
       │                                   ├── docker client ──► host daemon ──► Compose infra
@@ -124,13 +124,13 @@ The script is idempotent and never touches an existing plugin that already point
 
 `devbox.json` sets only non-sensitive, deterministic values:
 
-| Variable                        | Why                                                          |
-| ------------------------------- | ------------------------------------------------------------ |
-| `COREPACK_ENABLE_DOWNLOAD_PROMPT` | Keeps Corepack non-interactive                           |
-| `DO_NOT_TRACK`                  | No telemetry from package tooling                            |
-| `PNPM_HOME`, `PNPM_STORE_DIR`   | Keeps the pnpm store inside the home directory, out of the repo |
-| `BUN_INSTALL`                   | Pins Bun's install prefix                                     |
-| `VAULT_ADDR`                    | Local Vault address for `just vault-*`                        |
+| Variable                          | Why                                                             |
+| --------------------------------- | --------------------------------------------------------------- |
+| `COREPACK_ENABLE_DOWNLOAD_PROMPT` | Keeps Corepack non-interactive                                  |
+| `DO_NOT_TRACK`                    | No telemetry from package tooling                               |
+| `PNPM_HOME`, `PNPM_STORE_DIR`     | Keeps the pnpm store inside the home directory, out of the repo |
+| `BUN_INSTALL`                     | Pins Bun's install prefix                                       |
+| `VAULT_ADDR`                      | Local Vault address for `just vault-*`                          |
 
 **Secrets never enter the sandbox.** `.env` files stay on the host, git-ignored, and are read by Compose and the apps exactly as before.
 
@@ -172,16 +172,16 @@ devbox update               # refresh the lock file
 
 ## Troubleshooting
 
-| Symptom                                              | Cause / fix                                                                 |
-| ---------------------------------------------------- | --------------------------------------------------------------------------- |
-| `devbox: command not found`                          | Devbox is not installed. Install it from <https://www.jetify.com/devbox>.    |
-| `error: interrupted by the user` during `devbox install` | The Nix build was cancelled (Ctrl-C, or the process was killed). Re-run it; completed builds stay in the store. |
-| `bun: command not found`                             | You are outside the sandbox — run `devbox shell`.                             |
-| `docker compose: plugin not found`                   | Run `bash scripts/devbox/docker-plugin.sh` inside the sandbox.               |
-| `docker compose` cannot reach the daemon             | The sandbox ships the client only. Start the host daemon (`sudo systemctl start docker`). |
-| `pnpm install` fails on a native module              | The sandbox provides `gcc`, `python3`, `pkg-config`. Ensure the package is listed in `pnpm-workspace.yaml` → `allowBuilds`. |
-| `vault` takes a long time to install                 | Use `vault-bin@1.21.4` (the prebuilt HashiCorp binary). It resolves from the cache in seconds. |
-| Doctor reports a version mismatch                    | The host tool is shadowing the pinned one, or `devbox.lock` is stale — run `devbox update` and `devbox install`. |
+| Symptom                                                  | Cause / fix                                                                                                                 |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `devbox: command not found`                              | Devbox is not installed. Install it from <https://www.jetify.com/devbox>.                                                   |
+| `error: interrupted by the user` during `devbox install` | The Nix build was cancelled (Ctrl-C, or the process was killed). Re-run it; completed builds stay in the store.             |
+| `bun: command not found`                                 | You are outside the sandbox — run `devbox shell`.                                                                           |
+| `docker compose: plugin not found`                       | Run `bash scripts/devbox/docker-plugin.sh` inside the sandbox.                                                              |
+| `docker compose` cannot reach the daemon                 | The sandbox ships the client only. Start the host daemon (`sudo systemctl start docker`).                                   |
+| `pnpm install` fails on a native module                  | The sandbox provides `gcc`, `python3`, `pkg-config`. Ensure the package is listed in `pnpm-workspace.yaml` → `allowBuilds`. |
+| `vault` takes a long time to install                     | Use `vault-bin@1.21.4` (the prebuilt HashiCorp binary). It resolves from the cache in seconds.                              |
+| Doctor reports a version mismatch                        | The host tool is shadowing the pinned one, or `devbox.lock` is stale — run `devbox update` and `devbox install`.            |
 
 ### Reset the sandbox
 
@@ -195,12 +195,12 @@ nix-store --gc           # reclaim unused store space (optional)
 
 ## Relationship to the rest of the repository
 
-| Concern                 | Owner            | Where                                                     |
-| ----------------------- | ---------------- | --------------------------------------------------------- |
-| Development toolchain   | Devbox           | `devbox.json`, `devbox.lock`, `scripts/devbox/`            |
-| Workspace dependencies  | pnpm             | `pnpm-lock.yaml`, `pnpm-workspace.yaml`                   |
-| Infrastructure services | Docker Compose   | `docker/compose/**`                                        |
-| Operational tasks       | Just             | `justfile`                                                 |
-| Lint configuration      | Repository root  | `.shellcheckrc`, `.hadolint.yaml`, `.yamllint.yaml`, …    |
+| Concern                 | Owner           | Where                                                  |
+| ----------------------- | --------------- | ------------------------------------------------------ |
+| Development toolchain   | Devbox          | `devbox.json`, `devbox.lock`, `scripts/devbox/`        |
+| Workspace dependencies  | pnpm            | `pnpm-lock.yaml`, `pnpm-workspace.yaml`                |
+| Infrastructure services | Docker Compose  | `docker/compose/**`                                    |
+| Operational tasks       | Just            | `justfile`                                             |
+| Lint configuration      | Repository root | `.shellcheckrc`, `.hadolint.yaml`, `.yamllint.yaml`, … |
 
 The sandbox does not change any application code, build output, or Compose definition. If a change is required inside `devbox shell`, it is a change in `devbox.json` — never a change in the apps.
