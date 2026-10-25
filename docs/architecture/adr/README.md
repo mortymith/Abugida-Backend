@@ -31,7 +31,8 @@ This directory contains all Architecture Decision Records for the project. ADRs 
 | ADR-023 | Just v1.40.0 as central CLI                    | Accepted       | Single entry point for all infra operations                                                                                                                      |
 | ADR-024 | Modular Compose file structure                 | Accepted       | 11 purpose-split YAML files in `docker/compose/` with profile-based environment overrides                                                                        |
 | ADR-025 | PowerSync Postgres storage + split roles       | Accepted       | PostgreSQL bucket storage (no MongoDB), sync/api role split, Sync Streams, Better Auth JWKS client auth                                                          |
-| ADR-026 | Devbox sandbox for the development toolchain    | Accepted       | Toolchain (Bun, pnpm, Node, just, linters) pinned in `devbox.json` + `devbox.lock`; Docker Compose keeps owning the infrastructure                                      |
+| ADR-026 | Devbox sandbox for the development toolchain   | Accepted       | Toolchain (Bun, pnpm, Node, just, linters) pinned in `devbox.json` + `devbox.lock`; Docker Compose keeps owning the infrastructure                               |
+| ADR-027 | Bun 1.4.x upgrade: gains and adopted features  | Accepted       | `bun check` typecheck, strict code-generation ban in prod containers, CI + Dependabot + just recipes; watchlist: ModuleGraph, FetchSession, `bun test --check`   |
 
 ## ADR Template
 
