@@ -28,8 +28,7 @@ import {
 // works even though the file was imported above.
 import type { LessonDraftMirror } from '#/features/courses/hooks/courses.markdown-draft-mirror'
 
-;(globalThis as unknown as { indexedDB: typeof fakeIndexedDB }).indexedDB = fakeIndexedDB
-;(globalThis as unknown as { IDBKeyRange: typeof fakeKeyRange }).IDBKeyRange = fakeKeyRange
+Object.assign(globalThis, { indexedDB: fakeIndexedDB, IDBKeyRange: fakeKeyRange })
 
 beforeEach(async () => {
   __resetDraftsDbCacheForTests()

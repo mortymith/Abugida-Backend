@@ -22,8 +22,7 @@ import {
 
 import type { QueuedSave } from '#/features/courses/hooks/courses.markdown-offline-queue'
 
-;(globalThis as unknown as { indexedDB: typeof fakeIndexedDB }).indexedDB = fakeIndexedDB
-;(globalThis as unknown as { IDBKeyRange: typeof fakeKeyRange }).IDBKeyRange = fakeKeyRange
+Object.assign(globalThis, { indexedDB: fakeIndexedDB, IDBKeyRange: fakeKeyRange })
 
 function makeEntry(lessonPublicId: string, body: string, rowVersion: number): QueuedSave {
   return {
