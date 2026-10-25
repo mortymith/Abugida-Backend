@@ -1,7 +1,7 @@
 {
   "name": "@abugida/queue",
   "version": "0.0.1",
-  "description": "Shared message queue layer for the Abugida Application monorepo – BullMQ with Redis",
+  "description": "Shared message queue layer for the Abugida Application monorepo \u2013 BullMQ with Redis",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -37,7 +37,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "lint": "eslint src",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "bun test",

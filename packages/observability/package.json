@@ -33,7 +33,7 @@
   "scripts": {
     "build": "tsc",
     "test": "bun test",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "lint": "eslint .",
     "format": "prettier --write .",
     "clean": "rm -rf dist"

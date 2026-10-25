@@ -1,7 +1,7 @@
 {
   "name": "@abugida/tenant",
   "version": "0.0.1",
-  "description": "The single source of truth for tenancy in the Abugida monorepo: hostname resolution, tenant slugs, reserved subdomains, tenant URLs, tenant context and tenant-scoped authorization. Owns no schema and no authentication — those stay in @abugida/database and @abugida/auth.",
+  "description": "The single source of truth for tenancy in the Abugida monorepo: hostname resolution, tenant slugs, reserved subdomains, tenant URLs, tenant context and tenant-scoped authorization. Owns no schema and no authentication \u2014 those stay in @abugida/database and @abugida/auth.",
   "type": "module",
   "license": "MIT",
   "private": false,
@@ -49,7 +49,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "bun check",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "test": "bun test",

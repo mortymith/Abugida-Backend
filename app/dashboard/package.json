@@ -18,12 +18,12 @@
     "preview": "bun --bun vite preview",
     "lint": "eslint",
     "format": "prettier --write . && eslint --fix",
-    "check": "prettier --check .",
-    "typecheck": "bun run tsc --noEmit",
+    "typecheck": "bun check",
     "migrate:lesson-markdown": "bun run scripts/migrate-lesson-markdown.ts",
     "probe:tenant": "bun run scripts/dashboard.tenant-probe.ts",
     "clean": "rm -rf dist .turbo node_modules",
-    "test": "bun test --pass-with-no-tests"
+    "test": "bun test --pass-with-no-tests",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@abugida/auth": "workspace:*",

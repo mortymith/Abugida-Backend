@@ -14,7 +14,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "test": "bun test --pass-with-no-tests",
     "clean": "rm -rf dist"
   },
