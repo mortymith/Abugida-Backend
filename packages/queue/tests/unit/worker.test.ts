@@ -4,9 +4,15 @@
  */
 
 import { describe, test, expect, mock } from 'bun:test'
+import * as RealBullMQ from 'bullmq'
 import type { ProcessorEntry } from '../../src/core/types.js'
 
+// mock.module() overrides are process-global in bun and mock.restore() does
+// not unregister them. Spread the real module so every key bullmq actually
+// exports (UnrecoverableError, types, helpers...) stays available to test
+// files that run after this one; only the classes under test are mocked.
 mock.module('bullmq', () => ({
+  ...RealBullMQ,
   Queue: mock(() => ({
     add: mock(() => ({ id: 'test' })),
     getJobCounts: mock(() => Promise.resolve({})),

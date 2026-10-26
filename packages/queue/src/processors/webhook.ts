@@ -8,7 +8,7 @@
  * missing or invalid signature are rejected permanently.
  */
 
-import { UnrecoverableError } from 'bullmq'
+import * as BullMQ from 'bullmq'
 import type { JobProcessor, ProcessorEntry, WebhookProcessJobData } from '../core/types.js'
 import { JobType } from '../core/types.js'
 import { QUEUE_NAMES } from '../definitions/queues.js'
@@ -50,14 +50,14 @@ export const processWebhook: JobProcessor<WebhookProcessJobData> = async (data, 
     case 'telebirr': {
       const publicKey = getTelebirrVerificationKey()
       if (!publicKey) {
-        throw new UnrecoverableError(
+        throw new BullMQ.UnrecoverableError(
           'Telebirr webhook cannot be verified – set TELEBIRR_PUBLIC_KEY (or TELEBIRR_PUBLIC_KEY_PATH)',
         )
       }
 
       const sign = data.payload['sign']
       if (typeof sign !== 'string' || sign.length === 0) {
-        throw new UnrecoverableError('Telebirr webhook payload is missing the sign field')
+        throw new BullMQ.UnrecoverableError('Telebirr webhook payload is missing the sign field')
       }
 
       const isValid = verifyPayload(
@@ -68,7 +68,7 @@ export const processWebhook: JobProcessor<WebhookProcessJobData> = async (data, 
       )
       if (!isValid) {
         logger.warn('Rejected Telebirr webhook with invalid signature', { idempotencyKey })
-        throw new UnrecoverableError('Invalid Telebirr webhook signature')
+        throw new BullMQ.UnrecoverableError('Invalid Telebirr webhook signature')
       }
 
       const notification = normalizeTelebirrNotification(data.payload)

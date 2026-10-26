@@ -6,7 +6,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test'
-import { UnrecoverableError } from 'bullmq'
+import * as BullMQ from 'bullmq'
 import { generateKeyPairSync } from 'node:crypto'
 import {
   SIGN_TYPE,
@@ -421,7 +421,7 @@ describe('toJobError', () => {
   test('wraps permanent integration errors in UnrecoverableError', () => {
     const error = new TelebirrError('bad config', 'TELEBIRR_TOKEN', false)
     const jobError = toJobError(error)
-    expect(jobError).toBeInstanceOf(UnrecoverableError)
+    expect(jobError).toBeInstanceOf(BullMQ.UnrecoverableError)
     expect(jobError.message).toContain('TELEBIRR_TOKEN')
   })
 
