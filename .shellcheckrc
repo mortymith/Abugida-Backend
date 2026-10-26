@@ -10,3 +10,8 @@ disable=SC1091
 # Scripts intentionally target bash on Linux (dev containers, CI, prod images).
 # EC2/ECS-style init snippets are not a concern here.
 disable=SC2034
+
+# run_probe / audit / validate-secrets dispatch probe functions by reference
+# (function names passed as arguments), so shellcheck cannot see the call
+# sites and reports every probe body as unreachable.
+disable=SC2317

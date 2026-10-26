@@ -204,7 +204,7 @@ if [ -f "${PROJECT_ROOT}/requirements.txt" ] || [ -f "${PROJECT_ROOT}/Pipfile.lo
     fi
     if grep -qiE 'vulnerab|CVE' /tmp/pip-audit-output.txt 2> /dev/null; then
       log_high "pip-audit found vulnerabilities"
-      cat /tmp/pip-audit-output.txt | head -10
+      head -10 /tmp/pip-audit-output.txt
     else
       echo -e "  ${GREEN}pip-audit: no vulnerabilities${RESET}"
     fi

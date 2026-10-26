@@ -82,7 +82,7 @@ See the [Runbooks README](runbooks/README.md) for a decision tree that routes yo
 | Document                                                      | Description                              |
 | ------------------------------------------------------------- | ---------------------------------------- |
 | [Dev Workflow](development/dev-workflow.md)                   | Branching, PRs, CI/CD                    |
-| [Devbox Sandbox](development/devbox-sandbox.md)              | Pinned toolchain, sandbox commands        |
+| [Devbox Sandbox](development/devbox-sandbox.md)               | Pinned toolchain, sandbox commands       |
 | [Writing Just Recipes](development/writing-just-recipes.md)   | How to extend the justfile               |
 | [Dockerfile Guidelines](development/dockerfile-guidelines.md) | Multi-stage, Alpine, non-root patterns   |
 | [Testing](development/testing.md)                             | Integration, security, performance tests |

@@ -97,10 +97,10 @@ char_classes() {
   local str="$1"
   local classes=0
 
-  [[ "$str" =~ [A-Z] ]] && ((classes++)) || true
-  [[ "$str" =~ [a-z] ]] && ((classes++)) || true
-  [[ "$str" =~ [0-9] ]] && ((classes++)) || true
-  [[ "$str" =~ [^A-Za-z0-9] ]] && ((classes++)) || true
+  if [[ "$str" =~ [A-Z] ]]; then classes=$((classes + 1)); fi
+  if [[ "$str" =~ [a-z] ]]; then classes=$((classes + 1)); fi
+  if [[ "$str" =~ [0-9] ]]; then classes=$((classes + 1)); fi
+  if [[ "$str" =~ [^A-Za-z0-9] ]]; then classes=$((classes + 1)); fi
 
   echo "$classes"
 }
