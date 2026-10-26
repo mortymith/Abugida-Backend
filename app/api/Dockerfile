@@ -147,4 +147,7 @@ HEALTHCHECK --interval=15s --timeout=5s --retries=3 --start-period=30s \
 # The oven/bun entrypoint inherited via the base stage is replaced with the
 # dependency-wait entrypoint, which `exec`s the command below as PID 1.
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["bun", "dist/index.js"]
+# Disallow runtime code generation (bun 1.4.3+): eval(), new Function(),
+# node:vm, data: URL imports, Worker eval and inspector codegen all throw.
+# Validated against the full test suites and a smoke run of this server.
+CMD ["bun", "--disallow-code-generation-from-strings=strict", "dist/index.js"]
