@@ -32,15 +32,15 @@ Use **Bun** as the runtime for the API and website applications.
 - Bun is also the test runner (`bun test`; the API uses `bun test --pass-with-no-tests`).
 
 ```dockerfile
-FROM oven/bun:1.4.2-alpine@sha256:… AS base
+FROM oven/bun:1.4.4-alpine@sha256:… AS base
 # … workspace-aware pnpm install against the frozen lockfile, then:
 RUN bun run build
 
-FROM oven/bun:1.4.2-alpine AS runtime
+FROM oven/bun:1.4.4-alpine AS runtime
 COPY --from=builder --chown=appuser:appuser /build/dist ./dist
 ```
 
-> **Superseded detail:** the runtime was first pinned to `oven/bun:1.2.1-alpine`. The current pin is `1.4.2-alpine` (see `.bun-version` and `app/*/Dockerfile`), tracked through Renovate-style upgrades. The decision to standardise on Bun is unchanged.
+> **Superseded detail:** the runtime was first pinned to `oven/bun:1.2.1-alpine`. The current pin is `1.4.4-alpine` (see `.bun-version` and `app/*/Dockerfile`), tracked through Renovate-style upgrades. The decision to standardise on Bun is unchanged.
 
 Bun does **not** replace the package manager. Dependencies are still resolved by pnpm against the committed lockfile; `bunfig.toml` sets `frozenLockfile = true` and there is deliberately no `bun.lockb`.
 

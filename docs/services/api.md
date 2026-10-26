@@ -8,7 +8,7 @@
 
 | Property           | Value                       |
 | ------------------ | --------------------------- |
-| **Runtime**        | Bun 1.2.1-alpine            |
+| **Runtime**        | Bun 1.4.4-alpine            |
 | **Framework**      | Hono                        |
 | **Container Port** | 3000                        |
 | **Dev Host Port**  | 3001                        |
@@ -23,14 +23,14 @@
 The build uses two stages to minimise final image size and eliminate build-time dependencies from runtime:
 
 ```dockerfile
-FROM oven/bun:1.2.1-alpine AS builder
+FROM oven/bun:1.4.4-alpine AS builder
 WORKDIR /app
 COPY package.json bun.lockb ./
 RUN bun install --frozen-lockfile
 COPY . .
 RUN bun build ./src/index.ts --outdir ./dist
 
-FROM oven/bun:1.2.1-alpine AS runtime
+FROM oven/bun:1.4.4-alpine AS runtime
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=builder /app/dist ./dist
 USER app

@@ -27,7 +27,7 @@ The plugin set is not an extension point. An app cannot add, remove or reorder
 plugins, because two runtimes serving different auth surfaces is the exact
 failure this package removes.
 
-- Runtime: Bun `>=1.4.2`, TypeScript, ESM-only
+- Runtime: Bun `>=1.4.4`, TypeScript, ESM-only
 - Database: PostgreSQL via Drizzle ORM. Schemas and migrations are owned by
   `@abugida/database`; this package consumes `authSchema` and never migrates
 - One entry point (`createAbugidaAuth`) wires everything together

@@ -3,7 +3,7 @@
   "name": "abugida-platform",
   "description": "Sandboxed development environment for the Abugida platform monorepo (Bun + pnpm + Turborepo apps, Docker Compose infrastructure, repository linters).",
   "packages": [
-    "bun@1.4.2",
+    "bun@1.4.4",
     "pnpm@12",
     "just@1.58.0",
     "docker-client@29.9.1",

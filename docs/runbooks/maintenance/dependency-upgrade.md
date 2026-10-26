@@ -24,7 +24,7 @@ Update container image tags, validate in dev, security-scan, then deploy to prod
    | Vault          | hashicorp/vault:1.18-alpine                  |
    | Cloudflared    | cloudflare/cloudflared:2024.12.2             |
    | Keepalived     | osixia/keepalived:2.0.20-alpine              |
-   | Bun            | oven/bun:1.2.1-alpine                        |
+   | Bun            | oven/bun:1.4.4-alpine                        |
 
 2. **Update image tag in `compose.yml` or `.env`**
 
