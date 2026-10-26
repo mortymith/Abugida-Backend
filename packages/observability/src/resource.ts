@@ -5,7 +5,7 @@
  * attributes that every span and metric will inherit.
  */
 
-import { Resource } from '@opentelemetry/resources'
+import { resourceFromAttributes, type Resource } from '@opentelemetry/resources'
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
@@ -34,5 +34,5 @@ export function createResource(
     [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: environment,
   }
 
-  return new Resource({ ...baseAttributes, ...extra })
+  return resourceFromAttributes({ ...baseAttributes, ...extra })
 }

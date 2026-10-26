@@ -1,3 +1,9 @@
+overrides:
+  esbuild@<=0.24.2: '>=0.25.0'
+  js-yaml@<=5.4.0: '>=5.4.1'
+  smol-toml@<=1.8.0: '>=1.9.0'
+  katex@<0.18.2: '>=0.18.2'
+
 packages:
   - 'app/*'
   - 'packages/*'

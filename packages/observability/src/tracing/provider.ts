@@ -32,17 +32,18 @@ export function initTracerProvider(
     config.otlpProtocol === 'grpc' ? {} : { url: `${config.otlpEndpoint}/v1/traces` },
   )
 
-  provider = new BasicTracerProvider({
-    resource,
-  })
-
   // BatchSpanProcessor batches spans before exporting, which is more
   // efficient for production workloads than SimpleSpanProcessor.
-  provider.addSpanProcessor(new BatchSpanProcessor(exporter))
+  // (OTel 2.x: processors are wired via the constructor; addSpanProcessor()
+  // and register() no longer exist on BasicTracerProvider.)
+  provider = new BasicTracerProvider({
+    resource,
+    spanProcessors: [new BatchSpanProcessor(exporter)],
+  })
 
   // Register as the global provider so that getTracer() picks it up
   // without requiring an explicit provider reference.
-  provider.register()
+  trace.setGlobalTracerProvider(provider)
 
   return provider
 }
