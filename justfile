@@ -51,6 +51,7 @@
 # 13. Edge & Tunnel (Prod)       just tunnel-status | cert-status ...
 # 14. Testing                    just test-suite
 # 15. Sandbox (Devbox)           just sandbox-shell | sandbox-doctor | sandbox-setup
+# 16. Dependency Health          just deps-audit | deps-outdated | typecheck
 # ═════════════════════════════════════════════════════════════════════════════════
 
 # Load .env into every recipe's environment (same file compose reads), so
@@ -153,6 +154,11 @@ POSTGRES_DB_DEFAULT := env_var_or_default("POSTGRES_DB", "app")
     echo "    just security-audit       Configs + deps + secrets audit"
     echo "    just validate-compose     Validate all three compose tiers"
     echo "    just tunnel-status        Cloudflare Tunnel state"
+    echo ""
+    echo "  DEVELOPMENT"
+    echo "    just typecheck            Fast bun-check typecheck across workspaces"
+    echo "    just deps-audit           pnpm audit over the whole dependency tree"
+    echo "    just deps-outdated        List dependencies with newer versions"
     echo ""
     echo "  DISCOVER MORE"
     echo "    just --list               All recipes with descriptions"
@@ -861,6 +867,26 @@ sandbox-verify: (_need "devbox")
     devbox run typecheck
     devbox run lint
     devbox run test
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 16. Dependency Health
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Supply-chain hygiene for the pnpm workspace. Complements the Security group:
+# audit-dependencies (12) audits infrastructure tooling (pip, Dockerfiles,
+# secrets); these recipes cover the npm dependency tree itself.
+
+# Fail on any known vulnerability in the dependency tree (pnpm audit)
+deps-audit: (_need "pnpm")
+    pnpm audit
+
+# List dependencies with newer versions available, workspace-wide
+deps-outdated: (_need "pnpm")
+    pnpm outdated
+
+# Fast monorepo typecheck (bun check via the typecheck task, bun 1.4.3+)
+typecheck: (_need "pnpm")
+    pnpm typecheck
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # EXTENDING THIS FILE
