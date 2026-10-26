@@ -1,7 +1,7 @@
 {
   "name": "@abugida/storage",
   "version": "0.0.1",
-  "description": "Shared object storage layer for the Abugida Application monorepo — S3-compatible operations, presigned URLs, multipart uploads, and key management",
+  "description": "Shared object storage layer for the Abugida Application monorepo \u2014 S3-compatible operations, presigned URLs, multipart uploads, and key management",
   "type": "module",
   "license": "MIT",
   "private": false,
@@ -29,7 +29,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "lint": "eslint src/",
     "format": "prettier --write src/",
     "format:check": "prettier --check src/",
