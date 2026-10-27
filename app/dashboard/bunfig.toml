@@ -3,3 +3,14 @@
 # the CWD, so each workspace that runs `bun test` carries this file.
 [test]
 preload = ["@abugida/bun-test-config/preload"]
+
+# Formatter policy (bun fmt) — mirrors the shared repository policy in
+# @abugida/prettier-config: printWidth 100, no semicolons, single quotes.
+# bun fmt fills in the remaining policy defaults identically (tabWidth 2,
+# spaces, trailingComma all, bracketSpacing true, arrowParens always) and
+# reads .editorconfig plus .prettierignore natively, so the switch from
+# Prettier is byte-compatible across this workspace.
+[fmt]
+printWidth = 100
+semi = false
+singleQuote = true

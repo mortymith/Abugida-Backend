@@ -394,14 +394,14 @@ Conventions are documented in `AGENTS.md` at the root and in `app/dashboard/`,
 
 ## Technology stack
 
-| Layer           | Technologies                                                                                                                                         |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime & tools | Bun 1.4.4 (runtime + test runner) · pnpm 12.8.1 · Turborepo 2 · TypeScript 6 strict · Docker Compose · just · ESLint + Prettier · husky + commitlint |
-| API             | Hono 4 + Zod OpenAPI · Zod 4 · Better Auth 1.6.26 · Drizzle ORM 0.45 + `pg` · BullMQ 6.3 · rate-limiter-flexible                                     |
-| Dashboard       | TanStack Start + Router + Query + Charts · React 19 + Vite · Tailwind 4 + shadcn · `@dnd-kit` · TipTap · TanStack AI                                 |
-| Data            | PostgreSQL 17 · PgBouncer 1.23 · Redis 7.4 · MinIO · PowerSync 1.24                                                                                  |
-| Observability   | Pino 9.6 · OpenTelemetry 1.30 (OTLP) · ClickHouse + SigNoz                                                                                           |
-| Edge & secrets  | Caddy 2.8.4 · Keepalived 2.0.20 · HashiCorp Vault 1.18 · Cloudflared · Astro 7                                                                       |
+| Layer           | Technologies                                                                                                                                                                |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime & tools | Bun 1.4.4 (runtime + test runner + formatter) · pnpm 12.15.0 · Turborepo 2 · TypeScript 6 strict · Docker Compose · just · ESLint + bun fmt + Prettier · husky + commitlint |
+| API             | Hono 4 + Zod OpenAPI · Zod 4 · Better Auth 1.6.26 · Drizzle ORM 0.45 + `pg` · BullMQ 6.3 · rate-limiter-flexible                                                            |
+| Dashboard       | TanStack Start + Router + Query + Charts · React 19 + Vite · Tailwind 4 + shadcn · `@dnd-kit` · TipTap · TanStack AI                                                        |
+| Data            | PostgreSQL 17 · PgBouncer 1.23 · Redis 7.4 · MinIO · PowerSync 1.24                                                                                                         |
+| Observability   | Pino 9.6 · OpenTelemetry 1.30 (OTLP) · ClickHouse + SigNoz                                                                                                                  |
+| Edge & secrets  | Caddy 2.8.4 · Keepalived 2.0.20 · HashiCorp Vault 1.18 · Cloudflared · Astro 7                                                                                              |
 
 ## Integration model
 
@@ -429,7 +429,8 @@ pnpm dev          # watch all workspaces
 pnpm build        # build all, honoring ^build ordering
 pnpm typecheck    # tsc --noEmit across workspaces
 pnpm lint         # eslint
-pnpm format       # prettier + eslint --fix
+pnpm format       # bun fmt (apps) + prettier + eslint --fix
+pnpm format:check # verify formatting without writing (bun fmt + prettier + shfmt)
 pnpm test         # bun test
 ```
 
@@ -442,11 +443,12 @@ See [`docs/development/devbox-sandbox.md`](docs/development/devbox-sandbox.md).
   `--pass-with-no-tests`.
 - **After adding or renaming dashboard routes**, run
   `pnpm --filter @abugida/dashboard generate-routes`.
-- **Code style** is Prettier with no semicolons, single quotes, trailing commas,
-  `printWidth` 100, plus TypeScript strict mode.
+- **Code style** is formatter-enforced — `bun fmt` in `app/api` and `app/dashboard`, Prettier
+  everywhere else, both encoding no semicolons, single quotes, trailing commas,
+  `printWidth` 100 — plus TypeScript strict mode.
 - **Husky hooks are enforced** — do not bypass them. `commit-msg` requires Conventional
-  Commits; `pre-commit` runs ESLint `--fix` and Prettier on staged files; `pre-push` runs
-  `pnpm typecheck` across all workspaces.
+  Commits; `pre-commit` runs ESLint `--fix` and the owning workspace's formatter on staged
+  files; `pre-push` runs `pnpm typecheck` and `pnpm format:check` across all workspaces.
 
 ## Current status and roadmap
 

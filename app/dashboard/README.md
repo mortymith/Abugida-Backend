@@ -32,12 +32,12 @@ If you prefer not to use Tailwind CSS:
 
 ## Linting & Formatting
 
-This project uses [eslint](https://eslint.org/) and [prettier](https://prettier.io/) for linting and formatting. Eslint is configured using [tanstack/eslint-config](https://tanstack.com/config/latest/docs/eslint). The following scripts are available:
+This project uses [eslint](https://eslint.org/) for linting and `bun fmt` (bun's built-in formatter) for formatting. Eslint is configured using [tanstack/eslint-config](https://tanstack.com/config/latest/docs/eslint). The formatter policy lives in the `[fmt]` section of `bunfig.toml`. The following scripts are available:
 
 ```bash
 pnpm lint
 pnpm format
-pnpm check
+pnpm format:check
 ```
 
 # TanStack Chat Application

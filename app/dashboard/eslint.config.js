@@ -51,6 +51,6 @@ export default [
   },
   {
     name: 'abugida/dashboard/ignores',
-    ignores: ['eslint.config.js', 'prettier.config.js'],
+    ignores: ['eslint.config.js'],
   },
 ]

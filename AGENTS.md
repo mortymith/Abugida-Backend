@@ -115,23 +115,23 @@ just validate-compose   # Validate all three compose tiers
 
 ## Tooling layer (`tooling/`)
 
-Shared per-tool configuration packages (`@abugida/*-config`, part of the pnpm workspace) — one source of truth per tool. **Rule:** a tool whose configuration is a _preset or dictionary set_ that several consumers import or extend lives in `tooling/<tool>-config/`; a tool whose configuration is a _single file_ lives in the repository root, named exactly as the tool discovers it (`.shellcheckrc`, `.hadolint.yaml`, `.yamllint.yaml`, `.markdownlint.json`, `.ecrc.json`, `.gitleaks.toml`, `.dotenv-linter`, `knip.config.js`, `syncpack.config.js`, `lint-staged.config.js`, `commitlint.config.js`). Every app and package still owns its `eslint.config.*`, `prettier.config.js` and `tsconfig.json` and composes the shared packages; the repository-level tools (commitlint, lint-staged, knip, cspell, and the CLI linters) are wired through the root `package.json` scripts and the husky hooks. See `tooling/README.md` for the package table, root-config table, commands, system-binary list, and exceptions. Highlights:
+Shared per-tool configuration packages (`@abugida/*-config`, part of the pnpm workspace) — one source of truth per tool. **Rule:** a tool whose configuration is a _preset or dictionary set_ that several consumers import or extend lives in `tooling/<tool>-config/`; a tool whose configuration is a _single file_ lives in the repository root, named exactly as the tool discovers it (`.shellcheckrc`, `.hadolint.yaml`, `.yamllint.yaml`, `.markdownlint.json`, `.ecrc.json`, `.gitleaks.toml`, `.dotenv-linter`, `knip.config.js`, `syncpack.config.js`, `lint-staged.config.js`, `commitlint.config.js`). Every app and package still owns its `eslint.config.*` and `tsconfig.json` and composes the shared packages; formatting is owned per workspace — Prettier workspaces keep a `prettier.config.js` re-exporting the shared policy, while the app workspaces that format with `bun fmt` carry the same policy in their `bunfig.toml` `[fmt]` section; the repository-level tools (commitlint, lint-staged, knip, cspell, and the CLI linters) are wired through the root `package.json` scripts and the husky hooks. See `tooling/README.md` for the package table, root-config table, commands, system-binary list, and exceptions. Highlights:
 
 - TypeScript presets: `@abugida/typescript-config/{base,node,library}.json`. Path options (`outDir`/`rootDir`/`include`) stay in each consuming tsconfig (relative paths in shared presets resolve against the preset file).
 - ESLint: shared base via `@abugida/eslint-config` (typescript-eslint pinned 8.69.0). Framework plugins stay in the owning workspace (Astro in `app/marketing`, `@tanstack/eslint-config` in `app/dashboard`).
-- Prettier: one policy in `@abugida/prettier-config`; each workspace re-exports it from its own `prettier.config.js`.
+- Formatting: one style policy, two encoders — `@abugida/prettier-config` for the Prettier workspaces (marketing, packages, repository root/tooling/docs) and `bunfig.toml [fmt]` for the app workspaces that format with `bun fmt` (api, dashboard). Both encode: no semicolons, single quotes, trailing commas, `printWidth` 100.
 - `bun test` preload: root + workspace `bunfig.toml` wire `@abugida/bun-test-config/preload` (safe env defaults — `pnpm test` needs no exported secrets).
 - Repo-wide quality scripts: `lint:spelling`, `lint:docker`, `lint:yaml`, `lint:markdown`, `lint:editorconfig`, `lint:env`, `lint:secrets` (blocking) and `lint:shell`, `lint:deps`, `knip` (advisory). The CLI linters read their config from the repository root (`.shellcheckrc`, `.hadolint.yaml`, `.yamllint.yaml`, `.markdownlint.json`, `.ecrc.json`, `.gitleaks.toml`, `.dotenv-linter`, `knip.config.js`, `syncpack.config.js`, `lint-staged.config.js`, `commitlint.config.js`); some require system binaries (shellcheck, hadolint, yamllint, gitleaks, dotenv-linter, editorconfig-checker, shfmt) — see `tooling/README.md`.
 
 ## Git workflow (enforced by husky hooks — don't bypass)
 
 - `commit-msg`: Conventional Commits via commitlint (e.g. `feat(scope): ...`). `body-max-line-length`/`footer-max-line-length` are disabled. Config: root `commitlint.config.js` (discovered by commitlint).
-- `pre-commit`: lint-staged (config: root `lint-staged.config.js`, discovered by lint-staged) → eslint `--fix` + prettier `--write` on staged files.
-- `pre-push`: runs `pnpm typecheck` across all workspaces — must pass before pushing.
+- `pre-commit`: lint-staged (config: root `lint-staged.config.js`, discovered by lint-staged) → eslint `--fix` + the owning workspace's formatter (`bun fmt` or prettier) on staged files.
+- `pre-push`: runs `pnpm typecheck` and `pnpm format:check` across all workspaces — must pass before pushing.
 
 ## Conventions
 
-- Code style is prettier + eslint: no semicolons, single quotes, trailing commas, printWidth 100.
+- Code style is bun fmt/prettier + eslint: no semicolons, single quotes, trailing commas, printWidth 100.
 - Root tsconfig is strict with `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitReturns`, `isolatedModules`. Match these in new code.
 - `packages/auth`: Build with `tsc` to `dist/` before consuming. Framework middleware is intentionally kept in subpaths (`/hono`, `/tanstack`, `/client`, `/env`, `/roles`) so consumers don't pull unnecessary deps. Add new auth behaviour here, not in an app.
 - `packages/database`: Schema is organized by domain under `schema/` (`auth`, `catalog`, `finance`, `learning`, `ops`, `shared`). The barrel `index.ts` re-exports everything.

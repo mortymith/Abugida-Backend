@@ -17,13 +17,13 @@
     "build": "bun --bun vite build",
     "preview": "bun --bun vite preview",
     "lint": "eslint",
-    "format": "prettier --write . && eslint --fix",
+    "format": "bun fmt && eslint --fix",
     "typecheck": "bun check",
     "migrate:lesson-markdown": "bun run scripts/migrate-lesson-markdown.ts",
     "probe:tenant": "bun run scripts/dashboard.tenant-probe.ts",
     "clean": "rm -rf dist .turbo node_modules",
     "test": "bun test --pass-with-no-tests",
-    "format:check": "prettier --check ."
+    "format:check": "bun fmt --check"
   },
   "dependencies": {
     "@abugida/auth": "workspace:*",
@@ -89,7 +89,6 @@
   },
   "devDependencies": {
     "@abugida/eslint-config": "workspace:*",
-    "@abugida/prettier-config": "workspace:*",
     "@abugida/typescript-config": "workspace:*",
     "@tanstack/devtools-vite": "0.8.5",
     "@tanstack/eslint-config": "0.4.0",
@@ -102,7 +101,6 @@
     "dotenv": "^18.0.8",
     "eslint": "^10.13.0",
     "fake-indexeddb": "^6.2.6",
-    "prettier": "^3.9.10",
     "typescript": "^6.0.3",
     "vite": "8.3.5"
   }

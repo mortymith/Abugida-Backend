@@ -651,7 +651,9 @@ const courses = await withPageSpan('page.courses', async (span) => {
 
 <h1>All Courses</h1>
 <ul>
-  {courses.map((c) => <li>{c.title}</li>)}
+  {courses.map((c) => (
+    <li>{c.title}</li>
+  ))}
 </ul>
 ```
 

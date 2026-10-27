@@ -74,13 +74,25 @@ const config = {
     '@abugida/cspell-config',
     '@abugida/prettier-config',
     '@abugida/typescript-config',
+    // The Astro plugin is resolved to an absolute path by
+    // `tooling/prettier-config`, but Prettier still imports it from its own
+    // import context when lint-staged runs `prettier` from the repository
+    // root over staged workspace files — so the root devDependency is
+    // intentional and must stay resolvable from the root.
+    'prettier-plugin-astro',
   ],
   workspaces: {
     '.': {},
     'app/api': {
       entry: ['src/index.ts'],
+      // `bun fmt` is the formatter built into the bun runtime, not an npm
+      // binary — the `format`/`format:check` scripts call it directly.
+      ignoreBinaries: ['fmt'],
     },
     'app/dashboard': {
+      // `bun fmt` is the formatter built into the bun runtime, not an npm
+      // binary — the `format`/`format:check` scripts call it directly.
+      ignoreBinaries: ['fmt'],
       entry: [
         // TanStack Start production server (Dockerfile CMD) and framework
         // handler entry:

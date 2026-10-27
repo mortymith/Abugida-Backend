@@ -78,14 +78,14 @@
 
 ### Deploy & Security
 
-| Recipe                  | Description                                      |
-| ----------------------- | ------------------------------------------------ |
-| `just deploy prod`      | Deploy updated images to production              |
-| `just rollback`         | Roll back to previous deployment                 |
-| `just rotate-secrets`   | Rotate all application secrets (Vault)           |
-| `just validate-secrets` | Verify all secrets are present and valid         |
+| Recipe                  | Description                              |
+| ----------------------- | ---------------------------------------- |
+| `just deploy prod`      | Deploy updated images to production      |
+| `just rollback`         | Roll back to previous deployment         |
+| `just rotate-secrets`   | Rotate all application secrets (Vault)   |
+| `just validate-secrets` | Verify all secrets are present and valid |
 
-| `just security-audit`   | Full security audit (secrets, configs, firewall) |
+| `just security-audit` | Full security audit (secrets, configs, firewall) |
 
 ### Vault Operations
 

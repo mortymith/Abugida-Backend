@@ -77,12 +77,14 @@ docs(runbooks): add vault-sealed incident response
 - **Types:** `feat`, `fix`, `chore`, `docs`, `refactor`, `security`, `test`, `ci`
 - **Scope:** service or component (`api`, `dashboard`, `vault`, `compose`, …)
 
-Husky hooks are enforced — do not bypass them. `pre-commit` runs eslint `--fix` and
-prettier on staged files; `pre-push` runs `pnpm typecheck` across all workspaces.
+Husky hooks are enforced — do not bypass them. `pre-commit` runs eslint `--fix` and the
+owning workspace's formatter (`bun fmt` or prettier) on staged files; `pre-push` runs
+`pnpm typecheck` and `pnpm format:check` across all workspaces.
 
 ## Style
 
-- Prettier: no semicolons, single quotes, trailing commas, `printWidth` 100.
+- Formatting: `bun fmt` in `app/api` and `app/dashboard`, Prettier everywhere else — both
+  enforce the same style: no semicolons, single quotes, trailing commas, `printWidth` 100.
 - TypeScript strict, including `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`.
 - Keep API modules self-contained — routes, schemas, service, repository, handlers — and
   register them in `app/api/src/app.ts`.

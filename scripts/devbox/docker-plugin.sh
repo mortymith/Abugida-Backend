@@ -18,13 +18,13 @@
 
 set -uo pipefail
 
-compose_bin="$(command -v docker-compose 2>/dev/null || true)"
+compose_bin="$(command -v docker-compose 2> /dev/null || true)"
 if [[ -z "$compose_bin" ]]; then
   echo "devbox: docker-compose is not installed in the sandbox; skipping plugin wiring" >&2
   exit 0
 fi
 
-if docker compose version >/dev/null 2>&1; then
+if docker compose version > /dev/null 2>&1; then
   exit 0
 fi
 
@@ -33,7 +33,7 @@ mkdir -p "$plugin_dir"
 target="$plugin_dir/docker-compose"
 
 if [[ -L "$target" || -f "$target" ]]; then
-  if [[ "$(readlink -f "$target" 2>/dev/null || echo)" == "$(readlink -f "$compose_bin")" ]]; then
+  if [[ "$(readlink -f "$target" 2> /dev/null || echo)" == "$(readlink -f "$compose_bin")" ]]; then
     exit 0
   fi
   rm -f "$target"

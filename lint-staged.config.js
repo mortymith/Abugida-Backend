@@ -17,9 +17,12 @@
  *   lint policy and composes the shared base from `@abugida/eslint-config`.
  * - Files owned by the tooling layer are linted with the tooling layer's
  *   own ESLint config (`tooling/eslint.config.js`).
- * - Prettier always runs with the shared config
- *   (`@abugida/prettier-config`) so staged files are formatted exactly like
- *   the workspace `format` scripts format them.
+ * - Formatting follows the workspace's own `format` script: workspaces that
+ *   format with `bun fmt` (bunfig.toml `[fmt]` policy) are formatted with
+ *   `bun fmt --cwd <workspace>`, while Prettier workspaces are formatted
+ *   with the shared config (`@abugida/prettier-config`). Either way staged
+ *   files end up formatted exactly like the workspace `format` scripts
+ *   format them.
  *
  * The workspace list is discovered from the filesystem instead of being
  * hard-coded, so a new workspace is covered by the pre-commit hook without
@@ -148,6 +151,73 @@ function onlyExisting(command) {
 }
 
 /**
+ * Does the workspace format with `bun fmt`?
+ *
+ * The workspace package manifest is the source of truth: every workspace
+ * owns a `format` script, and the ones that start with `bun fmt` own their
+ * formatting through bun's built-in formatter (the `[fmt]` policy in the
+ * workspace `bunfig.toml`) instead of Prettier.
+ *
+ * @param {string} workspace
+ * @returns {boolean}
+ */
+function usesBunFmt(workspace) {
+  try {
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(repoRoot, workspace, 'package.json'), 'utf8'),
+    )
+    const format = manifest.scripts?.format
+    return typeof format === 'string' && format.startsWith('bun fmt')
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Build a `bun fmt` command bound to one workspace.
+ *
+ * `bun fmt` resolves its `[fmt]` policy from the bunfig.toml in the working
+ * directory, and lint-staged runs from the repository root — so the command
+ * pins `--cwd` to the workspace and rewrites the repo-relative paths that
+ * lint-staged hands over into workspace-relative ones.
+ *
+ * Like `onlyExisting`, files deleted in the current commit are skipped.
+ *
+ * @param {string} workspace
+ * @returns {(files: string[]) => string}
+ */
+function bunFmt(workspace) {
+  return (files) => {
+    const prefix = `${workspace.replaceAll('\\', '/')}/`
+    const existing = files
+      .filter((file) => fs.existsSync(file))
+      .map((file) => {
+        const normalized = toRepoRelative(file)
+        return normalized.startsWith(prefix) ? normalized.slice(prefix.length) : normalized
+      })
+    if (existing.length === 0) return ''
+    return ['bun fmt', `--cwd ${workspace}`, ...existing.map((file) => JSON.stringify(file))].join(
+      ' ',
+    )
+  }
+}
+
+/**
+ * Normalize a lint-staged file argument to a repository-relative path.
+ *
+ * lint-staged passes absolute paths, while the routing rules in this file
+ * (workspace prefixes, owned directories) are expressed repo-relative.
+ *
+ * @param {string} file
+ * @returns {string}
+ */
+function toRepoRelative(file) {
+  const normalized = file.replaceAll('\\', '/')
+  if (!path.isAbsolute(normalized)) return normalized
+  return path.relative(repoRoot, normalized).split(path.sep).join('/')
+}
+
+/**
  * Directories whose files are linted and formatted by their own owner.
  *
  * The repository-level patterns below use a leading `*`, which lint-staged
@@ -166,8 +236,7 @@ const ownedDirectories = ['app/', 'packages/', 'tooling/', 'docs/']
 function onlyRepositoryFiles(command) {
   return (files) => {
     const owned = files.filter(
-      (file) =>
-        !ownedDirectories.some((directory) => file.replaceAll('\\', '/').startsWith(directory)),
+      (file) => !ownedDirectories.some((directory) => toRepoRelative(file).startsWith(directory)),
     )
     if (owned.length === 0) return ''
     return [command, ...owned.map((file) => JSON.stringify(file))].join(' ')
@@ -178,16 +247,24 @@ function onlyRepositoryFiles(command) {
 const config = {}
 
 // Source code owned by a workspace: that workspace's ESLint config wins.
-// Everything else in a workspace: formatting only.
+// Everything else in a workspace: formatting only, with the formatter the
+// workspace itself uses (`bun fmt` or Prettier — see `usesBunFmt`).
 for (const workspace of discoverWorkspaces()) {
-  const extensions = hasAstroSupport(workspace) ? [...codeExtensions, 'astro'] : codeExtensions
+  const formatWithBun = usesBunFmt(workspace)
+
+  // bun fmt does not format Astro files — only Prettier (with the Astro
+  // plugin) does — so `.astro` is only routed to Prettier workspaces.
+  const extensions =
+    !formatWithBun && hasAstroSupport(workspace) ? [...codeExtensions, 'astro'] : codeExtensions
+
+  const formatter = formatWithBun ? bunFmt(workspace) : onlyExisting('prettier --write')
 
   const commands = hasEslintConfig(workspace)
-    ? [`pnpm --dir ${workspace} exec eslint --fix --no-warn-ignored`, 'prettier --write']
-    : ['prettier --write']
+    ? [`pnpm --dir ${workspace} exec eslint --fix --no-warn-ignored`, formatter]
+    : [formatter]
 
-  config[`${workspace}/**/*.{${extensions.join(',')}}`] = commands.map(onlyExisting)
-  config[`${workspace}/**/*.{${assetExtensions.join(',')}}`] = [onlyExisting('prettier --write')]
+  config[`${workspace}/**/*.{${extensions.join(',')}}`] = commands
+  config[`${workspace}/**/*.{${assetExtensions.join(',')}}`] = [formatter]
 }
 
 // The tooling layer owns its own ESLint config.

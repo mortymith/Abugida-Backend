@@ -19,18 +19,18 @@ single file in a workspace package would add a publish/resolve step without
 adding any sharing: nothing imports it, and the tool reads it from the project
 root anyway.
 
-| Concern              | Owner                                                                    |
-| -------------------- | ------------------------------------------------------------------------ |
-| ESLint rules         | `tooling/eslint-config` → composed by each workspace's `eslint.config.*` |
-| Prettier policy      | `tooling/prettier-config` → re-exported by each `prettier.config.js`     |
-| TypeScript presets   | `tooling/typescript-config` → `extends` in each `tsconfig.json`          |
-| Test preload         | `tooling/bun-test-config` → `bunfig.toml` (`[test] preload`)             |
-| Spelling dictionary  | `tooling/cspell-config` → root `pnpm lint:spelling` (`--config`)         |
-| Commit message rules | repository-root `commitlint.config.js` → husky `commit-msg` hook         |
-| Staged-file pipeline | repository-root `lint-staged.config.js` → husky `pre-commit` hook        |
-| Unused code analysis | repository-root `knip.config.js` → root `pnpm knip`                      |
-| Version drift        | repository-root `syncpack.config.js` → root `pnpm lint:deps`             |
-| CLI linters          | repository-root config file → root `lint:*` scripts                      |
+| Concern              | Owner                                                                                                                                                       |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ESLint rules         | `tooling/eslint-config` → composed by each workspace's `eslint.config.*`                                                                                    |
+| Prettier policy      | `tooling/prettier-config` → re-exported by each Prettier workspace's `prettier.config.js`; the `bun fmt` apps encode the same policy in `bunfig.toml [fmt]` |
+| TypeScript presets   | `tooling/typescript-config` → `extends` in each `tsconfig.json`                                                                                             |
+| Test preload         | `tooling/bun-test-config` → `bunfig.toml` (`[test] preload`)                                                                                                |
+| Spelling dictionary  | `tooling/cspell-config` → root `pnpm lint:spelling` (`--config`)                                                                                            |
+| Commit message rules | repository-root `commitlint.config.js` → husky `commit-msg` hook                                                                                            |
+| Staged-file pipeline | repository-root `lint-staged.config.js` → husky `pre-commit` hook                                                                                           |
+| Unused code analysis | repository-root `knip.config.js` → root `pnpm knip`                                                                                                         |
+| Version drift        | repository-root `syncpack.config.js` → root `pnpm lint:deps`                                                                                                |
+| CLI linters          | repository-root config file → root `lint:*` scripts                                                                                                         |
 
 Everything that is _not_ shared lives with its owner: an app's framework
 plugins, a package's `tsconfig` paths, a script's shell rules.
@@ -43,7 +43,7 @@ All tooling packages use the repository's established `@abugida/*` scope. Every 
 | --------------------------- | -------- | ------------------------------------------------- | --------------------------- |
 | `tooling/typescript-config` | tsc      | `app/*`, `packages/*` (`extends`)                 | `pnpm typecheck`            |
 | `tooling/eslint-config`     | eslint   | every workspace's `eslint.config.*`               | `pnpm lint`                 |
-| `tooling/prettier-config`   | prettier | every workspace's `prettier.config.js`            | `pnpm format` / lint-staged |
+| `tooling/prettier-config`   | prettier | Prettier workspaces' `prettier.config.js`         | `pnpm format` / lint-staged |
 | `tooling/bun-test-config`   | bun test | root + workspace `bunfig.toml` (`[test] preload`) | `pnpm test`                 |
 | `tooling/cspell-config`     | cspell   | root `pnpm lint:spelling` (`--config`)            | yes                         |
 
@@ -90,12 +90,18 @@ depends on the working directory.
   of the full base, and register the `@typescript-eslint` plugin only when the
   preset does not.
 
-- **Prettier** — every workspace owns a `prettier.config.js` that re-exports the
+- **Prettier** — every Prettier workspace owns a `prettier.config.js` that re-exports the
   shared policy:
 
   ```js
   export { default } from '@abugida/prettier-config'
   ```
+
+  The app workspaces `app/api` and `app/dashboard` are the exception: they format with
+  `bun fmt`, bun's built-in formatter, and carry the same style policy in the `[fmt]`
+  section of their `bunfig.toml` (`printWidth = 100`, `semi = false`, `singleQuote = true`;
+  the remaining policy options are `bun fmt` defaults). The switch is byte-compatible —
+  `bun fmt --check` and `prettier --check` agree on every file in both apps.
 
   The shared config resolves the Astro plugin to an absolute path, so the same
   config works from every workspace, from the repository root, and from
@@ -129,14 +135,17 @@ depends on the working directory.
 
 ```
 pnpm lint               # ESLint per workspace (turbo) + the tooling layer
-pnpm format             # Prettier per workspace (turbo) + repo-level files + shfmt
+pnpm format             # bun fmt (apps) + Prettier per workspace (turbo) + repo-level files + shfmt
+pnpm format:check       # verify formatting without writing (bun fmt + Prettier + shfmt -d)
 pnpm typecheck          # tsc per workspace (turbo)
 pnpm test               # bun test per workspace (turbo) — no env exports needed
 pnpm build              # tsc builds for packages, bundlers for apps
 
 pnpm lint:tooling       # ESLint over the tooling layer + the root tool configs
 pnpm format:root        # Prettier over repository-level files (docs, tooling, root configs)
+pnpm format:check:root  # Prettier --check over repository-level files
 pnpm format:shell       # shfmt over the tracked shell scripts
+pnpm format:check:shell # shfmt -d over the tracked shell scripts
 
 pnpm lint:spelling      # cspell over tracked Markdown          (blocking)
 pnpm lint:docker        # hadolint over tracked Dockerfiles     (blocking)
@@ -157,11 +166,12 @@ above.
 
 ## Formatting ownership
 
-| Files                                                   | Formatter                                               |
-| ------------------------------------------------------- | ------------------------------------------------------- |
-| JS/TS/TSX/JSX, JSON, CSS, HTML, GraphQL, YAML, Markdown | Prettier (single policy from `tooling/prettier-config`) |
-| Shell scripts                                           | shfmt (`shfmt -w -i 2 -sr -ln bash`)                    |
-| Everything else                                         | `.editorconfig` (checked by editorconfig-checker)       |
+| Files                                                                     | Formatter                                               |
+| ------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `app/api`, `app/dashboard` (JS/TS/TSX, JSON, CSS, MD, …)                  | `bun fmt` (policy in each app's `bunfig.toml [fmt]`)    |
+| Everything else (JS/TS/TSX/JSX, JSON, CSS, HTML, GraphQL, YAML, Markdown) | Prettier (single policy from `tooling/prettier-config`) |
+| Shell scripts                                                             | shfmt (`shfmt -w -i 2 -sr -ln bash`)                    |
+| Everything else                                                           | `.editorconfig` (checked by editorconfig-checker)       |
 
 ## System binaries
 

@@ -53,7 +53,7 @@ check_version() {
   local label="$1" expected="$2"
   shift 2
   local actual
-  if ! actual="$("$@" 2>/dev/null | head -n1)"; then
+  if ! actual="$("$@" 2> /dev/null | head -n1)"; then
     fail "$label — command not found: ${*: -1}"
     return
   fi
@@ -71,7 +71,7 @@ check_version() {
 # check_present <label> <command>
 check_present() {
   local label="$1" cmd="$2"
-  if command -v "$cmd" >/dev/null 2>&1; then
+  if command -v "$cmd" > /dev/null 2>&1; then
     pass "$label — $(command -v "$cmd")"
   else
     fail "$label — '$cmd' not on PATH"
@@ -83,7 +83,7 @@ printf '%sDevbox sandbox doctor%s — %s\n' "${C_DIM:-}" "${C_OFF:-}" "$REPO_ROO
 # ─── Runtime & package manager ───────────────────────────────────────────────
 section "Runtime"
 
-BUN_VERSION="$(tr -d '[:space:]' < .bun-version 2>/dev/null || echo '')"
+BUN_VERSION="$(tr -d '[:space:]' < .bun-version 2> /dev/null || echo '')"
 if [[ -n "$BUN_VERSION" ]]; then
   check_version "bun" "$BUN_VERSION" bun --version
 else
@@ -105,15 +105,15 @@ check_present "just" just
 check_present "docker" docker
 check_present "docker compose" docker-compose
 
-if docker compose version >/dev/null 2>&1; then
-  pass "docker compose plugin — $(docker compose version --short 2>/dev/null || echo available)"
-elif docker-compose version >/dev/null 2>&1; then
+if docker compose version > /dev/null 2>&1; then
+  pass "docker compose plugin — $(docker compose version --short 2> /dev/null || echo available)"
+elif docker-compose version > /dev/null 2>&1; then
   warn "docker compose plugin — not on the CLI plugin path, using 'docker-compose' directly"
 else
   fail "docker compose — neither the plugin nor the standalone binary works"
 fi
 
-if docker info >/dev/null 2>&1; then
+if docker info > /dev/null 2>&1; then
   pass "docker daemon — reachable"
 else
   warn "docker daemon — not reachable; 'just dev-up' needs a running Docker daemon"
