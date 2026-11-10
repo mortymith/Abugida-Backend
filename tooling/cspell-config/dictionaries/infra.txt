@@ -125,6 +125,24 @@ rcfile
 pgbouncer
 PRELOADED
 
+# CI/CD, container build, and supply-chain tooling vocabulary.
+buildx
+Buildx
+syft
+Syft
+cosign
+Cosign
+trivy
+Trivy
+sbom
+SBOM
+msgpackr
+attestations
+provenance
+keyless
+ghcr
+GHCR
+
 # Shell, TLS, and networking protocol vocabulary.
 pipefail
 certbot

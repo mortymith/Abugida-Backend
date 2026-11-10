@@ -26,13 +26,14 @@ New here? Start with [Onboarding](onboarding/quick-start.md) — you'll be runni
 
 ## Architecture
 
-| Document                                             | Description                                 |
-| ---------------------------------------------------- | ------------------------------------------- |
-| [Overview](architecture/overview.md)                 | System diagram, service catalog, data flow  |
-| [Networking](architecture/networking.md)             | 3-layer network, subnets, firewall rules    |
-| [Security Model](architecture/security-model.md)     | Trust boundaries, secret flow, threat model |
-| [Deployment Model](architecture/deployment-model.md) | Blue-green, canary, CI/CD pipelines         |
-| [ADR Index](architecture/adr/README.md)              | Architecture Decision Records               |
+| Document                                              | Description                                 |
+| ----------------------------------------------------- | ------------------------------------------- |
+| [Overview](architecture/overview.md)                  | System diagram, service catalog, data flow  |
+| [Networking](architecture/networking.md)              | 3-layer network, subnets, firewall rules    |
+| [Security Model](architecture/security-model.md)      | Trust boundaries, secret flow, threat model |
+| [Deployment Model](architecture/deployment-model.md)  | Blue-green, canary, CI/CD pipelines         |
+| [CI/CD Pipeline Spec](architecture/ci-cd-pipeline.md) | GitHub Actions workflows, gates, artifacts  |
+| [ADR Index](architecture/adr/README.md)               | Architecture Decision Records               |
 
 ## Services
 
