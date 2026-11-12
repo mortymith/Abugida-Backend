@@ -33,13 +33,13 @@ Validates that SigNoz is reachable through the Cloudflare Tunnel and that Vault 
 **Invoke:** `just audit-dependencies`
 **Script:** `scripts/security/audit-dependencies.sh`
 
-Runs Trivy against Dockerfiles, lockfiles (`bun.lockb`), and built images. Fails on CRITICAL or HIGH CVEs. Also invoked by `security.yml` in CI.
+Runs Trivy against Dockerfiles, lockfiles (`bun.lockb`), and built images. Fails on CRITICAL or HIGH CVEs. Also invoked by `security.yml` in CI. No `package-lock.json` exists in the repository; dependency audits run against `bun.lockb` and Docker images.
 
 ## Compose Validation
 
 **Invoke:** `just validate-compose`
 
-Validates the modular Compose files in `docker/compose/` using `docker compose config` for YAML correctness, service consistency across environments, and correct service counts (dev: 6, staging: 10, prod: 24).
+Validates the modular Compose files in `docker/compose/` using `docker compose config` for YAML correctness, service consistency across environments, and correct service counts per environment.
 
 ## Performance Tests
 

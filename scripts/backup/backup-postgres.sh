@@ -75,7 +75,7 @@ s3_upload() {
 }
 
 # ═════════════════════════════════════════════════════════════════════
-# 1. WAL ARCHIVE (continuous) — §9.1 diagram node
+# 1. WAL ARCHIVE (continuous) — §9.1 diagram checkpoint
 # ═════════════════════════════════════════════════════════════════════
 backup_wal() {
   echo "[backup-postgres] Archiving WAL segments..."
@@ -106,7 +106,7 @@ backup_wal() {
 }
 
 # ═════════════════════════════════════════════════════════════════════
-# 2. DAILY pg_dump (logical) — §9.1 diagram node
+# 2. DAILY pg_dump (logical) — §9.1 diagram checkpoint
 # ═════════════════════════════════════════════════════════════════════
 backup_dump() {
   echo "[backup-postgres] Creating pg_dump (custom format, compressed)..."

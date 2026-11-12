@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ═════════════════════════════════════════════════════════════════════════════════
-# Pre-Flight Deployment Checks (§5.1 PreFlight node)
+# Pre-Flight Deployment Checks (§5.1 PreFlight checkpoint)
 # ═══════════════════════════════════════════════════════════════════════════════════
 #
 # Validates the environment is ready for deployment:
@@ -8,7 +8,7 @@
 #   2. Required environment files (.env.prod)
 #   3. Required secret environment variables (NIST-validated, length >= 20)
 #   4. Dockerfiles exist
-#   5. Vault is initialized and unsealed (production, §5.1 VaultCheck node)
+#   5. Vault is initialized and unsealed (production, §5.1 VaultCheck checkpoint)
 #   6. Current deployment health (services healthy)
 #   7. Sufficient disk space (>= 5GB free)
 #   8. No conflicting containers on key ports
@@ -161,7 +161,7 @@ if [ "${SECRETS_OK}" = true ]; then
   check_pass "All required secret variables set and sufficient length"
 fi
 
-# 6. Vault status (§5.1 VaultCheck node, production only)
+# 6. Vault status (§5.1 VaultCheck checkpoint, production only)
 if docker ps --format '{{.Names}}' | grep -q "${COMPOSE_PROJECT}_vault"; then
   VAULT_SEALED=$(docker exec "${COMPOSE_PROJECT}_vault" vault status 2> /dev/null | grep 'Seal' | awk '{print $2}' || echo 'unknown')
   if [ "${VAULT_SEALED}" = "false" ]; then

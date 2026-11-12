@@ -6,7 +6,7 @@
 # Checks:
 #   1. Dockerfiles: flags `:latest` tags (pinned digests preferred),
 #      detects `--insecure` curl/wget, checks COPY/ADD bounds
-#   2. Lockfiles: runs `npm audit` / `pip-audit` / `trivy fs` if available
+#   2. Lockfiles: runs `trivy fs` if available
 #   3. Base images: checks for known EOL/distro versions
 #   4. Secret leakage: scans for hardcoded secrets in Dockerfiles
 #
@@ -84,7 +84,7 @@ while IFS= read -r -d '' dockerfile; do
     # Check for known EOL base distros
     for eol in "alpine:3.8" "alpine:3.9" "alpine:3.10" "alpine:3.11" "alpine:3.12" \
       "ubuntu:18.04" "ubuntu:20.04" "debian:9" "debian:10" \
-      "node:14" "node:16" "python:3.7" "python:3.8"; do
+      "python:3.7" "python:3.8"; do
       if [[ "$image" == *"${eol}"* ]]; then
         log_critical "${relpath}: EOL base image → ${image}"
       fi
@@ -172,26 +172,6 @@ fi
 # ═════════════════════════════════════════════════════════════════════
 echo ""
 echo -e "${BOLD}── Package Lockfile Audit ──${RESET}"
-
-# npm audit
-if [ -f "${PROJECT_ROOT}/package-lock.json" ]; then
-  if command -v npm > /dev/null 2>&1; then
-    echo "  Running npm audit..."
-    if npm audit --omit=dev 2> /tmp/npm-audit-output.txt; then
-      echo -e "  ${GREEN}npm audit: no vulnerabilities${RESET}"
-    else
-      vuln_count=$(grep -c 'vulnerability' /tmp/npm-audit-output.txt 2> /dev/null || echo "unknown")
-      log_high "npm audit found ${vuln_count} vulnerabilities"
-      grep -E 'high|critical' /tmp/npm-audit-output.txt 2> /dev/null | head -5 | while read -r line; do
-        echo "    → $line"
-      done
-    fi
-  else
-    echo "  (npm not available — skipping npm audit)"
-  fi
-else
-  echo "  (no package-lock.json found — skipping)"
-fi
 
 # pip-audit
 if [ -f "${PROJECT_ROOT}/requirements.txt" ] || [ -f "${PROJECT_ROOT}/Pipfile.lock" ]; then

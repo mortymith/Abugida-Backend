@@ -8,7 +8,7 @@
 #   - Hourly (XX:05): Redis RDB backup (prod only per §4.1)
 #   - Daily 03:00:  Monitoring (ClickHouse) backup
 #   - Daily 04:00:  Backup verification (checksum)
-#   - Weekly Sun 05:00: Full restore test (RestoreTest node)
+#   - Weekly Sun 05:00: Full restore test (RestoreTest checkpoint)
 #   - Daily 05:30:  Local retention prune
 #
 # Dev is on-demand only (no cron installed per §4.1).

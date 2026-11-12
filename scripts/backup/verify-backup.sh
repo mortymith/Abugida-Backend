@@ -10,7 +10,7 @@
 #   4. Config: tarball integrity (gzip -t)
 #   5. S3 existence check (optional)
 #
-# Also serves as the weekly automated restore test (RestoreTest node).
+# Also serves as the weekly automated restore test (RestoreTest checkpoint).
 # When called with --restore-test, it actually restores into a scratch
 # container and validates data integrity.
 #
@@ -51,7 +51,7 @@ check_fail() {
 }
 
 # ═════════════════════════════════════════════════════════════════════
-# 1. CHECKSUM VERIFICATION (daily, §9.1 IntegrityCheck node)
+# 1. CHECKSUM VERIFICATION (daily, §9.1 IntegrityCheck checkpoint)
 # ═════════════════════════════════════════════════════════════════════
 verify_checksums() {
   echo "==> Verifying checksums..."
@@ -154,7 +154,7 @@ verify_config() {
 }
 
 # ═════════════════════════════════════════════════════════════════════
-# 5. RESTORE TEST (weekly, RestoreTest node)
+# 5. RESTORE TEST (weekly, RestoreTest checkpoint)
 # ═════════════════════════════════════════════════════════════════════
 restore_test() {
   echo "==> Running restore test against scratch environment..."
@@ -258,7 +258,7 @@ echo "════════════════════════�
 printf '  Results:  %s passed,  %s failed  (of %s)\n' "${PASSED}" "${FAILED}" "${CHECKED}"
 echo "════════════════════════════════════════════════════════════"
 
-# ── Notify (§9.1 TelegramNotify node) ──────────────────────────
+# ── Notify (§9.1 TelegramNotify checkpoint) ──────────────────────────
 if [ ${FAILED} -gt 0 ]; then
   LEVEL=error CONTEXT=backup TASK=verify bash "${TELEGRAM_SH}" "Backup verification FAILED: ${FAILED} check(s) failed" 2> /dev/null || true
   exit 1

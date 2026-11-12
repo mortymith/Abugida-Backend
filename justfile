@@ -20,7 +20,7 @@
 #              (_need / _need-root / scripts/lib/common.sh: require_cmd),
 #              not a raw "command not found" mid-recipe.
 #
-# Development toolchain (Bun, pnpm, Node, and every system binary the
+# Development toolchain (Bun, pnpm, and every system binary the
 # repository lints with) is pinned and provided by the Devbox sandbox —
 # see ADR-026 and docs/development/devbox-sandbox.md. `just sandbox-shell`
 # enters it; recipes below are written so they also work from a plain host
@@ -874,7 +874,7 @@ sandbox-verify: (_need "devbox")
 #
 # Supply-chain hygiene for the pnpm workspace. Complements the Security group:
 # audit-dependencies (12) audits infrastructure tooling (pip, Dockerfiles,
-# secrets); these recipes cover the npm dependency tree itself.
+# secrets); these recipes cover the pnpm dependency tree itself.
 
 # Fail on any known vulnerability in the dependency tree (pnpm audit)
 deps-audit: (_need "pnpm")

@@ -23,8 +23,8 @@ Relevant project facts (see ADR-001, ADR-002, ADR-021, ADR-026):
 | `bun check` as the typechecker                   | every `tsc --noEmit` workspace (`typecheck` task)         | TypeScript-go port with 100% tsc conformance; `turbo typecheck` 65.7 s → ~5 s. `tsc` is kept everywhere it **emits** (builds); marketing keeps `astro check`.                                                          |
 | `--disallow-code-generation-from-strings=strict` | all three production container `CMD`s                     | Bun 1.4.3 makes the flag real: `eval`, `new Function`, `node:vm`, `data:` URL imports, `Worker` eval and inspector-driven generation all throw. Validated against the full test suites and smoke runs before enabling. |
 | CI pipeline                                      | `.github/workflows/ci.yml`                                | lint / config-lint / secrets / typecheck / test / build jobs; toolchain resolved from `packageManager` and `.bun-version` so CI never drifts from Docker.                                                              |
-| Dependabot update automation                     | `.github/dependabot.yml`                                  | npm (whole pnpm workspace), docker (all six Dockerfile directories, preserving tag+digest pinning), github-actions. `@tanstack/react-router` is excluded — it is pinned by a pnpm patch.                               |
-| Dependency-health recipes                        | `just deps-audit`, `just deps-outdated`, `just typecheck` | Supply-chain gate on the npm tree, complementing the Security group's `audit-dependencies`.                                                                                                                            |
+| Dependabot update automation                     | `.github/dependabot.yml`                                  | docker (all six Dockerfile directories, preserving tag+digest pinning), github-actions. `@tanstack/react-router` is excluded — it is pinned by a pnpm patch.                                                           |
+| Dependency-health recipes                        | `just deps-audit`, `just deps-outdated`, `just typecheck` | Supply-chain gate on the dependency tree, complementing the Security group's `audit-dependencies`.                                                                                                                     |
 | Dependency vulnerability cleanup                 | `pnpm-workspace.yaml` overrides + package bumps           | `pnpm audit` driven; scoped overrides only rewrite vulnerable ranges.                                                                                                                                                  |
 
 ### 2. Automatic gains — no code change, verified on 1.4.4
@@ -70,7 +70,7 @@ Relevant project facts (see ADR-001, ADR-002, ADR-021, ADR-026):
 ### Risks
 
 - Experimental watchlist APIs (`Bun.ModuleGraph`) may change shape between releases; they are intentionally not adopted so upgrades stay routine.
-- Dependabot's npm updates do not understand pnpm `patchedDependencies` beyond the explicit ignore list; a patch rebase becomes a required manual step whenever a patched package needs a version bump. CI catches a broken `pnpm install` immediately.
+- Dependabot's package updates do not understand pnpm `patchedDependencies` beyond the explicit ignore list; a patch rebase becomes a required manual step whenever a patched package needs a version bump. CI catches a broken `pnpm install` immediately.
 
 ## References
 

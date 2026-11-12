@@ -4,7 +4,8 @@
 # Abugida Marketing Service — Multi-Stage Dockerfile
 #
 # Stage 0 (`base`) inlines the shared Abugida base toolchain:
-# Bun 1.4.4 + pnpm 12.8.1, the runtime tooling (bash, curl, jq,
+# Bun 1.4.4 + pnpm 12.15.0 (installed via Bun — these images contain
+# no Node.js), the runtime tooling (bash, curl, jq,
 # postgresql17-client) used by the healthcheck and ops tasks, and the
 # non-root `appuser` (uid/gid 1000, WORKDIR /app).
 #
@@ -28,27 +29,23 @@ ARG BUILD_VERSION=0.0.1
 FROM oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a AS base
 
 # Version pins (single source of truth for this inline copy).
-ARG PNPM_VERSION=12.8.1
-ARG APK_NODEJS=22.23.2-r0
-ARG APK_NPM=11.6.4-r0
+ARG PNPM_VERSION=12.15.0
 ARG APK_BASH=5.2.37-r0
 ARG APK_CURL=8.14.1-r3
 ARG APK_JQ=1.8.1-r0
 ARG APK_PG17_CLIENT=17.11-r0
 
-# Toolchain + runtime tooling (all pinned). npm bootstraps pnpm and is
-# removed afterwards; node stays because pnpm runs on it.
+# Toolchain + runtime tooling (all pinned). No Node.js packages: pnpm is
+# installed and executed by Bun — the only JS runtime in this image. The
+# node→bun symlink lets dependency lifecycle scripts (esbuild, sharp) run
+# under Bun; it is a symlink to bun, not a Node.js installation.
 RUN apk add --no-cache \
         bash=${APK_BASH} \
         curl=${APK_CURL} \
         jq=${APK_JQ} \
-        nodejs=${APK_NODEJS} \
-        npm=${APK_NPM} \
         postgresql17-client=${APK_PG17_CLIENT} \
-    && npm install --global pnpm@${PNPM_VERSION} \
-    && npm cache clean --force \
-    && apk del --no-cache npm \
-    && rm -rf /root/.npm
+    && BUN_INSTALL=/usr/local bun add --global pnpm@${PNPM_VERSION} \
+    && ln -s "$(command -v bun)" /usr/local/bin/node
 
 # bash is present from the step above; use it with pipefail for all RUN.
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
@@ -65,7 +62,6 @@ USER 1000:1000
 
 # Toolchain verification (fails the build if anything is broken).
 RUN bun --version \
-    && node --version \
     && pnpm --version \
     && bash --version | head -n1 \
     && curl --version | head -n1 \

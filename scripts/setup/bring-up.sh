@@ -35,7 +35,7 @@ VAULT_TLS_SCRIPT="docker/config/vault/scripts/init-vault-tls.sh"
 # bring-up stays safe to run unattended. Use `just db-generate` after
 # changing packages/database/schema to author migrations.
 push_schema() {
-  require_cmd pnpm "install Node dependencies first (corepack enable && pnpm install)"
+  require_cmd pnpm "install workspace dependencies first (corepack enable && pnpm install)"
   log_info "Applying database schema (db:push)..."
   if [ -n "${DATABASE_URL:-}" ]; then
     pnpm --filter @abugida/database db:push
