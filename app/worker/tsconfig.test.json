@@ -1,0 +1,9 @@
+{
+  "extends": "@abugida/typescript-config/node.json",
+  "compilerOptions": {
+    "paths": { "@/*": ["./src/*"] },
+    "rootDir": "."
+  },
+  "include": ["src/**/*.ts", "tests/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

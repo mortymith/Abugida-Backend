@@ -1,0 +1,38 @@
+{
+  "name": "@abugida/worker",
+  "version": "0.0.1",
+  "description": "Background job worker for the Abugida Application monorepo – consumes the @abugida/queue job contract",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "bun": ">=1.4.4"
+  },
+  "scripts": {
+    "predev": "pnpm --filter \"@abugida/worker^...\" run build",
+    "dev": "bun --watch src/index.ts",
+    "build": "tsc",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "format": "prettier --write .",
+    "typecheck": "bun check",
+    "test": "bun test --pass-with-no-tests",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@abugida/observability": "workspace:*",
+    "@abugida/queue": "workspace:*",
+    "dotenv": "^18.0.8",
+    "hono": "^4.13.13",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@abugida/eslint-config": "workspace:*",
+    "@abugida/prettier-config": "workspace:*",
+    "@abugida/typescript-config": "workspace:*",
+    "@types/bun": "^1.4.4",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.3"
+  }
+}

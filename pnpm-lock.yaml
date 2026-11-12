@@ -603,6 +603,46 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  app/worker:
+    dependencies:
+      '@abugida/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
+      '@abugida/queue':
+        specifier: workspace:*
+        version: link:../../packages/queue
+      dotenv:
+        specifier: ^18.0.8
+        version: 18.0.8
+      hono:
+        specifier: ^4.13.13
+        version: 4.13.13
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@abugida/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint-config
+      '@abugida/prettier-config':
+        specifier: workspace:*
+        version: link:../../tooling/prettier-config
+      '@abugida/typescript-config':
+        specifier: workspace:*
+        version: link:../../tooling/typescript-config
+      '@types/bun':
+        specifier: ^1.4.4
+        version: 1.4.4
+      eslint:
+        specifier: ^10.13.0
+        version: 10.13.0(jiti@2.7.0)
+      prettier:
+        specifier: ^3.9.10
+        version: 3.9.10
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   packages/auth:
     dependencies:
       better-auth-telegram:

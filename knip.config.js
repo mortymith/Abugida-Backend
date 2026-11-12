@@ -96,6 +96,11 @@ const config = {
     'app/marketing': {
       entry: ['server.mjs', 'src/pages/**/*.{astro,ts,tsx}'],
     },
+    'app/worker': {
+      // The worker is a long-running process: its entry point starts the
+      // consumer and the health server, and nothing imports it.
+      entry: ['src/index.ts'],
+    },
     'packages/auth': {
       entry: ['examples/**/*.{ts,tsx}'],
     },
