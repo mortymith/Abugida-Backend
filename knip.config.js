@@ -48,13 +48,14 @@ const config = {
     'app/dashboard/src/features/students/students.rule-deferral.ts',
   ],
   ignoreIssues: {
-    // The API's modules, the dashboard's features, and the published
-    // packages export their public surface by design: routes, schemas, and
-    // types are consumed through barrels, route maps, the OpenAPI document,
-    // or by downstream consumers of the published packages — not through an
-    // import that static analysis can see.
+    // The API's modules, the dashboard's features, the worker's runtime and
+    // the published packages export their public surface by design: routes,
+    // schemas, and types are consumed through barrels, route maps, the
+    // OpenAPI document, or by downstream consumers of the published packages
+    // — not through an import that static analysis can see.
     'app/api/src/**': ['exports', 'types'],
     'app/dashboard/src/**': ['exports', 'types'],
+    'app/worker/src/**': ['exports', 'types'],
     'packages/*/src/**': ['exports', 'types'],
   },
   ignoreDependencies: [

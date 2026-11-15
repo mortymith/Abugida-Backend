@@ -6,7 +6,7 @@
  * failures (worth a job retry) from permanent rejections (not worth one).
  */
 
-import { QueueError } from '../core/types.js'
+import { QueueError } from '@abugida/queue'
 
 /**
  * Base class for all external service integration errors.

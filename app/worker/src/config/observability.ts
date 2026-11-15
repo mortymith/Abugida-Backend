@@ -14,7 +14,7 @@
  */
 
 import { initObservability, shutdownObservability, logger } from '@abugida/observability'
-import { workerEnv } from './env'
+import { workerEnv } from './app_config'
 
 export const observabilityConfig = {
   serviceName: workerEnv.OTEL_SERVICE_NAME,

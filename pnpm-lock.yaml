@@ -611,6 +611,9 @@ importers:
       '@abugida/queue':
         specifier: workspace:*
         version: link:../../packages/queue
+      bullmq:
+        specifier: ^6.4.0
+        version: 6.4.0(pg@8.23.1)
       dotenv:
         specifier: ^18.0.8
         version: 18.0.8

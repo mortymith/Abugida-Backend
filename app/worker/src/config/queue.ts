@@ -12,7 +12,7 @@
  */
 
 import { mergeWithDefaults, type QueueConfig } from '@abugida/queue'
-import { workerEnv } from './env'
+import { workerEnv } from './app_config'
 
 type QueueEnv = 'development' | 'staging' | 'production'
 type QueueLogLevel = 'debug' | 'info' | 'warn' | 'error'

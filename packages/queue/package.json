@@ -15,10 +15,6 @@
       "types": "./dist/core/types.d.ts",
       "import": "./dist/core/types.js"
     },
-    "./integrations": {
-      "types": "./dist/integrations/index.d.ts",
-      "import": "./dist/integrations/index.js"
-    },
     "./hono": {
       "types": "./dist/middleware/hono/client.d.ts",
       "import": "./dist/middleware/hono/client.js"

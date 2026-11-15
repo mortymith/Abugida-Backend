@@ -4,14 +4,9 @@
  * enrollments and updating enrollment progress.
  */
 
-import type {
-  AnyProcessorEntry,
-  JobProcessor,
-  BundleEnrollmentCreateJobData,
-  EnrollmentProgressUpdateJobData,
-} from '../core/types.js'
-import { JobType } from '../core/types.js'
-import { QUEUE_NAMES } from '../definitions/queues.js'
+import type { BundleEnrollmentCreateJobData, EnrollmentProgressUpdateJobData } from '@abugida/queue'
+import type { JobProcessor } from '@/runtime/types'
+import * as BullMQ from 'bullmq'
 
 // ---------------------------------------------------------------------------
 // Bundle Enrollment Create Processor
@@ -31,18 +26,15 @@ import { QUEUE_NAMES } from '../definitions/queues.js'
  * - Import `enrollments` from `@abugida/database/learning`
  * - Import `bundles` from `@abugida/database/catalog`
  * - Use Drizzle transaction for atomicity
+ *
+ * Status: **gated**. The processor is a placeholder, so it throws
+ * `UnrecoverableError` instead of returning a success result. BullMQ keeps
+ * the job in the failed set instead of completing and removing it, so queued
+ * work is never silently discarded (ADR-028, Risks).
  */
-export const processBundleEnrollmentCreate: JobProcessor<BundleEnrollmentCreateJobData> = async (
-  data,
-  job,
-) => {
-  const { userId, bundleId, courseIds, idempotencyKey } = data
-
-  console.debug(
-    `[enrollment:bundle] Creating enrollments for user=${userId} bundle=${bundleId} courses=${courseIds.length}`,
-    { jobId: job.id, idempotencyKey },
-  )
-
+export const processBundleEnrollmentCreate: JobProcessor<
+  BundleEnrollmentCreateJobData
+> = async () => {
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
   //
@@ -63,16 +55,10 @@ export const processBundleEnrollmentCreate: JobProcessor<BundleEnrollmentCreateJ
   //   return results;
   // });
 
-  return {
-    bundleId,
-    userId,
-    enrollmentsCreated: courseIds.map((courseId) => ({
-      courseId,
-      enrollmentId: `enrollment_${job.id}_${courseId}`,
-    })),
-  }
+  throw new BullMQ.UnrecoverableError(
+    'BUNDLE_ENROLLMENT_CREATE is not implemented yet: creating the enrollments requires the @abugida/database integration (ADR-028).',
+  )
 }
-
 // ---------------------------------------------------------------------------
 // Enrollment Progress Update Processor
 // ---------------------------------------------------------------------------
@@ -85,19 +71,15 @@ export const processBundleEnrollmentCreate: JobProcessor<BundleEnrollmentCreateJ
  * - Update enrollment record
  * - Check for course completion
  * - Trigger certificate generation if 100%
+ *
+ * Status: **gated**. The processor is a placeholder, so it throws
+ * `UnrecoverableError` instead of returning a success result. BullMQ keeps
+ * the job in the failed set instead of completing and removing it, so queued
+ * work is never silently discarded (ADR-028, Risks).
  */
 export const processEnrollmentProgressUpdate: JobProcessor<
   EnrollmentProgressUpdateJobData
-> = async (data, job) => {
-  const { enrollmentId, completedLessons, totalLessons, idempotencyKey } = data
-
-  const progress = Math.round((completedLessons / totalLessons) * 100)
-
-  console.debug(`[enrollment:progress] Updating enrollment=${enrollmentId} progress=${progress}%`, {
-    jobId: job.id,
-    idempotencyKey,
-  })
-
+> = async () => {
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
   // await db.update(enrollments)
@@ -108,24 +90,7 @@ export const processEnrollmentProgressUpdate: JobProcessor<
   //   // Enqueue certificate generation
   // }
 
-  return { enrollmentId, progress, completedLessons, totalLessons }
+  throw new BullMQ.UnrecoverableError(
+    'ENROLLMENT_PROGRESS_UPDATE is not implemented yet: updating the enrollment requires the @abugida/database integration (ADR-028).',
+  )
 }
-
-// ---------------------------------------------------------------------------
-// Processor Entries
-// ---------------------------------------------------------------------------
-
-export const enrollmentProcessors: AnyProcessorEntry[] = [
-  {
-    jobType: JobType.BUNDLE_ENROLLMENT_CREATE,
-    processor: processBundleEnrollmentCreate,
-    queueName: QUEUE_NAMES.ENROLLMENTS,
-    concurrency: 3,
-  },
-  {
-    jobType: JobType.ENROLLMENT_PROGRESS_UPDATE,
-    processor: processEnrollmentProgressUpdate,
-    queueName: QUEUE_NAMES.ENROLLMENTS,
-    concurrency: 3,
-  },
-]

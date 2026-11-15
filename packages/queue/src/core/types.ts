@@ -1,11 +1,14 @@
 /**
  * @module core/types
- * @description Core type definitions for the Abugida queue system.
- * Provides discriminated-union error types, job interfaces, processor
- * contracts, and queue configuration types used across the entire package.
+ * @description The job contract of the Abugida queue system: the job types,
+ * the payload of every job type, the producer-facing client, and the error
+ * hierarchy the whole system speaks.
+ *
+ * This module is the single source of truth for the contract. Producers
+ * (`app/api`, `app/dashboard`) and the consumer (`app/worker`) both build on
+ * it — the consumer half of the queue runtime (processors, worker, registry)
+ * lives in `app/worker` (ADR-028).
  */
-
-import type { Processor } from 'bullmq'
 
 // ---------------------------------------------------------------------------
 // Job Types
@@ -61,6 +64,8 @@ export interface PurchaseInitiateJobData {
   /** Optional display title for the payment order (e.g. course name). */
   title?: string
   idempotencyKey: string
+  /** Tenant the purchase belongs to. Optional and append-only (ADR-028 §5.5). */
+  tenantId?: string
 }
 
 /** Payload for PURCHASE_COMPLETE jobs (Telebirr callback) */
@@ -70,6 +75,8 @@ export interface PurchaseCompleteJobData {
   status: 'success' | 'failed' | 'pending'
   callbackPayload: Record<string, unknown>
   idempotencyKey: string
+  /** Tenant the purchase belongs to. Optional and append-only (ADR-028 §5.5). */
+  tenantId?: string
 }
 
 /** Payload for BUNDLE_ENROLLMENT_CREATE jobs */
@@ -78,6 +85,8 @@ export interface BundleEnrollmentCreateJobData {
   bundleId: string
   courseIds: string[]
   idempotencyKey: string
+  /** Tenant the enrollments belong to. Optional and append-only (ADR-028 §5.5). */
+  tenantId?: string
 }
 
 /** Payload for ENROLLMENT_PROGRESS_UPDATE jobs */
@@ -87,6 +96,8 @@ export interface EnrollmentProgressUpdateJobData {
   completedLessons: number
   totalLessons: number
   idempotencyKey: string
+  /** Tenant the enrollment belongs to. Optional and append-only (ADR-028 §5.5). */
+  tenantId?: string
 }
 
 /** Payload for DATA_EXPORT jobs (GDPR) */
@@ -95,6 +106,8 @@ export interface DataExportJobData {
   format: 'json' | 'csv'
   requestedAt: string // ISO-8601
   idempotencyKey: string
+  /** Tenant the exported data belongs to. Optional (ADR-028 §5.5). */
+  tenantId?: string
 }
 
 /** Payload for WEBHOOK_PROCESS jobs */
@@ -103,6 +116,8 @@ export interface WebhookProcessJobData {
   payload: Record<string, unknown>
   headers: Record<string, string>
   idempotencyKey: string
+  /** Tenant the callback belongs to. Optional and append-only (ADR-028 §5.5). */
+  tenantId?: string
 }
 
 /** Payload for SMS_NOTIFICATION jobs */
@@ -111,6 +126,8 @@ export interface SmsNotificationJobData {
   message: string
   templateId?: string
   idempotencyKey: string
+  /** Tenant the recipient belongs to. Optional and append-only (ADR-028 §5.5). */
+  tenantId?: string
 }
 
 /** Payload for EMAIL_NOTIFICATION jobs */
@@ -120,6 +137,8 @@ export interface EmailNotificationJobData {
   htmlBody: string
   templateId?: string
   idempotencyKey: string
+  /** Tenant the recipient belongs to. Optional and append-only (ADR-028 §5.5). */
+  tenantId?: string
 }
 
 /** Payload for MODERATION_SUBMIT jobs */
@@ -129,12 +148,16 @@ export interface ModerationSubmitJobData {
   content: string
   submittedBy: string
   idempotencyKey: string
+  /** Tenant the content belongs to. Optional and append-only (ADR-028 §5.5). */
+  tenantId?: string
 }
 
 /** Payload for RECALCULATE_STATS jobs */
 export interface RecalculateStatsJobData {
   courseId: string
   idempotencyKey: string
+  /** Tenant the course belongs to. Optional and append-only (ADR-028 §5.5). */
+  tenantId?: string
 }
 
 /** Payload for AGGREGATE_METRICS jobs */
@@ -152,6 +175,8 @@ export interface AuditLogJobData {
   entityId: string
   metadata: Record<string, unknown>
   idempotencyKey: string
+  /** Tenant the audited entity belongs to. Optional (ADR-028 §5.5). */
+  tenantId?: string
 }
 
 /** Payload for MAINTENANCE_TASK jobs */
@@ -191,46 +216,7 @@ export type JobDataMap = {
 }
 
 // ---------------------------------------------------------------------------
-// Processor Types
-// ---------------------------------------------------------------------------
-
-/**
- * A typed job processor function.
- * Receives the job data and must return a result or void.
- */
-export type JobProcessor<T = unknown> = (
-  data: T,
-  job: { id: string; name: string; attemptsMade: number; timestamp: number },
-) => Promise<unknown>
-
-/**
- * Registry entry mapping a {@link JobType} to its processor implementation.
- */
-export interface ProcessorEntry<T = unknown> {
-  jobType: JobType
-  processor: JobProcessor<T>
-  queueName: string
-  concurrency: number
-  priority?: number
-}
-
-/**
- * Union of every typed processor entry, keyed by {@link JobType}.
- * Use this when aggregating heterogeneous processor entries (e.g. the
- * worker registry), since a bare {@link ProcessorEntry} defaults to
- * `JobProcessor<unknown>` which typed processors are not assignable to.
- */
-export type AnyProcessorEntry = {
-  [T in JobType]: ProcessorEntry<JobDataMap[T]>
-}[JobType]
-
-/**
- * Function that builds a BullMQ-compatible Processor from a typed processor.
- */
-export type ProcessorAdapter = Processor
-
-// ---------------------------------------------------------------------------
-// Queue Client & Worker
+// Queue Client
 // ---------------------------------------------------------------------------
 
 /**
@@ -270,23 +256,6 @@ export interface EnqueueOptions {
     type: 'fixed' | 'exponential'
     delay: number
   }
-}
-
-/**
- * The queue worker (consumer) – processes jobs from one or more queues.
- */
-export interface QueueWorker {
-  /** Start processing jobs. Resolves when the worker is ready. */
-  start(): Promise<void>
-
-  /** Gracefully stop the worker. Waits for in-flight jobs to finish. */
-  stop(): Promise<void>
-
-  /** Check whether the worker is currently running. */
-  isRunning(): boolean
-
-  /** Register a custom processor at runtime (before start). */
-  registerProcessor(entry: AnyProcessorEntry): void
 }
 
 // ---------------------------------------------------------------------------
@@ -353,33 +322,4 @@ export class JobValidationError extends QueueError {
     super(`Job validation failed for ${jobType}: ${errors.join(', ')}`, 'JOB_VALIDATION')
     this.name = 'JobValidationError'
   }
-}
-
-// ---------------------------------------------------------------------------
-// Idempotency
-// ---------------------------------------------------------------------------
-
-export interface IdempotencyRecord {
-  id: string
-  jobType: JobType
-  processedAt: Date
-  result: unknown
-  status: 'processing' | 'completed' | 'failed'
-}
-
-// ---------------------------------------------------------------------------
-// Factory
-// ---------------------------------------------------------------------------
-
-/**
- * The main entry-point factory that creates the queue client and worker
- * from a validated {@link QueueConfig}.
- */
-export interface QueueFactory {
-  /** Create a producer client. */
-  createClient(): QueueClient
-  /** Create a consumer worker. */
-  createWorker(processors?: AnyProcessorEntry[]): QueueWorker
-  /** Gracefully tear down everything. */
-  shutdown(): Promise<void>
 }

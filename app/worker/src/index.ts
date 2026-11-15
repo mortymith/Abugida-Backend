@@ -9,24 +9,24 @@
  *   env → config → processors → worker → health → shutdown
  *
  * Nothing here reads `process.env` directly — the validated configuration
- * lives in `./config/env`.
+ * lives in `./config/app_config`.
  */
 
 import { createConnection, closeAllConnections } from '@abugida/queue'
 import type { RedisClient } from 'bun'
 
-import { workerEnv } from '@/config/env'
+import { workerEnv } from '@/config/app_config'
 import { queueConfig } from '@/config/queue'
 import { init, shutdown, logger } from '@/config/observability'
 import { createHealthApp } from '@/runtime/health'
 import { selectProcessors } from '@/runtime/queues'
 import { registerGracefulShutdown } from '@/runtime/shutdown'
-import { createWorker } from '@/runtime/worker'
+import { createQueueWorker } from '@/runtime/worker'
 
 await init()
 
 const selection = selectProcessors(workerEnv.WORKER_QUEUES)
-const handle = createWorker(queueConfig, selection.processors, selection.queues)
+const handle = createQueueWorker(queueConfig, selection.processors)
 
 // Dedicated connection for the readiness probe. It is purpose-tagged so it
 // never collides with the producer or consumer connections.

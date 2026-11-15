@@ -5,17 +5,11 @@
  */
 
 import * as BullMQ from 'bullmq'
-import type {
-  AnyProcessorEntry,
-  JobProcessor,
-  SmsNotificationJobData,
-  EmailNotificationJobData,
-} from '../core/types.js'
-import { JobType } from '../core/types.js'
-import { QUEUE_NAMES } from '../definitions/queues.js'
-import { getSMSEthiopiaClient, normalizeMsisdn } from '../integrations/index.js'
-import { toJobError } from '../integrations/job-error.js'
-import { getLogger } from '../utils/logger.js'
+import type { SmsNotificationJobData, EmailNotificationJobData } from '@abugida/queue'
+import type { JobProcessor } from '@/runtime/types'
+import { getSMSEthiopiaClient, normalizeMsisdn } from '@/integrations'
+import { toJobError } from '@/integrations/job-error'
+import { logger } from '@/config/observability'
 
 // ---------------------------------------------------------------------------
 // SMS Notification Processor
@@ -37,7 +31,7 @@ import { getLogger } from '../utils/logger.js'
  */
 export const processSmsNotification: JobProcessor<SmsNotificationJobData> = async (data, job) => {
   const { recipientPhone, message, templateId, idempotencyKey } = data
-  const logger = getLogger().child({ processor: 'notification:sms', jobId: job.id })
+  const log = logger.child({ processor: 'notification:sms', jobId: job.id })
 
   const msisdn = normalizeMsisdn(recipientPhone)
   if (!msisdn) {
@@ -47,11 +41,15 @@ export const processSmsNotification: JobProcessor<SmsNotificationJobData> = asyn
     )
   }
 
-  logger.info(`Sending SMS to ${maskPhone(recipientPhone)}`, {
-    idempotencyKey,
-    templateId,
-    length: message.length,
-  })
+  log.info(
+    {
+      recipient: maskPhone(recipientPhone),
+      idempotencyKey,
+      templateId,
+      length: message.length,
+    },
+    'Sending SMS',
+  )
 
   try {
     const sms = getSMSEthiopiaClient()
@@ -68,7 +66,7 @@ export const processSmsNotification: JobProcessor<SmsNotificationJobData> = asyn
     //   idempotencyKey,
     // });
 
-    logger.debug('SMS accepted by SMSEthiopia', { messageId: result.id })
+    log.debug({ messageId: result.id }, 'SMS accepted by SMSEthiopia')
 
     return {
       recipientPhone: maskPhone(recipientPhone),
@@ -94,21 +92,13 @@ export const processSmsNotification: JobProcessor<SmsNotificationJobData> = asyn
  * - Render HTML template if templateId provided
  * - Send via email service (e.g., Resend, SendGrid)
  * - Record the notification in the database
+ *
+ * Status: **gated**. No email delivery service is wired up yet, so the
+ * processor throws `UnrecoverableError` instead of returning a success
+ * result. BullMQ keeps the job in the failed set instead of completing and
+ * removing it, so queued work is never silently discarded (ADR-028, Risks).
  */
-export const processEmailNotification: JobProcessor<EmailNotificationJobData> = async (
-  data,
-  job,
-) => {
-  const { recipientEmail, subject, templateId, idempotencyKey } = data
-
-  getLogger()
-    .child({ processor: 'notification:email' })
-    .debug(`Sending email to ${maskEmail(recipientEmail)} subject="${subject}"`, {
-      jobId: job.id,
-      idempotencyKey,
-      templateId,
-    })
-
+export const processEmailNotification: JobProcessor<EmailNotificationJobData> = async () => {
   // TODO: Replace with actual email service integration:
   // const emailClient = getEmailClient();
   // const result = await emailClient.send({
@@ -127,13 +117,9 @@ export const processEmailNotification: JobProcessor<EmailNotificationJobData> = 
   //   idempotencyKey,
   // });
 
-  return {
-    recipientEmail: maskEmail(recipientEmail),
-    subject,
-    status: 'sent',
-    messageId: `email_${job.id}`,
-    processedAt: new Date().toISOString(),
-  }
+  throw new BullMQ.UnrecoverableError(
+    'EMAIL_NOTIFICATION is not implemented yet: no email delivery service is wired up (ADR-028).',
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -144,29 +130,3 @@ function maskPhone(phone: string): string {
   if (phone.length <= 4) return '****'
   return phone.slice(0, 3) + '****' + phone.slice(-2)
 }
-
-function maskEmail(email: string): string {
-  const [local, domain] = email.split('@')
-  if (!local || !domain) return '****'
-  const masked = local.slice(0, 2) + '****'
-  return `${masked}@${domain}`
-}
-
-// ---------------------------------------------------------------------------
-// Processor Entries
-// ---------------------------------------------------------------------------
-
-export const notificationProcessors: AnyProcessorEntry[] = [
-  {
-    jobType: JobType.SMS_NOTIFICATION,
-    processor: processSmsNotification,
-    queueName: QUEUE_NAMES.NOTIFICATIONS,
-    concurrency: 10,
-  },
-  {
-    jobType: JobType.EMAIL_NOTIFICATION,
-    processor: processEmailNotification,
-    queueName: QUEUE_NAMES.NOTIFICATIONS,
-    concurrency: 10,
-  },
-]

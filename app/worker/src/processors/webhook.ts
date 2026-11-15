@@ -9,17 +9,16 @@
  */
 
 import * as BullMQ from 'bullmq'
-import type { JobProcessor, ProcessorEntry, WebhookProcessJobData } from '../core/types.js'
-import { JobType } from '../core/types.js'
-import { QUEUE_NAMES } from '../definitions/queues.js'
+import type { WebhookProcessJobData } from '@abugida/queue'
+import type { JobProcessor } from '@/runtime/types'
 import {
   buildStringToSign,
   getTelebirrSignaturePadding,
   getTelebirrVerificationKey,
   normalizeSmsStatus,
   verifyPayload,
-} from '../integrations/index.js'
-import { getLogger } from '../utils/logger.js'
+} from '@/integrations'
+import { logger } from '@/config/observability'
 
 // ---------------------------------------------------------------------------
 // Webhook Process Processor
@@ -39,12 +38,19 @@ import { getLogger } from '../utils/logger.js'
  * - For Telebirr: enqueue PURCHASE_COMPLETE
  * - For SMSEthiopia: process SMS delivery receipts
  * - Store raw webhook for audit purposes
+ *
+ * Status: **gated**. Signature verification is implemented, but neither
+ * downstream route is: a verified Telebirr payment notification cannot be
+ * resolved to a purchase yet, and delivery receipts have nowhere to be
+ * recorded. Those jobs therefore throw `UnrecoverableError` instead of
+ * returning success, so the payment callback is not silently discarded
+ * (ADR-028, Risks).
  */
 export const processWebhook: JobProcessor<WebhookProcessJobData> = async (data, job) => {
   const { source, idempotencyKey } = data
-  const logger = getLogger().child({ processor: 'webhook', jobId: job.id })
+  const log = logger.child({ processor: 'webhook', jobId: job.id })
 
-  logger.debug(`Processing webhook from ${source}`, { idempotencyKey })
+  log.debug({ source, idempotencyKey }, 'Processing webhook')
 
   switch (source) {
     case 'telebirr': {
@@ -67,7 +73,7 @@ export const processWebhook: JobProcessor<WebhookProcessJobData> = async (data, 
         getTelebirrSignaturePadding(),
       )
       if (!isValid) {
-        logger.warn('Rejected Telebirr webhook with invalid signature', { idempotencyKey })
+        log.warn({ idempotencyKey }, 'Rejected Telebirr webhook with invalid signature')
         throw new BullMQ.UnrecoverableError('Invalid Telebirr webhook signature')
       }
 
@@ -76,14 +82,13 @@ export const processWebhook: JobProcessor<WebhookProcessJobData> = async (data, 
       // TODO: Route to purchase completion handler – requires the DB schema
       // to resolve purchaseId from merchOrderId/transactionId, then enqueue
       // PURCHASE_COMPLETE with the normalized data below.
-
-      return {
-        source,
-        processed: true,
-        routedTo: 'PURCHASE_COMPLETE',
-        ...notification,
-        processedAt: new Date().toISOString(),
-      }
+      log.warn(
+        { transactionId: notification.transactionId, idempotencyKey },
+        'Verified Telebirr webhook cannot be routed yet',
+      )
+      throw new BullMQ.UnrecoverableError(
+        'WEBHOOK_PROCESS is not implemented yet: routing a verified Telebirr payment notification to PURCHASE_COMPLETE requires the @abugida/database integration (ADR-028).',
+      )
     }
 
     case 'sms_ethiopia': {
@@ -93,19 +98,14 @@ export const processWebhook: JobProcessor<WebhookProcessJobData> = async (data, 
 
       // TODO: Update the notification record for messageId with the delivery
       // status once the notifications DB schema is wired up.
-
-      return {
-        source,
-        processed: true,
-        routedTo: 'SMS_DELIVERY_RECEIPT',
-        ...(messageId ? { messageId } : {}),
-        status,
-        processedAt: new Date().toISOString(),
-      }
+      log.warn({ messageId, status }, 'SMSEthiopia delivery receipt cannot be recorded yet')
+      throw new BullMQ.UnrecoverableError(
+        'WEBHOOK_PROCESS is not implemented yet: recording an SMSEthiopia delivery receipt requires the notifications schema (ADR-028).',
+      )
     }
 
     default: {
-      logger.warn(`Unknown webhook source: ${source}`)
+      log.warn({ source }, 'Unknown webhook source')
       return {
         source,
         processed: false,
@@ -151,16 +151,3 @@ function pickString(payload: Record<string, unknown>, keys: string[]): string | 
   }
   return null
 }
-
-// ---------------------------------------------------------------------------
-// Processor Entries
-// ---------------------------------------------------------------------------
-
-export const webhookProcessors: ProcessorEntry<WebhookProcessJobData>[] = [
-  {
-    jobType: JobType.WEBHOOK_PROCESS,
-    processor: processWebhook,
-    queueName: QUEUE_NAMES.WEBHOOKS,
-    concurrency: 5,
-  },
-]

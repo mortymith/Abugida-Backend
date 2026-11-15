@@ -3,9 +3,9 @@
  * @description Processor for submitting content into the moderation queue.
  */
 
-import type { JobProcessor, ProcessorEntry, ModerationSubmitJobData } from '../core/types.js'
-import { JobType } from '../core/types.js'
-import { QUEUE_NAMES } from '../definitions/queues.js'
+import type { ModerationSubmitJobData } from '@abugida/queue'
+import type { JobProcessor } from '@/runtime/types'
+import * as BullMQ from 'bullmq'
 
 // ---------------------------------------------------------------------------
 // Moderation Submit Processor
@@ -20,18 +20,13 @@ import { QUEUE_NAMES } from '../definitions/queues.js'
  * - If auto-approved, update content status immediately
  * - If flagged, notify moderators
  * - Record in audit log
+ *
+ * Status: **gated**. The processor is a placeholder, so it throws
+ * `UnrecoverableError` instead of returning a success result. BullMQ keeps
+ * the job in the failed set instead of completing and removing it, so queued
+ * work is never silently discarded (ADR-028, Risks).
  */
-export const processModerationSubmit: JobProcessor<ModerationSubmitJobData> = async (data, job) => {
-  const { entityType, entityId, submittedBy, idempotencyKey } = data
-
-  console.debug(
-    `[moderation:submit] Processing ${entityType}=${entityId} from user=${submittedBy}`,
-    {
-      jobId: job.id,
-      idempotencyKey,
-    },
-  )
-
+export const processModerationSubmit: JobProcessor<ModerationSubmitJobData> = async () => {
   // TODO: Replace with actual integration:
   // const db = getDatabase();
   //
@@ -54,24 +49,7 @@ export const processModerationSubmit: JobProcessor<ModerationSubmitJobData> = as
   //   // Enqueue notification...
   // }
 
-  return {
-    entityType,
-    entityId,
-    moderationId: `mod_${job.id}`,
-    status: 'pending_review',
-    processedAt: new Date().toISOString(),
-  }
+  throw new BullMQ.UnrecoverableError(
+    'MODERATION_SUBMIT is not implemented yet: creating the moderation record requires the @abugida/database integration (ADR-028).',
+  )
 }
-
-// ---------------------------------------------------------------------------
-// Processor Entries
-// ---------------------------------------------------------------------------
-
-export const moderationProcessors: ProcessorEntry<ModerationSubmitJobData>[] = [
-  {
-    jobType: JobType.MODERATION_SUBMIT,
-    processor: processModerationSubmit,
-    queueName: QUEUE_NAMES.MODERATION,
-    concurrency: 3,
-  },
-]

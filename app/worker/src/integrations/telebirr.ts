@@ -37,7 +37,7 @@
 
 import { createSign, createVerify, constants, randomBytes } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import { envNumber } from '../config/env.js'
+import { envNumber } from '@/config/process-env'
 import { IntegrationError, describeError } from './errors.js'
 import { fetchJson, HttpError, isRetryableHttpError } from './http.js'
 

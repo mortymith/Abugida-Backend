@@ -22,6 +22,7 @@
   "dependencies": {
     "@abugida/observability": "workspace:*",
     "@abugida/queue": "workspace:*",
+    "bullmq": "^6.4.0",
     "dotenv": "^18.0.8",
     "hono": "^4.13.13",
     "zod": "^4.6.7"

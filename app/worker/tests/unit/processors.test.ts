@@ -1,14 +1,18 @@
 /**
  * @test unit/processors
- * @description Unit tests for all job processors. Integration-backed
- * processors (SMS, Telebirr) run against a stubbed global fetch with a
- * real in-memory RSA keypair so signature handling is exercised end to end.
+ * @description Unit tests for all job processors and the registry that binds
+ * them to job types. Integration-backed processors (SMS, Telebirr) run against
+ * a stubbed global fetch with a real in-memory RSA keypair so signature
+ * handling is exercised end to end.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import * as BullMQ from 'bullmq'
 import { createHash, generateKeyPairSync } from 'node:crypto'
-import { SIGN_TYPE, buildStringToSign, signPayload } from '../../src/integrations/telebirr.js'
+import { JobType } from '@abugida/queue'
+import { SIGN_TYPE, buildStringToSign, signPayload } from '@/integrations/telebirr'
+import { processors } from '@/runtime/processors'
+import { ProcessorRegistry } from '@/runtime/registry'
 import { restoreFetch, stubFetch, telebirrTimestamp } from '../helpers/stub-fetch.js'
 
 // ---------------------------------------------------------------------------
@@ -91,52 +95,46 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 describe('Processor Registry', () => {
-  test('allProcessors should export all 14 job types', async () => {
-    const { allProcessors } = await import('../../src/processors/index.js')
-    const { JobType } = await import('../../src/core/types.js')
+  test('registers exactly one processor per job type', () => {
+    const registry = new ProcessorRegistry(Object.values(processors))
 
-    const expectedTypes = Object.values(JobType)
-    const registeredTypes = allProcessors.map((p) => p.jobType)
-
-    for (const type of expectedTypes) {
-      expect(registeredTypes).toContain(type)
+    expect(registry.getAll()).toHaveLength(Object.values(JobType).length)
+    for (const jobType of Object.values(JobType)) {
+      expect(registry.has(jobType)).toBe(true)
+      expect(registry.get(jobType)?.jobType).toBe(jobType)
     }
   })
 
-  test('getProcessorsForQueue should filter correctly', async () => {
-    const { getProcessorsForQueue } = await import('../../src/processors/index.js')
-    const { JobType } = await import('../../src/core/types.js')
+  test('groups entries by queue', () => {
+    const registry = new ProcessorRegistry(Object.values(processors))
+    const byQueue = registry.getByQueue()
 
-    const purchaseProcessors = getProcessorsForQueue('abugida.purchases')
-    expect(purchaseProcessors).toHaveLength(2)
-    expect(purchaseProcessors.map((p) => p.jobType)).toContain(JobType.PURCHASE_INITIATE)
-    expect(purchaseProcessors.map((p) => p.jobType)).toContain(JobType.PURCHASE_COMPLETE)
+    const purchases = byQueue.get('abugida.purchases') ?? []
+    expect(purchases.map((entry) => entry.jobType)).toContain(JobType.PURCHASE_INITIATE)
+    expect(purchases.map((entry) => entry.jobType)).toContain(JobType.PURCHASE_COMPLETE)
   })
 
-  test('getProcessorForJobType should find the right processor', async () => {
-    const { getProcessorForJobType } = await import('../../src/processors/index.js')
-    const { JobType } = await import('../../src/core/types.js')
+  test('starts empty and accepts registrations', () => {
+    const registry = new ProcessorRegistry()
 
-    const entry = getProcessorForJobType(JobType.DATA_EXPORT)
-    expect(entry).toBeDefined()
-    expect(entry?.queueName).toBe('abugida.exports')
+    expect(registry.getAll()).toEqual([])
+    registry.register(processors[JobType.DATA_EXPORT]!)
+
+    expect(registry.get(JobType.DATA_EXPORT)?.queueName).toBe('abugida.exports')
   })
 })
 
 // ---------------------------------------------------------------------------
-// Individual Processor Tests
+// Purchase Processors
 // ---------------------------------------------------------------------------
 
 describe('Purchase Processors', () => {
   test('processPurchaseInitiate should create a Telebirr order', async () => {
     stubTelebirrGateway()
 
-    const { purchaseProcessors } = await import('../../src/processors/purchase.js')
+    const entry = processors[JobType.PURCHASE_INITIATE]!
 
-    const processor = purchaseProcessors.find((p) => p.jobType === 'PURCHASE_INITIATE')
-    expect(processor).toBeDefined()
-
-    const result = (await processor!.processor(
+    const result = (await entry.processor(
       {
         userId: 'user-1',
         courseId: 'course-1',
@@ -159,12 +157,10 @@ describe('Purchase Processors', () => {
   })
 
   test('processPurchaseInitiate should reject unsupported payment methods permanently', async () => {
-    const { purchaseProcessors } = await import('../../src/processors/purchase.js')
-
-    const processor = purchaseProcessors.find((p) => p.jobType === 'PURCHASE_INITIATE')
+    const entry = processors[JobType.PURCHASE_INITIATE]!
 
     await expect(
-      processor!.processor(
+      entry.processor(
         {
           userId: 'user-1',
           courseId: 'course-1',
@@ -179,10 +175,7 @@ describe('Purchase Processors', () => {
   })
 
   test('processPurchaseComplete should verify the callback signature', async () => {
-    const { purchaseProcessors } = await import('../../src/processors/purchase.js')
-
-    const processor = purchaseProcessors.find((p) => p.jobType === 'PURCHASE_COMPLETE')
-    expect(processor).toBeDefined()
+    const entry = processors[JobType.PURCHASE_COMPLETE]!
 
     const payload = {
       transactionId: 'txn-123',
@@ -195,7 +188,7 @@ describe('Purchase Processors', () => {
       sign: signPayload(buildStringToSign(payload), PRIVATE_KEY_PEM),
     }
 
-    const result = (await processor!.processor(
+    const result = (await entry.processor(
       {
         purchaseId: 'purchase-1',
         transactionId: 'txn-123',
@@ -211,12 +204,10 @@ describe('Purchase Processors', () => {
   })
 
   test('processPurchaseComplete should reject invalid signatures permanently', async () => {
-    const { purchaseProcessors } = await import('../../src/processors/purchase.js')
-
-    const processor = purchaseProcessors.find((p) => p.jobType === 'PURCHASE_COMPLETE')
+    const entry = processors[JobType.PURCHASE_COMPLETE]!
 
     await expect(
-      processor!.processor(
+      entry.processor(
         {
           purchaseId: 'purchase-1',
           transactionId: 'txn-123',
@@ -230,6 +221,10 @@ describe('Purchase Processors', () => {
   })
 })
 
+// ---------------------------------------------------------------------------
+// Notification Processors
+// ---------------------------------------------------------------------------
+
 describe('Notification Processors', () => {
   test('processSmsNotification should send via SMSEthiopia and mask the phone', async () => {
     stubFetch((url, body) => {
@@ -238,12 +233,9 @@ describe('Notification Processors', () => {
       return { json: { id: '01J8Z0V2NQ2MC4C7XQ3W5K6J8H', segments: 1, status: 'ACCEPTED' } }
     })
 
-    const { notificationProcessors } = await import('../../src/processors/notification.js')
+    const entry = processors[JobType.SMS_NOTIFICATION]!
 
-    const processor = notificationProcessors.find((p) => p.jobType === 'SMS_NOTIFICATION')
-    expect(processor).toBeDefined()
-
-    const result = (await processor!.processor(
+    const result = (await entry.processor(
       {
         recipientPhone: '+251912345678',
         message: 'Your enrollment is confirmed!',
@@ -260,12 +252,10 @@ describe('Notification Processors', () => {
   })
 
   test('processSmsNotification should reject invalid phone numbers permanently', async () => {
-    const { notificationProcessors } = await import('../../src/processors/notification.js')
-
-    const processor = notificationProcessors.find((p) => p.jobType === 'SMS_NOTIFICATION')
+    const entry = processors[JobType.SMS_NOTIFICATION]!
 
     await expect(
-      processor!.processor(
+      entry.processor(
         {
           recipientPhone: 'not-a-phone',
           message: 'Hello',
@@ -275,49 +265,34 @@ describe('Notification Processors', () => {
       ),
     ).rejects.toBeInstanceOf(BullMQ.UnrecoverableError)
   })
-})
 
-describe('Webhook Processors', () => {
-  test('processWebhook should verify and route signed telebirr webhooks', async () => {
-    const { webhookProcessors } = await import('../../src/processors/webhook.js')
-
-    const processor = webhookProcessors.find((p) => p.jobType === 'WEBHOOK_PROCESS')
-    expect(processor).toBeDefined()
-
-    const payload = {
-      externalTransactionId: 'ext-1',
-      transactionId: 'txn-123',
-      status: 'SUCCESS',
-      sign_type: SIGN_TYPE,
-    }
-    const signedPayload = {
-      ...payload,
-      sign: signPayload(buildStringToSign(payload), PRIVATE_KEY_PEM),
-    }
-
-    const result = (await processor!.processor(
-      {
-        source: 'telebirr',
-        payload: signedPayload,
-        headers: { 'content-type': 'application/json' },
-        idempotencyKey: 'test-key',
-      },
-      { ...JOB_CTX, name: 'WEBHOOK_PROCESS' },
-    )) as Record<string, unknown>
-
-    expect(result['processed']).toBe(true)
-    expect(result['routedTo']).toBe('PURCHASE_COMPLETE')
-    expect(result['status']).toBe('success')
-    expect(result['transactionId']).toBe('txn-123')
-  })
-
-  test('processWebhook should reject unsigned telebirr webhooks permanently', async () => {
-    const { webhookProcessors } = await import('../../src/processors/webhook.js')
-
-    const processor = webhookProcessors.find((p) => p.jobType === 'WEBHOOK_PROCESS')
+  test('processEmailNotification is gated until an email service exists', async () => {
+    const entry = processors[JobType.EMAIL_NOTIFICATION]!
 
     await expect(
-      processor!.processor(
+      entry.processor(
+        {
+          recipientEmail: 'user@example.com',
+          subject: 'Welcome',
+          htmlBody: '<p>Hi</p>',
+          idempotencyKey: 'test-key',
+        },
+        { ...JOB_CTX, name: 'EMAIL_NOTIFICATION' },
+      ),
+    ).rejects.toBeInstanceOf(BullMQ.UnrecoverableError)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Webhook Processors
+// ---------------------------------------------------------------------------
+
+describe('Webhook Processors', () => {
+  test('rejects an unsigned telebirr webhook permanently', async () => {
+    const entry = processors[JobType.WEBHOOK_PROCESS]!
+
+    await expect(
+      entry.processor(
         {
           source: 'telebirr',
           payload: { transactionId: 'txn-123' },
@@ -329,24 +304,62 @@ describe('Webhook Processors', () => {
     ).rejects.toBeInstanceOf(BullMQ.UnrecoverableError)
   })
 
-  test('processWebhook should normalise sms delivery receipts', async () => {
-    const { webhookProcessors } = await import('../../src/processors/webhook.js')
+  test('rejects a signed telebirr webhook that cannot be routed yet', async () => {
+    const entry = processors[JobType.WEBHOOK_PROCESS]!
 
-    const processor = webhookProcessors.find((p) => p.jobType === 'WEBHOOK_PROCESS')
+    const payload = {
+      transactionId: 'txn-123',
+      status: 'SUCCESS',
+      sign_type: SIGN_TYPE,
+    }
+    const signedPayload = {
+      ...payload,
+      sign: signPayload(buildStringToSign(payload), PRIVATE_KEY_PEM),
+    }
 
-    const result = (await processor!.processor(
+    await expect(
+      entry.processor(
+        {
+          source: 'telebirr',
+          payload: signedPayload,
+          headers: { 'content-type': 'application/json' },
+          idempotencyKey: 'test-key',
+        },
+        { ...JOB_CTX, name: 'WEBHOOK_PROCESS' },
+      ),
+    ).rejects.toBeInstanceOf(BullMQ.UnrecoverableError)
+  })
+
+  test('rejects an sms delivery receipt that cannot be recorded yet', async () => {
+    const entry = processors[JobType.WEBHOOK_PROCESS]!
+
+    await expect(
+      entry.processor(
+        {
+          source: 'sms_ethiopia',
+          payload: { messageId: 'MSG1', status: 'DELIVERED' },
+          headers: {},
+          idempotencyKey: 'test-key',
+        },
+        { ...JOB_CTX, name: 'WEBHOOK_PROCESS' },
+      ),
+    ).rejects.toBeInstanceOf(BullMQ.UnrecoverableError)
+  })
+
+  test('acknowledges an unknown webhook source without completing the job', async () => {
+    const entry = processors[JobType.WEBHOOK_PROCESS]!
+
+    const result = (await entry.processor(
       {
-        source: 'sms_ethiopia',
-        payload: { messageId: 'MSG1', status: 'DELIVERED' },
+        source: 'other',
+        payload: {},
         headers: {},
         idempotencyKey: 'test-key',
       },
       { ...JOB_CTX, name: 'WEBHOOK_PROCESS' },
     )) as Record<string, unknown>
 
-    expect(result['processed']).toBe(true)
-    expect(result['routedTo']).toBe('SMS_DELIVERY_RECEIPT')
-    expect(result['messageId']).toBe('MSG1')
-    expect(result['status']).toBe('DELIVERED')
+    expect(result['processed']).toBe(false)
+    expect(result['reason']).toBe('Unknown source')
   })
 })

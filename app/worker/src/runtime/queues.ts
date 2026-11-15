@@ -1,9 +1,9 @@
 /**
- * @module processors
+ * @module runtime/queues
+ * @description Queue selection for the worker.
  *
- * Queue selection for the worker. Turns the `WORKER_QUEUES` setting into the
- * concrete set of queues this worker instance consumes, plus the processor
- * entries registered for them.
+ * Turns the `WORKER_QUEUES` setting into the concrete set of queues this
+ * worker instance consumes.
  *
  * `WORKER_QUEUES` is either `all` (every declared queue) or a CSV of full
  * queue names (e.g. `abugida.purchases,abugida.webhooks`). The selective
@@ -12,7 +12,10 @@
  * per-queue rollout.
  */
 
-import { allProcessors, getAllQueueNames, type AnyProcessorEntry } from '@abugida/queue'
+import { getAllQueueNames } from '@abugida/queue'
+
+import { allProcessors } from './processors'
+import type { AnyProcessorEntry } from './types'
 
 /** Sentinel value of `WORKER_QUEUES` meaning "every declared queue". */
 export const ALL_QUEUES = 'all'

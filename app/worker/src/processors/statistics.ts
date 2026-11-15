@@ -4,14 +4,9 @@
  * platform-wide metrics aggregation.
  */
 
-import type {
-  AnyProcessorEntry,
-  JobProcessor,
-  RecalculateStatsJobData,
-  AggregateMetricsJobData,
-} from '../core/types.js'
-import { JobType } from '../core/types.js'
-import { QUEUE_NAMES } from '../definitions/queues.js'
+import type { RecalculateStatsJobData, AggregateMetricsJobData } from '@abugida/queue'
+import type { JobProcessor } from '@/runtime/types'
+import * as BullMQ from 'bullmq'
 
 // ---------------------------------------------------------------------------
 // Recalculate Stats Processor
@@ -26,15 +21,13 @@ import { QUEUE_NAMES } from '../definitions/queues.js'
  * - Calculate completion rate, average score, drop-off points
  * - Update the course statistics record in the database
  * - Cache results for fast read access
+ *
+ * Status: **gated**. The processor is a placeholder, so it throws
+ * `UnrecoverableError` instead of returning a success result. BullMQ keeps
+ * the job in the failed set instead of completing and removing it, so queued
+ * work is never silently discarded (ADR-028, Risks).
  */
-export const processRecalculateStats: JobProcessor<RecalculateStatsJobData> = async (data, job) => {
-  const { courseId, idempotencyKey } = data
-
-  console.debug(`[statistics:recalculate] Recalculating stats for course=${courseId}`, {
-    jobId: job.id,
-    idempotencyKey,
-  })
-
+export const processRecalculateStats: JobProcessor<RecalculateStatsJobData> = async () => {
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
   //
@@ -59,15 +52,10 @@ export const processRecalculateStats: JobProcessor<RecalculateStatsJobData> = as
   //   })
   //   .where(eq(courseStatistics.courseId, courseId));
 
-  return {
-    courseId,
-    totalEnrollments: 0,
-    completionRate: 0,
-    avgScore: 0,
-    processedAt: new Date().toISOString(),
-  }
+  throw new BullMQ.UnrecoverableError(
+    'RECALCULATE_STATS is not implemented yet: recalculating the course statistics requires the @abugida/database integration (ADR-028).',
+  )
 }
-
 // ---------------------------------------------------------------------------
 // Aggregate Metrics Processor
 // ---------------------------------------------------------------------------
@@ -80,15 +68,13 @@ export const processRecalculateStats: JobProcessor<RecalculateStatsJobData> = as
  * - Generate daily/weekly/monthly summary records
  * - Store in the metrics table for dashboard display
  * - Trigger alerts if metrics exceed thresholds
+ *
+ * Status: **gated**. The processor is a placeholder, so it throws
+ * `UnrecoverableError` instead of returning a success result. BullMQ keeps
+ * the job in the failed set instead of completing and removing it, so queued
+ * work is never silently discarded (ADR-028, Risks).
  */
-export const processAggregateMetrics: JobProcessor<AggregateMetricsJobData> = async (data, job) => {
-  const { period, date, idempotencyKey } = data
-
-  console.debug(`[statistics:aggregate] Aggregating ${period} metrics for ${date}`, {
-    jobId: job.id,
-    idempotencyKey,
-  })
-
+export const processAggregateMetrics: JobProcessor<AggregateMetricsJobData> = async () => {
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
   //
@@ -116,29 +102,7 @@ export const processAggregateMetrics: JobProcessor<AggregateMetricsJobData> = as
   //
   // await db.insert(platformMetrics).values(metrics);
 
-  return {
-    period,
-    date,
-    status: 'completed',
-    processedAt: new Date().toISOString(),
-  }
+  throw new BullMQ.UnrecoverableError(
+    'AGGREGATE_METRICS is not implemented yet: aggregating the platform metrics requires the @abugida/database integration (ADR-028).',
+  )
 }
-
-// ---------------------------------------------------------------------------
-// Processor Entries
-// ---------------------------------------------------------------------------
-
-export const statisticsProcessors: AnyProcessorEntry[] = [
-  {
-    jobType: JobType.RECALCULATE_STATS,
-    processor: processRecalculateStats,
-    queueName: QUEUE_NAMES.STATISTICS,
-    concurrency: 1,
-  },
-  {
-    jobType: JobType.AGGREGATE_METRICS,
-    processor: processAggregateMetrics,
-    queueName: QUEUE_NAMES.STATISTICS,
-    concurrency: 1,
-  },
-]

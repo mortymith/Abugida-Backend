@@ -6,8 +6,9 @@
  */
 
 import type { RedisClient } from 'bun'
-import type { IdempotencyRecord, JobType } from '../core/types.js'
-import { DuplicateJobError } from '../core/types.js'
+import type { JobType } from '@abugida/queue'
+import type { IdempotencyRecord } from '@/runtime/types'
+import { DuplicateJobError } from '@abugida/queue'
 
 // ---------------------------------------------------------------------------
 // Key helpers

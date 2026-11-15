@@ -4,9 +4,9 @@
  * Generates user data exports in JSON or CSV format.
  */
 
-import type { JobProcessor, ProcessorEntry, DataExportJobData } from '../core/types.js'
-import { JobType } from '../core/types.js'
-import { QUEUE_NAMES } from '../definitions/queues.js'
+import type { DataExportJobData } from '@abugida/queue'
+import type { JobProcessor } from '@/runtime/types'
+import * as BullMQ from 'bullmq'
 
 // ---------------------------------------------------------------------------
 // Data Export Processor
@@ -22,15 +22,13 @@ import { QUEUE_NAMES } from '../definitions/queues.js'
  * - Store the export file in secure storage
  * - Send download link via email/SMS to the user
  * - Record export in audit log
+ *
+ * Status: **gated**. The processor is a placeholder, so it throws
+ * `UnrecoverableError` instead of returning a success result. BullMQ keeps
+ * the job in the failed set instead of completing and removing it, so queued
+ * work is never silently discarded (ADR-028, Risks).
  */
-export const processDataExport: JobProcessor<DataExportJobData> = async (data, job) => {
-  const { userId, format, idempotencyKey } = data
-
-  console.debug(`[export:data] Processing data export for user=${userId} format=${format}`, {
-    jobId: job.id,
-    idempotencyKey,
-  })
-
+export const processDataExport: JobProcessor<DataExportJobData> = async () => {
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
   //
@@ -57,25 +55,7 @@ export const processDataExport: JobProcessor<DataExportJobData> = async (data, j
   //
   // 4. Send notification with download link
 
-  return {
-    userId,
-    format,
-    exportId: `export_${job.id}`,
-    status: 'completed',
-    downloadUrl: `/api/exports/${job.id}/download`,
-    processedAt: new Date().toISOString(),
-  }
+  throw new BullMQ.UnrecoverableError(
+    'DATA_EXPORT is not implemented yet: collecting and storing the export requires the @abugida/database integration (ADR-028).',
+  )
 }
-
-// ---------------------------------------------------------------------------
-// Processor Entries
-// ---------------------------------------------------------------------------
-
-export const exportProcessors: ProcessorEntry<DataExportJobData>[] = [
-  {
-    jobType: JobType.DATA_EXPORT,
-    processor: processDataExport,
-    queueName: QUEUE_NAMES.EXPORTS,
-    concurrency: 2,
-  },
-]

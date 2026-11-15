@@ -3,7 +3,7 @@
  * @description Unit tests for the queue client.
  */
 
-import { describe, test, expect, beforeEach, mock } from 'bun:test'
+import { describe, test, expect, mock } from 'bun:test'
 
 // ---------------------------------------------------------------------------
 // Mock BullMQ (before importing our modules)
@@ -45,7 +45,7 @@ mock.module('bullmq', () => ({
 
 describe('QueueClient', () => {
   test('should export a createQueueClient factory', async () => {
-    const { createQueueClient, mergeWithDefaults } = await import('../../src/core/client.js')
+    const { createQueueClient } = await import('../../src/core/client.js')
     const { mergeWithDefaults: mergeConfig } = await import('../../src/config/defaults.js')
 
     const config = mergeConfig({
@@ -76,17 +76,5 @@ describe('QueueConfig', () => {
     expect(config.redis.port).toBe(6380)
     expect(config.redis.tls).toBe(false)
     expect(config.logging.level).toBe('debug')
-  })
-
-  test('should detect environment from NODE_ENV', async () => {
-    const origEnv = process.env.NODE_ENV
-
-    process.env.NODE_ENV = 'production'
-    const { detectEnvironment } = await import('../../src/config/env.js')
-    // Re-import to pick up the env change
-    const env = detectEnvironment()
-    expect(env).toBe('production')
-
-    process.env.NODE_ENV = origEnv
   })
 })

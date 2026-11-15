@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { parseWorkerEnv } from '@/config/env'
+import { parseWorkerEnv } from '@/config/app_config'
 
 describe('parseWorkerEnv', () => {
   test('applies the documented defaults', () => {

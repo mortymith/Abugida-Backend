@@ -125,3 +125,13 @@ export function parseWorkerEnv(source: Record<string, unknown> = process.env): W
  * reading `process.env` directly.
  */
 export const workerEnv: WorkerEnv = parseWorkerEnv()
+
+/**
+ * The identity of this worker process.
+ *
+ * Used in BullMQ's worker name and in every log line the worker emits, so a
+ * job can be traced back to the process that ran it.
+ */
+export function getWorkerId(): string {
+  return `${workerEnv.APP_NAME}-worker-${process.pid}`
+}

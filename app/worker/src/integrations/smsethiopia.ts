@@ -23,7 +23,7 @@
  * failures via {@link SMSEthiopiaError.retryable}.
  */
 
-import { envNumber } from '../config/env.js'
+import { envNumber } from '@/config/process-env'
 import { IntegrationError, describeError } from './errors.js'
 import { fetchJson, HttpError, isRetryableHttpError } from './http.js'
 

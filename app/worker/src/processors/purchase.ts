@@ -11,17 +11,11 @@
 
 import { createHash } from 'node:crypto'
 import * as BullMQ from 'bullmq'
-import type {
-  AnyProcessorEntry,
-  JobProcessor,
-  PurchaseInitiateJobData,
-  PurchaseCompleteJobData,
-} from '../core/types.js'
-import { JobType } from '../core/types.js'
-import { QUEUE_NAMES } from '../definitions/queues.js'
-import { TelebirrError, getTelebirrClient } from '../integrations/index.js'
-import { toJobError } from '../integrations/job-error.js'
-import { getLogger } from '../utils/logger.js'
+import type { PurchaseInitiateJobData, PurchaseCompleteJobData } from '@abugida/queue'
+import type { JobProcessor } from '@/runtime/types'
+import { TelebirrError, getTelebirrClient } from '@/integrations'
+import { toJobError } from '@/integrations/job-error'
+import { logger } from '@/config/observability'
 
 // ---------------------------------------------------------------------------
 // Purchase Initiate Processor
@@ -46,7 +40,7 @@ import { getLogger } from '../utils/logger.js'
  */
 export const processPurchaseInitiate: JobProcessor<PurchaseInitiateJobData> = async (data, job) => {
   const { userId, courseId, amount, currency, paymentMethod, idempotencyKey, title } = data
-  const logger = getLogger().child({ processor: 'purchase:initiate', jobId: job.id })
+  const log = logger.child({ processor: 'purchase:initiate', jobId: job.id })
 
   if (paymentMethod !== 'telebirr') {
     // No other gateway is implemented; retrying cannot succeed.
@@ -61,11 +55,15 @@ export const processPurchaseInitiate: JobProcessor<PurchaseInitiateJobData> = as
     )
   }
 
-  logger.info(
-    `Creating Telebirr order for user=${userId} course=${courseId} amount=${amount} ${currency}`,
+  log.info(
     {
+      userId,
+      courseId,
+      amount,
+      currency,
       idempotencyKey,
     },
+    'Creating Telebirr order',
   )
 
   try {
@@ -85,9 +83,10 @@ export const processPurchaseInitiate: JobProcessor<PurchaseInitiateJobData> = as
       checkoutUrl = telebirr.buildCheckoutUrl(order.prepayId)
     } catch (error) {
       if (!(error instanceof TelebirrError && error.code === 'TELEBIRR_CONFIG')) throw error
-      logger.warn('TELEBIRR_CHECKOUT_BASE_URL is not set – returning order without checkout URL', {
-        merchOrderId,
-      })
+      log.warn(
+        { merchOrderId },
+        'TELEBIRR_CHECKOUT_BASE_URL is not set – order has no checkout URL',
+      )
     }
 
     // TODO: persist the purchase (status "pending") with Drizzle inside a
@@ -139,13 +138,16 @@ export const processPurchaseInitiate: JobProcessor<PurchaseInitiateJobData> = as
  */
 export const processPurchaseComplete: JobProcessor<PurchaseCompleteJobData> = async (data, job) => {
   const { purchaseId, transactionId, status, callbackPayload, idempotencyKey } = data
-  const logger = getLogger().child({ processor: 'purchase:complete', jobId: job.id })
+  const log = logger.child({ processor: 'purchase:complete', jobId: job.id })
 
-  logger.info(
-    `Processing completion for purchase=${purchaseId} tx=${transactionId} status=${status}`,
+  log.info(
     {
+      purchaseId,
+      transactionId,
+      status,
       idempotencyKey,
     },
+    'Processing purchase completion',
   )
 
   try {
@@ -193,22 +195,3 @@ function buildOrderTitle(title: string | undefined, courseId: string): string {
   const courseLabel = courseId.replace(/[^A-Za-z0-9]+/g, '')
   return courseLabel.length > 0 ? `Abugida purchase ${courseLabel}` : 'Abugida purchase'
 }
-
-// ---------------------------------------------------------------------------
-// Processor Entries
-// ---------------------------------------------------------------------------
-
-export const purchaseProcessors: AnyProcessorEntry[] = [
-  {
-    jobType: JobType.PURCHASE_INITIATE,
-    processor: processPurchaseInitiate,
-    queueName: QUEUE_NAMES.PURCHASES,
-    concurrency: 5,
-  },
-  {
-    jobType: JobType.PURCHASE_COMPLETE,
-    processor: processPurchaseComplete,
-    queueName: QUEUE_NAMES.PURCHASES,
-    concurrency: 5,
-  },
-]

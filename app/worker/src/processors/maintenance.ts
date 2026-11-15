@@ -4,14 +4,9 @@
  * retention (GDPR compliance).
  */
 
-import type {
-  AnyProcessorEntry,
-  JobProcessor,
-  MaintenanceTaskJobData,
-  DataRetentionJobData,
-} from '../core/types.js'
-import { JobType } from '../core/types.js'
-import { QUEUE_NAMES } from '../definitions/queues.js'
+import type { MaintenanceTaskJobData, DataRetentionJobData } from '@abugida/queue'
+import type { JobProcessor } from '@/runtime/types'
+import * as BullMQ from 'bullmq'
 
 // ---------------------------------------------------------------------------
 // Maintenance Task Processor
@@ -26,15 +21,13 @@ import { QUEUE_NAMES } from '../definitions/queues.js'
  * - `db_vacuum` – Run database VACUUM/ANALYZE
  * - `certificate_cleanup` – Clean up expired certificate records
  * - `session_cleanup` – Remove expired sessions
+ *
+ * Status: **gated**. The processor is a placeholder, so it throws
+ * `UnrecoverableError` instead of returning a success result. BullMQ keeps
+ * the job in the failed set instead of completing and removing it, so queued
+ * work is never silently discarded (ADR-028, Risks).
  */
-export const processMaintenanceTask: JobProcessor<MaintenanceTaskJobData> = async (data, job) => {
-  const { taskName, idempotencyKey } = data
-
-  console.debug(`[maintenance:task] Running maintenance task="${taskName}"`, {
-    jobId: job.id,
-    idempotencyKey,
-  })
-
+export const processMaintenanceTask: JobProcessor<MaintenanceTaskJobData> = async () => {
   // TODO: Replace with actual task implementations:
   // switch (taskName) {
   //   case 'cache_warmup':
@@ -53,13 +46,10 @@ export const processMaintenanceTask: JobProcessor<MaintenanceTaskJobData> = asyn
   //     throw new Error(`Unknown maintenance task: ${taskName}`);
   // }
 
-  return {
-    taskName,
-    status: 'completed',
-    processedAt: new Date().toISOString(),
-  }
+  throw new BullMQ.UnrecoverableError(
+    'MAINTENANCE_TASK is not implemented yet: the maintenance tasks require the @abugida/database integration (ADR-028).',
+  )
 }
-
 // ---------------------------------------------------------------------------
 // Data Retention Processor
 // ---------------------------------------------------------------------------
@@ -73,18 +63,13 @@ export const processMaintenanceTask: JobProcessor<MaintenanceTaskJobData> = asyn
  * - `temp_export` – Remove expired data export files
  *
  * Processes in batches to avoid overwhelming the database.
+ *
+ * Status: **gated**. The processor is a placeholder, so it throws
+ * `UnrecoverableError` instead of returning a success result. BullMQ keeps
+ * the job in the failed set instead of completing and removing it, so queued
+ * work is never silently discarded (ADR-028, Risks).
  */
-export const processDataRetention: JobProcessor<DataRetentionJobData> = async (data, job) => {
-  const { entityType, olderThanDays, batchSize, idempotencyKey } = data
-
-  console.debug(
-    `[maintenance:retention] Purging ${entityType} older than ${olderThanDays} days (batch=${batchSize})`,
-    {
-      jobId: job.id,
-      idempotencyKey,
-    },
-  )
-
+export const processDataRetention: JobProcessor<DataRetentionJobData> = async () => {
   // TODO: Replace with actual database integration:
   // const db = getDatabase();
   // const cutoff = new Date();
@@ -108,29 +93,7 @@ export const processDataRetention: JobProcessor<DataRetentionJobData> = async (d
   //   if (hasMore) await Bun.sleep(100);
   // }
 
-  return {
-    entityType,
-    olderThanDays,
-    totalDeleted: 0,
-    processedAt: new Date().toISOString(),
-  }
+  throw new BullMQ.UnrecoverableError(
+    'DATA_RETENTION is not implemented yet: purging the expired records requires the @abugida/database integration (ADR-028).',
+  )
 }
-
-// ---------------------------------------------------------------------------
-// Processor Entries
-// ---------------------------------------------------------------------------
-
-export const maintenanceProcessors: AnyProcessorEntry[] = [
-  {
-    jobType: JobType.MAINTENANCE_TASK,
-    processor: processMaintenanceTask,
-    queueName: QUEUE_NAMES.MAINTENANCE,
-    concurrency: 1,
-  },
-  {
-    jobType: JobType.DATA_RETENTION,
-    processor: processDataRetention,
-    queueName: QUEUE_NAMES.MAINTENANCE,
-    concurrency: 1,
-  },
-]

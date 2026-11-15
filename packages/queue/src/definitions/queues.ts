@@ -33,8 +33,14 @@ export const QUEUE_NAMES = {
 
 /**
  * Maps each {@link JobType} to its owning queue name.
+ *
+ * The map is typed `as const satisfies Record<JobType, string>` so that the
+ * *literal* queue name of every job type survives into the consumer: the
+ * worker can therefore only register a processor under the queue the job type
+ * actually belongs to (ADR-028 §5.2). A plain `Record<JobType, string>` would
+ * widen the names to `string` and lose that guarantee.
  */
-export const JOB_QUEUE_MAP: Record<JobType, string> = {
+export const JOB_QUEUE_MAP = {
   [JobType.PURCHASE_INITIATE]: QUEUE_NAMES.PURCHASES,
   [JobType.PURCHASE_COMPLETE]: QUEUE_NAMES.PURCHASES,
   [JobType.BUNDLE_ENROLLMENT_CREATE]: QUEUE_NAMES.ENROLLMENTS,
@@ -50,7 +56,7 @@ export const JOB_QUEUE_MAP: Record<JobType, string> = {
   [JobType.AUDIT_LOG]: QUEUE_NAMES.AUDIT,
   [JobType.MAINTENANCE_TASK]: QUEUE_NAMES.MAINTENANCE,
   [JobType.DATA_RETENTION]: QUEUE_NAMES.MAINTENANCE,
-}
+} as const satisfies Record<JobType, string>
 
 // ---------------------------------------------------------------------------
 // Default Queue Options

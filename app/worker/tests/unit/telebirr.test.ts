@@ -17,9 +17,9 @@ import {
   signPayload,
   verifyPayload,
   type TelebirrConfig,
-} from '../../src/integrations/telebirr.js'
-import { SMSEthiopiaError } from '../../src/integrations/smsethiopia.js'
-import { toJobError } from '../../src/integrations/job-error.js'
+} from '@/integrations/telebirr'
+import { SMSEthiopiaError } from '@/integrations/smsethiopia'
+import { toJobError } from '@/integrations/job-error'
 import { restoreFetch, stubFetch, telebirrTimestamp } from '../helpers/stub-fetch.js'
 
 // ---------------------------------------------------------------------------

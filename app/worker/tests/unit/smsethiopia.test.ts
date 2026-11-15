@@ -14,7 +14,7 @@ import {
   normalizeMsisdn,
   normalizeSmsStatus,
   type SMSEthiopiaConfig,
-} from '../../src/integrations/smsethiopia.js'
+} from '@/integrations/smsethiopia'
 import { restoreFetch, stubFetch } from '../helpers/stub-fetch.js'
 
 afterAll(() => {
