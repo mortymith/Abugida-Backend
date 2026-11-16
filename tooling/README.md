@@ -165,7 +165,7 @@ above.
 
 ## System binaries
 
-The infrastructure linters are system packages (no npm wrappers — the wrappers either don't exist or download binaries at runtime):
+The infrastructure linters are system packages (no wrapper scripts — the tools either don't exist or download binaries at runtime):
 
 | Tool                 | Install                                                                                                                                     |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |

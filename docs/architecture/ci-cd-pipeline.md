@@ -15,7 +15,7 @@ It is a **specification**, not an implementation. Every normative statement belo
 
 ### 1.1 Goals
 
-1. **Reproducible** — a CI run resolves the exact same toolchain (Bun 1.4.4, pnpm 12.15.0, Node 22, linter versions) as the devbox sandbox and the container images.
+1. **Reproducible** — a CI run resolves the exact same toolchain (Bun 1.4.4, pnpm 12.15.0, linter versions) as the devbox sandbox and the container images.
 2. **Fast** — a pull request reaches a merge decision in under 6 minutes of wall clock, warm cache.
 3. **Least privilege** — every job runs with the minimum `GITHUB_TOKEN` scope it needs; no workflow runs on `pull_request_target`.
 4. **Supply-chain auditable** — every published image is traceable to a commit SHA, carries an SBOM, is signed, and is scanned before it can be deployed.
@@ -114,13 +114,12 @@ flowchart TD
 
 **Requirement (normative).** The toolchain used by CI MUST be derived from files already committed to the repository. CI MUST NOT hard-code version numbers that already exist elsewhere in the tree.
 
-| Tool                                                                                           | Source of truth                   | How CI resolves it                                                                          |
-| ---------------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------- |
-| Bun                                                                                            | `.bun-version`                    | `oven-sh/setup-bun` with `bun-version-file: .bun-version`                                   |
-| pnpm                                                                                           | `package.json` → `packageManager` | `pnpm/action-setup` with `version` parsed from `packageManager`, or `corepack`              |
-| Node                                                                                           | Not declared                      | CI MUST pin `node-version: 22` and open a follow-up to declare it in `devbox.json`/`.nvmrc` |
-| Linters (shellcheck, hadolint, yamllint, gitleaks, dotenv-linter, editorconfig-checker, shfmt) | `devbox.json` `packages[]`        | Composite action installs the **same versions** as `devbox.json`                            |
-| cspell, markdownlint, knip, syncpack, eslint, prettier, turbo                                  | workspace `package.json`          | Installed by `pnpm install --frozen-lockfile`                                               |
+| Tool                                                                                           | Source of truth                   | How CI resolves it                                                             |
+| ---------------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------ |
+| Bun                                                                                            | `.bun-version`                    | `oven-sh/setup-bun` with `bun-version-file: .bun-version`                      |
+| pnpm                                                                                           | `package.json` → `packageManager` | `pnpm/action-setup` with `version` parsed from `packageManager`, or `corepack` |
+| Linters (shellcheck, hadolint, yamllint, gitleaks, dotenv-linter, editorconfig-checker, shfmt) | `devbox.json` `packages[]`        | Composite action installs the **same versions** as `devbox.json`               |
+| cspell, markdownlint, knip, syncpack, eslint, prettier, turbo                                  | workspace `package.json`          | Installed by `pnpm install --frozen-lockfile`                                  |
 
 **Drift guard.** `ci.yml` MUST include a `toolchain-drift` job that:
 
@@ -336,7 +335,7 @@ Consistent with `docs/architecture/deployment-model.md` §Pipeline Guards:
 
 ### 7.5 Scheduling rationale
 
-The weekly schedule is what catches drift that a PR cannot: a newly disclosed CVE in `postgres:17-alpine`, a compromised upstream release, a newly published malicious npm version that has not yet been flagged by the registry.
+The weekly schedule is what catches drift that a PR cannot: a newly disclosed CVE in `postgres:17-alpine`, a compromised upstream release, a newly published malicious pnpm version that has not yet been flagged by the registry.
 
 ---
 
@@ -551,7 +550,7 @@ Do **not** optimise by removing gates. The gate set is the deliverable; the runt
 | `husky` hooks              | Local fast gate only. Never a substitute for CI                                                                                                                                                                              |
 | `commitlint` (root config) | Enforced in CI via `commitlint` on the PR commit range, so a bad message cannot enter `master` even if hooks are skipped with `--no-verify`                                                                                  |
 | `lint-staged`              | Local only                                                                                                                                                                                                                   |
-| `dependabot.yml`           | Already configured for npm / docker / github-actions. Dependabot PRs are validated by this same CI pipeline                                                                                                                  |
+| `dependabot.yml`           | Configured for pnpm-lock / docker / github-actions. Dependabot PRs are validated by this same CI pipeline                                                                                                                    |
 | `turbo.json`               | Source of the task graph CI drives                                                                                                                                                                                           |
 
 ---
@@ -596,7 +595,7 @@ Each phase is independently shippable and leaves the repository in a green state
 
 Phase 1 — Fast feedback (day 1–2)
 
-1. `.github/actions/setup-toolchain/action.yml` (Bun + pnpm + Node + linters).
+1. `.github/actions/setup-toolchain/action.yml` (Bun + pnpm + linters).
 2. `scripts/ci/check-toolchain-drift.sh`.
 3. `ci.yml` with `toolchain-drift`, `lint`, `typecheck`, `test`, `build`, `format`, `commitlint`, `summary`.
 4. Branch protection with the `ci.yml` checks required.

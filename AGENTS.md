@@ -133,6 +133,7 @@ Shared per-tool configuration packages (`@abugida/*-config`, part of the pnpm wo
 
 ## Conventions
 
+- **Bun-only runtime**: Bun is the sole JavaScript runtime. Node.js and npm must not be introduced into Docker images, CI/CD pipelines, scripts, or developer tooling. pnpm is the package manager; `bun add --global` installs it in custom Docker images.
 - Code style is prettier + eslint: no semicolons, single quotes, trailing commas, printWidth 100.
 - Root tsconfig is strict with `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitReturns`, `isolatedModules`. Match these in new code.
 - `packages/auth`: Build with `tsc` to `dist/` before consuming. Framework middleware is intentionally kept in subpaths (`/hono`, `/tanstack`, `/client`, `/env`, `/roles`) so consumers don't pull unnecessary deps. Add new auth behaviour here, not in an app.

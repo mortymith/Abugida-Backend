@@ -84,7 +84,7 @@ The sandbox never receives secrets. `.env` files stay on the host, are git-ignor
 
 - **Nix is a new dependency.** Devbox manages its own Nix installation, but the first run downloads a Nix store — a one-time cost of a few hundred megabytes.
 - **A slow first build.** Packages that are not in the binary cache are compiled locally. `vault-bin@1.21.4` is the prebuilt HashiCorp binary and resolves from the cache in seconds; only packages not present in the cache are compiled locally.
-- **Native modules need care.** Native npm dependencies must build against the Nix-provided toolchain (`gcc`, `python3`, `pkg-config` are in the sandbox for this reason); the `pnpm-workspace.yaml` `allowBuilds` list stays the single place where build permissions are granted.
+- **Native modules need care.** Native package dependencies must build against the Nix-provided toolchain (`gcc`, `python3`, `pkg-config` are in the sandbox for this reason); the `pnpm-workspace.yaml` `allowBuilds` list stays the single place where build permissions are granted.
 - **Docker Compose plugin discovery.** The Nix Compose binary lives in the store, outside the paths the Docker CLI scans; the plugin must be linked (handled automatically by `scripts/devbox/docker-plugin.sh`).
 
 ### Risks

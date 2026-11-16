@@ -14,9 +14,8 @@
  * root, lint-staged). An absolute path keeps the plugin resolvable
  * everywhere while it stays a dependency of this package only.
  */
-import { createRequire } from 'node:module'
-
-const require = createRequire(import.meta.url)
+// Bun-native module resolution — no Node.js `node:module` import.
+// `import.meta.resolve` resolves package names to file:// URLs (Bun 1.2+).
 
 /** @type {import('prettier').Config} */
 const config = {
@@ -30,7 +29,7 @@ const config = {
   bracketSpacing: true,
   bracketSameLine: false,
   arrowParens: 'always',
-  plugins: [require.resolve('prettier-plugin-astro')],
+  plugins: [import.meta.resolve('prettier-plugin-astro')],
   overrides: [
     {
       files: '*.astro',

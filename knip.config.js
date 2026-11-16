@@ -29,8 +29,8 @@
  * @type {import('knip').KnipConfig}
  */
 const config = {
-  // System binaries invoked from the root scripts. They are not npm
-  // packages, so Knip cannot resolve them as dependencies.
+  // System binaries invoked from the root scripts. They are not
+  // workspace-managed packages, so Knip cannot resolve them as dependencies.
   ignoreBinaries: ['editorconfig-checker', 'dotenv-linter', 'gitleaks'],
   // Binaries installed system-wide (shellcheck, hadolint, yamllint,
   // markdownlint) are resolved from PATH, not from a dependency.
