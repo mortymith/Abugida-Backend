@@ -14,7 +14,7 @@
  */
 
 import { initObservability, shutdownObservability, logger } from '@abugida/observability'
-import { appConfig } from './app_config'
+import { appConfig } from '#/src/config/app_config'
 
 export const observabilityConfig = {
   serviceName: appConfig.OTEL_SERVICE_NAME,

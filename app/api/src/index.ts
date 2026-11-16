@@ -15,10 +15,10 @@ try {
   // no-op
 }
 
-import { appConfig } from './config/app_config'
-import { init, shutdown, logger } from './config/observability'
-import { pool } from './config/database'
-import { createApp } from './app'
+import { appConfig } from '#/src/config/app_config'
+import { init, shutdown, logger } from '#/src/config/observability'
+import { pool } from '#/src/config/database'
+import { createApp } from '#/src/app'
 
 await init()
 

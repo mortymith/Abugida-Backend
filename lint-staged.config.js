@@ -165,10 +165,18 @@ const ownedDirectories = ['app/', 'packages/', 'tooling/', 'docs/']
  */
 function onlyRepositoryFiles(command) {
   return (files) => {
-    const owned = files.filter(
-      (file) =>
-        !ownedDirectories.some((directory) => file.replaceAll('\\', '/').startsWith(directory)),
-    )
+    const owned = files.filter((file) => {
+      // lint-staged hands tasks absolute paths, so normalise them against the
+      // repo root before matching the relative `ownedDirectories` prefixes.
+      // Otherwise every workspace file looks repository-level and gets linted
+      // twice — once with the root tooling config that does not know the
+      // workspace's rule overrides.
+      const relative = (path.isAbsolute(file) ? path.relative(repoRoot, file) : file).replaceAll(
+        '\\',
+        '/',
+      )
+      return !ownedDirectories.some((directory) => relative.startsWith(directory))
+    })
     if (owned.length === 0) return ''
     return [command, ...owned.map((file) => JSON.stringify(file))].join(' ')
   }

@@ -10,8 +10,8 @@
  */
 
 import { describe, it, expect } from 'bun:test'
-import { parseAppConfig } from '@/config/app_config'
-import { tenantConfig, tenantStore } from '@/config/tenant'
+import { parseAppConfig } from '#/src/config/app_config'
+import { tenantConfig, tenantStore } from '#/src/config/tenant'
 import { resolveTenantFromHostname } from '@abugida/tenant'
 import { getTenantUrl } from '@abugida/tenant/url'
 

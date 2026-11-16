@@ -19,9 +19,9 @@
 
 import { createAbugidaAuth, type AuthInstance } from '@abugida/auth'
 import { resolveAuthEnv } from '@abugida/auth/env'
-import { appConfig } from './app_config'
-import { db } from './database'
-import { logger } from './observability'
+import { appConfig } from '#/src/config/app_config'
+import { db } from '#/src/config/database'
+import { logger } from '#/src/config/observability'
 
 let instance: AuthInstance | undefined
 

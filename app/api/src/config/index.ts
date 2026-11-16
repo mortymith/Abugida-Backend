@@ -9,23 +9,27 @@
  * configuration.
  */
 
-export { appConfig, parseAppConfig } from './app_config'
-export type { AppConfig } from './app_config'
+export { appConfig, parseAppConfig } from '#/src/config/app_config'
+export type { AppConfig } from '#/src/config/app_config'
 
-export { databaseConfig } from './database'
-export type { DatabaseConfig } from './database'
+export { databaseConfig } from '#/src/config/database'
+export type { DatabaseConfig } from '#/src/config/database'
 
-export { createAuthInstance } from './auth'
+export { createAuthInstance } from '#/src/config/auth'
 
-export { queueConfig, createQueue } from './queue'
+export { queueConfig, createQueue } from '#/src/config/queue'
 export type { QueueClient } from '@abugida/queue'
 
-export { observabilityConfig, init, shutdown, logger } from './observability'
+export { observabilityConfig, init, shutdown, logger } from '#/src/config/observability'
 
-export { rateLimitConfig, createRateLimiters, RateLimitExceededError } from './rate-limit'
+export {
+  rateLimitConfig,
+  createRateLimiters,
+  RateLimitExceededError,
+} from '#/src/config/rate-limit'
 export type {
   RateLimiters,
   RateLimiter,
   RateLimitLimits,
   RateLimitConsumeResult,
-} from './rate-limit'
+} from '#/src/config/rate-limit'

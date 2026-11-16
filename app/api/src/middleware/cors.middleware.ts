@@ -9,8 +9,8 @@
 
 import type { MiddlewareHandler } from 'hono'
 import { cors } from 'hono/cors'
-import { appConfig } from '../config/app_config'
-import type { AppEnv } from './types'
+import { appConfig } from '#/src/config/app_config'
+import type { AppEnv } from '#/src/middleware/types'
 
 const CORS_OPTIONS = {
   origin: appConfig.corsOrigins,

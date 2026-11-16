@@ -87,11 +87,11 @@ COPY --chown=1000:1000 app/api/package.json app/api/
 RUN --mount=type=cache,id=pnpm-api,uid=1000,gid=1000,target=/app/.local/share/pnpm/store \
     pnpm install --filter @abugida/api --frozen-lockfile
 
-# tsconfigs (root + app) so `bun build` resolves paths (@/*) and jsx
-# exactly as the dev server does; then the application source.
-COPY --chown=1000:1000 tsconfig.json ./
+# The app tsconfig so `bun build` resolves paths (#/*) and jsx exactly as the
+# dev server does; then the application source.
 COPY --chown=1000:1000 app/api/tsconfig.json app/api/
 COPY --chown=1000:1000 app/api/src app/api/src
+COPY --chown=1000:1000 app/api/modules app/api/modules
 
 # Compile into a single self-contained bundle (no runtime install step).
 WORKDIR /app/app/api

@@ -17,14 +17,14 @@ import type { QueueClient } from '@abugida/queue'
 import { mountAuthRoutes } from '@abugida/auth/hono'
 import type { MountAuthRoutesOptions } from '@abugida/auth/hono'
 
-import { appConfig } from './config/app_config'
-import { createAuthInstance } from './config/auth'
-import { db } from './config/database'
-import { createQueue } from './config/queue'
-import { queueConfig } from './config/queue'
-import { logger } from './config/observability'
-import { createRateLimiters } from './config/rate-limit'
-import { applyMiddleware, zodOpenApiHook, type AppEnv } from './middleware'
+import { appConfig } from '#/src/config/app_config'
+import { createAuthInstance } from '#/src/config/auth'
+import { db } from '#/src/config/database'
+import { createQueue } from '#/src/config/queue'
+import { queueConfig } from '#/src/config/queue'
+import { logger } from '#/src/config/observability'
+import { createRateLimiters } from '#/src/config/rate-limit'
+import { applyMiddleware, zodOpenApiHook, type AppEnv } from '#/src/middleware'
 import {
   createSystemHandlers,
   createSystemRouteMap,
@@ -77,7 +77,7 @@ import {
   createWebhooksHandlers,
   createWebhooksRouteMap,
   registerSystemDocumentation,
-} from './modules'
+} from '#/modules'
 
 extendZodWithOpenApi(z)
 

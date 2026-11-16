@@ -54,6 +54,7 @@ const config = {
     // OpenAPI document, or by downstream consumers of the published packages
     // — not through an import that static analysis can see.
     'app/api/src/**': ['exports', 'types'],
+    'app/api/modules/**': ['exports', 'types'],
     'app/dashboard/src/**': ['exports', 'types'],
     'app/worker/src/**': ['exports', 'types'],
     'packages/*/src/**': ['exports', 'types'],

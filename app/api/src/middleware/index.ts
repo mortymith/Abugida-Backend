@@ -20,17 +20,21 @@ import { HTTPException } from 'hono/http-exception'
 import { observabilityMiddleware } from '@abugida/observability/hono'
 import type { AuthInstance } from '@abugida/auth'
 import type { DatabaseClient } from '@abugida/database/client'
-import type { RateLimiters } from '../config/rate-limit'
-import { requestIdMiddleware } from './request-id.middleware'
-import { loggingMiddleware } from './logging.middleware'
-import { corsMiddleware } from './cors.middleware'
-import { errorHandler, notFoundHandler, problemResponse } from './error-handler.middleware'
-import { rateLimitMiddleware } from './rate-limit.middleware'
-import { optionalSessionMiddleware, requireAuthMiddleware } from './auth.middleware'
-import { apiKeyAuthMiddleware } from './api-key-auth.middleware'
-import { requireApiKeyScope } from './api-key-auth.middleware'
+import type { RateLimiters } from '#/src/config/rate-limit'
+import { requestIdMiddleware } from '#/src/middleware/request-id.middleware'
+import { loggingMiddleware } from '#/src/middleware/logging.middleware'
+import { corsMiddleware } from '#/src/middleware/cors.middleware'
+import {
+  errorHandler,
+  notFoundHandler,
+  problemResponse,
+} from '#/src/middleware/error-handler.middleware'
+import { rateLimitMiddleware } from '#/src/middleware/rate-limit.middleware'
+import { optionalSessionMiddleware, requireAuthMiddleware } from '#/src/middleware/auth.middleware'
+import { apiKeyAuthMiddleware } from '#/src/middleware/api-key-auth.middleware'
+import { requireApiKeyScope } from '#/src/middleware/api-key-auth.middleware'
 import { csrfProtection } from '@abugida/auth/hono'
-import type { AppEnv, AppHono } from './types'
+import type { AppEnv, AppHono } from '#/src/middleware/types'
 
 /** Max request body — 10 MB per API spec (shared by API and webhook routes). */
 const BODY_LIMIT_BYTES = 10 * 1024 * 1024
@@ -156,11 +160,11 @@ export function applyMiddleware(app: AppHono, deps: MiddlewareDependencies): voi
 }
 
 // Re-export the shared types and select helpers for route modules and tests.
-export type { AppEnv, AppHono, AppVariables, ResolvedApiKey } from './types'
+export type { AppEnv, AppHono, AppVariables, ResolvedApiKey } from '#/src/middleware/types'
 export type {
   ProblemDetails,
   ProblemErrorField,
   ProblemResponseOptions,
-} from './error-handler.middleware'
-export { problemResponse, zodOpenApiHook } from './error-handler.middleware'
-export { uuidv7 } from './request-id.middleware'
+} from '#/src/middleware/error-handler.middleware'
+export { problemResponse, zodOpenApiHook } from '#/src/middleware/error-handler.middleware'
+export { uuidv7 } from '#/src/middleware/request-id.middleware'

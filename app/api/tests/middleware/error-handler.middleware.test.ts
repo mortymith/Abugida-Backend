@@ -10,8 +10,8 @@ import {
   problemResponse,
   zodOpenApiHook,
   errorHandler,
-} from '@/middleware/error-handler.middleware'
-import type { AppEnv } from '@/middleware/types'
+} from '#/src/middleware/error-handler.middleware'
+import type { AppEnv } from '#/src/middleware/types'
 
 describe('problemResponse', () => {
   it('builds a problem+json response with correct structure', async () => {

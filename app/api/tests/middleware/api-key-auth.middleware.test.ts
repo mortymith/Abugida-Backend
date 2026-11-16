@@ -5,7 +5,7 @@
 
 import { Hono } from 'hono'
 import { describe, it, expect, mock, beforeEach } from 'bun:test'
-import type { AppEnv, ResolvedApiKey } from '@/middleware/types'
+import type { AppEnv, ResolvedApiKey } from '#/src/middleware/types'
 
 function mockDb(options: { findKey?: any; updateCalled?: { value: boolean } }) {
   const updateState = options.updateCalled ?? { value: false }
@@ -34,7 +34,7 @@ describe('apiKeyAuthMiddleware', () => {
   })
 
   it('returns 401 when X-API-Key header is missing', async () => {
-    const { apiKeyAuthMiddleware } = await import('@/middleware/api-key-auth.middleware')
+    const { apiKeyAuthMiddleware } = await import('#/src/middleware/api-key-auth.middleware')
     const app = new Hono<AppEnv>()
     const db = mockDb({ findKey: null }) as any
 
@@ -53,7 +53,7 @@ describe('apiKeyAuthMiddleware', () => {
   })
 
   it('returns 401 when API key is not found in database', async () => {
-    const { apiKeyAuthMiddleware } = await import('@/middleware/api-key-auth.middleware')
+    const { apiKeyAuthMiddleware } = await import('#/src/middleware/api-key-auth.middleware')
     const app = new Hono<AppEnv>()
     const db = mockDb({ findKey: null }) as any
 
@@ -72,7 +72,7 @@ describe('apiKeyAuthMiddleware', () => {
   })
 
   it('returns 401 when API key is expired', async () => {
-    const { apiKeyAuthMiddleware } = await import('@/middleware/api-key-auth.middleware')
+    const { apiKeyAuthMiddleware } = await import('#/src/middleware/api-key-auth.middleware')
     const app = new Hono<AppEnv>()
     const expiredKey = {
       publicId: 'pk-expired',
@@ -101,7 +101,7 @@ describe('apiKeyAuthMiddleware', () => {
   })
 
   it('sets apiKey in context and proceeds with valid key', async () => {
-    const { apiKeyAuthMiddleware } = await import('@/middleware/api-key-auth.middleware')
+    const { apiKeyAuthMiddleware } = await import('#/src/middleware/api-key-auth.middleware')
     const app = new Hono<AppEnv>()
     const validKey = {
       publicId: 'pk-valid',
@@ -138,7 +138,7 @@ describe('apiKeyAuthMiddleware', () => {
   })
 
   it('handles key with no expiration', async () => {
-    const { apiKeyAuthMiddleware } = await import('@/middleware/api-key-auth.middleware')
+    const { apiKeyAuthMiddleware } = await import('#/src/middleware/api-key-auth.middleware')
     const app = new Hono<AppEnv>()
     const noExpiryKey = {
       publicId: 'pk-no-expiry',
@@ -162,7 +162,7 @@ describe('apiKeyAuthMiddleware', () => {
   })
 
   it('handles key with non-array scopes', async () => {
-    const { apiKeyAuthMiddleware } = await import('@/middleware/api-key-auth.middleware')
+    const { apiKeyAuthMiddleware } = await import('#/src/middleware/api-key-auth.middleware')
     const app = new Hono<AppEnv>()
     const keyWithBadScopes = {
       publicId: 'pk-bad-scopes',

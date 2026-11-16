@@ -9,7 +9,7 @@ it through your own websites, apps, and learning products.
 [![Packages](https://img.shields.io/badge/package%20manager-pnpm%2012.8.1-f5f5f5?logo=pnpm&logoColor=ffffff)](https://pnpm.io)
 [![Language](https://img.shields.io/badge/TypeScript-6-f5f5f5?logo=typescript&logoColor=ffffff)](https://www.typescriptlang.org)
 [![API](https://img.shields.io/badge/API-Hono%204-f5f5f5?logo=hono&logoColor=ffffff)](https://hono.dev)
-[![API](https://img.shields.io/badge/API%20contract-OpenAPI%203.1-f5f5f5)](app/api/src/modules/system/system.routes.ts)
+[![API](https://img.shields.io/badge/API%20contract-OpenAPI%203.1-f5f5f5)](app/api/modules/system/system.routes.ts)
 [![Database](https://img.shields.io/badge/database-PostgreSQL%2017-f5f5f5?logo=postgresql&logoColor=ffffff)](https://www.postgresql.org)
 [![Runtime](https://img.shields.io/badge/container-Docker%2027-f5f5f5?logo=docker&logoColor=ffffff)](https://www.docker.com)
 [![License](https://img.shields.io/badge/license-MIT-f5f5f5?logo=opensourceinitiative&logoColor=ffffff)](LICENSE)

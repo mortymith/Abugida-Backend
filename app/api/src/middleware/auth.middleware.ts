@@ -19,7 +19,7 @@
 import type { MiddlewareHandler } from 'hono'
 import { requireSession, withSession } from '@abugida/auth/hono'
 import type { AuthInstance } from '@abugida/auth'
-import type { AppEnv } from './types'
+import type { AppEnv } from '#/src/middleware/types'
 
 /**
  * Public catalog roots — anonymous GETs are allowed by the API spec (they are

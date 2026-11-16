@@ -3,9 +3,10 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
-    "paths": { "@/*": ["./src/*"] },
+    // Same alias contract as tsconfig.json: `#/` maps to the app root.
+    "paths": { "#/*": ["./*"] },
     "rootDir": "."
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"],
+  "include": ["src/**/*.ts", "modules/**/*.ts", "tests/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

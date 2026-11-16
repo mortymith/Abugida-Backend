@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'bun:test'
-import { parseAppConfig } from '@/config/app_config'
+import { parseAppConfig } from '#/src/config/app_config'
 
 function baseEnv(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {

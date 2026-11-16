@@ -12,9 +12,9 @@
  */
 
 import type { MiddlewareHandler } from 'hono'
-import { appConfig } from '../config/app_config'
-import { logger } from '../config/observability'
-import type { AppEnv } from './types'
+import { appConfig } from '#/src/config/app_config'
+import { logger } from '#/src/config/observability'
+import type { AppEnv } from '#/src/middleware/types'
 
 export function loggingMiddleware(): MiddlewareHandler<AppEnv> {
   return async (c, next) => {

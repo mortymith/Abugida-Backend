@@ -5,7 +5,7 @@
 
 import { Hono } from 'hono'
 import { describe, it, expect, mock, beforeEach } from 'bun:test'
-import type { AppEnv } from '@/middleware/types'
+import type { AppEnv } from '#/src/middleware/types'
 
 const mockLogger = {
   info: mock(() => {}),
@@ -13,7 +13,7 @@ const mockLogger = {
   error: mock(() => {}),
 }
 
-mock.module('@/config/observability', () => ({
+mock.module('#/src/config/observability', () => ({
   logger: mockLogger,
 }))
 
@@ -28,7 +28,7 @@ describe('loggingMiddleware', () => {
   }
 
   it('logs info for successful responses (2xx)', async () => {
-    const { loggingMiddleware } = await import('@/middleware/logging.middleware')
+    const { loggingMiddleware } = await import('#/src/middleware/logging.middleware')
     const app = makeApp()
     app.use('*', loggingMiddleware())
     app.get('/ok', (c) => c.text('ok'))
@@ -49,7 +49,7 @@ describe('loggingMiddleware', () => {
   })
 
   it('logs warn for client errors (4xx)', async () => {
-    const { loggingMiddleware } = await import('@/middleware/logging.middleware')
+    const { loggingMiddleware } = await import('#/src/middleware/logging.middleware')
     const app = makeApp()
     app.use('*', loggingMiddleware())
     app.get('/not-found', (c) => c.notFound())
@@ -69,7 +69,7 @@ describe('loggingMiddleware', () => {
   })
 
   it('logs error for server errors (5xx)', async () => {
-    const { loggingMiddleware } = await import('@/middleware/logging.middleware')
+    const { loggingMiddleware } = await import('#/src/middleware/logging.middleware')
     const app = makeApp()
     app.use('*', loggingMiddleware())
     app.onError((_err, c) => c.text('error', 500))
@@ -92,8 +92,8 @@ describe('loggingMiddleware', () => {
   })
 
   it('includes requestId in log fields', async () => {
-    const { loggingMiddleware } = await import('@/middleware/logging.middleware')
-    const { requestIdMiddleware } = await import('@/middleware/request-id.middleware')
+    const { loggingMiddleware } = await import('#/src/middleware/logging.middleware')
+    const { requestIdMiddleware } = await import('#/src/middleware/request-id.middleware')
     const app = makeApp()
     app.use('*', requestIdMiddleware())
     app.use('*', loggingMiddleware())
@@ -111,7 +111,7 @@ describe('loggingMiddleware', () => {
   })
 
   it('includes userId when user is set in context', async () => {
-    const { loggingMiddleware } = await import('@/middleware/logging.middleware')
+    const { loggingMiddleware } = await import('#/src/middleware/logging.middleware')
     const app = makeApp()
     app.use('*', async (c, next) => {
       c.set('user', { id: 'user-123' })
@@ -131,7 +131,7 @@ describe('loggingMiddleware', () => {
   })
 
   it('omits userId when user is not set', async () => {
-    const { loggingMiddleware } = await import('@/middleware/logging.middleware')
+    const { loggingMiddleware } = await import('#/src/middleware/logging.middleware')
     const app = makeApp()
     app.use('*', loggingMiddleware())
     app.get('/test', (c) => c.text('ok'))
@@ -147,7 +147,7 @@ describe('loggingMiddleware', () => {
   })
 
   it('rounds durationMs to 2 decimal places', async () => {
-    const { loggingMiddleware } = await import('@/middleware/logging.middleware')
+    const { loggingMiddleware } = await import('#/src/middleware/logging.middleware')
     const app = makeApp()
     app.use('*', loggingMiddleware())
     app.get('/test', (c) => c.text('ok'))

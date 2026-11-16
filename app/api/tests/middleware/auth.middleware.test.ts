@@ -6,7 +6,7 @@
 import { Hono } from 'hono'
 import { describe, it, expect, mock, beforeEach } from 'bun:test'
 import type { AuthInstance } from '@abugida/auth'
-import type { AppEnv } from '@/middleware/types'
+import type { AppEnv } from '#/src/middleware/types'
 
 const mockWithSession = mock(() => async (c: any, next: any) => {
   c.set('session', { id: 'sess-1' })
@@ -33,7 +33,7 @@ describe('optionalSessionMiddleware', () => {
   })
 
   it('resolves session and populates context', async () => {
-    const { optionalSessionMiddleware } = await import('@/middleware/auth.middleware')
+    const { optionalSessionMiddleware } = await import('#/src/middleware/auth.middleware')
     const app = new Hono<AppEnv>()
     const auth = {} as AuthInstance
 
@@ -53,7 +53,7 @@ describe('optionalSessionMiddleware', () => {
   })
 
   it('calls withSession with the auth instance', async () => {
-    const { optionalSessionMiddleware } = await import('@/middleware/auth.middleware')
+    const { optionalSessionMiddleware } = await import('#/src/middleware/auth.middleware')
     const app = new Hono<AppEnv>()
     const auth = { secret: 'test' } as unknown as AuthInstance
 
@@ -71,7 +71,7 @@ describe('requireAuthMiddleware', () => {
   })
 
   it('rejects requests without session', async () => {
-    const { requireAuthMiddleware } = await import('@/middleware/auth.middleware')
+    const { requireAuthMiddleware } = await import('#/src/middleware/auth.middleware')
     const app = new Hono<AppEnv>()
     const auth = {} as AuthInstance
 
@@ -87,7 +87,7 @@ describe('requireAuthMiddleware', () => {
   })
 
   it('passes through with valid session', async () => {
-    const { requireAuthMiddleware } = await import('@/middleware/auth.middleware')
+    const { requireAuthMiddleware } = await import('#/src/middleware/auth.middleware')
     const app = new Hono<AppEnv>()
     const auth = {} as AuthInstance
 
@@ -105,7 +105,7 @@ describe('requireAuthMiddleware', () => {
   })
 
   it('allows public catalog GETs to bypass auth', async () => {
-    const { requireAuthMiddleware } = await import('@/middleware/auth.middleware')
+    const { requireAuthMiddleware } = await import('#/src/middleware/auth.middleware')
     const app = new Hono<AppEnv>()
     const auth = {} as AuthInstance
 
@@ -122,7 +122,7 @@ describe('requireAuthMiddleware', () => {
   })
 
   it('requires auth for mutations on otherwise-public roots', async () => {
-    const { requireAuthMiddleware } = await import('@/middleware/auth.middleware')
+    const { requireAuthMiddleware } = await import('#/src/middleware/auth.middleware')
     const app = new Hono<AppEnv>()
     const auth = {} as AuthInstance
 
@@ -138,7 +138,7 @@ describe('requireAuthMiddleware', () => {
   })
 
   it('always lets the better-auth /auth flow through', async () => {
-    const { requireAuthMiddleware } = await import('@/middleware/auth.middleware')
+    const { requireAuthMiddleware } = await import('#/src/middleware/auth.middleware')
     const app = new Hono<AppEnv>()
     const auth = {} as AuthInstance
 

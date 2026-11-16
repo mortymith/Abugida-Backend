@@ -3,11 +3,14 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
-    "paths": { "@/*": ["./src/*"] },
+    // `#/` maps to the app root, so every internal import is absolute:
+    // `#/src/...` for the app shell (config, middleware, entry point) and
+    // `#/modules/...` for the feature modules. No relative imports.
+    "paths": { "#/*": ["./*"] },
     "types": ["bun"],
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "."
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "modules/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

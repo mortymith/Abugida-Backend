@@ -25,9 +25,9 @@ import type { MiddlewareHandler } from 'hono'
 import { and, eq } from 'drizzle-orm'
 import { apiKeys } from '@abugida/database/ops'
 import type { DatabaseClient } from '@abugida/database/client'
-import { logger } from '../config/observability'
-import { problemResponse } from './error-handler.middleware'
-import type { AppEnv, ResolvedApiKey } from './types'
+import { logger } from '#/src/config/observability'
+import { problemResponse } from '#/src/middleware/error-handler.middleware'
+import type { AppEnv, ResolvedApiKey } from '#/src/middleware/types'
 
 async function hashApiKey(key: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key))

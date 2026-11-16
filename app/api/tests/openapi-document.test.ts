@@ -11,8 +11,8 @@
 
 import { beforeAll, describe, expect, it } from 'bun:test'
 import { OpenAPIHono, createRoute, z, extendZodWithOpenApi } from '@hono/zod-openapi'
-import type { AppEnv } from '@/middleware/types'
-import { registerSystemDocumentation } from '@/modules/system'
+import type { AppEnv } from '#/src/middleware/types'
+import { registerSystemDocumentation } from '#/modules/system'
 import type { AuthInstance } from '@abugida/auth'
 
 extendZodWithOpenApi(z)
@@ -46,9 +46,9 @@ function refsIn(value: unknown, found: string[] = []): string[] {
 beforeAll(async () => {
   // The shared auth instance logs through the observability logger, which
   // throws until init() has run — the same order app.ts uses.
-  const { init } = await import('@/config/observability')
+  const { init } = await import('#/src/config/observability')
   await init()
-  const { createAuthInstance } = await import('@/config/auth')
+  const { createAuthInstance } = await import('#/src/config/auth')
   const auth: AuthInstance = createAuthInstance()
 
   const app = new OpenAPIHono<AppEnv>()

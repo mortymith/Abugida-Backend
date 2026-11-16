@@ -4,7 +4,9 @@
 my-project/
 ├── app/                       # Application workspaces (Bun + pnpm)
 │   ├── api/                   #   Hono REST API
-│   │   └── Dockerfile         #     Built from repo-root context
+│   │   ├── Dockerfile         #     Built from repo-root context
+│   │   ├── src/               #     Entry point, config, middleware
+│   │   └── modules/           #     Feature modules (imported via `#/modules/…`)
 │   ├── dashboard/             #   TanStack Start dashboard
 │   │   └── Dockerfile         #     Built from repo-root context
 │   └── marketing/             #   Astro landing page

@@ -48,20 +48,40 @@ configurable via `OTEL_*`.
 ## Project Structure
 
 ```
-src/
-  index.ts           # Entry point: init config/observability, serve, graceful shutdown
-  app.ts             # Hono app composition (auth, middleware, health)
-  config/
-    index.ts         # Public config entry point
-    app_config.ts    # Env loading, Zod validation, defaults, normalization (source of truth)
-    database.ts      # Shared pg Pool + Drizzle client
-    auth.ts          # Better Auth config + instance factory
-    queue.ts         # BullMQ/Redis config + producer factory
-    observability.ts # Pino + OpenTelemetry init
-    rate-limit.ts    # Rate limit config + limiter factories (API spec NFR-403)
+app/api/
+  src/
+    index.ts           # Entry point: init config/observability, serve, graceful shutdown
+    app.ts             # Hono app composition (auth, middleware, health)
+    config/
+      index.ts         # Public config entry point
+      app_config.ts    # Env loading, Zod validation, defaults, normalization (source of truth)
+      database.ts      # Shared pg Pool + Drizzle client
+      auth.ts          # Better Auth config + instance factory
+      queue.ts         # BullMQ/Redis config + producer factory
+      observability.ts # Pino + OpenTelemetry init
+      rate-limit.ts    # Rate limit config + limiter factories (API spec NFR-403)
+    middleware/        # Cross-cutting Hono middleware (auth, tenant, rate limit, error handling)
+  modules/             # Feature modules — one directory per domain
+    bookmarks/ bundles/ downloads/ enrollments/ exam-types/ purchases/
+    quizzes/ recommendations/ resources/ system/ tags/ users/ webhooks/
+  tests/               # Unit tests (mirrors the source layout)
 ```
 
 Configuration modules consume `appConfig` and never read `process.env` directly.
+
+### Import convention
+
+Every internal import uses the `#/` alias, which maps to the **app root**
+(`tsconfig.json` → `paths: { "#/*": ["./*"] }`):
+
+```ts
+import { appConfig } from '#/src/config/app_config'
+import { createUsersService } from '#/modules/users/users.service'
+```
+
+`#/src/…` addresses the app shell (entry point, config, middleware); `#/modules/…`
+addresses a feature module. Relative and absolute file paths are not used inside
+the app — the alias keeps imports stable when files move between directories.
 
 ## API documentation
 
@@ -69,7 +89,7 @@ Configuration modules consume `appConfig` and never read `process.env` directly.
 reference (both development-only). The `/auth/*` paths are **not** declared by
 this app: they are served by `@abugida/auth`, which generates their
 documentation from the live Better Auth instance and merges it into the API's
-document (`registerSystemDocumentation` in `src/modules/system`). The security
+document (`registerSystemDocumentation` in `modules/system`). The security
 schemes `Bearer` (JWT) and `apiKeyHeader` (`X-API-Key`) are declared by the
 API; the session-cookie scheme (`sessionCookie`) comes from the auth document.
 

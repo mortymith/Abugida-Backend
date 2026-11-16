@@ -28,7 +28,7 @@
 
 import type { RedisClient } from 'bun'
 import { RateLimiterMemory } from 'rate-limiter-flexible'
-import { appConfig } from './app_config'
+import { appConfig } from '#/src/config/app_config'
 
 export interface RateLimitLimits {
   /** Shared window length in seconds. */

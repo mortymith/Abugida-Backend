@@ -15,11 +15,15 @@
 
 import type { Context, MiddlewareHandler } from 'hono'
 import { getConnInfo } from 'hono/bun'
-import { appConfig } from '../config/app_config'
-import { logger } from '../config/observability'
-import { RateLimitExceededError, type RateLimiter, type RateLimiters } from '../config/rate-limit'
-import { problemResponse } from './error-handler.middleware'
-import type { AppEnv } from './types'
+import { appConfig } from '#/src/config/app_config'
+import { logger } from '#/src/config/observability'
+import {
+  RateLimitExceededError,
+  type RateLimiter,
+  type RateLimiters,
+} from '#/src/config/rate-limit'
+import { problemResponse } from '#/src/middleware/error-handler.middleware'
+import type { AppEnv } from '#/src/middleware/types'
 
 /**
  * Resolve the caller's IP. When `TRUST_PROXY` is enabled (behind Caddy),

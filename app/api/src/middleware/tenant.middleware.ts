@@ -27,9 +27,9 @@ import {
   tenantHostMiddleware,
   type TenantVariables,
 } from '@abugida/tenant/hono'
-import { appConfig } from '../config/app_config'
-import { tenantConfig, tenantStore } from '../config/tenant'
-import type { AppEnv } from './types'
+import { appConfig } from '#/src/config/app_config'
+import { tenantConfig, tenantStore } from '#/src/config/tenant'
+import type { AppEnv } from '#/src/middleware/types'
 
 export type { TenantVariables }
 

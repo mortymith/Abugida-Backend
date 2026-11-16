@@ -25,8 +25,8 @@ import type { Hook } from '@hono/zod-openapi'
 import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import { recordError } from '@abugida/observability'
-import { appConfig } from '../config/app_config'
-import type { AppEnv } from './types'
+import { appConfig } from '#/src/config/app_config'
+import type { AppEnv } from '#/src/middleware/types'
 
 export interface ProblemErrorField {
   field: string

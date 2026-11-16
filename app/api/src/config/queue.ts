@@ -18,7 +18,7 @@ import {
   type QueueClient,
   type QueueConfig,
 } from '@abugida/queue'
-import { appConfig } from './app_config'
+import { appConfig } from '#/src/config/app_config'
 
 type QueueEnv = 'development' | 'staging' | 'production'
 type QueueLogLevel = 'debug' | 'info' | 'warn' | 'error'

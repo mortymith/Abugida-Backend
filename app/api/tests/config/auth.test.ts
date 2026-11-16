@@ -22,13 +22,13 @@ describe('auth module', () => {
   beforeAll(async () => {
     // The auth instance logs through the shared observability logger, which
     // requires init() — the same order app.ts uses.
-    const { init } = await import('@/config/observability')
+    const { init } = await import('#/src/config/observability')
     await init()
   })
   it(
     'exports createAuthInstance function',
     async () => {
-      const mod = await import('@/config/auth')
+      const mod = await import('#/src/config/auth')
       expect(typeof mod.createAuthInstance).toBe('function')
     },
     AUTH_INIT_TIMEOUT_MS,
@@ -37,7 +37,7 @@ describe('auth module', () => {
   it(
     'builds exactly one instance per process',
     async () => {
-      const mod = await import('@/config/auth')
+      const mod = await import('#/src/config/auth')
       expect(mod.createAuthInstance()).toBe(mod.createAuthInstance())
     },
     AUTH_INIT_TIMEOUT_MS,
@@ -46,7 +46,7 @@ describe('auth module', () => {
   it(
     'resolves the configuration from the shared auth package',
     async () => {
-      const { createAuthInstance } = await import('@/config/auth')
+      const { createAuthInstance } = await import('#/src/config/auth')
       const { config, api, db } = createAuthInstance()
 
       expect(config.secret).toBeDefined()
@@ -75,7 +75,7 @@ describe('auth module', () => {
   it(
     'serves the same plugin surface as the dashboard',
     async () => {
-      const { createAuthInstance } = await import('@/config/auth')
+      const { createAuthInstance } = await import('#/src/config/auth')
       const { api } = createAuthInstance() as unknown as {
         api: Record<string, unknown>
       }
@@ -96,7 +96,7 @@ describe('auth module', () => {
       // Redirect destinations are app configuration, not request data: the
       // shared mount replaces the client's body (see
       // `SocialSignInPolicy` in @abugida/auth and its tests).
-      const { registerAuthRoutePolicy } = await import('@/app')
+      const { registerAuthRoutePolicy } = await import('#/src/app')
       expect(typeof registerAuthRoutePolicy).toBe('function')
 
       const policy = registerAuthRoutePolicy()

@@ -9,13 +9,13 @@
 import { Hono } from 'hono'
 import { describe, expect, it } from 'bun:test'
 import { HTTPException } from 'hono/http-exception'
-import { appConfig } from '@/config/app_config'
-import { createMemoryRateLimiter, type RateLimiters } from '@/config/rate-limit'
-import { requestIdMiddleware, uuidv7 } from '@/middleware/request-id.middleware'
-import { corsMiddleware } from '@/middleware/cors.middleware'
-import { errorHandler, notFoundHandler } from '@/middleware/error-handler.middleware'
-import { rateLimitMiddleware } from '@/middleware/rate-limit.middleware'
-import type { AppEnv } from '@/middleware/types'
+import { appConfig } from '#/src/config/app_config'
+import { createMemoryRateLimiter, type RateLimiters } from '#/src/config/rate-limit'
+import { requestIdMiddleware, uuidv7 } from '#/src/middleware/request-id.middleware'
+import { corsMiddleware } from '#/src/middleware/cors.middleware'
+import { errorHandler, notFoundHandler } from '#/src/middleware/error-handler.middleware'
+import { rateLimitMiddleware } from '#/src/middleware/rate-limit.middleware'
+import type { AppEnv } from '#/src/middleware/types'
 
 const UUIDV7_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 

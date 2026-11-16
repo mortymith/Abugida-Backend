@@ -139,7 +139,7 @@ Shared per-tool configuration packages (`@abugida/*-config`, part of the pnpm wo
 - `packages/auth`: Build with `tsc` to `dist/` before consuming. Framework middleware is intentionally kept in subpaths (`/hono`, `/tanstack`, `/client`, `/env`, `/roles`) so consumers don't pull unnecessary deps. Add new auth behaviour here, not in an app.
 - `packages/database`: Schema is organized by domain under `schema/` (`auth`, `catalog`, `finance`, `learning`, `ops`, `shared`). The barrel `index.ts` re-exports everything.
 - `app/dashboard`: File-based routing via TanStack Router. After adding/renaming routes run `pnpm --filter @abugida/dashboard generate-routes`. `*.gen.ts` files are eslint-ignored. See `app/dashboard/AGENTS.md` for dashboard-specific conventions.
-- `app/api`: Hono REST API with Zod OpenAPI. See `app/api/` for module structure.
+- `app/api`: Hono REST API with Zod OpenAPI. Feature modules live in `app/api/modules/` (sibling of `app/api/src/`). Every internal import uses the `#/` alias mapped to the app root (`#/src/…` for the app shell, `#/modules/…` for a feature module) — never relative paths. See `app/api/README.md` for the layout.
 - `app/marketing`: Astro site. Use `astro dev --background` for dev server. See `app/marketing/AGENTS.md`.
 
 ## Repo-local instruction files

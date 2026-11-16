@@ -97,7 +97,7 @@ app/worker/
 ```
 
 - **Queue selection:** `WORKER_QUEUES=all` (default) or a CSV of full queue names (e.g. `abugida.purchases,abugida.webhooks`) — the package's existing selective-worker capability becomes an ops feature, and a per-queue rollout is also the mechanism that gates the stub processors (see Risks).
-- **Health:** a small Hono server exposing `/health` (process liveness) and `/health/ready` (Redis reachable + expected workers started), wired into the Compose healthcheck — BullMQ workers are otherwise headless. The paths match the existing convention in `app/api/src/modules/system/system.routes.ts` and the Compose healthchecks in `docker/compose/app.yml`. This Hono usage is app-local: the work app owns its runtime, so it does not contradict the package's framework boundary.
+- **Health:** a small Hono server exposing `/health` (process liveness) and `/health/ready` (Redis reachable + expected workers started), wired into the Compose healthcheck — BullMQ workers are otherwise headless. The paths match the existing convention in `app/api/modules/system/system.routes.ts` and the Compose healthchecks in `docker/compose/app.yml`. This Hono usage is app-local: the work app owns its runtime, so it does not contradict the package's framework boundary.
 - **Runtime:** plain Bun (ADR-001, ADR-027), no bundler, so the dashboard's Vite externalisation of the shared package does not apply here.
 - **Logging/tracing:** composed from `@abugida/observability`, so jobs emit the same pino/OpenTelemetry signals as the apps. The package's bespoke `utils/logger.ts` is not carried over.
 

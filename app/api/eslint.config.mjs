@@ -12,7 +12,7 @@ import base, { typescriptProject } from '@abugida/eslint-config'
 export default [
   ...base,
   typescriptProject({
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'modules/**/*.ts'],
     project: './tsconfig.json',
     tsconfigRootDir: import.meta.dirname,
   }),

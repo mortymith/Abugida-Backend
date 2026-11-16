@@ -11,8 +11,8 @@
 
 import { Pool } from 'pg'
 import { createClient, type DatabaseClient } from '@abugida/database/client'
-import { appConfig } from './app_config'
-import { logger } from './observability'
+import { appConfig } from '#/src/config/app_config'
+import { logger } from '#/src/config/observability'
 
 const pool = new Pool({
   connectionString: appConfig.DATABASE_URL,

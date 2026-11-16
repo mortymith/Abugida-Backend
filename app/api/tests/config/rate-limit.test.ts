@@ -10,7 +10,7 @@ import {
   createMemoryRateLimiter,
   createRedisRateLimiter,
   createRateLimiters,
-} from '@/config/rate-limit'
+} from '#/src/config/rate-limit'
 
 describe('rateLimitConfig', () => {
   it('has correct structure', () => {

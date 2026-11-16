@@ -19,8 +19,8 @@ import type { TenantDomainConfig, TenantStore } from '@abugida/tenant'
 import { resolveTenantConfig } from '@abugida/tenant/env'
 import { createDrizzleTenantStore } from '@abugida/tenant/store'
 
-import { appConfig } from './app_config'
-import { db } from './database'
+import { appConfig } from '#/src/config/app_config'
+import { db } from '#/src/config/database'
 
 /** The domain the API treats as the tenant domain. */
 export const tenantConfig: TenantDomainConfig = resolveTenantConfig({

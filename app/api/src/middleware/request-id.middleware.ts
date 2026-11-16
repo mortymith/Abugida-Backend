@@ -16,7 +16,7 @@
 
 import type { MiddlewareHandler } from 'hono'
 import { requestId } from 'hono/request-id'
-import type { AppEnv } from './types'
+import type { AppEnv } from '#/src/middleware/types'
 
 /**
  * Generate a UUID v7 (time-ordered, RFC 9562) from the current Unix
