@@ -15,7 +15,7 @@
 | **Services**       | `powersync-sync` (singleton), `powersync-api` (stateless) |
 | **Environments**   | All                                                       |
 
-Design decisions live in [ADR-025](../architecture/adr/ADR-025-powersync-postgres-storage.md).
+Design decisions live in [ADR-025](../adr/ADR-025-powersync-postgres-storage.md).
 
 ---
 

@@ -44,7 +44,7 @@ The workspace layout is preserved in the runtime image so pnpm symlinks into the
 
 Both data-layer dependencies use `condition: service_healthy`, ensuring the Dashboard only starts after PgBouncer and Redis are confirmed operational.
 
-All application services connect to PostgreSQL **through PgBouncer** (per ADR-019). The former direct-connection exception for this service ([ADR-013](../architecture/adr/)) is superseded and no longer applies.
+All application services connect to PostgreSQL **through PgBouncer** (per ADR-019). The former direct-connection exception for this service ([ADR-013](../adr/)) is superseded and no longer applies.
 
 ---
 

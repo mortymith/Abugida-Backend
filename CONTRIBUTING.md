@@ -91,7 +91,7 @@ prettier on staged files; `pre-push` runs `pnpm typecheck` across all workspaces
 
 - Branch from and target `dev`; promote to `main` only for production-bound merges.
   Small self-contained change > sprawling change.
-- Architecture decisions belong in an ADR under `docs/architecture/adr/` — if you had to
+- Architecture decisions belong in an ADR under `docs/adr/` — if you had to
   ask "why is it built this way?", the next person will too.
 - Same-commit rule: schema change ⇒ `db:generate` migration; new env var ⇒ Zod schema +
   `.env.example`; framework middleware ⇒ `packages/`, not the app.

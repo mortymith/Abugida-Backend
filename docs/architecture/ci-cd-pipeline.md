@@ -656,9 +656,9 @@ The CI/CD work is complete when all of the following hold:
 - `docs/architecture/deployment-model.md` — pipeline architecture and pipeline guards
 - `docs/development/dev-workflow.md` — branching model and PR process
 - `docs/development/testing.md` — test categories and their runners
-- `docs/architecture/adr/ADR-026-devbox-sandbox.md` — pinned toolchain
-- `docs/architecture/adr/ADR-027-bun-1-4-adoption.md` — CI pipeline adoption, `bun check`
-- `docs/architecture/adr/ADR-002-alpine-base-images.md` — digest pinning
-- `docs/architecture/adr/ADR-021-just-recipes.md` — `just` as the operator interface
+- `docs/adr/ADR-026-devbox-sandbox.md` — pinned toolchain
+- `docs/adr/ADR-027-bun-1-4-adoption.md` — CI pipeline adoption, `bun check`
+- `docs/adr/ADR-002-alpine-base-images.md` — digest pinning
+- `docs/adr/ADR-021-just-recipes.md` — `just` as the operator interface
 - `tooling/README.md` — the blocking-gate matrix CI MUST implement
 - GitHub Docs: [Secure use reference](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions), [Environments](https://docs.github.com/en/actions/deployment/targeting-different-environments/managing-environments-for-deployment), [OIDC](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect)

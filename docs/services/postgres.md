@@ -73,7 +73,7 @@ docker kill --signal=HUP infra_pgbouncer    # pick up the regenerated userlist.t
 | --------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | PowerSync | Logical replication requires a continuous, long-lived connection that transaction-mode pooling would terminate | See [powersync.md](powersync.md) |
 
-All application services (API, Dashboard) route their database traffic through PgBouncer per [ADR-019](../architecture/adr/). The former direct-connection exception for the Dashboard ([ADR-013](../architecture/adr/)) is superseded and no longer applies.
+All application services (API, Dashboard) route their database traffic through PgBouncer per [ADR-019](../adr/). The former direct-connection exception for the Dashboard ([ADR-013](../adr/)) is superseded and no longer applies.
 
 ---
 

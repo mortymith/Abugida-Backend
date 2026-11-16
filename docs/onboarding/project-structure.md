@@ -60,7 +60,8 @@ my-project/
 │   └── backups/             #   Scheduled backup output
 ├── docs/
 │   ├── onboarding/          #   Getting started guides
-│   ├── architecture/        #   System design, ADRs
+│   ├── architecture/        #   System design documents
+│   ├── adr/                 #   Architecture Decision Records
 │   ├── services/            #   Per-service documentation
 │   ├── configuration/       #   How to customize the stack
 │   ├── runbooks/            #   Operational procedures

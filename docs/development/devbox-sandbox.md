@@ -2,7 +2,7 @@
 
 The development toolchain (Bun, pnpm, Node, Just, the Docker client, and every system binary the repository lints with) is **pinned and provided by a Devbox sandbox**. Docker Compose keeps owning the _infrastructure_ (PostgreSQL, Redis, MinIO, observability) — the sandbox owns the _tools_.
 
-ADR: [ADR-026](../architecture/adr/ADR-026-devbox-sandbox.md)
+ADR: [ADR-026](../adr/ADR-026-devbox-sandbox.md)
 
 ---
 

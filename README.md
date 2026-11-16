@@ -490,7 +490,7 @@ Infrastructure and operations docs live under [`docs/`](docs/README.md).
 | Architecture overview  | [docs/architecture/overview.md](docs/architecture/overview.md)                                                                    |
 | Deployment model       | [docs/architecture/deployment-model.md](docs/architecture/deployment-model.md)                                                    |
 | Security model         | [docs/architecture/security-model.md](docs/architecture/security-model.md)                                                        |
-| ADRs                   | [docs/architecture/adr/README.md](docs/architecture/adr/README.md)                                                                |
+| ADRs                   | [docs/adr/README.md](docs/adr/README.md)                                                                                          |
 | Service catalog        | [docs/services/_index.md](docs/services/_index.md)                                                                                |
 | Runbooks               | [docs/runbooks/README.md](docs/runbooks/README.md)                                                                                |
 | Dev workflow / testing | [docs/development/dev-workflow.md](docs/development/dev-workflow.md) · [docs/development/testing.md](docs/development/testing.md) |

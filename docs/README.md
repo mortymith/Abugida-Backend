@@ -33,7 +33,7 @@ New here? Start with [Onboarding](onboarding/quick-start.md) — you'll be runni
 | [Security Model](architecture/security-model.md)      | Trust boundaries, secret flow, threat model |
 | [Deployment Model](architecture/deployment-model.md)  | Blue-green, canary, CI/CD pipelines         |
 | [CI/CD Pipeline Spec](architecture/ci-cd-pipeline.md) | GitHub Actions workflows, gates, artifacts  |
-| [ADR Index](architecture/adr/README.md)               | Architecture Decision Records               |
+| [ADR Index](adr/README.md)                            | Architecture Decision Records               |
 
 ## Services
 
