@@ -42,6 +42,19 @@ interface ManagedWorker {
   isClosing: boolean
 }
 
+export interface WorkerRuntimeOptions {
+  /**
+   * How long `worker.close()` may wait for in-flight jobs before it is forced
+   * (ms). A graceful shutdown waits for the jobs a worker has picked up; a
+   * single stuck job must not hold the process hostage until the container
+   * runtime escalates to SIGKILL. Default: 30 000.
+   */
+  closeTimeoutMs?: number
+}
+
+/** Default ceiling for the graceful close of one BullMQ worker. */
+const DEFAULT_CLOSE_TIMEOUT_MS = 30_000
+
 /**
  * The raw Redis connection the idempotency layer uses. It is created lazily
  * on the first job that carries an `idempotencyKey` and failures are
@@ -69,6 +82,39 @@ function extractIdempotencyKey(data: unknown): string | undefined {
   return typeof key === 'string' && key.length > 0 ? key : undefined
 }
 
+/**
+ * Close one BullMQ worker, bounded by a timeout.
+ *
+ * BullMQ's `close()` waits for the in-flight jobs so no work is interrupted.
+ * A job that never finishes must not hold the shutdown hostage, though: once
+ * the timeout expires the close is forced — best-effort and not awaited, so
+ * the worker's locks expire and other workers re-assign the in-flight jobs
+ * (they are not lost).
+ */
+async function closeWorker(mw: ManagedWorker, closeTimeoutMs: number): Promise<void> {
+  let forced = false
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    await Promise.race([
+      mw.worker.close(),
+      new Promise<void>((resolve) => {
+        timer = setTimeout(() => {
+          forced = true
+          resolve()
+        }, closeTimeoutMs)
+        timer.unref?.()
+      }),
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
+    if (forced) {
+      void mw.worker.close(true).catch(() => {
+        // Best-effort force close; the process is on its way out anyway.
+      })
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Implementation
 // ---------------------------------------------------------------------------
@@ -78,11 +124,14 @@ function extractIdempotencyKey(data: unknown): string | undefined {
  *
  * @param config - Queue configuration.
  * @param processors - Processor entries to register.
+ * @param options - Runtime knobs (see {@link WorkerRuntimeOptions}).
  */
 export function createQueueWorker(
   config: QueueConfig,
   processors: AnyProcessorEntry[] = [],
+  options: WorkerRuntimeOptions = {},
 ): QueueWorker {
+  const closeTimeoutMs = options.closeTimeoutMs ?? DEFAULT_CLOSE_TIMEOUT_MS
   const workers: ManagedWorker[] = []
   const active: string[] = []
   let running = false
@@ -154,15 +203,19 @@ export function createQueueWorker(
           return result
         } catch (error) {
           const elapsed = performance.now() - start
+          // The full error (with its stack) belongs in the process's own
+          // logs — `safeErrorMessage` only sanitises what leaves the
+          // process, never what an operator has to debug from.
           logger.error(
             {
+              err: error,
               jobType,
               jobId: job.id,
               queueName,
               attemptsMade: job.attemptsMade,
               processingTimeMs: Math.round(elapsed),
               category: classifyError(error),
-              error: safeErrorMessage(error),
+              errorLabel: safeErrorMessage(error),
             },
             'Job failed',
           )
@@ -187,11 +240,12 @@ export function createQueueWorker(
       worker.on('failed', (job, err) => {
         logger.error(
           {
+            err,
             queueName,
             jobType: job?.name,
             jobId: job?.id,
             category: classifyError(err),
-            error: safeErrorMessage(err),
+            errorLabel: safeErrorMessage(err),
           },
           'Worker failed job',
         )
@@ -199,7 +253,7 @@ export function createQueueWorker(
 
       worker.on('error', (err) => {
         logger.error(
-          { queueName, category: classifyError(err), error: safeErrorMessage(err) },
+          { err, queueName, category: classifyError(err), errorLabel: safeErrorMessage(err) },
           'Worker error',
         )
       })
@@ -235,18 +289,22 @@ export function createQueueWorker(
       if (mw.isClosing) return
       mw.isClosing = true
       try {
-        await mw.worker.close()
+        await closeWorker(mw, closeTimeoutMs)
         logger.debug({ queueName: mw.queueName }, 'Worker closed for queue')
       } catch (err) {
-        logger.error(
-          { queueName: mw.queueName, error: err instanceof Error ? err.message : String(err) },
-          'Error closing worker',
-        )
+        logger.error({ queueName: mw.queueName, err }, 'Error closing worker')
       }
     })
 
     await Promise.allSettled(closePromises)
-    await closeConnection(config, 'consumer')
+
+    // BullMQ does not close connections it was handed by the caller, so each
+    // per-queue connection is closed here — workers use blocking commands and
+    // must not share connections anyway, which is why they are not cached
+    // under a single purpose.
+    await Promise.allSettled(
+      active.map((queueName) => closeConnection(config, `consumer:${queueName}`)),
+    )
     if (idempotencyRedis) {
       await closeConnection(config, 'consumer:idempotency')
       idempotencyRedis = undefined

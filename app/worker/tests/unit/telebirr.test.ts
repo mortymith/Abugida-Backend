@@ -194,11 +194,9 @@ describe('TelebirrClient.createOrder', () => {
     stubFetch((url, body) => {
       if (url.endsWith('/payment/v1/token')) return fabricTokenResponse()
       if (url.endsWith('/payment/v1/merchant/preOrder')) {
-        totalAmount =
-          (body as Record<string, unknown>)['biz_content'] &&
-          ((body as Record<string, unknown>)['biz_content'] as Record<string, string>)[
-            'total_amount'
-          ]
+        totalAmount = (
+          (body as Record<string, unknown>)['biz_content'] as Record<string, string> | undefined
+        )?.['total_amount']
         return {
           json: {
             result: 'SUCCESS',
@@ -260,9 +258,12 @@ describe('TelebirrClient.createOrder', () => {
     })
 
     const client = createTelebirrClient(makeConfig())
-    const error: TelebirrError = await client
+    const cause = await client
       .createOrder({ title: 't', amount: 10 })
-      .catch((cause: unknown) => cause as TelebirrError)
+      .catch((reason: unknown) => reason)
+
+    expect(cause).toBeInstanceOf(TelebirrError)
+    const error = cause as TelebirrError
 
     expect(error).toBeInstanceOf(TelebirrError)
     expect(error.code).toBe('TELEBIRR_ORDER')
@@ -283,9 +284,12 @@ describe('TelebirrClient.createOrder', () => {
     })
 
     const client = createTelebirrClient(makeConfig())
-    const error: TelebirrError = await client
+    const cause = await client
       .createOrder({ title: 't', amount: 10 })
-      .catch((cause: unknown) => cause as TelebirrError)
+      .catch((reason: unknown) => reason)
+
+    expect(cause).toBeInstanceOf(TelebirrError)
+    const error = cause as TelebirrError
 
     expect(error.code).toBe('TELEBIRR_VERIFY')
   })
@@ -293,17 +297,23 @@ describe('TelebirrClient.createOrder', () => {
   test('maps transport failures: 5xx retryable, 4xx permanent', async () => {
     stubFetch(() => ({ status: 500, json: {} }))
     const client = createTelebirrClient(makeConfig())
-    const serverError: TelebirrError = await client
+    const cause = await client
       .createOrder({ title: 't', amount: 10 })
-      .catch((cause: unknown) => cause as TelebirrError)
+      .catch((reason: unknown) => reason)
+
+    expect(cause).toBeInstanceOf(TelebirrError)
+    const serverError = cause as TelebirrError
     expect(serverError.code).toBe('TELEBIRR_HTTP')
     expect(serverError.retryable).toBe(true)
 
     stubFetch(() => ({ status: 400, json: {} }))
     const client2 = createTelebirrClient(makeConfig())
-    const clientError: TelebirrError = await client2
+    const cause2 = await client2
       .createOrder({ title: 't', amount: 10 })
-      .catch((cause: unknown) => cause as TelebirrError)
+      .catch((reason: unknown) => reason)
+
+    expect(cause2).toBeInstanceOf(TelebirrError)
+    const clientError = cause2 as TelebirrError
     expect(clientError.code).toBe('TELEBIRR_HTTP')
     expect(clientError.retryable).toBe(false)
   })

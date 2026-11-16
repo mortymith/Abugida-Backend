@@ -110,6 +110,7 @@ const FIXTURES = {
   },
   [JobType.MAINTENANCE_TASK]: {
     taskName: 'session_cleanup',
+    params: {},
     idempotencyKey: 'key-1',
   },
   [JobType.DATA_RETENTION]: {

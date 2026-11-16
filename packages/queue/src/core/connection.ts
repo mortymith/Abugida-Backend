@@ -160,6 +160,10 @@ export async function checkConnectionHealth(
 
 /**
  * Close a specific connection and remove it from the cache.
+ *
+ * The cache entry is removed even when `quit()` fails: a connection that
+ * cannot be closed politely is exactly one that must not be handed out
+ * again, so the next `createConnection` always builds a fresh client.
  */
 export async function closeConnection(
   config: QueueConfig,
@@ -168,8 +172,10 @@ export async function closeConnection(
   const cacheKey = getCacheKey(config, purpose)
   const entry = connectionCache.get(cacheKey)
   if (entry) {
-    await entry.adapter.quit()
     connectionCache.delete(cacheKey)
+    await entry.adapter.quit().catch(() => {
+      /* ignore close errors — the entry is gone either way */
+    })
   }
 }
 

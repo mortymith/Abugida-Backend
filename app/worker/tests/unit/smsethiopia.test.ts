@@ -111,11 +111,13 @@ describe('SMSEthiopiaClient.send (v2)', () => {
 
   test('rejects invalid msisdn without hitting the network', async () => {
     const client = createSMSEthiopiaClient(makeConfig())
-    const error: SMSEthiopiaError = await client
+    const cause = await client
       .send({ msisdn: 'not-a-phone', text: 'Hello' })
-      .catch((cause: unknown) => cause as SMSEthiopiaError)
+      .catch((reason: unknown) => reason)
 
-    expect(error).toBeInstanceOf(SMSEthiopiaError)
+    expect(cause).toBeInstanceOf(SMSEthiopiaError)
+    const error = cause as SMSEthiopiaError
+
     expect(error.code).toBe('SMS_REJECTED')
     expect(error.retryable).toBe(false)
   })
@@ -124,9 +126,12 @@ describe('SMSEthiopiaClient.send (v2)', () => {
     stubFetch(() => ({ status: 503, json: { error: 'overloaded' } }))
 
     const client = createSMSEthiopiaClient(makeConfig())
-    const error: SMSEthiopiaError = await client
+    const cause = await client
       .send({ msisdn: '251912345678', text: 'Hello' })
-      .catch((cause: unknown) => cause as SMSEthiopiaError)
+      .catch((reason: unknown) => reason)
+
+    expect(cause).toBeInstanceOf(SMSEthiopiaError)
+    const error = cause as SMSEthiopiaError
 
     expect(error.code).toBe('SMS_HTTP')
     expect(error.retryable).toBe(true)
@@ -157,9 +162,10 @@ describe('SMSEthiopiaClient.getStatus', () => {
     stubFetch(() => ({ status: 404, json: { error: 'not found' } }))
 
     const client = createSMSEthiopiaClient(makeConfig())
-    const error: SMSEthiopiaError = await client
-      .getStatus('UNKNOWN_ID')
-      .catch((cause: unknown) => cause as SMSEthiopiaError)
+    const cause = await client.getStatus('UNKNOWN_ID').catch((reason: unknown) => reason)
+
+    expect(cause).toBeInstanceOf(SMSEthiopiaError)
+    const error = cause as SMSEthiopiaError
 
     expect(error.code).toBe('SMS_NOT_FOUND')
     expect(error.retryable).toBe(false)
@@ -167,9 +173,10 @@ describe('SMSEthiopiaClient.getStatus', () => {
 
   test('is unsupported on the v1 API', async () => {
     const client = createSMSEthiopiaClient(makeConfig({ apiVersion: 'v1' }))
-    const error: SMSEthiopiaError = await client
-      .getStatus('ANY')
-      .catch((cause: unknown) => cause as SMSEthiopiaError)
+    const cause = await client.getStatus('ANY').catch((reason: unknown) => reason)
+
+    expect(cause).toBeInstanceOf(SMSEthiopiaError)
+    const error = cause as SMSEthiopiaError
 
     expect(error.code).toBe('SMS_UNSUPPORTED')
   })

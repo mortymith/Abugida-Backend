@@ -22,3 +22,6 @@ await initObservability({
   serviceVersion: '0.0.0',
   environment: 'test',
 })
+
+// Top-level await above requires this file to be a module.
+export {}
