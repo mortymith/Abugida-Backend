@@ -72,9 +72,9 @@
     "@abugida/database": "workspace:*",
     "@tanstack/react-router": ">=1.0.0",
     "@tanstack/react-start": ">=1.0.0",
-    "better-auth": "1.6.26",
+    "better-auth": "1.7.25",
     "drizzle-orm": ">=0.45.0",
-    "hono": ">=4.6.0",
+    "hono": "^4.13.16",
     "react": ">=18.0.0"
   },
   "peerDependenciesMeta": {
@@ -92,7 +92,7 @@
     }
   },
   "dependencies": {
-    "better-auth-telegram": "^2.0.1",
+    "better-auth-telegram": "^3.2.2",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -104,10 +104,10 @@
     "@tanstack/react-start": "1.169.3",
     "@types/bun": "^1.4.4",
     "@types/react": "^19.3.0",
-    "better-auth": "1.6.26",
+    "better-auth": "1.7.25",
     "drizzle-orm": "^0.45.4",
     "eslint": "^10.13.0",
-    "hono": "^4.13.13",
+    "hono": "^4.13.16",
     "prettier": "^3.9.10",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

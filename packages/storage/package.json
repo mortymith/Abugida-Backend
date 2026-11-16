@@ -51,12 +51,12 @@
     "@abugida/typescript-config": "workspace:*",
     "@types/bun": "^1.4.4",
     "eslint": "^10.13.0",
-    "hono": "^4.13.13",
+    "hono": "^4.13.16",
     "prettier": "^3.9.10",
     "typescript": "^6.0.3"
   },
   "peerDependencies": {
-    "hono": "^4.0.0"
+    "hono": "^4.13.16"
   },
   "peerDependenciesMeta": {
     "hono": {

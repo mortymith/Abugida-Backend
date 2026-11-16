@@ -121,6 +121,14 @@ export function buildAdvancedOptions(config: AuthConfig) {
       domain: config.session?.cookie?.domain,
     },
     cookiePrefix: config.session?.cookie?.name ?? 'abugida.session',
+    database: {
+      // Better Auth 1.7 introduced runtime schema introspection. The auth
+      // tables here are a custom Drizzle schema owned by @abugida/database
+      // (domain fields plus plugin tables), which the new check does not
+      // model — it would fail otherwise-valid requests. Schema ownership and
+      // migrations stay in this monorepo, so keep pre-1.7 behaviour.
+      validateSchema: false,
+    },
     // Let Better Auth generate IDs in the adapter. The database package uses
     // text primary keys without database-side defaults, so
     // `generateId: 'uuid'` would make the PostgreSQL adapter assume the DB

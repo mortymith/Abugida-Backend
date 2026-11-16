@@ -56,14 +56,14 @@
     "@abugida/typescript-config": "workspace:*",
     "@tanstack/react-start": "1.169.3",
     "@types/bun": "^1.4.4",
-    "astro": "^7.4.2",
+    "astro": "^7.4.7",
     "eslint": "^10.13.0",
-    "hono": "^4.13.13",
+    "hono": "^4.13.16",
     "prettier": "^3.9.10",
     "typescript": "^6.0.3"
   },
   "peerDependencies": {
-    "hono": ">=4.0.0"
+    "hono": "^4.13.16"
   },
   "peerDependenciesMeta": {
     "hono": {

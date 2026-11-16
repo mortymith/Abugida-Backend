@@ -119,7 +119,12 @@ describe('buildAdvancedOptions', () => {
 
   it('leaves IDs to Better Auth for text primary keys without database defaults', () => {
     const options = buildAdvancedOptions(baseConfig())
-    expect(options.database).toBeUndefined()
+    expect(options.database?.generateId).toBeUndefined()
+  })
+
+  it('disables better-auth 1.7 runtime schema introspection for the custom Drizzle schema', () => {
+    const options = buildAdvancedOptions(baseConfig())
+    expect(options.database?.validateSchema).toBe(false)
   })
 })
 

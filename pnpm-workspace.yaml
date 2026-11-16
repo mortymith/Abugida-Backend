@@ -3,6 +3,14 @@ overrides:
   js-yaml@<=5.4.0: '>=5.4.1'
   smol-toml@<=1.8.0: '>=1.9.0'
   katex@<0.18.2: '>=0.18.2'
+  # Security overrides for transitive dependencies (see GHSA IDs in pnpm audit)
+  hono: '^4.13.16'
+  '@hono/node-server': '>=2.1.6'
+  minimatch@>=7.0.0 <11.0.1: '>=11.0.1'
+  # pnpm otherwise resolves a beta wasm runtime for astro's language server,
+  # whose bridge is incompatible with @astrojs/astro2tsx (typecheck crash).
+  '@emnapi/core': '1.11.3'
+  '@emnapi/runtime': '1.11.3'
 
 packages:
   - 'app/*'
@@ -25,3 +33,13 @@ minimumReleaseAgeExclude:
 
 patchedDependencies:
   '@tanstack/react-router@1.170.38': patches/@tanstack__react-router@1.170.38.patch
+  eslint-plugin-import-x@4.17.1: patches/eslint-plugin-import-x@4.17.1.patch
+
+audit:
+  ignorePrune: true
+  ignore:
+    # GHSA-gcqx-w48m-w2h4: deepmerge mergeObject() prototype poisoning.
+    # No patched release exists (4.3.1 is the latest upstream version). It is
+    # reachable only through the dev-only `shadcn` CLI, never shipped to users.
+    # Remove this entry once a fixed deepmerge version is published.
+    - GHSA-gcqx-w48m-w2h4

@@ -52,11 +52,32 @@ export async function getValidAccessToken(
   logger: Logger = noopLogger,
 ): Promise<AuthResult<AccessTokenResult>> {
   try {
+    // Since better-auth 1.7 the `getAccessToken` endpoint selects the OAuth
+    // account by its local `accountId` (no more `providerId` body field), so
+    // resolve the linked account first. The internal adapter keeps this a
+    // server-only lookup that does not depend on a session cookie, preserving
+    // this wrapper's userId + providerId contract for callers.
+    const context = await auth.$context
+    const accounts = await context.internalAdapter.findAccounts(params.userId)
+    const account = accounts.find((candidate) => candidate.providerId === params.providerId)
+
+    if (!account) {
+      logger.warn('No linked account for provider', {
+        providerId: params.providerId,
+        userId: params.userId,
+      })
+      return err({
+        kind: 'provider_error',
+        providerId: params.providerId,
+        message: 'No linked account found for this provider.',
+      })
+    }
+
     // better-auth's account plugin exposes `getAccessToken`, which checks
     // the stored token's expiry and performs the provider's refresh-token
     // exchange automatically when needed, persisting the rotated token.
     const result = await auth.api.getAccessToken({
-      body: { providerId: params.providerId, userId: params.userId },
+      body: { accountId: account.id, userId: params.userId },
     })
 
     if (!result?.accessToken) {

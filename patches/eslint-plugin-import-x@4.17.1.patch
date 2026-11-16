@@ -1,0 +1,22 @@
+diff --git a/lib/rules/no-internal-modules.js b/lib/rules/no-internal-modules.js
+index cf3696278157c4a5b2623ed634ef367387b042bc..bb7b19b6ffe723138683122a9df59def0cef4838 100644
+--- a/lib/rules/no-internal-modules.js
++++ b/lib/rules/no-internal-modules.js
+@@ -1,4 +1,16 @@
+-import { makeRe } from 'minimatch';
++import { minimatch } from 'minimatch';
++// minimatch 11 (required by the DoS fix) dropped the standalone `makeRe()`
++// export. Keep this rule's regex-like allow/forbid matching with an adapter
++// that preserves the old "invalid pattern => null" behaviour.
++const makeRe = (pattern, options) => {
++    let valid = true;
++    try {
++        minimatch('', pattern, options);
++    } catch {
++        valid = false;
++    }
++    return valid ? { test: path => minimatch(path, pattern, options) } : null;
++};
+ import { importType, createRule, moduleVisitor, resolve, } from '../utils/index.js';
+ function normalizeSep(somePath) {
+     return somePath.split('\\').join('/');

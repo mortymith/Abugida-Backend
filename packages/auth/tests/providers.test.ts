@@ -100,7 +100,11 @@ describe('buildTelegramPlugins', () => {
     const plugins = buildTelegramPlugins(baseConfig({ providers: { telegram: validTelegram } }))
     const plugin = plugins[0]!
     expect(plugin.init).toBeDefined()
-    const result = plugin.init!({ socialProviders: [] } as never) as {
+    const result = plugin.init!({
+      socialProviders: [],
+      // better-auth-telegram 3.x emits init-time warnings through the context logger.
+      logger: { warn: () => {}, info: () => {}, error: () => {}, debug: () => {} },
+    } as never) as {
       context: { socialProviders: Array<{ id: string }> }
     }
     const ids = result.context.socialProviders.map((provider) => provider.id)

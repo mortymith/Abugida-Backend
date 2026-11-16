@@ -58,7 +58,7 @@
   "peerDependencies": {
     "@abugida/auth": "workspace:*",
     "@abugida/database": "workspace:*",
-    "hono": ">=4.6.0",
+    "hono": "^4.13.16",
     "zod": "^4.4.3"
   },
   "peerDependenciesMeta": {
@@ -75,7 +75,7 @@
     "@abugida/typescript-config": "workspace:*",
     "@types/bun": "^1.4.4",
     "eslint": "^10.13.0",
-    "hono": "^4.13.13",
+    "hono": "^4.13.16",
     "prettier": "^3.9.10",
     "typescript": "^6.0.3",
     "zod": "^4.6.7"

@@ -46,7 +46,7 @@
   },
   "peerDependencies": {
     "@tanstack/react-start": "^1.112.0",
-    "hono": "^4.6.0"
+    "hono": "^4.13.16"
   },
   "peerDependenciesMeta": {
     "hono": {
