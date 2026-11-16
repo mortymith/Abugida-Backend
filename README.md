@@ -301,12 +301,13 @@ flowchart TB
     API["app/api · @abugida/api<br/>Hono + OpenAPI 3.1<br/>66 documented endpoints"]
     DASH["app/dashboard · @abugida/dashboard<br/>TanStack Start<br/>authoring and admin UI"]
     MKT["app/marketing · @abugida/marketing<br/>Astro · starter scaffold"]
+    WORKER["app/worker · @abugida/worker<br/>BullMQ consumer<br/>job processors"]
   end
 
   subgraph shared["Shared workspace packages"]
     AUTH["@abugida/auth<br/>Better Auth · sessions, OAuth, CSRF"]
     DB["@abugida/database<br/>Drizzle · 96 tables, 7 domains"]
-    QUEUE["@abugida/queue<br/>BullMQ · 9 named queues"]
+    QUEUE["@abugida/queue<br/>job contract + producer<br/>9 named queues"]
     STORAGE["@abugida/storage<br/>S3-compatible · presigned URLs"]
     OBS["@abugida/observability<br/>Pino + OpenTelemetry"]
   end
@@ -335,6 +336,9 @@ flowchart TB
   DASH --> QUEUE
   DASH --> STORAGE
   DASH --> OBS
+
+  WORKER --> QUEUE
+  WORKER --> OBS
 
   AUTH --> PGB
   DB --> PGB

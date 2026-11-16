@@ -112,6 +112,9 @@ const config = {
       entry: ['examples/**/*.{ts,tsx}'],
     },
     'packages/queue': {
+      // The package is the job contract plus the producer runtime (ADR-028);
+      // `definitions/jobs.ts` is its public job-type barrel and the examples
+      // are the producer snippets.
       entry: ['src/definitions/jobs.ts', 'examples/**/*.ts'],
       // `hono` is an optional peer dependency: the Hono integration is one
       // of several subpath exports, so consumers that do not use it must not

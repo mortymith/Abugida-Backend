@@ -11,8 +11,8 @@
 #
 # Tiers:
 #   dev      10 services  infrastructure only
-#   staging  20 services  infrastructure + apps + observability + security
-#   prod     31 services  full stack + HA + security
+#   staging  21 services  infrastructure + apps + observability + security
+#   prod     32 services  full stack + HA + security
 #
 # API:
 #   require_tier <tier>          Validate a tier name (exit 64 if unknown)

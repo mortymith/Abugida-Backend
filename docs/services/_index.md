@@ -15,8 +15,8 @@ This catalogue documents every service that composes the platform infrastructure
 | Tier        | Compose Modules                                                     | Services | Purpose                                                           |
 | ----------- | ------------------------------------------------------------------- | -------- | ----------------------------------------------------------------- |
 | **Dev**     | `networks` + `volumes` + `base` + `dev.override`                    | 5        | Local development with core data stores and sync                  |
-| **Staging** | Dev modules + `app` + `observability` + `staging.override`          | 11       | Pre-production validation with application and telemetry          |
-| **Prod**    | Staging modules + `edge` + `scaling` + `security` + `prod.override` | 25       | Full production with HA ingress, secrets management, and replicas |
+| **Staging** | Dev modules + `app` + `observability` + `staging.override`          | 12       | Pre-production validation with application and telemetry          |
+| **Prod**    | Staging modules + `edge` + `scaling` + `security` + `prod.override` | 26       | Full production with HA ingress, secrets management, and replicas |
 
 ---
 
@@ -39,6 +39,7 @@ Phase 3 — Application
   API (depends on PgBouncer, Redis, MinIO — all healthy)
   Dashboard (depends on PgBouncer, Redis — all healthy)
   Marketing (no dependencies)
+  Worker (depends on Redis — healthy)
 
 Phase 4 — Ingress (prod only)
   Caddy (active + standby)
@@ -70,6 +71,7 @@ Phase 6 — One-Shot Init (prod only)
 | API                | PgBouncer, Redis, MinIO (all healthy)      | `backend`, `infrastructure` | staging, prod | 3 — App      |
 | Dashboard          | PgBouncer, Redis (both healthy)            | `backend`, `infrastructure` | staging, prod | 3 — App      |
 | Marketing          | _(none)_                                   | `backend`                   | staging, prod | 3 — App      |
+| Worker             | Redis (healthy)                            | `infrastructure`            | staging, prod | 3 — App      |
 | OTEL Collector     | ClickHouse, SigNoz (both healthy)          | `infrastructure`            | staging, prod | 3 — Observe  |
 | SigNoz Frontend    | ClickHouse (healthy)                       | `infrastructure`            | staging, prod | 2 — Observe  |
 | Caddy (active)     | _(none)_                                   | `edge`, `backend`           | prod          | 4 — Ingress  |
@@ -84,11 +86,11 @@ Phase 6 — One-Shot Init (prod only)
 
 Traffic is isolated across three Docker bridge networks, each representing a trust boundary:
 
-| Network            | Members                                                                                      | Trust Level       | Description                                                                    |
-| ------------------ | -------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------------------------------------------------ |
-| **edge**           | Caddy (active), Caddy (standby)                                                              | Untrusted inbound | Accepts external traffic only via VIP or Cloudflare tunnel                     |
-| **backend**        | API, Dashboard, Marketing                                                                    | Semi-trusted      | Application-layer services; cross-attaches to `infrastructure` for data access |
-| **infrastructure** | PostgreSQL, PgBouncer, Redis, MinIO, ClickHouse, Vault, OTEL, SigNoz, PowerSync, Cloudflared | Trusted internal  | All data stores, observability, and internal tooling                           |
+| Network            | Members                                                                                              | Trust Level       | Description                                                                       |
+| ------------------ | ---------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------------- |
+| **edge**           | Caddy (active), Caddy (standby)                                                                      | Untrusted inbound | Accepts external traffic only via VIP or Cloudflare tunnel                        |
+| **backend**        | API, Dashboard, Marketing                                                                            | Semi-trusted      | Application-layer services; cross-attaches to `infrastructure` for data access    |
+| **infrastructure** | PostgreSQL, PgBouncer, Redis, MinIO, ClickHouse, Vault, OTEL, SigNoz, PowerSync, Cloudflared, Worker | Trusted internal  | All data stores, observability, internal tooling, and the background job consumer |
 
 Cross-network access is controlled at the Compose level. Services requiring access to multiple networks (e.g., API, Dashboard) are explicitly dual-attached. No service on the `infrastructure` network is reachable from `edge` without traversing the `backend` layer.
 
@@ -128,6 +130,7 @@ Detailed per-service documentation is available below:
 | API       | [api.md](api.md)             | Primary backend service (Bun + Hono) handling business logic, CRUD, and authentication   |
 | Dashboard | [dashboard.md](dashboard.md) | Customer-facing web application (TanStack Start) with SSR, backed by PgBouncer and Redis |
 | Marketing | [marketing.md](marketing.md) | Static Astro landing page served by Bun — no data-layer dependencies                     |
+| Worker    | [worker.md](worker.md)       | Background job consumer (Bun + BullMQ) draining the queues the API and dashboard fill    |
 | PowerSync | [powersync.md](powersync.md) | Real-time offline-first data sync via PostgreSQL logical replication                     |
 
 ### Observability Layer
@@ -162,6 +165,7 @@ Detailed per-service documentation is available below:
 | API           | 3000           | 3001          | No (via Caddy)       |
 | Dashboard     | 8080           | 8081          | No (via Caddy)       |
 | Marketing     | 8080           | 8082          | No (via Caddy)       |
+| Worker        | 3000           | 3003          | No                   |
 | PowerSync     | 8085           | 8085          | No                   |
 | SigNoz        | 3001           | 3002          | No (via Cloudflared) |
 | OTEL gRPC     | 4317           | —             | No                   |

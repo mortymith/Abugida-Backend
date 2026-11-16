@@ -23,7 +23,9 @@ const config = defineConfig({
     // `@abugida/queue` pulls Bun's native Redis client (`import 'bun'`), which
     // rolldown cannot bundle — keep it a runtime import resolved by Bun, and
     // never reachable from the client environment (only `.server` chunks use it).
-    // Marketing campaign sends enqueue EMAIL_NOTIFICATION jobs through it.
+    // Since ADR-028 the package is the job contract + producer runtime only:
+    // the dashboard enqueues (e.g. marketing campaign EMAIL_NOTIFICATION jobs);
+    // the consumer lives in app/worker and is never imported from here.
     //
     // `@abugida/database` is deliberately NOT listed here: it compiles with
     // `moduleResolution: "Bundler"`, so tsc emits extensionless specifiers that

@@ -33,3 +33,6 @@ config/cloudflared/credentials.json
 # ─── Devbox sandbox (local Nix state; devbox.json/devbox.lock ARE committed) ──
 .devbox/
 .direnv/
+
+# ─── Python virtualenvs (local tooling; nothing in the repo runs on Python) ──
+.venv/

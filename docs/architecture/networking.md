@@ -58,6 +58,7 @@ This matrix is the single source of truth for which services attach to which net
 | `api`                | Application           | 3000             | → backend     | Accesses Postgres via PgBouncer, Redis, MinIO, Vault                                         |
 | `dashboard`          | Application           | 8080             | → backend     | Accesses Postgres via PgBouncer (ADR-019), Redis for cache/sessions                          |
 | `marketing`          | Application           | 8080             | —             | Backend network only; no data-layer access                                                   |
+| `worker`             | Background job worker | 3000             | —             | BullMQ consumer; Redis only — no external traffic, health probed inside the container        |
 | `postgres-primary`   | Database (write)      | 5432             | —             | Streaming replication source                                                                 |
 | `postgres-replica-1` | Database (read)       | 5432             | —             | Read replica, replicated from primary                                                        |
 | `postgres-replica-2` | Database (read)       | 5432             | —             | Read replica, prod only                                                                      |
@@ -111,6 +112,7 @@ This matrix is the single source of truth for which services attach to which net
 | Redis Sentinels | 0 | 0 | 3 (quorum = 2) |
 | PostgreSQL replicas | 0 | 0 | 2 (primary + 2 read replicas) |
 | API / Dashboard / Marketing | Not deployed | Single instance, published ports | 3 replicas each, no published ports |
+| Worker | Not deployed (run locally) | Single instance, published port | 2 replicas, no published ports |
 | OTEL / SigNoz | Not deployed | Single instance, published ports | Single instance, no published ports |
 | Published ports | Infrastructure only | All services | Only 80/443 on host |
 | Cloudflare Tunnel | Not deployed | Not deployed | Required for SigNoz (ADR-020) |

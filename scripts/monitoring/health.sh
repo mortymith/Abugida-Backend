@@ -63,6 +63,7 @@ POWERSYNC_PORT_VAL=$(env_or_dotenv POWERSYNC_PORT 8085)
 API_PORT_VAL=$(env_or_dotenv API_PORT 3001)
 DASHBOARD_PORT_VAL=$(env_or_dotenv DASHBOARD_PORT 8081)
 MARKETING_PORT_VAL=$(env_or_dotenv MARKETING_PORT 8082)
+WORKER_PORT_VAL=$(env_or_dotenv WORKER_PORT 3003)
 VAULT_API_PORT_VAL=$(env_or_dotenv VAULT_API_PORT 8200)
 
 # ─── Output helpers ───────────────────────────────────────────────────
@@ -217,6 +218,23 @@ probe_marketing() {
   probe_http_health marketing "${MARKETING_PORT_VAL}"
 }
 
+probe_worker() {
+  # The worker is a BullMQ consumer: /health is the liveness probe, and
+  # /health/ready additionally asserts that Redis is reachable and every
+  # expected queue worker has started.
+  local body
+  body=$(timeout "${PROBE_TIMEOUT}" curl -sf "http://localhost:${WORKER_PORT_VAL}/health/ready") || {
+    echo "GET /health/ready failed"
+    return 1
+  }
+  if grep -q '"status"[[:space:]]*:[[:space:]]*"ok"' <<< "${body}"; then
+    echo "HTTP 200 ready"
+  else
+    echo "HTTP 200 but not ready: ${body}"
+    return 1
+  fi
+}
+
 probe_otel() {
   # signoz-otel-collector image ships bash but no wget — probe the
   # health extension via /dev/tcp.
@@ -288,6 +306,7 @@ if [ "${MODE}" != "core" ]; then
   run_probe api api probe_api || true
   run_probe dashboard dashboard probe_dashboard || true
   run_probe marketing marketing probe_marketing || true
+  run_probe worker worker probe_worker || true
 
   section "Observability & Security"
   run_probe otel-collector otel-collector probe_otel || true

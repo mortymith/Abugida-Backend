@@ -106,6 +106,62 @@ services:
       start_period: 30s
 
   # ═══════════════════════════════════════════════════════════════════
+  # Worker Service — background job consumer (ADR-028)
+  # ─────────────────────────────────────────────────────────────────
+  # Single network: infrastructure (Redis + OTEL collector). The worker
+  # receives no external traffic — its health endpoint is probed from
+  # inside the container by the compose healthcheck.
+  #
+  # It is the only process that reads the TELEBIRR_*/SMS_ETHIOPIA_*
+  # secrets: those credentials belong to the process that calls those APIs
+  # (ADR-028 §2).
+  # ═══════════════════════════════════════════════════════════════════
+  worker:
+    build:
+      context: .
+      dockerfile: app/worker/Dockerfile
+    restart: unless-stopped
+    <<: *default-security
+    logging: *default-logging
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      # Container port is pinned to 3000 regardless of the app's dev default
+      # (3003): the image healthcheck curls localhost:3000 and the profiles
+      # publish ${WORKER_PORT}:3000.
+      PORT: '3000'
+      APP_NAME: ${WORKER_APP_NAME:-abugida-worker}
+      # Which queues this instance consumes: "all" or a comma-separated list
+      # of full queue names (abugida.purchases,abugida.webhooks). This is the
+      # per-queue rollout gate (ADR-028, Risks).
+      WORKER_QUEUES: ${WORKER_QUEUES:-all}
+      REDIS_HOST: redis-primary
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required (set it in .env or export from Vault)}
+      # Payment gateway (Telebirr) — used by the purchase/webhook processors.
+      TELEBIRR_APP_ID: ${TELEBIRR_APP_ID:-}
+      TELEBIRR_APP_SECRET: ${TELEBIRR_APP_SECRET:-}
+      TELEBIRR_MERCHANT_APP_ID: ${TELEBIRR_MERCHANT_APP_ID:-}
+      TELEBIRR_MERCHANT_CODE: ${TELEBIRR_MERCHANT_CODE:-}
+      TELEBIRR_PRIVATE_KEY: ${TELEBIRR_PRIVATE_KEY:-}
+      TELEBIRR_PUBLIC_KEY: ${TELEBIRR_PUBLIC_KEY:-}
+      TELEBIRR_NOTIFY_URL: ${TELEBIRR_NOTIFY_URL:-}
+      TELEBIRR_CHECKOUT_BASE_URL: ${TELEBIRR_CHECKOUT_BASE_URL:-}
+      # SMS gateway (SMSEthiopia) — used by the notification processor.
+      SMS_ETHIOPIA_API_KEY: ${SMS_ETHIOPIA_API_KEY:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    depends_on:
+      redis-primary:
+        condition: service_healthy
+    networks:
+      - infrastructure
+    healthcheck:
+      test: ['CMD', 'curl', '-sf', 'http://localhost:3000/health']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════════════════
   # Dashboard Service
   # ─────────────────────────────────────────────────────────────────
   # Multi-network: backend (receives traffic from Caddy) + infrastructure (data layer).

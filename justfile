@@ -4,8 +4,8 @@
 #
 # Three-tier modular Docker Compose:
 #   Dev:     10 services (infrastructure only)
-#   Staging: 20 services (infrastructure + applications + observability + security)
-#   Prod:    31 services (full stack + HA + security)
+#   Staging: 21 services (infrastructure + applications + observability + security)
+#   Prod:    32 services (full stack + HA + security)
 #
 # Secrets strategy (ADR-006):
 #   Dev:        .env file
@@ -286,7 +286,7 @@ staging-recreate:
     source scripts/lib/compose.sh
     dc staging up -d --force-recreate
 
-# Start prod services (full stack: 31 services)
+# Start prod services (full stack: 32 services)
 prod-up:
     #!/usr/bin/env bash
     source scripts/lib/compose.sh
@@ -340,6 +340,56 @@ validate-compose:
     fi
     exit "${rc}"
 
+# ── Background worker (background job consumer — ADR-028) ──────────────────
+#
+# The worker consumes the BullMQ queues the API and the dashboard fill. It
+# is an application service, so it runs in the tiers that compose the
+# application services (staging, prod); in development it runs as a local
+# process against the dev infrastructure (`just worker-dev`).
+
+# Start the background worker in a tier (staging | prod)
+worker-up tier="staging": (_need "docker")
+    #!/usr/bin/env bash
+    source scripts/lib/compose.sh
+    case "{{tier}}" in
+      staging | prod) ;;
+      *)
+        echo "error: the worker runs in the staging and prod tiers (use 'just worker-dev' in development)" >&2
+        exit 64
+        ;;
+    esac
+    dc {{tier}} up -d worker
+
+# Stop the background worker in a tier (staging | prod)
+worker-down tier="staging": (_need "docker")
+    #!/usr/bin/env bash
+    source scripts/lib/compose.sh
+    case "{{tier}}" in
+      staging | prod) ;;
+      *)
+        echo "error: the worker runs in the staging and prod tiers (use 'just worker-dev' in development)" >&2
+        exit 64
+        ;;
+    esac
+    dc {{tier}} rm -sf worker
+
+# Tail the background worker logs (tier: staging | prod)
+worker-logs tier="staging": (_need "docker")
+    #!/usr/bin/env bash
+    source scripts/lib/compose.sh
+    case "{{tier}}" in
+      staging | prod) ;;
+      *)
+        echo "error: the worker runs in the staging and prod tiers (use 'just worker-dev' in development)" >&2
+        exit 64
+        ;;
+    esac
+    dc {{tier}} logs -f --tail 100 worker
+
+# Run the background worker locally against the dev infrastructure
+worker-dev: (_need "pnpm")
+    pnpm --filter @abugida/worker dev
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 3. Deployment
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -384,6 +434,11 @@ health-dashboard *ARGS:
 # Check Marketing health (liveness); add --strict to exit non-zero on failure
 health-marketing *ARGS:
     bash scripts/monitoring/http-health.sh marketing {{ARGS}}
+
+# Check the background worker health (liveness + readiness); add --strict to
+# exit non-zero on failure
+health-worker *ARGS:
+    bash scripts/monitoring/http-health.sh worker {{ARGS}}
 
 # Check PostgreSQL replication lag (prod only)
 health-replication:

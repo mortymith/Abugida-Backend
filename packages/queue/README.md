@@ -1,33 +1,29 @@
 # @abugida/queue
 
-Shared message queue layer for the [Abugida Application](https://github.com/abugida/abugida-app)
-monorepo. Provides a typed, BullMQ-based background job system on top of Redis, used by the
-**Hono API**, the **TanStack Start dashboard**, and standalone worker processes.
+The **job contract** and the **producer runtime** of the [Abugida Application](https://github.com/abugida/abugida-app)
+monorepo: a typed, BullMQ-based background job system on top of Redis, used by the **Hono API**
+and the **TanStack Start dashboard** to enqueue work.
+
+The consumer — the BullMQ worker, the processors and the provider integrations — lives in
+`app/worker` (`@abugida/worker`). The split is one-way: the worker depends on this package, never
+the other way round (ADR-028).
 
 ## Features
 
 - **Typed job payloads** — a `JobType` enum plus a `JobDataMap` discriminated union, so the payload
   for a given job type is checked at compile time
-- **Producer/consumer split** — `createQueueClient` for enqueuing, `createQueueWorker` for consuming
 - **Nine named queues** — declared once in `QUEUE_NAMES` with per-queue concurrency, rate limits,
   retry attempts, and backoff
-- **Batteries-included processors** — `allProcessors` covers purchases, enrollments, exports,
-  webhooks, notifications, moderation, statistics, audit, and maintenance
-- **Selective workers** — `getProcessorsForQueue` / `getProcessorForJobType` let you run a
-  dedicated worker per queue
-- **Idempotency helpers** — Redis `SET NX EX` locks and cached results so webhook retries and
-  duplicated requests never double-process
-- **Runtime validation** — `validateJobData` / `assertJobData` guard every payload
-- **Telebirr integration** — signed H5 C2B order creation, status queries, and callback
-  verification (`SHA256WithRSA`)
-- **SMSEthiopia integration** — MSISDN normalisation, multi-version send API, delivery receipts
-- **Error classification** — integration errors are tagged retryable vs. permanent and mapped onto
-  BullMQ's `UnrecoverableError` so hopeless jobs stop burning attempts
-- **Hono integration** — context-injecting middleware for producer routes
-- **TanStack Start integration** — singleton client for server functions
+- **One source of truth** — the job types, the payloads, the queue names and the maps exist only
+  here; the worker imports them and never re-declares them
+- **Runtime validation** — `validateJobData` / `assertJobData` guard every payload, at enqueue and
+  at consume time
+- **Typed errors** — the `QueueError` hierarchy distinguishes validation failures, exhausted jobs,
+  duplicates and Redis outages
+- **Hono integration** — context-injecting producer middleware
+- **TanStack Start integration** — singleton producer client for server functions
 - **Bun optimized** — Redis access via Bun's native `RedisClient` (`createBunRedisClient`), so no
   `ioredis` dependency
-- **Graceful shutdown** — `stop()` drains in-flight jobs; `setupGracefulShutdown` wires SIGTERM/SIGINT
 
 ## Installation
 
@@ -41,16 +37,14 @@ optional peer dependencies — install them only if you use the corresponding su
 ## Quick Start
 
 ```typescript
-import { createQueueSystem, mergeWithDefaults, allProcessors, JobType } from '@abugida/queue'
+import { createQueueClient, mergeWithDefaults, JobType } from '@abugida/queue'
 
 const config = mergeWithDefaults({
   redis: { hostname: 'localhost', port: 6379 },
 })
 
-const queueSystem = createQueueSystem(config)
+const client = createQueueClient(config)
 
-// ---- Producer ----
-const client = queueSystem.createClient()
 const jobId = await client.enqueue(JobType.PURCHASE_INITIATE, {
   userId: 'user-1',
   courseId: 'course-1',
@@ -60,31 +54,22 @@ const jobId = await client.enqueue(JobType.PURCHASE_INITIATE, {
   idempotencyKey: 'purchase:user-1:course-1',
 })
 
-// ---- Consumer ----
-const worker = queueSystem.createWorker(allProcessors)
-await worker.start()
-
-// ---- Shutdown ----
-await worker.stop()
-await queueSystem.shutdown()
+await client.close()
 ```
-
-`createQueueSystem` is a thin factory over the two building blocks; use them directly when you
-only need one side of the system.
 
 ## Entry Points
 
-| Subpath                       | Contents                                                                                                         |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `@abugida/queue`              | Everything: factory, client, worker, definitions, processors, config, utilities, integrations, framework helpers |
-| `@abugida/queue/core`         | Core types (`JobType`, `JobDataMap`, `QueueClient`, `QueueWorker`, `QueueError`, …)                              |
-| `@abugida/queue/integrations` | Telebirr and SMSEthiopia clients, HTTP helpers, shared error types                                               |
-| `@abugida/queue/hono`         | Hono producer client + `createQueueMiddleware`                                                                   |
-| `@abugida/queue/tanstack`     | TanStack Start singleton producer client                                                                         |
+| Subpath                   | Contents                                                                            |
+| ------------------------- | ----------------------------------------------------------------------------------- |
+| `@abugida/queue`          | The contract and the producer runtime: client, definitions, config, validators      |
+| `@abugida/queue/core`     | Contract types and errors (`JobType`, `JobDataMap`, `QueueClient`, `QueueError`, …) |
+| `@abugida/queue/hono`     | Hono producer client + `createQueueMiddleware`                                      |
+| `@abugida/queue/tanstack` | TanStack Start singleton producer client                                            |
 
 `./core` resolves to the `core/types` module — it is a types-and-errors surface, not a runtime
-entry point. The worker helpers for both frameworks (`createHonoWorker`, `createTanStackWorker`,
-`setupGracefulShutdown`) are re-exported from the root entry.
+entry point. The former `/integrations` subpath (Telebirr, SMSEthiopia) and every consumer export
+(`createQueueWorker`, `allProcessors`, `ProcessorRegistry`, the worker middleware) left the
+package in ADR-028; the worker app owns them now.
 
 ## Configuration
 
@@ -126,17 +111,16 @@ const config: QueueConfig = mergeWithDefaults(
 
 `getDefaultConfig` reads these when the matching field is not overridden:
 
-| Variable               | Used for                             |
-| ---------------------- | ------------------------------------ |
-| `REDIS_HOST`           | `redis.hostname` (staging/prod)      |
-| `REDIS_PORT`           | `redis.port`                         |
-| `REDIS_USERNAME`       | `redis.username` (ACL auth)          |
-| `REDIS_PASSWORD`       | `redis.password`                     |
-| `REDIS_DB`             | `redis.db`                           |
-| `APP_NAME`             | Worker id prefix via `getWorkerId()` |
-| `NODE_ENV` / `BUN_ENV` | `detectEnvironment()`                |
+| Variable         | Used for                        |
+| ---------------- | ------------------------------- |
+| `REDIS_HOST`     | `redis.hostname` (staging/prod) |
+| `REDIS_PORT`     | `redis.port`                    |
+| `REDIS_USERNAME` | `redis.username` (ACL auth)     |
+| `REDIS_PASSWORD` | `redis.password`                |
+| `REDIS_DB`       | `redis.db`                      |
 
-TLS is enabled automatically when `env === 'production'`.
+The environment label is a parameter (`mergeWithDefaults(overrides, 'production')`), not an
+environment variable. TLS is enabled automatically when `env === 'production'`.
 
 ## Queues
 
@@ -166,6 +150,10 @@ JOB_PRIORITY_MAP[JobType.PURCHASE_INITIATE] // PRIORITY.HIGH
 
 Lower `PRIORITY` numbers win in BullMQ: `HIGH: 1`, `MEDIUM: 5`, `LOW: 10`.
 
+`JOB_QUEUE_MAP` is declared `as const satisfies Record<JobType, string>`, so the literal queue name
+of a job type survives into the consumer: the worker can only register a processor under the queue
+the job type actually belongs to.
+
 ## Job Types
 
 | Job Type                     | Queue           | Payload                           |
@@ -185,7 +173,22 @@ Lower `PRIORITY` numbers win in BullMQ: `HIGH: 1`, `MEDIUM: 5`, `LOW: 10`.
 | `MAINTENANCE_TASK`           | `maintenance`   | `MaintenanceTaskJobData`          |
 | `DATA_RETENTION`             | `maintenance`   | `DataRetentionJobData`            |
 
-Every payload carries an `idempotencyKey` used by the processors to de-duplicate retries.
+Every payload carries an `idempotencyKey` used by the worker to de-duplicate retries, and the
+payloads that address tenant-scoped data carry an optional `tenantId`.
+
+### Payload evolution rules
+
+The job contract is append-only. Both this README and the worker app's README document the same
+rules (ADR-028 §5.4):
+
+- Payloads grow with **optional** fields only; an existing field never changes its type or meaning.
+- A **breaking change means a new `JobType`**. The previous job type, its payload type, its
+  validator and its processor all stay in place until the corresponding queue has drained, because
+  `removeOnComplete` retention means old jobs outlive deploys.
+- Retiring a `JobType` is a separate, explicit step with its own deprecation note.
+
+Adding a `JobType` here breaks the worker's typecheck until the new job type has a processor — the
+contract is guarded on both sides.
 
 ## Producing Jobs
 
@@ -230,120 +233,15 @@ await client.close()
 
 ## Consuming Jobs
 
-```typescript
-import {
-  createQueueWorker,
-  allProcessors,
-  getProcessorsForQueue,
-  QUEUE_NAMES,
-} from '@abugida/queue'
+Consuming is the worker's job, not this package's. The worker runtime (`createQueueWorker`), the
+processor registry, the nine processor modules, the idempotency helpers and the Telebirr /
+SMSEthiopia integrations live in `app/worker` — see `app/worker/README.md` and
+`docs/services/worker.md`.
 
-// Everything
-const worker = createQueueWorker(config, allProcessors)
-await worker.start()
+The package keeps the contract the consumer needs: the job types, the payloads, the queue map and
+the validators.
 
-// Or a dedicated per-queue worker
-const notifications = createQueueWorker(config, getProcessorsForQueue(QUEUE_NAMES.NOTIFICATIONS))
-
-worker.isRunning() // boolean
-await worker.stop() // drains in-flight jobs, then closes connections
-```
-
-Add processors before `start()`:
-
-```typescript
-const worker = createQueueWorker(config, allProcessors)
-worker.registerProcessor({
-  jobType: JobType.AUDIT_LOG,
-  queueName: QUEUE_NAMES.AUDIT,
-  concurrency: 1,
-  processor: async (data) => {
-    /* … */
-  },
-})
-await worker.start()
-```
-
-Registering after `start()` throws — the worker has already dispatched.
-
-### Retries
-
-BullMQ owns retries. The package only supplies the configuration; there is no bespoke retry
-wrapper. Per-queue defaults live in `DEFAULT_QUEUE_OPTIONS` (`attempts` + `backoff: { type, delay }`)
-and can be overridden per queue or per job. Processors signal hopeless failures by throwing
-BullMQ's `UnrecoverableError`, which stops retries immediately.
-
-## Processors
-
-`allProcessors` is the aggregate of every module's processor array. Individual arrays are exported
-too, for selective registration:
-
-```typescript
-import {
-  allProcessors,
-  purchaseProcessors,
-  enrollmentProcessors,
-  exportProcessors,
-  webhookProcessors,
-  notificationProcessors,
-  moderationProcessors,
-  statisticsProcessors,
-  auditProcessors,
-  maintenanceProcessors,
-  getProcessorsForQueue,
-  getProcessorForJobType,
-} from '@abugida/queue'
-```
-
-A custom processor is a plain `ProcessorEntry`:
-
-```typescript
-import type { ProcessorEntry, JobType } from '@abugida/queue'
-
-const entry: ProcessorEntry<{ userId: string }> = {
-  jobType: JobType.AUDIT_LOG,
-  queueName: 'abugida.audit',
-  concurrency: 1,
-  processor: async (data, job) => {
-    // data is strongly typed; job gives id, name, attemptsMade, timestamp
-    return { ok: true, userId: data.userId }
-  },
-}
-```
-
-`ProcessorRegistry` is available for building your own registry (`register`, `registerAll`, `get`,
-`getAll`, `has`, `getJobTypes`, `getByQueue`).
-
-### Idempotency
-
-Every helper takes a Bun `RedisClient` (from `createConnection`) as its first argument.
-
-```typescript
-import {
-  processWithIdempotency,
-  checkIdempotency,
-  acquireProcessingLock,
-  storeIdempotencyResult,
-  markProcessingFailed,
-  createConnection,
-} from '@abugida/queue'
-
-const redis = createConnection(config, 'idempotency')
-
-// Lock → run → store in one call; returns the cached result on a replay
-const result = await processWithIdempotency(redis, key, JobType.PURCHASE_COMPLETE, () => doWork())
-
-// Or step by step
-if (await checkIdempotency(redis, key)) return // already done
-await acquireProcessingLock(redis, key, JobType.PURCHASE_COMPLETE) // throws DuplicateJobError
-await storeIdempotencyResult(redis, key, JobType.PURCHASE_COMPLETE, result)
-```
-
-`acquireProcessingLock` claims the key with `SET NX EX` (5-minute lock TTL) and throws
-`DuplicateJobError` if the job already completed. Completed results are cached for 24 hours.
-`markProcessingFailed` releases the lock so the next attempt can retry.
-
-### Validation
+## Validation
 
 ```typescript
 import { validateJobData, assertJobData, JobType } from '@abugida/queue'
@@ -353,6 +251,9 @@ const result = validateJobData(JobType.PURCHASE_INITIATE, payload)
 
 assertJobData(JobType.PURCHASE_INITIATE, payload) // throws JobValidationError
 ```
+
+The validators are typed as a `Record<JobType, ValidatorFn>`, so a new job type without a validator
+is a compile error.
 
 ## Error Handling
 
@@ -380,19 +281,6 @@ try {
 }
 ```
 
-Helpers:
-
-```typescript
-import { classifyError, safeErrorMessage } from '@abugida/queue'
-
-classifyError(new Error('ECONNREFUSED')) // 'connection'
-classifyError(new Error('timeout exceeded')) // 'timeout'
-safeErrorMessage(new Error('secret password leak')) // 'An internal error occurred'
-```
-
-`classifyError` matches the same `ECONNREFUSED` / `ECONNRESET` / `ETIMEDOUT` / `timeout` signals
-that route failures to a retry category.
-
 ## Hono Integration
 
 ```typescript
@@ -415,8 +303,7 @@ app.post('/api/webhooks/telebirr', async (c) => {
 ```
 
 `createHonoQueueClient(config)` returns a standalone client if you would rather not use the
-context. `createHonoWorker({ config, processors? })` from the root entry bundles a worker with a
-Hono app for health-check routes.
+context.
 
 ## TanStack Start Integration
 
@@ -438,126 +325,6 @@ export async function requestExport(userId: string) {
 `getTanStackQueueClient` memoises a singleton; `createTanStackQueueClient` always builds a fresh
 one (useful in tests), and `closeTanStackQueueClient` tears the singleton down at shutdown.
 
-Worker side (root entry):
-
-```typescript
-import { createTanStackWorker, setupGracefulShutdown, getProcessorsForQueue } from '@abugida/queue'
-
-const worker = createTanStackWorker({
-  config,
-  processors: [
-    ...getProcessorsForQueue('abugida.statistics'),
-    ...getProcessorsForQueue('abugida.audit'),
-  ],
-})
-
-setupGracefulShutdown(worker) // handles SIGTERM + SIGINT
-await worker.start()
-```
-
-## Telebirr Integration
-
-Telebirr H5 C2B payment gateway: order creation, status queries, and signed callback
-verification using `SHA256WithRSA`.
-
-```typescript
-import {
-  createTelebirrClient,
-  getTelebirrClient,
-  getTelebirrConfigFromEnv,
-  getTelebirrVerificationKey,
-  getTelebirrSignaturePadding,
-  buildStringToSign,
-  signPayload,
-  verifyPayload,
-  TelebirrError,
-  SIGN_TYPE,
-  TELEBIRR_TESTBED_BASE_URL,
-  TELEBIRR_PRODUCTION_BASE_URL,
-} from '@abugida/queue/integrations'
-
-const client = getTelebirrClient() // configured from TELEBIRR_* env vars
-
-// Create a prepay order, then assemble the hosted checkout URL
-const order = await client.createOrder({
-  merchOrderId: 'order-1',
-  title: 'Course purchase',
-  amount: 500,
-  currency: 'ETB',
-})
-const checkoutUrl = client.buildCheckoutUrl(order.prepayId)
-
-// Or both in one call
-const { prepayId, checkoutUrl: url } = await client.createCheckoutUrl({
-  title: 'Course',
-  amount: 500,
-})
-
-// Status query (e.g. when a notification never arrived)
-const status = await client.queryOrder('order-1')
-
-// Webhook callbacks — returns false on a bad or missing signature
-const trusted = client.verifyCallback(await c.req.json())
-if (!trusted) return c.json({ error: 'bad signature' }, 400)
-```
-
-Lower-level primitives are exported too: `buildStringToSign(body)`,
-`signPayload(text, privateKeyPem, padding?)`, and
-`verifyPayload(text, signature, publicKeyPem, padding?)`. `SIGN_TYPE` is `'SHA256WithRSA'` and the
-signature padding is `pss` or `pkcs1v15`, resolved by `getTelebirrSignaturePadding()`.
-`getTelebirrClient()` throws a `TELEBIRR_CONFIG` error when the `TELEBIRR_*` variables are
-missing; use `createTelebirrClient(config)` with an explicit `TelebirrConfig` to avoid that.
-
-Every Telebirr business rejection is surfaced as a `TelebirrError` with `retryable: false`, so
-`toJobError` converts it to a BullMQ `UnrecoverableError` instead of retrying it. Transport
-failures and 5xx responses stay `retryable: true`.
-
-## SMSEthiopia Integration
-
-```typescript
-import {
-  createSMSEthiopiaClient,
-  getSMSEthiopiaClient,
-  getSMSEthiopiaConfigFromEnv,
-  isValidMsisdn,
-  normalizeMsisdn,
-  normalizeSmsStatus,
-  SMSEthiopiaError,
-} from '@abugida/queue/integrations'
-
-const client = getSMSEthiopiaClient() // configured from SMSETHIOPIA_* env vars
-
-const result = await client.send({
-  msisdn: '0911000000', // normalised to +251911000000 internally
-  text: 'Your code is 1234',
-})
-// { id: '01J…', segments: 1, status: 'ACCEPTED' }
-
-// Delivery receipt lookup — keep `id` for this
-const delivery = await client.getStatus(result.id)
-```
-
-MSISDNs are validated and normalised to E.164 (`+251…`); `isValidMsisdn` and `normalizeMsisdn`
-are exported for pre-flight checks. 4xx responses become permanent `SMSEthiopiaError`s; 5xx and
-transport failures are marked `retryable: true` so the queue retries them with the queue's backoff.
-
-### Shared integration error model
-
-```typescript
-import {
-  IntegrationError,
-  describeError,
-  toJobError,
-  HttpError,
-  HttpNetworkError,
-  isRetryableHttpError,
-} from '@abugida/queue/integrations'
-
-isRetryableHttpError(error) // transport / 5xx → true
-toJobError(error) // IntegrationError → UnrecoverableError when !retryable
-describeError(error) // human-readable summary
-```
-
 ## Redis Connections
 
 ```typescript
@@ -577,18 +344,6 @@ await closeAllConnections()
 
 Connections are cached per purpose (`producer`, `consumer:<queue>`, …) and reused. BullMQ is fed
 Bun's native client through `createBunRedisClient`, so no `ioredis` dependency is pulled in.
-
-## Logging
-
-```typescript
-import { getLogger, type Logger } from '@abugida/queue'
-
-const logger = getLogger(config)
-const child = getLogger().child({ processor: 'purchase:initiate' })
-```
-
-The worker logs start/stop, per-job completion and failure, and stalled jobs at the level
-configured in `config.logging`.
 
 ## Testing
 
@@ -612,7 +367,8 @@ pnpm run lint        # eslint
 pnpm run format      # prettier
 ```
 
-Runnable examples live in `examples/hono` and `examples/tanstack`.
+Runnable producer examples live in `examples/hono` and `examples/tanstack`. The consumer examples
+moved to `app/worker` with the consumer runtime.
 
 ## License
 

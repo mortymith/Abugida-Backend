@@ -4,11 +4,11 @@
 # ADR-009
 #
 # Single implementation behind `just health-api|health-dashboard|
-# health-marketing`. Probes the same endpoints the app images declare in
-# their compose healthchecks, from the host, with a short timeout.
+# health-marketing|health-worker`. Probes the same endpoints the app images
+# declare in their compose healthchecks, from the host, with a short timeout.
 #
 # Usage:
-#   bash scripts/monitoring/http-health.sh <api|dashboard|marketing> [--strict]
+#   bash scripts/monitoring/http-health.sh <api|dashboard|marketing|worker> [--strict]
 #
 #   --strict  exit non-zero when any probe fails (for gating deploys/CI)
 #
@@ -56,6 +56,11 @@ marketing)
   MARKETING_PORT="$(env_or_dotenv MARKETING_PORT 8082)"
   API_BASE="http://localhost:${MARKETING_PORT}"
   LABELS=("/health|liveness")
+  ;;
+worker)
+  WORKER_PORT="$(env_or_dotenv WORKER_PORT 3003)"
+  API_BASE="http://localhost:${WORKER_PORT}"
+  LABELS=("/health|liveness" "/health/ready|readiness")
   ;;
 *)
   echo "usage: $(basename "$0") <api|dashboard|marketing> [--strict]" >&2
