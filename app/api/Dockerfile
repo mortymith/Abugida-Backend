@@ -25,7 +25,7 @@ ARG BUILD_VERSION=0.0.1
 # ── Stage 0: Shared base ────────────────────────────────────────────
 # oven/bun pinned by digest (multi-arch index) for reproducible,
 # supply-chain-safe builds. Bump the tag AND digest together.
-FROM oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a AS base
+FROM oven/bun:1.4.5-alpine@sha256:da816670775f4c2b4e990b6b1847cf5540dcdc721a42033dd331ce7a88ba6a3b AS base
 
 # Version pins (single source of truth for this inline copy).
 ARG PNPM_VERSION=12.15.0
